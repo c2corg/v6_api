@@ -16,7 +16,7 @@ from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
@@ -183,10 +183,10 @@ class TestBookRest(BaseDocumentTestRest):
         scenarios.get_info_404(self.app, BOOKS)
 
     def test_post_error(self):
-        body = self.post_error({}, user='moderator')
+        body = scenarios.post_error(self.app, BOOKS, {}, user='moderator')
         errors = body.get('errors')
         assert len(errors) == 2
-        self.assertCorniceRequired(errors[0], 'locales')
+        assert_required(errors[0], 'locales')
 
     def test_post_invalid_enum_item(self):
         # an unknown activity used to reach the database enum (500)
@@ -209,7 +209,7 @@ class TestBookRest(BaseDocumentTestRest):
             'book_types': ['biography'],
             'locales': [{'lang': 'en'}],
         }
-        self.post_missing_title(body_post, user='moderator')
+        scenarios.post_missing_title(self.app, BOOKS, body_post, user='moderator')
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -217,10 +217,12 @@ class TestBookRest(BaseDocumentTestRest):
             'protected': True,
             'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
         }
-        self.post_non_whitelisted_attribute(body, user='moderator')
+        scenarios.post_non_whitelisted_attribute(
+            self.app, self.session, BOOKS, body, user='moderator'
+        )
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, BOOKS, {})
 
     def test_post_success(self):
         body = {
@@ -245,7 +247,9 @@ class TestBookRest(BaseDocumentTestRest):
             },
             'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
         }
-        body, doc = self.post_success(body, user='moderator')
+        body, doc = scenarios.post_success(
+            self.app, self.session, BOOKS, body, user='moderator'
+        )
         version = doc.versions[0]
 
         archive_book = version.document_archive

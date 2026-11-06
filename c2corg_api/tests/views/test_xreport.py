@@ -21,7 +21,7 @@ from c2corg_api.models.xreport import (
     Xreport,
     XreportLocale,
 )
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import assert_not_in_enum, assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
@@ -287,10 +287,12 @@ class TestXreportRest(BaseDocumentTestRest):
         scenarios.get_info_404(self.app, XREPORTS)
 
     def test_post_error(self):
-        body = self.post_error({}, user='moderator', status=422)
+        body = scenarios.post_error(
+            self.app, XREPORTS, {}, user='moderator', status=422
+        )
         errors = errors_of(body)
         assert len(errors) == 1
-        self.assertCorniceRequired(errors[0], 'event_activity')
+        assert_required(errors[0], 'event_activity')
 
     def test_post_missing_title(self):
         body_post = {
@@ -299,7 +301,7 @@ class TestXreportRest(BaseDocumentTestRest):
             'nb_participants': 5,
             'locales': [{'lang': 'en'}],
         }
-        self.post_missing_title(body_post, user='moderator')
+        scenarios.post_missing_title(self.app, XREPORTS, body_post, user='moderator')
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -315,10 +317,12 @@ class TestXreportRest(BaseDocumentTestRest):
                 }
             ],
         }
-        self.post_non_whitelisted_attribute(body, user='moderator')
+        scenarios.post_non_whitelisted_attribute(
+            self.app, self.session, XREPORTS, body, user='moderator'
+        )
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, XREPORTS, {})
 
     def test_post_wrong_geom_type(self):
         body = {
@@ -339,7 +343,7 @@ class TestXreportRest(BaseDocumentTestRest):
             },
             'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
         }
-        errors = self.post_wrong_geom_type(body, status=422)
+        errors = scenarios.post_wrong_geom_type(self.app, XREPORTS, body, status=422)
         assert (
             errors[0]['description']
             == "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING."
@@ -362,10 +366,12 @@ class TestXreportRest(BaseDocumentTestRest):
                 'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
             }
             body[key] = value
-            body = self.post_error(body, user='moderator', status=422)
+            body = scenarios.post_error(
+                self.app, XREPORTS, body, user='moderator', status=422
+            )
             errors = errors_of(body)
             assert len(errors) == 1
-            self.assertCorniceNotInEnum(errors[0], key)
+            assert_not_in_enum(errors[0], key)
 
     def test_post_success(self):
         body = {
@@ -390,7 +396,14 @@ class TestXreportRest(BaseDocumentTestRest):
             },
             'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
         }
-        body, doc = self.post_success(body, user='moderator', validate_with_auth=True)
+        body, doc = scenarios.post_success(
+            self.app,
+            self.session,
+            XREPORTS,
+            body,
+            user='moderator',
+            validate_with_auth=True,
+        )
         version = doc.versions[0]
 
         archive_xreport = version.document_archive
@@ -454,7 +467,9 @@ class TestXreportRest(BaseDocumentTestRest):
         }
 
         # create document (POST uses GET schema inside validation)
-        body_post, doc = self.post_success(body_post, user='contributor')
+        body_post, doc = scenarios.post_success(
+            self.app, self.session, XREPORTS, body_post, user='contributor'
+        )
 
         # the contributor is successfully set as author in DB
         user_id = self.global_userids['contributor']
@@ -493,7 +508,9 @@ class TestXreportRest(BaseDocumentTestRest):
             'anonymous': True,
         }
 
-        body_post, doc = self.post_success(body_post, user='contributor')
+        body_post, doc = scenarios.post_success(
+            self.app, self.session, XREPORTS, body_post, user='contributor'
+        )
 
         # Check that the contributor is not set as author
         user_id = self.global_userids['contributor']

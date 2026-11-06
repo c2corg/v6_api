@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from c2corg_api.models.cache_version import CacheVersion
@@ -8,7 +6,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
-from c2corg_api.tests import BaseTestCase, errors_of
+from c2corg_api.tests import BaseTestCase, assert_required, errors_of
 
 
 class BaseTestRest(BaseTestCase):
@@ -42,19 +40,6 @@ class BaseTestRest(BaseTestCase):
     def get_json_with_moderator(self, url, status):
         headers = self.add_authorization_header(username='moderator')
         return self.app.get(url, headers=headers, status=status).json
-
-    def assertCorniceMissing(self, error, key):  # noqa
-        assert error.get('description') == key + ' is missing'
-        assert error.get('name') == key
-
-    def assertCorniceNotInEnum(self, error, key):  # noqa
-        assert 'is not one of' in error.get('description')
-        assert error.get('name') == key
-
-    def assertCorniceRequired(self, error, key):  # noqa
-        # a missing field: FastAPI's text in a 422, the API's in its envelope
-        assert error.get('description') in ('Field required', 'Required')
-        assert error.get('name') == key
 
     def assertError(self, errors, name, description):  # noqa
         for error in errors:
@@ -124,259 +109,6 @@ class BaseDocumentTestRest(BaseTestRest):
         self._model = doc_type.model
         self._model_archive = doc_type.model_archive
         self._model_archive_locale = doc_type.model_archive_locale
-
-    def post_error(self, request_body, user='contributor', status=400):
-        response = self.app_post_json(
-            self._prefix, request_body, expect_errors=True, status=403
-        )
-
-        headers = self.add_authorization_header(username=user)
-        response = self.app_post_json(
-            self._prefix,
-            request_body,
-            headers=headers,
-            expect_errors=True,
-            status=status,
-        )
-
-        body = response.json
-        assert len(errors_of(body)) > 0
-        return body
-
-    def post_missing_title(self, request_body, user='contributor', prefix=''):
-        response = self.app_post_json(
-            self._prefix, request_body, expect_errors=True, status=403
-        )
-
-        headers = self.add_authorization_header(username=user)
-        response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=422
-        )
-
-        body = response.json
-        errors = errors_of(body)
-        self.assertCorniceRequired(errors[0], prefix + 'locales.0.title')
-        return body
-
-    def post_missing_geometry(self, request_body):
-        response = self.app_post_json(
-            self._prefix, request_body, expect_errors=True, status=403
-        )
-
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=400
-        )
-
-        body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert len(errors) == 1
-        self.assertCorniceRequired(errors[0], 'geometry')
-        return body
-
-    def post_missing_geom(self, request_body):
-        response = self.app_post_json(
-            self._prefix, request_body, expect_errors=True, status=403
-        )
-
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=400
-        )
-
-        body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert len(errors) == 1
-        self.assertCorniceRequired(errors[0], 'geometry.geom')
-        return body
-
-    def post_wrong_geom_type(self, request_body, status=400):
-        response = self.app_post_json(
-            self._prefix, request_body, expect_errors=True, status=403
-        )
-
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            self._prefix,
-            request_body,
-            headers=headers,
-            expect_errors=True,
-            status=status,
-        )
-
-        return errors_of(response.json)
-
-    def post_missing_locales(self, request_body):
-        response = self.app_post_json(
-            self._prefix, request_body, expect_errors=True, status=403
-        )
-
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=400
-        )
-
-        body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert len(errors) == 1
-        assert errors[0].get('description') == 'Required'
-        assert errors[0].get('name') == 'locales'
-        return body
-
-    def post_same_locale_twice(self, request_body):
-        response = self.app_post_json(
-            self._prefix, request_body, expect_errors=True, status=403
-        )
-
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=400
-        )
-
-        body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert len(errors) == 1
-        assert errors[0].get('description') == 'lang "en" is given twice'
-        assert errors[0].get('name') == 'locales'
-        return body
-
-    def post_missing_field(self, request_body, field):
-        response = self.app_post_json(
-            self._prefix, request_body, expect_errors=True, status=403
-        )
-
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            self._prefix, request_body, headers=headers, expect_errors=True, status=400
-        )
-
-        body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert len(errors) == 1
-        assert errors[0].get('description') == 'Required'
-        assert errors[0].get('name') == field
-        return body
-
-    def post_non_whitelisted_attribute(self, request_body, user='contributor'):
-        """`protected` is a non-whitelisted attribute, which is ignored when
-        given in a request.
-        """
-        response = self.app_post_json(self._prefix, request_body, status=403)
-
-        headers = self.add_authorization_header(username=user)
-        response = self.app_post_json(
-            self._prefix, request_body, headers=headers, status=200
-        )
-
-        body = response.json
-        document_id = body.get('document_id')
-        document = self.session.get(self._model, document_id)
-        # the value for `protected` was ignored
-        assert not document.protected
-        return (body, document)
-
-    def post_missing_content_type(self, request_body):
-        response = self.app.post(
-            self._prefix, params=json.dumps(request_body), status=415
-        )
-
-        body = response.json
-        assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert len(errors) == 1
-        assert errors[0].get('location') == 'header'
-        assert errors[0].get('name') == 'Content-Type'
-        return body
-
-    def post_success(
-        self,
-        request_body,
-        user='contributor',
-        validate_with_auth=False,
-        skip_validation=False,
-    ):
-        response = self.app_post_json(self._prefix, request_body, status=403)
-
-        headers = self.add_authorization_header(username=user)
-        response = self.app_post_json(
-            self._prefix, request_body, headers=headers, status=200
-        )
-
-        body = response.json
-        if skip_validation:
-            document_id = body.get('document_id')
-            response = self.app.get(self._prefix + '/' + str(document_id), status=200)
-            doc = self.session.get(self._model, document_id)
-            return response.json, doc
-        else:
-            return self._validate_document(body, headers, validate_with_auth)
-
-    def _validate_document(self, body, headers=None, validate_with_auth=False):
-        document_id = body.get('document_id')
-        assert document_id is not None
-
-        if validate_with_auth:
-            response = self.app.get(
-                self._prefix + '/' + str(document_id), headers=headers, status=200
-            )
-        else:
-            response = self.app.get(self._prefix + '/' + str(document_id), status=200)
-        assert response.content_type == 'application/json'
-
-        body = response.json
-        assert body.get('version') is not None
-        assert body.get('protected') is False
-
-        # check that the version was created correctly
-        doc = self.session.get(self._model, document_id)
-        assert 1 == doc.version
-        versions = doc.versions
-        assert len(versions) == 1
-        version = versions[0]
-
-        lang = body.get('locales')[0].get('lang')
-        assert version.lang == lang
-
-        meta_data = version.history_metadata
-        assert meta_data.comment == 'creation'
-        assert meta_data.written_at is not None
-
-        archive_doc = version.document_archive
-        assert archive_doc.document_id == document_id
-        assert archive_doc.version == doc.version
-
-        archive_locale = version.document_locales_archive
-        waypoint_locale_en = doc.locales[0]
-        assert 1 == waypoint_locale_en.version
-        assert archive_locale.version == waypoint_locale_en.version
-        assert archive_locale.document_id == document_id
-        assert archive_locale.lang == lang
-
-        # check updates to the search index
-        self.sync_es()
-        search_doc = search_documents[self._doc_type].get(
-            id=doc.document_id, index=elasticsearch_config['index']
-        )
-
-        assert search_doc['doc_type'] is not None
-        assert search_doc['doc_type'] == doc.type
-
-        if isinstance(doc, Route):
-            title = waypoint_locale_en.title_prefix + ' : ' + waypoint_locale_en.title
-            assert search_doc['title_en'] == title
-        else:
-            assert search_doc['title_en'] == waypoint_locale_en.title
-
-        cache_version = self.session.get(CacheVersion, document_id)
-        assert cache_version is not None
-        assert cache_version.version == 1
-
-        return (body, doc)
 
     def put_wrong_document_id(self, request_body, user='contributor'):
         response = self.app_put_json(
@@ -452,7 +184,7 @@ class BaseDocumentTestRest(BaseTestRest):
         assert body.get('status') == 'error'
         errors = body.get('errors')
         assert len(errors) == 1
-        self.assertCorniceRequired(errors[0], field)
+        assert_required(errors[0], field)
 
     def put_success_all(
         self, request_body, document, user='contributor', check_es=True, cache_version=2

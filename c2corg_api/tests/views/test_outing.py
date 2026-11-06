@@ -23,7 +23,7 @@ from c2corg_api.models.outing import (
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
@@ -317,15 +317,17 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_post_error(self):
         # an invalid body: its errors alone, the rules of the API (the
         # associations) need a valid body (see test_post_missing_route_user_id)
-        body = self.post_error({}, status=422)
+        body = scenarios.post_error(self.app, OUTINGS, {}, status=422)
         errors = errors_of(body)
         assert len(errors) == 3
-        self.assertCorniceRequired(self.get_error(errors, 'activities'), 'activities')
-        self.assertCorniceRequired(self.get_error(errors, 'date_end'), 'date_end')
-        self.assertCorniceRequired(self.get_error(errors, 'date_start'), 'date_start')
+        assert_required(self.get_error(errors, 'activities'), 'activities')
+        assert_required(self.get_error(errors, 'date_end'), 'date_end')
+        assert_required(self.get_error(errors, 'date_start'), 'date_start')
 
     def test_post_empty_activities_error(self):
-        body = self.post_error(
+        body = scenarios.post_error(
+            self.app,
+            OUTINGS,
             {
                 'activities': [],
                 'date_start': '2016-01-01',
@@ -363,7 +365,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'users': [{'document_id': self.global_userids['contributor']}],
             },
         }
-        body = self.post_error(body_post, status=422)
+        body = scenarios.post_error(self.app, OUTINGS, body_post, status=422)
         # the schema rejects the body, so the association checks also miss
         # their data and add their own errors
         self.assertError(
@@ -393,7 +395,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'users': [{'document_id': self.global_userids['contributor']}],
             },
         }
-        body = self.post_missing_title(body_post)
+        body = scenarios.post_missing_title(self.app, OUTINGS, body_post)
         errors = errors_of(body)
         assert len(errors) == 1
 
@@ -424,7 +426,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'images': [{'document_id': self.route.document_id}],
             },
         }
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, OUTINGS, body_post)
         errors = body.get('errors')
         assert len(errors) == 1
         assert errors[0]['name'] == 'date_start'
@@ -457,7 +459,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'images': [{'document_id': self.route.document_id}],
             },
         }
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, OUTINGS, body_post)
         errors = body.get('errors')
         assert len(errors) == 1
         assert errors[0]['name'] == 'date_end'
@@ -491,7 +493,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'images': [{'document_id': self.route.document_id}],
             },
         }
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, OUTINGS, body_post)
         errors = body.get('errors')
         assert len(errors) == 1
         assert errors[0]['name'] == 'date_end'
@@ -519,10 +521,10 @@ class TestOutingRest(BaseDocumentTestRest):
                 'users': [{'document_id': self.global_userids['contributor']}],
             },
         }
-        self.post_non_whitelisted_attribute(body)
+        scenarios.post_non_whitelisted_attribute(self.app, self.session, OUTINGS, body)
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, OUTINGS, {})
 
     def test_post_missing_route_user_id(self):
         request_body = {
@@ -627,7 +629,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'images': [{'document_id': self.route.document_id}],
             },
         }
-        body, doc = self.post_success(body)
+        body, doc = scenarios.post_success(self.app, self.session, OUTINGS, body)
         self._assert_geometry(body)
         self._assert_default_geometry(body)
         assert doc.date_start == date(2016, 1, 1)
@@ -705,7 +707,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'routes': [{'document_id': self.route.document_id}],
             },
         }
-        body, doc = self.post_success(body)
+        body, doc = scenarios.post_success(self.app, self.session, OUTINGS, body)
         self._assert_default_geometry(body, x=635961, y=5723624)
 
     def test_put_wrong_document_id(self):

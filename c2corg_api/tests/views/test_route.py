@@ -296,21 +296,23 @@ class TestRouteRest(BaseDocumentTestRest):
     def test_post_error(self):
         # an invalid body: its errors alone, the rules of the API need a
         # valid body
-        body = self.post_error({}, status=422)
+        body = scenarios.post_error(self.app, ROUTES, {}, status=422)
         errors = errors_of(body)
         assert len(errors) == 1
         self.assertError(errors, 'activities', 'Field required')
 
     def test_post_empty_activities_and_associations_error(self):
-        body = self.post_error({'activities': []}, status=422)
+        body = scenarios.post_error(self.app, ROUTES, {'activities': []}, status=422)
         errors = errors_of(body)
         assert len(errors) == 1
         self.assertError(errors, 'activities', 'Shorter than minimum length 1')
 
     def test_post_without_waypoint(self):
         # a valid body: the rules of the API, in its envelope (400)
-        body = self.post_error(
-            {'activities': ['hiking'], 'locales': [{'lang': 'en', 'title': 'x'}]}
+        body = scenarios.post_error(
+            self.app,
+            ROUTES,
+            {'activities': ['hiking'], 'locales': [{'lang': 'en', 'title': 'x'}]},
         )
         errors = errors_of(body)
         assert len(errors) == 1
@@ -340,7 +342,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 ]
             },
         }
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, ROUTES, body_post)
         errors = body.get('errors')
         assert len(errors) == 3
         assert (
@@ -366,7 +368,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body = self.post_error(body_post, status=422)
+        body = scenarios.post_error(self.app, ROUTES, body_post, status=422)
         # the schema rejects the body, so the association checks also miss
         # their data and add their own errors
         self.assertError(
@@ -391,7 +393,7 @@ class TestRouteRest(BaseDocumentTestRest):
             },
             'locales': [{'lang': 'en'}],
         }
-        self.post_missing_title(body_post)
+        scenarios.post_missing_title(self.app, ROUTES, body_post)
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -411,10 +413,10 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        self.post_non_whitelisted_attribute(body)
+        scenarios.post_non_whitelisted_attribute(self.app, self.session, ROUTES, body)
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, ROUTES, {})
 
     def test_post_success(self):
         body = {
@@ -434,7 +436,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body, doc = self.post_success(body)
+        body, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
         self._assert_geometry(body)
         self._assert_default_geometry(body)
 
@@ -496,7 +498,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
 
-        _, doc = self.post_success(body)
+        _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
         response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
@@ -540,7 +542,7 @@ class TestRouteRest(BaseDocumentTestRest):
             ],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = self.post_wrong_geom_type(body, status=422)
+        errors = scenarios.post_wrong_geom_type(self.app, ROUTES, body, status=422)
         assert (
             errors[0]['description'] == 'Invalid geometry type. Expected: '
             "['LINESTRING', 'MULTILINESTRING']. Got: POINT."
@@ -571,7 +573,7 @@ class TestRouteRest(BaseDocumentTestRest):
             ],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = self.post_wrong_geom_type(body, status=422)
+        errors = scenarios.post_wrong_geom_type(self.app, ROUTES, body, status=422)
         assert (
             errors[0]['description'] == 'Invalid geometry: {"type": '
             '"LineString", "coordinates": '
@@ -589,7 +591,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = self.post_wrong_geom_type(body, status=422)
+        errors = scenarios.post_wrong_geom_type(self.app, ROUTES, body, status=422)
         assert (
             errors[0]['description']
             == 'Invalid geometry: {"type": "Point", "coordinates": [NaN, NaN]}'
@@ -608,7 +610,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
 
-        _, doc = self.post_success(body)
+        _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
         response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
@@ -642,7 +644,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
 
-        _, doc = self.post_success(body)
+        _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
         response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
@@ -680,7 +682,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body, doc = self.post_success(body)
+        body, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
         assert doc.geometry.geom is not None
         assert doc.geometry.geom_detail is not None
         self._assert_default_geometry(body)
@@ -697,7 +699,7 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body, doc = self.post_success(body)
+        body, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
         assert doc.geometry.geom is not None
         assert doc.geometry.geom_detail is None
         self._assert_default_geometry(body, x=635956, y=5723604)
@@ -713,7 +715,9 @@ class TestRouteRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body, doc = self.post_success(body, skip_validation=True)
+        body, doc = scenarios.post_success(
+            self.app, self.session, ROUTES, body, skip_validation=True
+        )
         assert doc.geometry.geom is not None
         assert doc.geometry.geom_detail is None
         self._assert_default_geometry(body, x=635956, y=5723604)
@@ -733,7 +737,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 'waypoints': [{'document_id': self.waypoint2.document_id}]
             },
         }
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, ROUTES, body_post)
         errors = body.get('errors')
         assert len(errors) == 1
         self.assertError(

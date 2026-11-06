@@ -23,7 +23,7 @@ from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
@@ -382,10 +382,10 @@ class TestImageRest(BaseTestImage):
         assert 'articles' in associations
 
     def test_post_error(self):
-        body = self.post_error({}, status=422)
+        body = scenarios.post_error(self.app, IMAGES, {}, status=422)
         errors = errors_of(body)
         assert len(errors) == 1
-        self.assertCorniceRequired(errors[0], 'filename')
+        assert_required(errors[0], 'filename')
 
     def test_get_caching(self):
         scenarios.get_caching(self.app, IMAGES, self.image)
@@ -402,7 +402,7 @@ class TestImageRest(BaseTestImage):
         request_body = self._post_success_document()
         del request_body['locales'][0]['title']
 
-        body, doc = self.post_success(request_body)
+        body, doc = scenarios.post_success(self.app, self.session, IMAGES, request_body)
         assert doc.locales[0].title == ''
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
@@ -410,7 +410,7 @@ class TestImageRest(BaseTestImage):
         request_body = self._post_success_document()
         request_body['locales'][0]['title'] = None
 
-        self.post_success(request_body)
+        scenarios.post_success(self.app, self.session, IMAGES, request_body)
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_non_whitelisted_attribute(self, post_mock):
@@ -422,17 +422,17 @@ class TestImageRest(BaseTestImage):
             'protected': True,
             'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
         }
-        self.post_non_whitelisted_attribute(body)
+        scenarios.post_non_whitelisted_attribute(self.app, self.session, IMAGES, body)
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, IMAGES, {})
 
     def test_post_missing_filename(self):
         body_post = self._post_success_document()
         del body_post['filename']
-        body = self.post_error(body_post, status=422)
+        body = scenarios.post_error(self.app, IMAGES, body_post, status=422)
         errors = errors_of(body)
-        self.assertCorniceRequired(errors[0], 'filename')
+        assert_required(errors[0], 'filename')
 
     @pytest.mark.parametrize('value', ['NaN', 'inf', float('nan')])
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
@@ -442,7 +442,7 @@ class TestImageRest(BaseTestImage):
         body_post['exposure_time'] = value
         body_post['focal_length'] = 26
 
-        body, doc = self.post_success(body_post)
+        body, doc = scenarios.post_success(self.app, self.session, IMAGES, body_post)
         assert doc.fnumber is None
         assert doc.exposure_time is None
         assert doc.focal_length == 26
@@ -464,7 +464,7 @@ class TestImageRest(BaseTestImage):
     def test_post_duplicated_filename(self):
         body_post = self._post_success_document()
         body_post['filename'] = 'image.jpg'
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, IMAGES, body_post)
         errors = body.get('errors')
         assert errors[0].get('description') == 'Unique'
 
@@ -484,7 +484,9 @@ class TestImageRest(BaseTestImage):
         waypoint_cache_key = self.session.get(
             CacheVersion, self.waypoint.document_id
         ).version
-        body, doc = self.post_success(self._post_success_document())
+        body, doc = scenarios.post_success(
+            self.app, self.session, IMAGES, self._post_success_document()
+        )
         self._validate_post_success(body, doc)
         self.check_cache_version(self.waypoint.document_id, waypoint_cache_key + 1)
 
@@ -1028,7 +1030,7 @@ class TestImageListRest(BaseTestImage):
         BaseTestImage.setUp(self)
         self._add_test_data()
 
-    def post_success(self, request_body, user='contributor'):
+    def post_list_success(self, request_body, user='contributor'):
         response = self.app_post_json('/images/list', request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
@@ -1040,14 +1042,16 @@ class TestImageListRest(BaseTestImage):
         images = body.get('images')
         assert len(request_body['images']) == len(images)
         for image in images:
-            (body, doc) = self._validate_document(image)
+            (body, doc) = scenarios.validate_document(
+                self.app, self.session, IMAGES, image
+            )
 
         return (body, doc)
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_success(self, post_mock):
         body = {'images': [self._post_success_document()]}
-        body, doc = self.post_success(body)
+        body, doc = self.post_list_success(body)
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(self.waypoint.document_id)
@@ -1067,7 +1071,7 @@ class TestImageListRest(BaseTestImage):
                 self._post_success_document({'filename': 'post_image1.jpg'}),
             ]
         }
-        body, doc = self.post_success(body)
+        body, doc = self.post_list_success(body)
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(self.waypoint.document_id)
@@ -1093,7 +1097,7 @@ class TestImageListRest(BaseTestImage):
                 )
             ]
         }
-        body, doc = self.post_success(body)
+        body, doc = self.post_list_success(body)
         self._validate_post_success(body, doc, check_wp=False)
 
         # check that a link to the linked image is created
@@ -1119,7 +1123,7 @@ class TestImageListRest(BaseTestImage):
                 self._post_success_document({'filename': 'post_image2.jpg'}),
             ]
         }
-        body, doc = self.post_success(body_request, user='contributor2')
+        body, doc = self.post_list_success(body_request, user='contributor2')
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(
@@ -1148,7 +1152,7 @@ class TestImageListRest(BaseTestImage):
                 self._post_success_document({'filename': 'post_image4.jpg'}),
             ]
         }
-        self.post_success(body_request, user='contributor2')
+        self.post_list_success(body_request, user='contributor2')
         assert 1 == q.count()
 
         self.session.refresh(feed_change)

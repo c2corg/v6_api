@@ -4,6 +4,7 @@
 # answer. It takes the `DocType` of the documents under test: the URL prefix,
 # the document type and the models used to check what was written.
 
+import json
 import urllib.parse
 from collections import Counter
 from dataclasses import dataclass
@@ -12,10 +13,18 @@ from dateutil import parser as datetime_parser
 from dogpile.cache.api import NO_VALUE
 
 from c2corg_api.caching import cache_document_detail
-from c2corg_api.models.cache_version import get_cache_key
+from c2corg_api.models.cache_version import CacheVersion, get_cache_key
+from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.tests import global_tokens
+from c2corg_api.scripts.es.sync import sync_es
+from c2corg_api.search import elasticsearch_config, search_documents
+from c2corg_api.tests import (
+    assert_required,
+    errors_of,
+    global_tokens,
+    send_json,
+)
 
 
 @dataclass(frozen=True)
@@ -330,3 +339,202 @@ def get_404(client, doc_type, user=None):
 
     client.get(doc_type.prefix + '/9999999', headers=headers, status=404)
     client.get(doc_type.prefix + '/9999999?l=es', headers=headers, status=404)
+
+
+def assert_notified_es(client):
+    """Check that a sync. notification was sent for ES, and take it."""
+    queue_config = client.registry.queue_config
+    queue = queue_config.queue(queue_config.connection)
+    assert queue.get() is not None, 'no sync. notification sent for ES'
+
+
+def _post(client, doc_type, request_body, user, status):
+    # without a token: forbidden, then as the given user
+    send_json(client, 'post', doc_type.prefix, request_body, status=403)
+    return send_json(
+        client,
+        'post',
+        doc_type.prefix,
+        request_body,
+        headers=auth_headers(username=user),
+        status=status,
+    )
+
+
+def _single_error(body):
+    assert body.get('status') == 'error'
+    errors = body.get('errors')
+    assert len(errors) == 1
+    return errors[0]
+
+
+def post_error(client, doc_type, request_body, user='contributor', status=400):
+    """Post an invalid document: some errors."""
+    body = _post(client, doc_type, request_body, user, status).json
+    assert len(errors_of(body)) > 0
+    return body
+
+
+def post_missing_title(client, doc_type, request_body, user='contributor', prefix=''):
+    """Post a document without title."""
+    body = _post(client, doc_type, request_body, user, 422).json
+    errors = errors_of(body)
+    assert_required(errors[0], prefix + 'locales.0.title')
+    return body
+
+
+def post_missing_geometry(client, doc_type, request_body):
+    """Post a document without geometry."""
+    body = _post(client, doc_type, request_body, 'contributor', 400).json
+    assert_required(_single_error(body), 'geometry')
+    return body
+
+
+def post_missing_geom(client, doc_type, request_body):
+    """Post a document with a geometry without point."""
+    body = _post(client, doc_type, request_body, 'contributor', 400).json
+    assert_required(_single_error(body), 'geometry.geom')
+    return body
+
+
+def post_wrong_geom_type(client, doc_type, request_body, status=400):
+    """Post a document with a wrong geometry type; return the errors."""
+    response = _post(client, doc_type, request_body, 'contributor', status)
+    return errors_of(response.json)
+
+
+def post_missing_locales(client, doc_type, request_body):
+    """Post a document without locales."""
+    body = _post(client, doc_type, request_body, 'contributor', 400).json
+    error = _single_error(body)
+    assert error.get('description') == 'Required'
+    assert error.get('name') == 'locales'
+    return body
+
+
+def post_same_locale_twice(client, doc_type, request_body):
+    """Post a document with the same language twice."""
+    body = _post(client, doc_type, request_body, 'contributor', 400).json
+    error = _single_error(body)
+    assert error.get('description') == 'lang "en" is given twice'
+    assert error.get('name') == 'locales'
+    return body
+
+
+def post_missing_field(client, doc_type, request_body, field):
+    """Post a document without a required field."""
+    body = _post(client, doc_type, request_body, 'contributor', 400).json
+    error = _single_error(body)
+    assert error.get('description') == 'Required'
+    assert error.get('name') == field
+    return body
+
+
+def post_non_whitelisted_attribute(
+    client, session, doc_type, request_body, user='contributor'
+):
+    """Post a document with `protected`, which is ignored."""
+    body = _post(client, doc_type, request_body, user, 200).json
+    document_id = body.get('document_id')
+    document = session.get(doc_type.model, document_id)
+    # the value for `protected` was ignored
+    assert not document.protected
+    return (body, document)
+
+
+def post_missing_content_type(client, doc_type, request_body):
+    """Post a document without content type."""
+    response = client.post(doc_type.prefix, params=json.dumps(request_body), status=415)
+
+    error = _single_error(response.json)
+    assert error.get('location') == 'header'
+    assert error.get('name') == 'Content-Type'
+    return response.json
+
+
+def post_success(
+    client,
+    session,
+    doc_type,
+    request_body,
+    user='contributor',
+    validate_with_auth=False,
+    skip_validation=False,
+):
+    """Post a document, then check what was written; return it."""
+    headers = auth_headers(username=user)
+    body = _post(client, doc_type, request_body, user, 200).json
+    if skip_validation:
+        document_id = body.get('document_id')
+        response = client.get(doc_type.prefix + '/' + str(document_id), status=200)
+        doc = session.get(doc_type.model, document_id)
+        return response.json, doc
+    return validate_document(
+        client,
+        session,
+        doc_type,
+        body,
+        headers if validate_with_auth else None,
+    )
+
+
+def validate_document(client, session, doc_type, body, headers=None):
+    """Check a new document: its first version, archives, ES and cache."""
+    document_id = body.get('document_id')
+    assert document_id is not None
+
+    response = client.get(
+        doc_type.prefix + '/' + str(document_id), headers=headers, status=200
+    )
+    assert response.content_type == 'application/json'
+
+    body = response.json
+    assert body.get('version') is not None
+    assert body.get('protected') is False
+
+    # check that the version was created correctly
+    doc = session.get(doc_type.model, document_id)
+    assert 1 == doc.version
+    versions = doc.versions
+    assert len(versions) == 1
+    version = versions[0]
+
+    lang = body.get('locales')[0].get('lang')
+    assert version.lang == lang
+
+    meta_data = version.history_metadata
+    assert meta_data.comment == 'creation'
+    assert meta_data.written_at is not None
+
+    archive_doc = version.document_archive
+    assert archive_doc.document_id == document_id
+    assert archive_doc.version == doc.version
+
+    archive_locale = version.document_locales_archive
+    locale = doc.locales[0]
+    assert 1 == locale.version
+    assert archive_locale.version == locale.version
+    assert archive_locale.document_id == document_id
+    assert archive_locale.lang == lang
+
+    # check updates to the search index
+    assert_notified_es(client)
+    sync_es(session)
+    search_doc = search_documents[doc_type.type].get(
+        id=doc.document_id, index=elasticsearch_config['index']
+    )
+
+    assert search_doc['doc_type'] is not None
+    assert search_doc['doc_type'] == doc.type
+
+    if isinstance(doc, Route):
+        title = locale.title_prefix + ' : ' + locale.title
+        assert search_doc['title_en'] == title
+    else:
+        assert search_doc['title_en'] == locale.title
+
+    cache_version = session.get(CacheVersion, document_id)
+    assert cache_version is not None
+    assert cache_version.version == 1
+
+    return (body, doc)

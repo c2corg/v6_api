@@ -12,6 +12,7 @@ from c2corg_api.models.document import (
 )
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.tests import assert_required
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
@@ -196,10 +197,10 @@ class TestArticleRest(BaseDocumentTestRest):
         scenarios.get_info_404(self.app, ARTICLES)
 
     def test_post_error(self):
-        body = self.post_error({}, user='moderator')
+        body = scenarios.post_error(self.app, ARTICLES, {}, user='moderator')
         errors = body.get('errors')
         assert len(errors) == 2
-        self.assertCorniceRequired(errors[0], 'locales')
+        assert_required(errors[0], 'locales')
 
     def test_post_missing_title(self):
         body_post = {
@@ -208,7 +209,7 @@ class TestArticleRest(BaseDocumentTestRest):
             'article_type': 'collab',
             'locales': [{'lang': 'en'}],
         }
-        self.post_missing_title(body_post, user='moderator')
+        scenarios.post_missing_title(self.app, ARTICLES, body_post, user='moderator')
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -216,10 +217,12 @@ class TestArticleRest(BaseDocumentTestRest):
             'protected': True,
             'locales': [{'lang': 'en', 'title': "Lac d'Annecy"}],
         }
-        self.post_non_whitelisted_attribute(body, user='moderator')
+        scenarios.post_non_whitelisted_attribute(
+            self.app, self.session, ARTICLES, body, user='moderator'
+        )
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, ARTICLES, {})
 
     def test_post_empty_assoc_in_new_c_document(self):
         body = {
@@ -250,7 +253,9 @@ class TestArticleRest(BaseDocumentTestRest):
             ],
         }
 
-        body, doc = self.post_success(body, user='moderator')
+        body, doc = scenarios.post_success(
+            self.app, self.session, ARTICLES, body, user='moderator'
+        )
 
     def test_post_success(self):
         body = {
@@ -270,7 +275,9 @@ class TestArticleRest(BaseDocumentTestRest):
             },
             'locales': [{'lang': 'en', 'title': "Lac d'Annecy"}],
         }
-        body, doc = self.post_success(body, user='moderator')
+        body, doc = scenarios.post_success(
+            self.app, self.session, ARTICLES, body, user='moderator'
+        )
         version = doc.versions[0]
 
         archive_article = version.document_archive

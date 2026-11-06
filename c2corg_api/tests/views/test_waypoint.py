@@ -40,7 +40,7 @@ from c2corg_api.models.waypoint import (
 )
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
@@ -435,10 +435,10 @@ class TestWaypointRest(BaseDocumentTestRest):
         assert set(body['available_langs']) == set(['en', 'fr'])
 
     def test_post_error(self):
-        body = self.post_error({}, status=422)
+        body = scenarios.post_error(self.app, WAYPOINTS, {}, status=422)
         errors = errors_of(body)
         assert len(errors) == 1
-        self.assertCorniceRequired(errors[0], 'waypoint_type')
+        assert_required(errors[0], 'waypoint_type')
 
     def test_post_missing_title(self):
         body = {
@@ -447,7 +447,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
             'locales': [{'lang': 'en'}],
         }
-        self.post_missing_title(body)
+        scenarios.post_missing_title(self.app, WAYPOINTS, body)
 
     def test_post_missing_geometry(self):
         body = {
@@ -455,7 +455,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'elevation': 3200,
             'locales': [{'lang': 'en', 'title': 'Mont Pourri', 'access': 'y'}],
         }
-        self.post_missing_geometry(body)
+        scenarios.post_missing_geometry(self.app, WAYPOINTS, body)
 
     def test_post_missing_geom(self):
         body = {
@@ -464,7 +464,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'geometry': {},
             'locales': [{'lang': 'en', 'title': 'Mont Pourri', 'access': 'y'}],
         }
-        self.post_missing_geom(body)
+        scenarios.post_missing_geom(self.app, WAYPOINTS, body)
 
     def test_post_missing_locales(self):
         body = {
@@ -473,7 +473,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
             'locales': [],
         }
-        self.post_missing_locales(body)
+        scenarios.post_missing_locales(self.app, WAYPOINTS, body)
 
     def test_post_same_locale_twice(self):
         body = {
@@ -485,7 +485,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 {'lang': 'en', 'title': 'Mont Pourri', 'access': 'y'},
             ],
         }
-        self.post_same_locale_twice(body)
+        scenarios.post_same_locale_twice(self.app, WAYPOINTS, body)
 
     def test_post_missing_elevation(self):
         body = {
@@ -493,7 +493,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'geometry': {'geom': '{"type": "Point", "coordinates": [1, 1]}'},
             'locales': [{'lang': 'en', 'title': 'Mont Pourri', 'access': 'y'}],
         }
-        self.post_missing_field(body, 'elevation')
+        scenarios.post_missing_field(self.app, WAYPOINTS, body, 'elevation')
 
     def test_post_non_whitelisted_attribute(self):
         body = {
@@ -503,10 +503,12 @@ class TestWaypointRest(BaseDocumentTestRest):
             'protected': True,
             'locales': [{'lang': 'en', 'title': 'Mont Pourri', 'access': 'y'}],
         }
-        self.post_non_whitelisted_attribute(body)
+        scenarios.post_non_whitelisted_attribute(
+            self.app, self.session, WAYPOINTS, body
+        )
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, WAYPOINTS, {})
 
     def test_post_invalid_waypoint_type(self):
         body_post = {
@@ -518,7 +520,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             'elevation': 3779,
             'locales': [{'lang': 'en', 'title': 'Mont Pourri'}],
         }
-        body = self.post_error(body_post, status=422)
+        body = scenarios.post_error(self.app, WAYPOINTS, body_post, status=422)
         errors = errors_of(body)
         assert len(errors) == 1
         assert errors[0].get('description').startswith('"swimming-pool" is not one of')
@@ -558,7 +560,9 @@ class TestWaypointRest(BaseDocumentTestRest):
             },
         }
 
-        body, doc = self.post_success(body, user='moderator')
+        body, doc = scenarios.post_success(
+            self.app, self.session, WAYPOINTS, body, user='moderator'
+        )
 
     def test_post_invalid_association_with_personal_article(self):
         body_post = {
@@ -583,7 +587,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             ],
             'associations': {'articles': [{'document_id': self.article2.document_id}]},
         }
-        body = self.post_error(body_post, user='contributor2')
+        body = scenarios.post_error(self.app, WAYPOINTS, body_post, user='contributor2')
         self.assertError(
             body['errors'],
             'Bad Request',
@@ -616,7 +620,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'waypoints': [{'document_id': self.waypoint5.document_id}]
             },
         }
-        body = self.post_error(body_post, user='contributor2')
+        body = scenarios.post_error(self.app, WAYPOINTS, body_post, user='contributor2')
         self.assertError(
             body['errors'],
             'associations.waypoints',
@@ -652,7 +656,7 @@ class TestWaypointRest(BaseDocumentTestRest):
             CacheVersion, self.waypoint2.document_id
         ).version
 
-        body, doc = self.post_success(body)
+        body, doc = scenarios.post_success(self.app, self.session, WAYPOINTS, body)
         self._assert_geometry(body, 'geom')
 
         # test that document_id and version was reset
@@ -739,7 +743,7 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'waypoint_children': [{'document_id': self.waypoint2.document_id}]
             },
         }
-        errors = self.post_wrong_geom_type(body, status=422)
+        errors = scenarios.post_wrong_geom_type(self.app, WAYPOINTS, body, status=422)
         assert (
             errors[0]['description']
             == "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING."
@@ -1566,7 +1570,9 @@ class TestWaypointRest(BaseDocumentTestRest):
                 'waypoint_children': [{'document_id': self.waypoint2.document_id}]
             },
         }
-        (body, waypoint) = self.post_success(body)
+        (body, waypoint) = scenarios.post_success(
+            self.app, self.session, WAYPOINTS, body
+        )
         locale_en = waypoint.get_locale('en')
         assert locale_en.external_resources == external_resources
 

@@ -2,7 +2,7 @@ from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.feed import FilterArea
 from c2corg_api.models.user import User
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import assert_required, errors_of
 from c2corg_api.tests.views import BaseTestRest
 
 
@@ -84,12 +84,10 @@ class TestUserFilterPreferencesRest(BaseTestRest):
 
         assert self.get_error(errors, 'activities.1') is not None
         assert self.get_error(errors, 'langs.1') is not None
-        self.assertCorniceRequired(
+        assert_required(
             self.get_error(errors, 'areas.0.document_id'), 'areas.0.document_id'
         )
-        self.assertCorniceRequired(
-            self.get_error(errors, 'followed_only'), 'followed_only'
-        )
+        assert_required(self.get_error(errors, 'followed_only'), 'followed_only')
 
     def test_post_preferences(self):
         request_body = {
