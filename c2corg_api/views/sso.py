@@ -5,7 +5,6 @@ from os import urandom
 from urllib.parse import urlencode
 
 from pydiscourse.exceptions import DiscourseClientError
-from sqlalchemy import and_, not_, or_
 
 from c2corg_api.httpexceptions import (
     HTTPInternalServerError,
@@ -47,20 +46,9 @@ class SsoSyncSchema(Schema):
     groups: Str() = None
 
 
-# a SHA-256 in hex, as the hashed secrets are stored
-HASHED = '^[0-9a-f]{64}$'
-
-
 def _stored(column, secret):
     """Return the condition matching the stored hash of an SSO secret."""
-    # TODO(#2365): match the hash only, in the release after the migration
-    # b3d5f8a1c9e2. Until it ran, a row may hold the secret itself; a row
-    # holding a hash never matches the secret as is, else the stored hash
-    # would be a secret.
-    return or_(
-        column == hash_token(secret),
-        and_(column == secret, not_(column.op('~')(HASHED))),
-    )
+    return column == hash_token(secret)
 
 
 def sso_sync_validator(request, **kwargs):
