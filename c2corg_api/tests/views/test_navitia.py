@@ -6,8 +6,10 @@ from datetime import datetime, time
 from unittest import mock
 from unittest.mock import call
 
+import anyio
 import pytest
 import requests
+from anyio import to_thread
 from dotenv import load_dotenv
 from shapely.geometry import Polygon
 
@@ -57,6 +59,28 @@ load_dotenv()
 NAVITIA_GET_PATH = 'c2corg_api.views.navitia.navitia_get'
 NAVITIA_REDIS_CLIENT_PATH = 'c2corg_api.views.navitia.redis_client'
 NAVITIA_KEY = os.getenv('NAVITIA_API_KEY', 'test-key')
+
+
+def _no_wait():
+    """Patch the wait between two reads of a progress stream."""
+    return mock.patch(
+        'c2corg_api.views.navitia.anyio.sleep', new_callable=mock.AsyncMock
+    )
+
+
+def _events(stream, count=None):
+    """Return the events of a progress stream, the first count ones if given."""
+
+    async def read():
+        events = []
+        async for event in stream:
+            events.append(event)
+            if len(events) == count:
+                break
+        await stream.aclose()
+        return events
+
+    return anyio.run(read)
 
 
 class TestNavitiaRestParams(BaseTestCase):
@@ -371,11 +395,8 @@ class TestNavitiaRestParams(BaseTestCase):
             b'done',  # status → terminates loop
         ]
 
-        with mock.patch('c2corg_api.views.navitia.time.sleep'):
-            gen = progress_stream(r, job_id='job-123')
-
-            first = next(gen)
-            second = next(gen)
+        with _no_wait():
+            first, second = _events(progress_stream(r, job_id='job-123'))
 
         payload = json.loads(first.decode().replace('data: ', '').strip())
 
@@ -398,9 +419,8 @@ class TestNavitiaRestParams(BaseTestCase):
             b'running',
         ]
 
-        with mock.patch('c2corg_api.views.navitia.time.sleep'):
-            gen = progress_stream(r, job_id='123')
-            output = next(gen)
+        with _no_wait():
+            (output,) = _events(progress_stream(r, job_id='123'), count=1)
 
         payload = json.loads(output.decode().replace('data: ', '').strip())
 
@@ -422,10 +442,8 @@ class TestNavitiaRestParams(BaseTestCase):
             b'{"id": "date_out_of_bounds", "message": "date_out_of_bounds"}',
         ]
 
-        with mock.patch('c2corg_api.views.navitia.time.sleep'):
-            gen = progress_stream(r, job_id='123')
-            next(gen)
-            second = next(gen)
+        with _no_wait():
+            _, second = _events(progress_stream(r, job_id='123'))
 
         assert second.startswith(b'event: error')
         data = json.loads(second.decode().split('data: ')[1])
@@ -443,8 +461,8 @@ class TestNavitiaRestParams(BaseTestCase):
             b'Missing filter : area is required',
         ]
 
-        with mock.patch('c2corg_api.views.navitia.time.sleep'):
-            events = list(progress_stream(r, job_id='123'))
+        with _no_wait():
+            events = _events(progress_stream(r, job_id='123'))
 
         data = json.loads(events[-1].decode().split('data: ')[1])
         assert data == {
@@ -457,8 +475,8 @@ class TestNavitiaRestParams(BaseTestCase):
         r = mock.Mock()
         r.get.side_effect = [None, None, None, None, None]
 
-        with mock.patch('c2corg_api.views.navitia.time.sleep') as sleep:
-            events = list(progress_stream(r, job_id='123'))
+        with _no_wait() as sleep:
+            events = _events(progress_stream(r, job_id='123'))
 
         assert len(events) == 1
         assert events[0].startswith(b'event: error\n')
@@ -471,12 +489,35 @@ class TestNavitiaRestParams(BaseTestCase):
         r = mock.Mock()
         r.get.side_effect = lambda key: b'running' if key.endswith(':status') else None
 
-        with mock.patch('c2corg_api.views.navitia.time.sleep'):
-            events = list(progress_stream(r, job_id='123', max_duration=0))
+        with _no_wait():
+            events = _events(progress_stream(r, job_id='123', max_duration=0))
 
         assert events[0].startswith(b'data: ')
         data = json.loads(events[-1].decode().split('data: ')[1])
         assert data == {'id': 'timeout', 'message': 'The job takes too long'}
+
+    def test_progress_stream_waits_without_a_thread(self):
+        # #2448: between two reads, a stream holds none of the threads of the
+        # worker (server.threads), here a single one
+        r = mock.Mock()
+        r.get.side_effect = lambda key: b'running' if key.endswith(':status') else None
+
+        async def follow():
+            async for _ in progress_stream(r, '123', poll_interval=60):
+                pass
+
+        async def run():
+            to_thread.current_default_thread_limiter().total_tokens = 1
+            async with anyio.create_task_group() as streams:
+                for _ in range(3):
+                    streams.start_soon(follow)
+                await anyio.sleep(0.1)
+                with anyio.fail_after(1):
+                    answer = await to_thread.run_sync(lambda: 'served')
+                streams.cancel_scope.cancel()
+            return answer
+
+        assert anyio.run(run) == 'served'
 
     # /navitia/journeyreachableroutes endpoints (includes job handling)
     # /navitia/journeyreachableroutes/start endpoint
