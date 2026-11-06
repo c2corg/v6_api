@@ -15,12 +15,12 @@ WAYPOINTS_STOPAREAS = DocType('/waypoints_stopareas', 'ws', WaypointStoparea)
 class Docs:
     """The documents of the tests, built by `docs`."""
 
-    waypoint1: object
-    waypoint2: object
-    stoparea1: object
-    stoparea2: object
-    waypoint_stoparea1: object
-    waypoint_stoparea2: object
+    waypoint1: Waypoint
+    waypoint2: Waypoint
+    stoparea1: Stoparea
+    stoparea2: Stoparea
+    waypoint_stoparea1: WaypointStoparea
+    waypoint_stoparea2: WaypointStoparea
 
 
 @pytest.fixture(autouse=True)
@@ -32,7 +32,6 @@ def docs(session) -> Docs:
 
     session.add(waypoint1)
     session.flush()
-    waypoint1 = waypoint1
 
     waypoint2 = Waypoint(waypoint_type='summit', elevation=3000)
 
@@ -41,7 +40,6 @@ def docs(session) -> Docs:
 
     session.add(waypoint2)
     session.flush()
-    waypoint2 = waypoint2
 
     # Create stopareas for testing
     stoparea1 = Stoparea(
@@ -54,7 +52,6 @@ def docs(session) -> Docs:
 
     session.add(stoparea1)
     session.flush()
-    stoparea1 = stoparea1
 
     stoparea2 = Stoparea(
         stoparea_id=2,
@@ -66,7 +63,6 @@ def docs(session) -> Docs:
 
     session.add(stoparea2)
     session.flush()
-    stoparea2 = stoparea2
 
     # Create waypoint-stoparea associations
     waypoint_stoparea1 = WaypointStoparea(
@@ -78,7 +74,6 @@ def docs(session) -> Docs:
 
     session.add(waypoint_stoparea1)
     session.flush()
-    waypoint_stoparea1 = waypoint_stoparea1
 
     waypoint_stoparea2 = WaypointStoparea(
         waypoint_stoparea_id=2,
@@ -89,7 +84,6 @@ def docs(session) -> Docs:
 
     session.add(waypoint_stoparea2)
     session.flush()
-    waypoint_stoparea2 = waypoint_stoparea2
     return Docs(
         waypoint1=waypoint1,
         waypoint2=waypoint2,

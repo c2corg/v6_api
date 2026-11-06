@@ -1,5 +1,4 @@
 import threading
-from dataclasses import dataclass
 from unittest import mock
 
 import pytest
@@ -30,18 +29,12 @@ def _query_using_db(fail=False):
     return query, 0
 
 
-@dataclass
-class Docs:
-    """The documents of the tests, built by `docs`."""
-
-    job_engine: object
-
-
 @pytest.fixture
-def docs(db_connection):
+def job_engine(db_connection):
+    """Bind DBSession to an engine of its own, as in a Navitia job."""
     job_engine = get_engine()
     DBSession.configure(bind=job_engine)
-    yield Docs(job_engine=job_engine)
+    yield job_engine
     DBSession.configure(bind=db_connection)
     job_engine.dispose()
 
@@ -65,8 +58,8 @@ def _run_in_thread(job, request):
     return state, redis_client.return_value
 
 
-def _assert_connection_released(docs, state):
-    pool = docs.job_engine.pool
+def _assert_connection_released(job_engine, state):
+    pool = job_engine.pool
     # the job did use a connection ...
     assert pool.checkedin() == 1
     # ... and gave it back to the pool
@@ -74,7 +67,7 @@ def _assert_connection_released(docs, state):
     assert not state['session_left']
 
 
-def test_waypoints_job_releases_connection(docs):
+def test_waypoints_job_releases_connection(job_engine):
     request = mock.Mock()
     request.GET = {'a': '1'}
     with mock.patch(
@@ -83,10 +76,10 @@ def test_waypoints_job_releases_connection(docs):
         state, r = _run_in_thread(compute_journey_reachable_waypoints, request)
 
     r.set.assert_any_call('job:job-123:status', 'done', ex=JOB_TTL)
-    _assert_connection_released(docs, state)
+    _assert_connection_released(job_engine, state)
 
 
-def test_routes_job_releases_connection_on_error(docs):
+def test_routes_job_releases_connection_on_error(job_engine):
     request = mock.Mock()
     request.GET = {}
     with mock.patch(
@@ -96,4 +89,4 @@ def test_routes_job_releases_connection_on_error(docs):
         state, r = _run_in_thread(compute_journey_reachable_routes, request)
 
     r.set.assert_any_call('job:job-123:status', 'error', ex=JOB_TTL)
-    _assert_connection_released(docs, state)
+    _assert_connection_released(job_engine, state)

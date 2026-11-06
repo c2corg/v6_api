@@ -1,5 +1,4 @@
 import re
-from dataclasses import dataclass
 
 import pytest
 from sqlalchemy import event
@@ -11,17 +10,10 @@ from c2corg_api.models.image import Image
 from c2corg_api.tests import send_json
 
 
-@dataclass
-class Docs:
-    """The documents of the tests, built by `docs`."""
-
-    image_url: object
-
-
-@pytest.fixture(autouse=True)
-def docs(client) -> Docs:
-    image_url = client.registry.settings['image_url']
-    return Docs(image_url=image_url)
+@pytest.fixture
+def image_url(client):
+    """Return the URL of the images."""
+    return client.registry.settings['image_url']
 
 
 def test_get(client):
@@ -59,11 +51,11 @@ def _cook(client, description):
     return response.json['description']
 
 
-def test_image_known(client, session, docs):
+def test_image_known(client, session, image_url):
     image = _add_image(session, 'image.jpg')
     html = _cook(client, f'[img={image.document_id}/]')
 
-    assert f'c2c:url="{docs.image_url}imageMI.jpg"' in html
+    assert f'c2c:url="{image_url}imageMI.jpg"' in html
     assert f'c2c:url-proxy="/images/proxy/{image.document_id}?size=MI"' in html
 
 
@@ -108,13 +100,13 @@ def test_image_id_out_of_range(client):
     assert 'c2c:url-proxy=' in html
 
 
-def test_image_redirected(client, session, docs):
+def test_image_redirected(client, session, image_url):
     # the files of a merged image are deleted, use the target ones
     image = _add_image(session, 'image.jpg')
     merged = _add_image(session, 'merged.jpg', redirects_to=image.document_id)
     html = _cook(client, f'[img={merged.document_id}/]')
 
-    assert f'c2c:url="{docs.image_url}imageMI.jpg"' in html
+    assert f'c2c:url="{image_url}imageMI.jpg"' in html
     assert f'c2c:url-proxy="/images/proxy/{merged.document_id}?size=MI"' in html
 
 
@@ -129,7 +121,7 @@ def test_not_an_image(client, session):
     assert 'c2c:url=' not in html
 
 
-def test_image_sizes_and_svg(client, session, docs):
+def test_image_sizes_and_svg(client, session, image_url):
     jpg = _add_image(session, 'image.jpg')
     svg = _add_image(session, 'image.svg')
     html = _cook(
@@ -140,10 +132,10 @@ def test_image_sizes_and_svg(client, session, docs):
 
     urls = re.findall(r'c2c:url="([^"]*)"', html)
     assert [
-        docs.image_url + 'imageBI.jpg',
-        docs.image_url + 'image.jpg',
-        docs.image_url + 'imageSI.jpg',
-        docs.image_url + 'image.svg',
+        image_url + 'imageBI.jpg',
+        image_url + 'image.jpg',
+        image_url + 'imageSI.jpg',
+        image_url + 'image.svg',
     ] == urls
 
 
@@ -205,7 +197,7 @@ def test_no_query_without_images(client, db_connection):
     assert [] == statements
 
 
-def test_get_cooked_book(client, session, docs):
+def test_get_cooked_book(client, session, image_url):
     # the image URL comes from the image_url setting
     image = _add_image(session, 'image.jpg')
     book = Book(activities=['hiking'], book_types=['biography'])
@@ -220,10 +212,10 @@ def test_get_cooked_book(client, session, docs):
     response = client.get(f'/books/{book.document_id}?cook=en', status=200)
     html = response.json['cooked']['description']
 
-    assert f'c2c:url="{docs.image_url}imageMI.jpg"' in html
+    assert f'c2c:url="{image_url}imageMI.jpg"' in html
 
 
-def test_get_cooked_document(client, session, docs):
+def test_get_cooked_document(client, session, image_url):
     image = _add_image(session, 'image.jpg')
     article = Article(
         categories=['site_info'], activities=['hiking'], article_type='collab'
@@ -242,7 +234,7 @@ def test_get_cooked_document(client, session, docs):
     html = response.json['cooked']['description']
 
     assert 1 == html.count('c2c:url=')
-    assert f'c2c:url="{docs.image_url}imageMI.jpg"' in html
+    assert f'c2c:url="{image_url}imageMI.jpg"' in html
     assert 'c2c:url-proxy="/images/proxy/999999?size=MI"' in html
 
 
