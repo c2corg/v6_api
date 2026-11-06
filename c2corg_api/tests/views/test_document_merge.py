@@ -9,7 +9,7 @@ from c2corg_api.models.feed import DocumentChange, update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.views.document import create_new_version, update_version
 
 
@@ -318,9 +318,9 @@ class TestDocumentMergeRest(BaseTestRest):
         )
 
         # check that the cache versions are updated
-        self.check_cache_version(self.waypoint1.document_id, 2)
-        self.check_cache_version(self.waypoint2.document_id, 3)
-        self.check_cache_version(self.route1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 3)
+        scenarios.check_cache_version(self.session, self.route1.document_id, 2)
 
         # check that the feed entry is removed
         feed_count = (

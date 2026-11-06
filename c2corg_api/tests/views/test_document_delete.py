@@ -49,7 +49,7 @@ from c2corg_api.models.xreport import (
     Xreport,
     XreportLocale,
 )
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.views.document import create_new_version, update_version
 
 
@@ -733,8 +733,8 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.route3.document_id, 2)
-        self.check_cache_version(self.image1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route3.document_id, 2)
+        scenarios.check_cache_version(self.session, self.image1.document_id, 2)
 
     def test_delete_route(self):
         self._test_delete(
@@ -746,13 +746,13 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.waypoint1.document_id, 3)
-        self.check_cache_version(self.waypoint2.document_id, 3)
-        self.check_cache_version(self.waypoint3.document_id, 3)
-        self.check_cache_version(self.outing2.document_id, 2)
-        self.check_cache_version(self.book1.document_id, 2)
-        self.check_cache_version(self.xreport1.document_id, 2)
-        self.check_cache_version(self.image1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 3)
+        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 3)
+        scenarios.check_cache_version(self.session, self.waypoint3.document_id, 3)
+        scenarios.check_cache_version(self.session, self.outing2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.book1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.xreport1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.image1.document_id, 2)
 
     def _count_tags(self, document_id):
         nb_tags = (
@@ -797,8 +797,8 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.route1.document_id, 2)
-        self.check_cache_version(self.image1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.image1.document_id, 2)
 
     def test_delete_outing_route_waypoint(self):
         self._test_delete(
@@ -810,10 +810,10 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.route2.document_id, 2)
-        self.check_cache_version(self.route3.document_id, 2)
-        self.check_cache_version(self.article1.document_id, 2)
-        self.check_cache_version(self.xreport1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route3.document_id, 2)
+        scenarios.check_cache_version(self.session, self.article1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.xreport1.document_id, 2)
 
         self._test_delete(
             self.route2.document_id,
@@ -824,9 +824,9 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.waypoint2.document_id, 4)
-        self.check_cache_version(self.article1.document_id, 3)
-        self.check_cache_version(self.book1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 4)
+        scenarios.check_cache_version(self.session, self.article1.document_id, 3)
+        scenarios.check_cache_version(self.session, self.book1.document_id, 2)
 
         self._test_delete(
             self.waypoint2.document_id,
@@ -837,7 +837,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.route3.document_id, 3)
+        scenarios.check_cache_version(self.session, self.route3.document_id, 3)
 
     def test_delete_article(self):
         self._test_delete(
@@ -845,15 +845,15 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.route2.document_id, 2)
-        self.check_cache_version(self.outing2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.outing2.document_id, 2)
 
     def test_delete_book(self):
         self._test_delete(self.book1.document_id, Book, None, ArchiveBook, None)
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.route2.document_id, 2)
-        self.check_cache_version(self.route3.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route3.document_id, 2)
 
     def test_delete_xreport(self):
         self._test_delete(
@@ -865,8 +865,8 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        self.check_cache_version(self.route3.document_id, 2)
-        self.check_cache_version(self.outing2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route3.document_id, 2)
+        scenarios.check_cache_version(self.session, self.outing2.document_id, 2)
 
     def test_delete_image(self):
         call = {'times': 0}
@@ -884,9 +884,9 @@ class TestDocumentDeleteRest(BaseTestRest):
             assert 'filenames=image1.1.jpg' in call['request.body']
             assert 'filenames=image1.jpg' in call['request.body']
             assert call['request.url'] == self.settings['image_backend.url'] + '/delete'
-            self.check_cache_version(self.waypoint3.document_id, 2)
-            self.check_cache_version(self.route3.document_id, 2)
-            self.check_cache_version(self.outing1.document_id, 2)
+            scenarios.check_cache_version(self.session, self.waypoint3.document_id, 2)
+            scenarios.check_cache_version(self.session, self.route3.document_id, 2)
+            scenarios.check_cache_version(self.session, self.outing1.document_id, 2)
 
     def test_delete_image_error_deleting_files(self):
         """Test that the delete request is also successful if the image files
@@ -907,9 +907,9 @@ class TestDocumentDeleteRest(BaseTestRest):
             assert 'filenames=image1.1.jpg' in call['request.body']
             assert 'filenames=image1.jpg' in call['request.body']
             assert call['request.url'] == self.settings['image_backend.url'] + '/delete'
-            self.check_cache_version(self.waypoint3.document_id, 2)
-            self.check_cache_version(self.route3.document_id, 2)
-            self.check_cache_version(self.outing1.document_id, 2)
+            scenarios.check_cache_version(self.session, self.waypoint3.document_id, 2)
+            scenarios.check_cache_version(self.session, self.route3.document_id, 2)
+            scenarios.check_cache_version(self.session, self.outing1.document_id, 2)
 
     def test_delete_collaborative_doc(self):
         # Collaborative documents cannot be deleted, even by their authors:

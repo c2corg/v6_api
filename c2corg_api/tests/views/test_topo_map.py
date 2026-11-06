@@ -14,17 +14,16 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests import assert_required
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
 MAPS = DocType('/maps', MAP_TYPE, TopoMap, ArchiveTopoMap, ArchiveDocumentLocale)
 
 
-class TestTopoMapRest(BaseDocumentTestRest):
+class TestTopoMapRest(BaseTestRest):
     def setUp(self):
-        self.set_doc_type(MAPS)
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -109,7 +108,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
     def test_post_not_moderator(self):
         headers = self.add_authorization_header(username='contributor')
         self.app_post_json(
-            self._prefix, {}, headers=headers, expect_errors=True, status=403
+            MAPS.prefix, {}, headers=headers, expect_errors=True, status=403
         )
 
     def test_post_error(self):
@@ -194,8 +193,8 @@ class TestTopoMapRest(BaseDocumentTestRest):
             .all()
         )
         assert len(links) == 2
-        self.check_cache_version(self.waypoint1.document_id, 2)
-        self.check_cache_version(self.route.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route.document_id, 2)
 
     def test_put_wrong_document_id(self):
         body = {
@@ -214,7 +213,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_document_id(body, user='moderator')
+        scenarios.put_wrong_document_id(self.app, MAPS, body, user='moderator')
 
     def test_put_wrong_document_version(self):
         body = {
@@ -233,7 +232,9 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_version(body, self.map1.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, MAPS, body, self.map1.document_id, user='moderator'
+        )
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -246,7 +247,9 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'en', 'title': "Lac d'Annecy", 'version': -9999}],
             }
         }
-        self.put_wrong_version(body, self.map1.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, MAPS, body, self.map1.document_id, user='moderator'
+        )
 
     def test_put_wrong_ids(self):
         body = {
@@ -265,10 +268,14 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_ids(body, self.map1.document_id, user='moderator')
+        scenarios.put_wrong_ids(
+            self.app, MAPS, body, self.map1.document_id, user='moderator'
+        )
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.map1.document_id, user='moderator')
+        scenarios.put_no_document(
+            self.app, MAPS, self.map1.document_id, user='moderator'
+        )
 
     def test_put_success_all(self):
         body = {
@@ -293,7 +300,15 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, map1) = self.put_success_all(body, self.map1, user='moderator')
+        (body, map1) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            MAPS,
+            body,
+            self.map1,
+            user='moderator',
+            locale_fr=self.locale_fr,
+        )
 
         assert map1.code == '3433OT'
         locale_en = map1.get_locale('en')
@@ -301,7 +316,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = map1.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'New title'
 
@@ -313,7 +328,7 @@ class TestTopoMapRest(BaseDocumentTestRest):
         assert archive_geometry_en.version == 2
 
         # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
+        version_fr = scenarios.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == "Lac d'Annecy"
 
@@ -324,10 +339,10 @@ class TestTopoMapRest(BaseDocumentTestRest):
             .all()
         )
         assert len(links) == 2
-        self.check_cache_version(self.waypoint1.document_id, 2)
-        self.check_cache_version(self.route.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route.document_id, 2)
         # waypoint 2 is no longer associated, the cache key was incremented
-        self.check_cache_version(self.waypoint2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 2)
 
     def test_put_success_figures_only(self):
         body = {
@@ -348,7 +363,9 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, map1) = self.put_success_figures_only(body, self.map1, user='moderator')
+        (body, map1) = scenarios.put_success_figures_only(
+            self.app, self.session, MAPS, body, self.map1, user='moderator'
+        )
 
         assert map1.code == '3433OT'
 
@@ -371,7 +388,9 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, map1) = self.put_success_lang_only(body, self.map1, user='moderator')
+        (body, map1) = scenarios.put_success_lang_only(
+            self.app, self.session, MAPS, body, self.map1, user='moderator'
+        )
 
         assert map1.get_locale('en').title == 'New title'
 
@@ -389,7 +408,9 @@ class TestTopoMapRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'es', 'title': "Lac d'Annecy"}],
             },
         }
-        (body, map1) = self.put_success_new_lang(body, self.map1, user='moderator')
+        (body, map1) = scenarios.put_success_new_lang(
+            self.app, self.session, MAPS, body, self.map1, user='moderator'
+        )
 
         assert map1.get_locale('es').title == "Lac d'Annecy"
 

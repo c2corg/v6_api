@@ -16,7 +16,7 @@ from c2corg_api.caching import cache_document_detail
 from c2corg_api.models.cache_version import CacheVersion, get_cache_key
 from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
-from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import (
@@ -538,3 +538,421 @@ def validate_document(client, session, doc_type, body, headers=None):
     assert cache_version.version == 1
 
     return (body, doc)
+
+
+def get_latest_version(lang, versions):
+    """Return the latest of the versions in the given language."""
+    versions_in_lang = [v for v in versions if v.lang == lang]
+    versions_in_lang.sort(key=lambda v: v.id, reverse=True)
+    return versions_in_lang[0]
+
+
+def check_cache_version(session, document_id, version):
+    """Check the cache version of a document."""
+    cache_version = session.get(CacheVersion, document_id)
+    assert cache_version is not None
+    assert cache_version.version == version
+
+
+def _url(doc_type, document_id):
+    return f'{doc_type.prefix}/{document_id}'
+
+
+def _put(client, url, request_body, user, status):
+    # without a token: forbidden, then as the given user
+    send_json(client, 'put', url, request_body, status=403)
+    return send_json(
+        client,
+        'put',
+        url,
+        request_body,
+        headers=auth_headers(username=user),
+        status=status,
+    )
+
+
+def put_wrong_document_id(client, doc_type, request_body, user='contributor'):
+    """Update a missing document."""
+    url = _url(doc_type, 9999999)
+    body = _put(client, url, request_body, user, 404).json
+    assert body['status'] == 'error'
+    assert body['errors'][0]['name'] == 'Not Found'
+
+
+def put_wrong_version(client, doc_type, request_body, id, user='contributor'):
+    """Update a document from an old version: a conflict."""
+    body = _put(client, _url(doc_type, id), request_body, user, 409).json
+    assert body['status'] == 'error'
+    assert body['errors'][0]['name'] == 'Conflict'
+
+
+def put_wrong_ids(client, doc_type, request_body, id, user='contributor'):
+    """Update with another document id in the URL than in the body."""
+    body = _put(client, _url(doc_type, id + 1), request_body, user, 400).json
+    assert body['status'] == 'error'
+    assert body['errors'][0]['name'] == 'Bad Request'
+
+
+def put_no_document(client, doc_type, id, user='contributor'):
+    """Update without document."""
+    request_body = {'message': '...'}
+    response = _put(client, _url(doc_type, id), request_body, user, 422)
+    assert errors_of(response.json)[0]['description'] == 'Field required'
+
+
+def put_missing_field(
+    client, doc_type, request_body, document, field, user='contributor'
+):
+    """Update a document without a required field."""
+    url = _url(doc_type, document.document_id)
+    body = _put(client, url, request_body, user, 400).json
+    assert body.get('status') == 'error'
+    errors = body.get('errors')
+    assert len(errors) == 1
+    assert_required(errors[0], field)
+
+
+def _put_success(client, session, doc_type, request_body, document, user):
+    # update, get the document back, then reload it in the session; return
+    # the answer, the version before the update and the reloaded document
+    url = _url(doc_type, document.document_id)
+    _put(client, url, request_body, user, 200)
+
+    headers = auth_headers(username=user)
+    response = client.get(url, headers=headers, status=200)
+    assert response.content_type == 'application/json'
+
+    body = response.json
+    old_version = document.version
+
+    session.expire_all()
+    return body, old_version, session.get(doc_type.model, body.get('document_id'))
+
+
+def _archive_counts(session, doc_type, document_id):
+    # the number of archived documents and of archived locales
+    archive, archive_locale = doc_type.model_archive, doc_type.model_archive_locale
+    archive_count = (
+        session.query(archive).filter(archive.document_id == document_id).count()
+    )
+    archive_locale_count = (
+        session.query(archive_locale)
+        .filter(document_id == archive_locale.document_id)
+        .count()
+    )
+    return archive_count, archive_locale_count
+
+
+def _search_doc(session, doc_type, document):
+    sync_es(session)
+    return search_documents[doc_type.type].get(
+        id=document.document_id, index=elasticsearch_config['index']
+    )
+
+
+def put_success_all(
+    client,
+    session,
+    doc_type,
+    request_body,
+    document,
+    user='contributor',
+    check_es=True,
+    cache_version=2,
+    *,
+    locale_fr,
+):
+    """Update a document with changes to the figures and locales."""
+    body, old_version, document = _put_success(
+        client, session, doc_type, request_body, document, user
+    )
+    assert body.get('version') != old_version
+    document_id = document.document_id
+    assert len(document.locales) == 2
+    locale_en = document.get_locale('en')
+
+    # one new archive_document, one new archive_document_locale (only
+    # for 'en' not 'fr')
+    assert _archive_counts(session, doc_type, document_id) == (2, 3)
+
+    # check that new versions were created
+    versions = document.versions
+    assert len(versions) == 4
+
+    # version with lang 'en'
+    version_en = get_latest_version('en', versions)
+
+    assert version_en.lang == 'en'
+
+    meta_data_en = version_en.history_metadata
+    assert meta_data_en.comment == 'Update'
+    assert meta_data_en.written_at is not None
+
+    archive_document_en = version_en.document_archive
+    assert archive_document_en.document_id == document_id
+    assert archive_document_en.version == document.version
+
+    archive_locale = version_en.document_locales_archive
+    assert archive_locale.document_id == document_id
+    assert archive_locale.version == locale_en.version
+    assert archive_locale.lang == 'en'
+
+    # version with lang 'fr'
+    version_fr = get_latest_version('fr', versions)
+
+    assert version_fr.lang == 'fr'
+
+    meta_data_fr = version_fr.history_metadata
+    assert meta_data_en is meta_data_fr
+
+    archive_document_fr = version_fr.document_archive
+    assert archive_document_en is archive_document_fr
+
+    archive_locale_fr = version_fr.document_locales_archive
+    assert archive_locale_fr.document_id == document_id
+    assert archive_locale_fr.version == locale_fr.version
+    assert archive_locale_fr.lang == 'fr'
+
+    if check_es:
+        search_doc = _search_doc(session, doc_type, document)
+        assert search_doc['doc_type'] == document.type
+        assert search_doc['title_en'] == archive_locale.title
+        assert search_doc['title_fr'] == archive_locale_fr.title
+
+    check_cache_version(session, document_id, cache_version)
+
+    return (body, document)
+
+
+def put_success_figures_only(
+    client, session, doc_type, request_body, document, user='contributor', check_es=True
+):
+    """Update a document with changes to the figures only."""
+    body, old_version, document = _put_success(
+        client, session, doc_type, request_body, document, user
+    )
+    assert body.get('version') != old_version
+    assert len(document.locales) == 2
+
+    # one new archive_document, no new archive_document_locale
+    assert _archive_counts(session, doc_type, document.document_id) == (2, 2)
+
+    # check that new versions were created
+    versions = document.versions
+    assert len(versions) == 4
+
+    # version with lang 'en'
+    version_en = get_latest_version('en', versions)
+
+    assert version_en.lang == 'en'
+
+    meta_data_en = version_en.history_metadata
+    assert meta_data_en.comment == 'Changing figures'
+    assert meta_data_en.written_at is not None
+
+    # version with lang 'fr'
+    version_fr = get_latest_version('fr', versions)
+
+    assert version_fr.lang == 'fr'
+
+    meta_data_fr = version_fr.history_metadata
+    assert meta_data_en is meta_data_fr
+
+    archive_document_en = version_en.document_archive
+    archive_document_fr = version_fr.document_archive
+    assert archive_document_en is archive_document_fr
+
+    # check updates to the search index
+    search_doc = _search_doc(session, doc_type, document)
+
+    assert search_doc['doc_type'] == document.type
+
+    if isinstance(document, Route) and document.main_waypoint_id:
+        locale_en = document.get_locale('en')
+        title = locale_en.title_prefix + ' : ' + locale_en.title
+        assert search_doc['title_en'] == title
+
+        locale_fr = document.get_locale('fr')
+        title = locale_fr.title_prefix + ' : ' + locale_fr.title
+        assert search_doc['title_fr'] == title
+    elif check_es:
+        assert search_doc['title_en'] == document.get_locale('en').title
+        assert search_doc['title_fr'] == document.get_locale('fr').title
+
+    return (body, document)
+
+
+def put_success_lang_only(
+    client, session, doc_type, request_body, document, user='contributor', check_es=True
+):
+    """Update a document with only changes to a locale."""
+    body, old_version, document = _put_success(
+        client, session, doc_type, request_body, document, user
+    )
+    # the document version does not change, except for routes (title prefix)
+    is_route = document.type == 'r'
+    assert body.get('version') == (2 if is_route else old_version)
+    assert len(document.locales) == 2
+
+    # no new archive_document (except for routes), one new
+    # archive_document_locale
+    expected_count = 2 if is_route else 1
+    assert _archive_counts(session, doc_type, document.document_id) == (
+        expected_count,
+        3,
+    )
+
+    # check that one new version was created
+    versions = document.versions
+    assert len(versions) == (4 if is_route else 3)
+
+    # version with lang 'en'
+    version_en = get_latest_version('en', versions)
+
+    assert version_en.lang == 'en'
+
+    meta_data_en = version_en.history_metadata
+    assert meta_data_en.comment == 'Changing lang'
+    assert meta_data_en.written_at is not None
+
+    # version with lang 'fr'
+    version_fr = get_latest_version('fr', versions)
+
+    assert version_fr.lang == 'fr'
+
+    meta_data_fr = version_fr.history_metadata
+    if is_route:
+        assert meta_data_en == meta_data_fr
+    else:
+        assert meta_data_en is not meta_data_fr
+
+    archive_document_en = version_en.document_archive
+    archive_document_fr = version_fr.document_archive
+    assert archive_document_en is archive_document_fr
+
+    if check_es:
+        search_doc = _search_doc(session, doc_type, document)
+        assert search_doc['doc_type'] == document.type
+        assert search_doc['title_en'] == document.get_locale('en').title
+        assert search_doc['title_fr'] == document.get_locale('fr').title
+
+    return (body, document)
+
+
+def put_success_new_lang(
+    client, session, doc_type, request_body, document, user='contributor', check_es=True
+):
+    """Update a document by adding a new locale ('es')."""
+    body, old_version, document = _put_success(
+        client, session, doc_type, request_body, document, user
+    )
+    # the document version does not change, except for routes (title prefix)
+    is_route = document.type == 'r'
+    assert body.get('version') == (2 if is_route else old_version)
+    assert len(document.locales) == 3
+
+    # no new archive_document (except for routes), one new
+    # archive_document_locale
+    expected_count = 2 if is_route else 1
+    assert _archive_counts(session, doc_type, document.document_id) == (
+        expected_count,
+        3,
+    )
+
+    # check that one new version was created
+    versions = document.versions
+    assert len(versions) == (5 if is_route else 3)
+
+    # version with lang 'en'
+    version_en = get_latest_version('en', versions)
+    assert version_en.lang == 'en'
+
+    meta_data_en = version_en.history_metadata
+
+    # version with lang 'fr'
+    version_fr = get_latest_version('fr', versions)
+    assert version_fr.lang == 'fr'
+
+    meta_data_fr = version_fr.history_metadata
+    assert meta_data_en is meta_data_fr
+
+    archive_document_en = version_en.document_archive
+    archive_document_fr = version_fr.document_archive
+    assert archive_document_en is archive_document_fr
+
+    # version with lang 'es'
+    version_es = get_latest_version('es', versions)
+    assert version_es.lang == 'es'
+
+    meta_data_es = version_es.history_metadata
+    if is_route:
+        assert meta_data_en == meta_data_es
+    else:
+        assert meta_data_en is not meta_data_es
+
+    archive_document_es = version_es.document_archive
+    assert archive_document_es is archive_document_fr
+
+    if check_es:
+        search_doc = _search_doc(session, doc_type, document)
+        assert search_doc['doc_type'] == document.type
+        assert search_doc['title_en'] == document.get_locale('en').title
+        assert search_doc['title_fr'] == document.get_locale('fr').title
+        assert search_doc['title_es'] == document.get_locale('es').title
+
+    return (body, document)
+
+
+def get_association_logs(client, document):
+    """Get the association history of a document and check its entries."""
+    url = f'/associations-history?d={document.document_id}'
+
+    resp = client.get(url, status=200)
+    assert isinstance(resp.json['count'], int)
+    associations = resp.json['associations']
+
+    assert len(associations) != 0, 'Need at least one association'
+
+    for association in associations:
+        _assert_association_log_structure(association, document.document_id)
+
+    return associations
+
+
+def _assert_association_log_structure(log, document_id):
+    assert log['written_at'] is not None
+    assert isinstance(log['is_creation'], bool)
+
+    user = log['user']
+    assert isinstance(user['user_id'], int)
+    assert isinstance(user['name'], str)
+    assert isinstance(user['forum_username'], str)
+    assert isinstance(user['robot'], bool)
+    assert isinstance(user['moderator'], bool)
+    assert isinstance(user['blocked'], bool)
+
+    child = log['child_document']
+    child_id = child['document_id']
+    assert isinstance(child_id, int)
+    assert isinstance(child['type'], str)
+    assert isinstance(child['locales'], list)
+
+    parent = log['parent_document']
+    parent_id = parent['document_id']
+    assert isinstance(parent_id, int)
+    assert isinstance(parent['type'], str)
+    assert isinstance(parent['locales'], list)
+
+    assert child_id == document_id or parent_id == document_id
+
+    if parent['type'] == USERPROFILE_TYPE:
+        assert isinstance(parent['name'], str)
+
+    if child['type'] == USERPROFILE_TYPE:
+        assert isinstance(child['name'], str)
+
+
+def add_association(session, association, user_id):
+    """Add an association and its log (test data)."""
+    session.add(association)
+    session.add(association.get_log(user_id, is_creation=True))

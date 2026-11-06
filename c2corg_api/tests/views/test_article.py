@@ -14,7 +14,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests import assert_required
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
@@ -23,10 +23,9 @@ ARTICLES = DocType(
 )
 
 
-class TestArticleRest(BaseDocumentTestRest):
+class TestArticleRest(BaseTestRest):
     def setUp(self):
-        self.set_doc_type(ARTICLES)
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -141,7 +140,7 @@ class TestArticleRest(BaseDocumentTestRest):
 
     def test_get_version_etag(self):
         url = (
-            f'{self._prefix}/{self.article1.document_id!s}/en'
+            f'{ARTICLES.prefix}/{self.article1.document_id!s}/en'
             f'/{self.article1_version.id!s}'
         )
         response = self.app.get(url, status=200)
@@ -157,7 +156,7 @@ class TestArticleRest(BaseDocumentTestRest):
 
     def test_get_version_caching(self):
         url = (
-            f'{self._prefix}/{self.article1.document_id!s}/en'
+            f'{ARTICLES.prefix}/{self.article1.document_id!s}/en'
             f'/{self.article1_version.id!s}'
         )
         cache_key = '{}-{}'.format(
@@ -337,7 +336,7 @@ class TestArticleRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_document_id(body, user='moderator')
+        scenarios.put_wrong_document_id(self.app, ARTICLES, body, user='moderator')
 
     def test_put_wrong_document_version(self):
         body = {
@@ -356,7 +355,9 @@ class TestArticleRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_version(body, self.article1.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, ARTICLES, body, self.article1.document_id, user='moderator'
+        )
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -369,7 +370,9 @@ class TestArticleRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'en', 'title': "Lac d'Annecy", 'version': -9999}],
             }
         }
-        self.put_wrong_version(body, self.article1.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, ARTICLES, body, self.article1.document_id, user='moderator'
+        )
 
     def test_put_wrong_ids(self):
         body = {
@@ -388,10 +391,14 @@ class TestArticleRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_ids(body, self.article1.document_id, user='moderator')
+        scenarios.put_wrong_ids(
+            self.app, ARTICLES, body, self.article1.document_id, user='moderator'
+        )
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.article1.document_id, user='moderator')
+        scenarios.put_no_document(
+            self.app, ARTICLES, self.article1.document_id, user='moderator'
+        )
 
     def test_put_success_all(self):
         body = {
@@ -420,8 +427,15 @@ class TestArticleRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, article1) = self.put_success_all(
-            body, self.article1, user='moderator', cache_version=3
+        (body, article1) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            ARTICLES,
+            body,
+            self.article1,
+            user='moderator',
+            cache_version=3,
+            locale_fr=self.locale_fr,
         )
 
         assert article1.activities == ['hiking']
@@ -430,7 +444,7 @@ class TestArticleRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = article1.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'New title'
 
@@ -440,7 +454,7 @@ class TestArticleRest(BaseDocumentTestRest):
         assert archive_document_en.article_type == 'personal'
 
         # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
+        version_fr = scenarios.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == "Lac d'Annecy"
 
@@ -493,8 +507,8 @@ class TestArticleRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, article1) = self.put_success_figures_only(
-            body, self.article1, user='moderator'
+        (body, article1) = scenarios.put_success_figures_only(
+            self.app, self.session, ARTICLES, body, self.article1, user='moderator'
         )
 
         assert article1.activities == ['hiking']
@@ -518,8 +532,8 @@ class TestArticleRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, article1) = self.put_success_lang_only(
-            body, self.article1, user='moderator'
+        (body, article1) = scenarios.put_success_lang_only(
+            self.app, self.session, ARTICLES, body, self.article1, user='moderator'
         )
 
         assert article1.get_locale('en').title == 'New title'
@@ -538,8 +552,8 @@ class TestArticleRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'es', 'title': "Lac d'Annecy"}],
             },
         }
-        (body, article1) = self.put_success_new_lang(
-            body, self.article1, user='moderator'
+        (body, article1) = scenarios.put_success_new_lang(
+            self.app, self.session, ARTICLES, body, self.article1, user='moderator'
         )
 
         assert article1.get_locale('es').title == "Lac d'Annecy"
@@ -567,7 +581,7 @@ class TestArticleRest(BaseDocumentTestRest):
 
         headers = self.add_authorization_header(username='contributor2')
         response = self.app_put_json(
-            self._prefix + '/' + str(self.article1.document_id),
+            ARTICLES.prefix + '/' + str(self.article1.document_id),
             body,
             headers=headers,
             status=400,
@@ -599,13 +613,20 @@ class TestArticleRest(BaseDocumentTestRest):
             },
         }
 
-        (body, article4) = self.put_success_all(
-            body, self.article4, user='contributor', cache_version=2
+        (body, article4) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            ARTICLES,
+            body,
+            self.article4,
+            user='contributor',
+            cache_version=2,
+            locale_fr=self.locale_fr,
         )
 
         # version with lang 'en'
         versions = article4.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'Another final EN title'
 
@@ -637,7 +658,7 @@ class TestArticleRest(BaseDocumentTestRest):
 
         headers = self.add_authorization_header(username='contributor2')
         response = self.app_put_json(
-            self._prefix + '/' + str(self.article4.document_id),
+            ARTICLES.prefix + '/' + str(self.article4.document_id),
             body,
             headers=headers,
             status=403,
@@ -649,7 +670,7 @@ class TestArticleRest(BaseDocumentTestRest):
         assert body['errors'][0]['name'] == 'Forbidden'
 
     def test_get_associations_history(self):
-        self._get_association_logs(self.article1)
+        scenarios.get_association_logs(self.app, self.article1)
 
     def _add_test_data(self):
         self.article1 = Article(
@@ -708,13 +729,15 @@ class TestArticleRest(BaseDocumentTestRest):
         self.session.add(self.waypoint2)
         self.session.flush()
 
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.article1, child_document=self.article4
             ),
             user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.article3, child_document=self.article1
             ),

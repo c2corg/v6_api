@@ -23,7 +23,7 @@ from c2corg_api.models.xreport import (
 )
 from c2corg_api.tests import assert_not_in_enum, assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
@@ -32,10 +32,9 @@ XREPORTS = DocType(
 )
 
 
-class TestXreportRest(BaseDocumentTestRest):
+class TestXreportRest(BaseTestRest):
     def setUp(self):
-        self.set_doc_type(XREPORTS)
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -209,7 +208,7 @@ class TestXreportRest(BaseDocumentTestRest):
 
     def test_get_cache_headers(self):
         response = self.app.get(
-            self._prefix + '/' + str(self.xreport1.document_id), status=200
+            XREPORTS.prefix + '/' + str(self.xreport1.document_id), status=200
         )
         headers = response.headers
         etag = headers.get('ETag')
@@ -225,7 +224,7 @@ class TestXreportRest(BaseDocumentTestRest):
     def test_get_version_etag(self):
         auth_headers = self.add_authorization_header(username='contributor')
         url = (
-            f'{self._prefix}/{self.xreport1.document_id!s}/en'
+            f'{XREPORTS.prefix}/{self.xreport1.document_id!s}/en'
             f'/{self.xreport1_version.id!s}'
         )
         response = self.app.get(url, headers=auth_headers, status=200)
@@ -247,7 +246,7 @@ class TestXreportRest(BaseDocumentTestRest):
     def test_get_version_caching(self):
         headers = self.add_authorization_header(username='contributor')
         url = (
-            f'{self._prefix}/{self.xreport1.document_id!s}/en'
+            f'{XREPORTS.prefix}/{self.xreport1.document_id!s}/en'
             f'/{self.xreport1_version.id!s}'
         )
         cache_key = '{}-{}'.format(
@@ -536,7 +535,7 @@ class TestXreportRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_document_id(body, user='moderator')
+        scenarios.put_wrong_document_id(self.app, XREPORTS, body, user='moderator')
 
     def test_put_wrong_document_version(self):
         body = {
@@ -555,7 +554,9 @@ class TestXreportRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_version(body, self.xreport1.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, XREPORTS, body, self.xreport1.document_id, user='moderator'
+        )
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -568,7 +569,9 @@ class TestXreportRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'en', 'title': "Lac d'Annecy", 'version': -9999}],
             }
         }
-        self.put_wrong_version(body, self.xreport1.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, XREPORTS, body, self.xreport1.document_id, user='moderator'
+        )
 
     def test_put_wrong_ids(self):
         body = {
@@ -587,10 +590,14 @@ class TestXreportRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_ids(body, self.xreport1.document_id, user='moderator')
+        scenarios.put_wrong_ids(
+            self.app, XREPORTS, body, self.xreport1.document_id, user='moderator'
+        )
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.xreport1.document_id, user='moderator')
+        scenarios.put_no_document(
+            self.app, XREPORTS, self.xreport1.document_id, user='moderator'
+        )
 
     def test_put_success_all(self):
         body = {
@@ -622,8 +629,15 @@ class TestXreportRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, xreport1) = self.put_success_all(
-            body, self.xreport1, user='moderator', cache_version=3
+        (body, xreport1) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            XREPORTS,
+            body,
+            self.xreport1,
+            user='moderator',
+            cache_version=3,
+            locale_fr=self.locale_fr,
         )
 
         assert xreport1.event_activity == 'skitouring'
@@ -632,7 +646,7 @@ class TestXreportRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = xreport1.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'New title'
         assert archive_locale.place == 'some NEW place descrip. in english'
@@ -644,7 +658,7 @@ class TestXreportRest(BaseDocumentTestRest):
         assert archive_document_en.nb_impacted == 666
 
         # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
+        version_fr = scenarios.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == "Lac d'Annecy"
 
@@ -701,8 +715,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, xreport1) = self.put_success_figures_only(
-            body, self.xreport1, user='moderator'
+        (body, xreport1) = scenarios.put_success_figures_only(
+            self.app, self.session, XREPORTS, body, self.xreport1, user='moderator'
         )
 
         assert xreport1.event_activity == 'skitouring'
@@ -726,8 +740,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, xreport1) = self.put_success_lang_only(
-            body, self.xreport1, user='moderator'
+        (body, xreport1) = scenarios.put_success_lang_only(
+            self.app, self.session, XREPORTS, body, self.xreport1, user='moderator'
         )
 
         assert xreport1.get_locale('en').title == 'New title'
@@ -746,8 +760,8 @@ class TestXreportRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'es', 'title': "Lac d'Annecy"}],
             },
         }
-        (body, xreport1) = self.put_success_new_lang(
-            body, self.xreport1, user='moderator'
+        (body, xreport1) = scenarios.put_success_new_lang(
+            self.app, self.session, XREPORTS, body, self.xreport1, user='moderator'
         )
 
         assert xreport1.get_locale('es').title == "Lac d'Annecy"
@@ -772,13 +786,20 @@ class TestXreportRest(BaseDocumentTestRest):
             },
         }
 
-        (body, xreport1) = self.put_success_all(
-            body, self.xreport1, user='contributor', cache_version=2
+        (body, xreport1) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            XREPORTS,
+            body,
+            self.xreport1,
+            user='contributor',
+            cache_version=2,
+            locale_fr=self.locale_fr,
         )
 
         # version with lang 'en'
         versions = xreport1.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'Another final EN title'
 
@@ -811,13 +832,20 @@ class TestXreportRest(BaseDocumentTestRest):
             },
         }
 
-        (body, xreport1) = self.put_success_all(
-            body, self.xreport1, user='contributor3', cache_version=3
+        (body, xreport1) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            XREPORTS,
+            body,
+            self.xreport1,
+            user='contributor3',
+            cache_version=3,
+            locale_fr=self.locale_fr,
         )
 
         # version with lang 'en'
         versions = xreport1.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'Renamed title by assoc. user'
 
@@ -848,7 +876,7 @@ class TestXreportRest(BaseDocumentTestRest):
 
         headers = self.add_authorization_header(username='contributor2')
         response = self.app_put_json(
-            self._prefix + '/' + str(self.xreport4.document_id),
+            XREPORTS.prefix + '/' + str(self.xreport4.document_id),
             body,
             headers=headers,
             status=403,
@@ -860,7 +888,7 @@ class TestXreportRest(BaseDocumentTestRest):
         assert body['errors'][0]['name'] == 'Forbidden'
 
     def test_get_associations_history(self):
-        self._get_association_logs(self.xreport1)
+        scenarios.get_association_logs(self.app, self.xreport1)
 
     def _add_test_data(self):
         self.xreport1 = Xreport(
@@ -891,7 +919,8 @@ class TestXreportRest(BaseDocumentTestRest):
         )
 
         user_id3 = self.global_userids['contributor3']
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association(
                 parent_document_id=user_id3,
                 parent_document_type=USERPROFILE_TYPE,
@@ -966,13 +995,15 @@ class TestXreportRest(BaseDocumentTestRest):
         self.session.add(self.route3)
         self.session.flush()
 
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.outing3, child_document=self.xreport1
             ),
             user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.route3, child_document=self.xreport1
             ),

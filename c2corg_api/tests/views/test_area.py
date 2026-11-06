@@ -17,17 +17,16 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests import assert_required
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
 AREAS = DocType('/areas', AREA_TYPE, Area, ArchiveArea, ArchiveDocumentLocale)
 
 
-class TestAreaRest(BaseDocumentTestRest):
+class TestAreaRest(BaseTestRest):
     def setUp(self):
-        self.set_doc_type(AREAS)
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -198,9 +197,9 @@ class TestAreaRest(BaseDocumentTestRest):
         )
         assert len(links) == 2
         assert links[0].document_id == self.waypoint1.document_id
-        self.check_cache_version(self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
         assert links[1].document_id == self.route.document_id
-        self.check_cache_version(self.route.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route.document_id, 2)
 
         # check that a link to the provided image is created
         association_image = self.session.get(
@@ -223,7 +222,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_document_id(body)
+        scenarios.put_wrong_document_id(self.app, AREAS, body)
 
     def test_put_wrong_document_version(self):
         body = {
@@ -240,7 +239,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_version(body, self.area1.document_id)
+        scenarios.put_wrong_version(self.app, AREAS, body, self.area1.document_id)
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -251,7 +250,7 @@ class TestAreaRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'en', 'title': 'Chartreuse', 'version': -9999}],
             }
         }
-        self.put_wrong_version(body, self.area1.document_id)
+        scenarios.put_wrong_version(self.app, AREAS, body, self.area1.document_id)
 
     def test_put_wrong_ids(self):
         body = {
@@ -268,10 +267,10 @@ class TestAreaRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_ids(body, self.area1.document_id)
+        scenarios.put_wrong_ids(self.app, AREAS, body, self.area1.document_id)
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.area1.document_id)
+        scenarios.put_no_document(self.app, AREAS, self.area1.document_id)
 
     def test_put_update_geometry_fail(self):
         body = {
@@ -295,7 +294,7 @@ class TestAreaRest(BaseDocumentTestRest):
         }
         headers = self.add_authorization_header(username='contributor')
         response = self.app_put_json(
-            self._prefix + '/' + str(self.area1.document_id),
+            AREAS.prefix + '/' + str(self.area1.document_id),
             body,
             headers=headers,
             status=400,
@@ -325,7 +324,15 @@ class TestAreaRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, area) = self.put_success_all(body, self.area1, cache_version=2)
+        (body, area) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            AREAS,
+            body,
+            self.area1,
+            cache_version=2,
+            locale_fr=self.locale_fr,
+        )
 
         assert area.area_type == 'admin_limits'
         locale_en = area.get_locale('en')
@@ -333,7 +340,7 @@ class TestAreaRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = area.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'New title'
 
@@ -346,7 +353,7 @@ class TestAreaRest(BaseDocumentTestRest):
         assert archive_geometry_en.version == 1
 
         # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
+        version_fr = scenarios.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == 'Chartreuse'
 
@@ -372,8 +379,15 @@ class TestAreaRest(BaseDocumentTestRest):
                 'associations': {'images': []},
             },
         }
-        (body, area) = self.put_success_all(
-            body, self.area1, user='moderator', cache_version=3
+        (body, area) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            AREAS,
+            body,
+            self.area1,
+            user='moderator',
+            cache_version=3,
+            locale_fr=self.locale_fr,
         )
 
         # version with lang 'en'
@@ -392,11 +406,11 @@ class TestAreaRest(BaseDocumentTestRest):
         )
         assert len(links) == 2
         assert links[0].document_id == self.waypoint1.document_id
-        self.check_cache_version(self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
         assert links[1].document_id == self.route.document_id
-        self.check_cache_version(self.route.document_id, 2)
+        scenarios.check_cache_version(self.session, self.route.document_id, 2)
         # waypoint 2 is no longer associated, the cache key was incremented
-        self.check_cache_version(self.waypoint2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 2)
 
         # check that existing link to the image is removed
         association_image = self.session.get(
@@ -421,7 +435,9 @@ class TestAreaRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, area) = self.put_success_figures_only(body, self.area1)
+        (body, area) = scenarios.put_success_figures_only(
+            self.app, self.session, AREAS, body, self.area1
+        )
 
         assert area.area_type == 'admin_limits'
 
@@ -452,7 +468,9 @@ class TestAreaRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, area) = self.put_success_lang_only(body, self.area1)
+        (body, area) = scenarios.put_success_lang_only(
+            self.app, self.session, AREAS, body, self.area1
+        )
 
         assert area.get_locale('en').title == 'New title'
 
@@ -478,12 +496,14 @@ class TestAreaRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'es', 'title': 'Chartreuse'}],
             },
         }
-        (body, area) = self.put_success_new_lang(body, self.area1)
+        (body, area) = scenarios.put_success_new_lang(
+            self.app, self.session, AREAS, body, self.area1
+        )
 
         assert area.get_locale('es').title == 'Chartreuse'
 
     def test_get_associations_history(self):
-        self._get_association_logs(self.area1)
+        scenarios.get_association_logs(self.app, self.area1)
 
     def _assert_geometry(self, body):
         assert body.get('geometry') is not None
@@ -565,5 +585,7 @@ class TestAreaRest(BaseDocumentTestRest):
         self.session.add(self.image)
         self.session.flush()
 
-        self._add_association(Association.create(self.area1, self.image), user_id)
+        scenarios.add_association(
+            self.session, Association.create(self.area1, self.image), user_id
+        )
         self.session.flush()

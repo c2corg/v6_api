@@ -4,6 +4,7 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import errors_of
+from c2corg_api.tests.views import scenarios
 from c2corg_api.tests.views.test_user import BaseUserTestRest, forum_username_tests
 
 
@@ -87,7 +88,7 @@ class TestUserAccountRest(BaseUserTestRest):
 
         # and check that the cache version of the user profile was updated
         # (from 2: creating the profile version of the test data bumped it)
-        self.check_cache_version(user_id, 3)
+        scenarios.check_cache_version(self.session, user_id, 3)
 
         assert search_doc['doc_type'] is not None
         assert search_doc['title_en'] == 'changed contributor'

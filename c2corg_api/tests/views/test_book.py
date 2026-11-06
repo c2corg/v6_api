@@ -18,17 +18,16 @@ from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests import assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
 BOOKS = DocType('/books', BOOK_TYPE, Book, ArchiveBook, ArchiveDocumentLocale)
 
 
-class TestBookRest(BaseDocumentTestRest):
+class TestBookRest(BaseTestRest):
     def setUp(self):
-        self.set_doc_type(BOOKS)
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -132,7 +131,7 @@ class TestBookRest(BaseDocumentTestRest):
         scenarios.get_version(self.app, BOOKS, self.book1, self.book1_version)
 
     def test_get_version_etag(self):
-        url = f'{self._prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
+        url = f'{BOOKS.prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
         response = self.app.get(url, status=200)
 
         # check that the ETag header is set
@@ -145,7 +144,7 @@ class TestBookRest(BaseDocumentTestRest):
         self.app.get(url, status=304, headers=headers)
 
     def test_get_version_caching(self):
-        url = f'{self._prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
+        url = f'{BOOKS.prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
         cache_key = '{}-{}'.format(
             get_cache_key(self.book1.document_id, 'en', BOOK_TYPE),
             self.book1_version.id,
@@ -196,7 +195,7 @@ class TestBookRest(BaseDocumentTestRest):
             'locales': [{'lang': 'en', 'title': 'Book'}],
         }
         headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(self._prefix, body, headers=headers, status=422)
+        response = self.app_post_json(BOOKS.prefix, body, headers=headers, status=422)
         self.assertError(
             errors_of(response.json),
             'activities.1',
@@ -307,7 +306,7 @@ class TestBookRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_document_id(body, user='moderator')
+        scenarios.put_wrong_document_id(self.app, BOOKS, body, user='moderator')
 
     def test_put_wrong_document_version(self):
         body = {
@@ -325,7 +324,9 @@ class TestBookRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_version(body, self.book1.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, BOOKS, body, self.book1.document_id, user='moderator'
+        )
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -339,7 +340,9 @@ class TestBookRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_version(body, self.book1.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, BOOKS, body, self.book1.document_id, user='moderator'
+        )
 
     def test_put_wrong_ids(self):
         body = {
@@ -357,10 +360,14 @@ class TestBookRest(BaseDocumentTestRest):
                 ],
             }
         }
-        self.put_wrong_ids(body, self.book1.document_id, user='moderator')
+        scenarios.put_wrong_ids(
+            self.app, BOOKS, body, self.book1.document_id, user='moderator'
+        )
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.book1.document_id, user='moderator')
+        scenarios.put_no_document(
+            self.app, BOOKS, self.book1.document_id, user='moderator'
+        )
 
     def test_put_success_all(self):
         body = {
@@ -391,8 +398,15 @@ class TestBookRest(BaseDocumentTestRest):
             },
         }
 
-        (body, book1) = self.put_success_all(
-            body, self.book1, user='moderator', cache_version=3
+        (body, book1) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            BOOKS,
+            body,
+            self.book1,
+            user='moderator',
+            cache_version=3,
+            locale_fr=self.locale_fr,
         )
 
         assert book1.activities == ['hiking']
@@ -401,7 +415,7 @@ class TestBookRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = book1.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'New title'
 
@@ -410,7 +424,7 @@ class TestBookRest(BaseDocumentTestRest):
         assert archive_document_en.book_types == ['magazine']
 
         # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
+        version_fr = scenarios.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == 'Escalades au Thaurac'
 
@@ -458,8 +472,8 @@ class TestBookRest(BaseDocumentTestRest):
                 'editor': 'New editor',
             },
         }
-        (body, book1) = self.put_success_figures_only(
-            body, self.book1, user='moderator'
+        (body, book1) = scenarios.put_success_figures_only(
+            self.app, self.session, BOOKS, body, self.book1, user='moderator'
         )
 
         assert book1.activities == ['hiking']
@@ -483,7 +497,9 @@ class TestBookRest(BaseDocumentTestRest):
                 ],
             },
         }
-        (body, book1) = self.put_success_lang_only(body, self.book1, user='moderator')
+        (body, book1) = scenarios.put_success_lang_only(
+            self.app, self.session, BOOKS, body, self.book1, user='moderator'
+        )
 
         assert book1.get_locale('en').title == 'New title'
 
@@ -500,12 +516,14 @@ class TestBookRest(BaseDocumentTestRest):
                 'locales': [{'lang': 'es', 'title': 'Escalades au Thaurac'}],
             },
         }
-        (body, book1) = self.put_success_new_lang(body, self.book1, user='moderator')
+        (body, book1) = scenarios.put_success_new_lang(
+            self.app, self.session, BOOKS, body, self.book1, user='moderator'
+        )
 
         assert book1.get_locale('es').title == 'Escalades au Thaurac'
 
     def test_get_associations_history(self):
-        self._get_association_logs(self.book1)
+        scenarios.get_association_logs(self.app, self.book1)
 
     def _add_test_data(self):
         self.book1 = Book(activities=['hiking'], book_types=['biography'])
@@ -624,14 +642,16 @@ class TestBookRest(BaseDocumentTestRest):
         self.session.add(self.route3)
         self.session.flush()
 
-        # self._add_association(Association.create(
+        # scenarios.add_association(self.session, Association.create(
         #     parent_document=self.book1,
         #     child_document=self.image2), user_id)
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.book1, child_document=self.route3),
             user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.book2, child_document=self.waypoint2
             ),

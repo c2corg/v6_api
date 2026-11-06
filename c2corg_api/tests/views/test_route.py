@@ -28,7 +28,7 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 from c2corg_api.views.route import (
@@ -40,10 +40,9 @@ from c2corg_api.views.route import (
 ROUTES = DocType('/routes', ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale)
 
 
-class TestRouteRest(BaseDocumentTestRest):
+class TestRouteRest(BaseTestRest):
     def setUp(self):
-        self.set_doc_type(ROUTES)
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
@@ -91,7 +90,7 @@ class TestRouteRest(BaseDocumentTestRest):
         reset_search_index(self.session)
 
         response = self.app.get(
-            self._prefix + '?w=' + str(self.waypoint.document_id), status=200
+            ROUTES.prefix + '?w=' + str(self.waypoint.document_id), status=200
         )
 
         documents = response.json['documents']
@@ -264,7 +263,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
     def test_get_edit(self):
         response = self.app.get(
-            self._prefix + '/' + str(self.route.document_id) + '?e=1', status=200
+            ROUTES.prefix + '/' + str(self.route.document_id) + '?e=1', status=200
         )
         body = response.json
 
@@ -499,7 +498,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
 
         _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
-        response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
+        response = self.app.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
         geometry = body['geometry']
@@ -611,7 +610,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
 
         _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
-        response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
+        response = self.app.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
         geometry = body['geometry']
@@ -645,7 +644,7 @@ class TestRouteRest(BaseDocumentTestRest):
         }
 
         _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
-        response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
+        response = self.app.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
         geometry = body['geometry']
@@ -769,7 +768,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             }
         }
-        self.put_wrong_document_id(body)
+        scenarios.put_wrong_document_id(self.app, ROUTES, body)
 
     def test_put_wrong_document_version(self):
         body = {
@@ -796,7 +795,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             }
         }
-        self.put_wrong_version(body, self.route.document_id)
+        scenarios.put_wrong_version(self.app, ROUTES, body, self.route.document_id)
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -823,7 +822,7 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             }
         }
-        self.put_wrong_version(body, self.route.document_id)
+        scenarios.put_wrong_version(self.app, ROUTES, body, self.route.document_id)
 
     def test_put_wrong_ids(self):
         body = {
@@ -850,10 +849,10 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             }
         }
-        self.put_wrong_ids(body, self.route.document_id)
+        scenarios.put_wrong_ids(self.app, ROUTES, body, self.route.document_id)
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.route.document_id)
+        scenarios.put_no_document(self.app, ROUTES, self.route.document_id)
 
     def test_put_success_all(self):
         body = {
@@ -890,7 +889,9 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_all(body, self.route)
+        (body, route) = scenarios.put_success_all(
+            self.app, self.session, ROUTES, body, self.route, locale_fr=self.locale_fr
+        )
         self._assert_default_geometry(body, x=635961, y=5723624)
 
         assert route.elevation_max == 1600
@@ -900,7 +901,7 @@ class TestRouteRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = route.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'Mont Blanc from the air'
         assert archive_locale.gear == 'none'
@@ -913,7 +914,7 @@ class TestRouteRest(BaseDocumentTestRest):
         assert archive_geometry_en.version == 2
 
         # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
+        version_fr = scenarios.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == 'Mont Blanc du ciel'
         assert archive_locale.gear == 'paraglider'
@@ -950,7 +951,9 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_figures_only(body, self.route)
+        (body, route) = scenarios.put_success_figures_only(
+            self.app, self.session, ROUTES, body, self.route
+        )
 
         assert route.elevation_max == 1600
 
@@ -995,7 +998,9 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_figures_only(body, self.route)
+        (body, route) = scenarios.put_success_figures_only(
+            self.app, self.session, ROUTES, body, self.route
+        )
         self._assert_default_geometry(body, x=635000, y=5723000)
 
     def test_put_success_main_wp_changed(self):
@@ -1030,8 +1035,8 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_figures_only(
-            body, self.route, user='moderator'
+        (body, route) = scenarios.put_success_figures_only(
+            self.app, self.session, ROUTES, body, self.route, user='moderator'
         )
         # tests that the default geometry has not changed (main wp has changed
         # but the route has a track)
@@ -1086,7 +1091,9 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_lang_only(body, self.route)
+        (body, route) = scenarios.put_success_lang_only(
+            self.app, self.session, ROUTES, body, self.route
+        )
 
         assert route.get_locale('en').gear == 'none'
 
@@ -1121,7 +1128,9 @@ class TestRouteRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_new_lang(body, self.route)
+        (body, route) = scenarios.put_success_new_lang(
+            self.app, self.session, ROUTES, body, self.route
+        )
 
         assert route.get_locale('es').gear == 'si'
 
@@ -1204,7 +1213,7 @@ class TestRouteRest(BaseDocumentTestRest):
         assert locale_es.title_prefix == self.waypoint.get_locale('fr').title
 
     def test_get_associations_history(self):
-        self._get_association_logs(self.route)
+        scenarios.get_association_logs(self.app, self.route)
 
     def _add_test_data(self):
         self.route = Route(
@@ -1254,7 +1263,8 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.add(self.article1)
         self.session.flush()
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.route, child_document=self.article1
             ),
@@ -1264,7 +1274,8 @@ class TestRouteRest(BaseDocumentTestRest):
         self.book1 = Book(activities=['hiking'], book_types=['biography'])
         self.session.add(self.book1)
         self.session.flush()
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.book1, child_document=self.route),
             user_id,
         )
@@ -1411,21 +1422,25 @@ class TestRouteRest(BaseDocumentTestRest):
         self.session.flush()
 
         # associations
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.route, child_document=self.route4),
             user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.route4, child_document=self.route),
             user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.waypoint, child_document=self.route
             ),
             user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.waypoint_tc, child_document=self.route
             ),
@@ -1457,7 +1472,8 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.route, child_document=self.outing1),
             user_id,
         )
@@ -1473,7 +1489,8 @@ class TestRouteRest(BaseDocumentTestRest):
         )
         self.session.add(self.outing2)
         self.session.flush()
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.route, child_document=self.outing2),
             user_id,
         )
