@@ -9,7 +9,8 @@ import pytest
 from alembic.command import downgrade
 from alembic.config import Config
 from dotenv import load_dotenv
-from sqlalchemy import engine_from_config
+from sqlalchemy import create_engine, engine_from_config, text
+from sqlalchemy.engine import make_url
 
 from c2corg_api import caching as caching_common
 from c2corg_api.config import get_appsettings
@@ -30,6 +31,29 @@ log = logging.getLogger(__name__)
 curdir = os.path.dirname(os.path.abspath(__file__))
 configfile = os.path.realpath(os.path.join(curdir, '../../test.ini'))
 settings = get_appsettings(configfile)
+
+
+def _isolate_worker(settings):
+    """Give a pytest-xdist worker its own database, ES index and Redis names."""
+    # Each worker is a process of its own: only what lives outside of it is
+    # shared. Without a worker (no -n), the settings are used as they are.
+    worker = os.environ.get('PYTEST_XDIST_WORKER')
+    if not worker:
+        return
+    url = make_url(settings['sqlalchemy.url'])
+    url = url.set(database=f'{url.database}_{worker}')
+    settings['sqlalchemy.url'] = url.render_as_string(hide_password=False)
+    for key in (
+        'elasticsearch.index',
+        # also the prefix of the rate limiting counters
+        'redis.cache_key_prefix',
+        'redis.exchange',
+        'redis.queue_es_sync',
+    ):
+        settings[key] = f'{settings[key]}_{worker}'
+
+
+_isolate_worker(settings)
 
 alembic_scripts_folder = os.path.realpath(
     os.path.join(curdir, '../../alembic_migration')
@@ -244,11 +268,40 @@ def _add_global_test_data(session):
         global_tokens[user.username] = token
 
 
+def _create_database():
+    """Create the test database if it does not exist yet, as the CI does."""
+    # see scripts/database/create_test_schema.sh
+    url = make_url(settings['sqlalchemy.url'])
+    admin = create_engine(url.set(database='postgres'), isolation_level='AUTOCOMMIT')
+    try:
+        with admin.connect() as connection:
+            exists = connection.execute(
+                text('SELECT 1 FROM pg_database WHERE datname = :name'),
+                {'name': url.database},
+            ).scalar()
+            if exists:
+                return
+            # the name comes from test.ini and the worker id
+            connection.execute(text(f'CREATE DATABASE "{url.database}"'))
+    finally:
+        admin.dispose()
+
+    engine = create_engine(url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text('CREATE EXTENSION IF NOT EXISTS postgis'))
+            for schema in ('guidebook', 'users', 'sympa', 'alembic'):
+                connection.execute(text(f'CREATE SCHEMA IF NOT EXISTS {schema}'))
+    finally:
+        engine.dispose()
+
+
 def setup_package():
     """Create the test database and ElasticSearch index, once per run."""
     # Called by the session fixture in conftest.py (not at import time, so
     # importing this package has no side effect).
     # set up database
+    _create_database()
     engine = get_engine()
     DBSession.configure(bind=engine)
 
