@@ -410,7 +410,8 @@ def test_no_token(client):
 
 @pytest.mark.usefixtures('login_docs')
 def test_invalid_token(client):
-    body = send_json(client, 'post', LOGIN_URL, {'token': 'bad_token'}, status=403).json
+    token = 'bad_token'  # nosec B105 (a token the API refuses)
+    body = send_json(client, 'post', LOGIN_URL, {'token': token}, status=403).json
     errors = body.get('errors')
     assert 'token' == errors[0].get('name')
     assert 'Invalid' == errors[0].get('description')
@@ -420,8 +421,9 @@ def test_expired_token(client, session, login_docs):
     login_docs.sso_external_id.expire = localized_now()
     session.flush()
 
+    token = 'good_token'  # nosec B105 (the token of the fixture, expired)
     body = send_json(
-        client, 'post', LOGIN_URL, params={'token': 'good_token'}, status=403
+        client, 'post', LOGIN_URL, params={'token': token}, status=403
     ).json
     errors = body.get('errors')
     assert 'token' == errors[0].get('name')
