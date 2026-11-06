@@ -2,12 +2,11 @@ import pytest
 
 from c2corg_api.models.association import Association
 from c2corg_api.models.route import ROUTE_TYPE
-from c2corg_api.models.stoparea import Stoparea
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
-from c2corg_api.tests.contract.test_documents import POINT, DocumentContractTest
+from c2corg_api.tests.contract.test_documents import POINT
 from c2corg_api.tests.search.__init__ import reset_search_index
 
 STOPAREAS = ('GET', '/stopareas')
@@ -20,49 +19,23 @@ REACHABLE_ROUTES = ('GET', '/reachableroutes')
 REACHABLE_WAYPOINTS = ('GET', '/reachablewaypoints')
 
 
-class StopareaContractTest(DocumentContractTest):
-    """A stop area near the waypoint of DocumentContractTest."""
-
-    @pytest.fixture(autouse=True)
-    def _setup_stoparea_contract_test(
-        self, client, session, _setup_document_contract_test
-    ):
-        stoparea = Stoparea(
-            navitia_id='stop_area:SNCF:87747006',
-            stoparea_name='Grenoble',
-            line='TER',
-            operator='SNCF',
-            geom='SRID=3857;POINT(636150 5652000)',
-        )
-        session.add(stoparea)
-        session.flush()
-        link = WaypointStoparea(
-            waypoint_id=self.ids['waypoints'],
-            stoparea_id=stoparea.stoparea_id,
-            distance=123.456,
-        )
-        session.add(link)
-        session.flush()
-        self.stoparea_id = stoparea.stoparea_id
-        self.link_id = link.waypoint_stoparea_id
-
-
-class TestStopareas(StopareaContractTest):
+@pytest.mark.usefixtures('stoparea_link')
+class TestStopareas:
     @contract(STOPAREAS)
-    def test_listing(self, client, settings):
-        check_snapshot('stopareas_listing', self.get(client, settings, '/stopareas'))
+    def test_listing(self, browser):
+        check_snapshot('stopareas_listing', browser.get('/stopareas'))
 
     @contract(STOPAREA)
-    def test_get(self, client, settings):
+    def test_get(self, browser, stoparea_link):
         check_snapshot(
             'stopareas_get',
-            self.get(client, settings, f'/stopareas/{self.stoparea_id}'),
+            browser.get(f'/stopareas/{stoparea_link.stoparea_id}'),
         )
 
     @contract(STOPAREA)
-    def test_get_unknown(self, client, settings):
+    def test_get_unknown(self, browser):
         # a 404 in the error envelope, as the other routes
-        response = self.get(client, settings, '/stopareas/9999999', status=404)
+        response = browser.get('/stopareas/9999999', status=404)
         check_snapshot('stopareas_get_unknown', response)
         assert response.json['errors'] == [
             {
@@ -73,114 +46,104 @@ class TestStopareas(StopareaContractTest):
         ]
 
     @contract(STOPAREA_INFO)
-    def test_info(self, client, settings):
-        response = self.get(client, settings, f'/stopareas/{self.stoparea_id}/en/info')
+    def test_info(self, browser, stoparea_link):
+        response = browser.get(f'/stopareas/{stoparea_link.stoparea_id}/en/info')
         check_snapshot('stopareas_info', response)
 
     @contract(STOPAREA_INFO)
-    def test_info_unknown(self, client, settings):
-        response = self.get(client, settings, '/stopareas/9999999/en/info', status=404)
+    def test_info_unknown(self, browser):
+        response = browser.get('/stopareas/9999999/en/info', status=404)
         check_snapshot('stopareas_info_unknown', response)
 
 
-class TestWaypointStopareas(StopareaContractTest):
+@pytest.mark.usefixtures('stoparea_link')
+class TestWaypointStopareas:
     @contract(WAYPOINT_STOPAREAS)
-    def test_stopareas_of_a_waypoint(self, client, settings):
-        response = self.get(
-            client, settings, f'/waypoints/{self.ids["waypoints"]}/stopareas'
-        )
+    def test_stopareas_of_a_waypoint(self, browser, documents):
+        response = browser.get(f'/waypoints/{documents.ids["waypoints"]}/stopareas')
         check_snapshot('waypoint_stopareas', response)
         assert response.json['stopareas'][0]['distance'] == 123.46
 
     @contract(WAYPOINT_STOPAREAS)
-    def test_invalid_waypoint_id(self, client, settings):
+    def test_invalid_waypoint_id(self, browser):
         # as the other ids: a path with an id that is not a number is not found
-        response = self.get(client, settings, '/waypoints/abc/stopareas', status=404)
+        response = browser.get('/waypoints/abc/stopareas', status=404)
         check_snapshot('waypoint_stopareas_invalid', response)
 
     @contract(IS_REACHABLE)
-    def test_is_reachable(self, client, settings):
-        response = self.get(
-            client, settings, f'/waypoints/{self.ids["waypoints"]}/isReachable'
-        )
+    def test_is_reachable(self, browser, documents):
+        response = browser.get(f'/waypoints/{documents.ids["waypoints"]}/isReachable')
         check_snapshot('waypoint_is_reachable', response)
         assert response.json is True
 
     @contract(IS_REACHABLE)
-    def test_is_not_reachable(self, client, settings):
-        response = self.get(client, settings, '/waypoints/9999999/isReachable')
+    def test_is_not_reachable(self, browser):
+        response = browser.get('/waypoints/9999999/isReachable')
         assert response.json is False
 
     @contract(WAYPOINT_STOPAREA_INFO)
-    def test_info(self, client, settings):
-        response = self.get(
-            client, settings, f'/waypoints_stopareas/{self.link_id}/en/info'
-        )
+    def test_info(self, browser, stoparea_link):
+        response = browser.get(f'/waypoints_stopareas/{stoparea_link.link_id}/en/info')
         check_snapshot('waypoints_stopareas_info', response)
 
     @contract(WAYPOINT_STOPAREA_INFO)
-    def test_info_unknown(self, client, settings):
-        response = self.get(
-            client, settings, '/waypoints_stopareas/9999999/en/info', status=404
-        )
+    def test_info_unknown(self, browser):
+        response = browser.get('/waypoints_stopareas/9999999/en/info', status=404)
         check_snapshot('waypoints_stopareas_info_unknown', response)
 
 
-class TestReachable(StopareaContractTest):
-    @pytest.fixture(autouse=True)
-    def _setup_test_reachable(
-        self, client, session, settings, _setup_stoparea_contract_test
-    ):
-        # only the access waypoints with a stop area make a route reachable
-        access_id = self.create(
-            client,
-            settings,
-            'waypoints',
-            {
-                'waypoint_type': 'access',
-                'elevation': 900,
-                'geometry': {'geom': POINT},
-                'locales': [{'lang': 'en', 'title': 'Bus stop'}],
-            },
+@pytest.fixture
+def access_id(browser, session, documents, stoparea_link):
+    """Add an access waypoint with a stop area to the route; return its id."""
+    # only the access waypoints with a stop area make a route reachable
+    access_id = browser.create(
+        'waypoints',
+        {
+            'waypoint_type': 'access',
+            'elevation': 900,
+            'geometry': {'geom': POINT},
+            'locales': [{'lang': 'en', 'title': 'Bus stop'}],
+        },
+    )
+    session.add(
+        Association(
+            parent_document_id=access_id,
+            parent_document_type=WAYPOINT_TYPE,
+            child_document_id=documents.ids['routes'],
+            child_document_type=ROUTE_TYPE,
         )
-        session.add(
-            Association(
-                parent_document_id=access_id,
-                parent_document_type=WAYPOINT_TYPE,
-                child_document_id=self.ids['routes'],
-                child_document_type=ROUTE_TYPE,
-            )
+    )
+    session.add(
+        WaypointStoparea(
+            waypoint_id=access_id,
+            stoparea_id=stoparea_link.stoparea_id,
+            distance=50,
         )
-        session.add(
-            WaypointStoparea(
-                waypoint_id=access_id, stoparea_id=self.stoparea_id, distance=50
-            )
-        )
-        session.flush()
-        self.access_id = access_id
+    )
+    session.flush()
+    return access_id
 
+
+@pytest.mark.usefixtures('access_id')
+class TestReachable:
     @contract(REACHABLE_ROUTES, REACHABLE_WAYPOINTS)
-    def test_reachable_documents(self, client, session, settings):
+    def test_reachable_documents(self, session, browser, documents, access_id):
         # the listings filter with ElasticSearch: one index for both
         reset_search_index(session)
-        routes = self.get(client, settings, '/reachableroutes', params={'pl': 'en'})
+        routes = browser.get('/reachableroutes', params={'pl': 'en'})
         check_snapshot('reachable_routes', routes)
-        assert self.ids['routes'] in [
+        assert documents.ids['routes'] in [
             d['document_id'] for d in routes.json['documents']
         ]
-        waypoints = self.get(
-            client, settings, '/reachablewaypoints', params={'pl': 'en'}
-        )
+        waypoints = browser.get('/reachablewaypoints', params={'pl': 'en'})
         check_snapshot('reachable_waypoints', waypoints)
         ids = [d['document_id'] for d in waypoints.json['documents']]
-        assert self.access_id in ids
+        assert access_id in ids
 
     @contract(REACHABLE_ROUTES, REACHABLE_WAYPOINTS)
-    def test_invalid_parameters(self, client, settings):
+    def test_invalid_parameters(self, browser):
         for path in ('/reachableroutes', '/reachablewaypoints'):
-            response = self.get(
-                client, settings, path, params={'limit': 'x', 'pl': 'xx'}, status=422
-            )
+            response = browser.get(path, params={'limit': 'x', 'pl': 'xx'}, status=422)
             check_snapshot('reachable_invalid', response)
             assert [name for _, name, _ in invalid_parameters(response)] == [
                 'limit',
