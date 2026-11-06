@@ -125,38 +125,37 @@ def check_snapshot(name, response, extra_headers=()):
     assert actual == expected
 
 
-@pytest.mark.usefixtures('client')
-class ContractTest:
-    """Base class of the contract tests: requests as a browser client sends them."""
+class Browser:
+    """Requests as a browser client sends them: from an allowed CORS origin."""
 
-    def request(
-        self, client, settings, method, url, body=None, user=None, status=200, **kwargs
-    ):
+    def __init__(self, client, settings):
+        self.client = client
+        self.origin = settings['cors.allowed_origins'].split()[0]
+
+    def request(self, method, url, body=None, user=None, status=200, **kwargs):
         """Send a request from an allowed CORS origin, as `user` if given."""
         headers = kwargs.pop('headers', {})
         # an allowed origin, unless the test gives one (None: no Origin)
-        headers.setdefault('Origin', settings['cors.allowed_origins'].split()[0])
+        headers.setdefault('Origin', self.origin)
         if headers['Origin'] is None:
             del headers['Origin']
         if user:
             auth_headers(username=user, headers=headers)
         if body is None:
-            call = getattr(client, method.lower())
+            call = getattr(self.client, method.lower())
             return call(url, headers=headers, status=status, **kwargs)
-        call = getattr(client, method.lower() + '_json')
+        call = getattr(self.client, method.lower() + '_json')
         return call(url, body, headers=headers, status=status, **kwargs)
 
-    def get(self, client, settings, url, user=None, status=200, **kwargs):
-        return self.request(
-            client, settings, 'GET', url, user=user, status=status, **kwargs
-        )
+    def get(self, url, user=None, status=200, **kwargs):
+        return self.request('GET', url, user=user, status=status, **kwargs)
 
-    def post(self, client, settings, url, body, user=None, status=200, **kwargs):
-        return self.request(
-            client, settings, 'POST', url, body, user=user, status=status, **kwargs
-        )
+    def post(self, url, body, user=None, status=200, **kwargs):
+        return self.request('POST', url, body, user=user, status=status, **kwargs)
 
-    def put(self, client, settings, url, body, user=None, status=200, **kwargs):
-        return self.request(
-            client, settings, 'PUT', url, body, user=user, status=status, **kwargs
-        )
+    def put(self, url, body, user=None, status=200, **kwargs):
+        return self.request('PUT', url, body, user=user, status=status, **kwargs)
+
+    def create(self, prefix, body, user='contributor'):
+        """Create a document through the API and return its id."""
+        return self.post(f'/{prefix}', body, user=user).json['document_id']

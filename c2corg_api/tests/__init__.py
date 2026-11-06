@@ -1,8 +1,10 @@
 import datetime
 import logging
 import os
+import re
 import time
 from random import randint
+from urllib.parse import urlparse
 
 import jwt
 import pytest
@@ -214,6 +216,19 @@ def get_feed_change(session, document_id, change_type=None):
     if change_type:
         q = q.filter(DocumentChange.change_type == change_type)
     return q.first()
+
+
+def extract_urls(text):
+    """Return the URLs in a text (an email)."""
+    # up to the last letter or digit before a space: no punctuation after it
+    return re.findall(r'https?://\S*[0-9a-zA-Z]', text)
+
+
+def extract_nonce(send_mail, key):
+    """Return the nonce of the link in the first email sent."""
+    validation_url = extract_urls(send_mail.call_args_list[0][1]['body'])[0]
+    fragment = urlparse(validation_url).fragment
+    return fragment.replace(key + '=', '')
 
 
 def invalid_parameters(response):
