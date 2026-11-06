@@ -10,7 +10,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.models.xreport import Xreport, XreportLocale
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests.views import BaseTestRest, scenarios
 from c2corg_api.views.document import create_new_version
 
 
@@ -50,8 +50,8 @@ class TestAssociationRest(BaseTestRest):
 
         self.assertNotifiedEs()
 
-        self.check_cache_version(self.waypoint1.document_id, 2)
-        self.check_cache_version(self.waypoint2.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 2)
 
     def test_add_association_wa(self):
         request_body = {
@@ -77,8 +77,8 @@ class TestAssociationRest(BaseTestRest):
         assert association_log.is_creation is True
         assert association_log.user_id is not None
 
-        self.check_cache_version(self.waypoint1.document_id, 2)
-        self.check_cache_version(self.article1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(self.session, self.article1.document_id, 2)
 
     def test_add_association_uo(self):
         contributor2 = self.global_userids['contributor2']
@@ -473,8 +473,8 @@ class TestAssociationRest(BaseTestRest):
 
         self.assertNotifiedEs()
 
-        self.check_cache_version(self.waypoint1.document_id, 3)
-        self.check_cache_version(self.waypoint2.document_id, 3)
+        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 3)
+        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 3)
 
     def test_delete_association_non_moderator(self):
         """For non-personal documents, a normal user can create associations

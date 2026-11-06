@@ -23,22 +23,22 @@ from c2corg_api.models.outing import (
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
+OUTINGS = DocType('/outings', OUTING_TYPE, Outing, ArchiveOuting, ArchiveOutingLocale)
 
-class TestOutingRest(BaseDocumentTestRest):
+
+class TestOutingRest(BaseTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/outings', OUTING_TYPE, Outing, ArchiveOuting, ArchiveOutingLocale
-        )
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, OUTINGS)
         assert len(body['documents']) == 4
         doc1 = body['documents'][0]
         assert 'frequentation' not in doc1
@@ -61,7 +61,7 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_collection_for_route(self):
         reset_search_index(self.session)
         response = self.app.get(
-            self._prefix + '?r=' + str(self.route.document_id), status=200
+            OUTINGS.prefix + '?r=' + str(self.route.document_id), status=200
         )
         documents = response.json['documents']
         assert documents[0]['document_id'] == self.outing.document_id
@@ -70,7 +70,7 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_collection_has_geom(self):
         reset_search_index(self.session)
         response = self.app.get(
-            self._prefix + '?r=' + str(self.route.document_id), status=200
+            OUTINGS.prefix + '?r=' + str(self.route.document_id), status=200
         )
         documents = response.json['documents']
         assert documents[0]['geometry']['has_geom_detail'] is True
@@ -78,7 +78,7 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_collection_for_waypoint(self):
         reset_search_index(self.session)
         response = self.app.get(
-            self._prefix + '?w=' + str(self.waypoint.document_id), status=200
+            OUTINGS.prefix + '?w=' + str(self.waypoint.document_id), status=200
         )
 
         documents = response.json['documents']
@@ -89,7 +89,7 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_collection_for_user(self):
         reset_search_index(self.session)
         response = self.app.get(
-            self._prefix + '?u=' + str(self.global_userids['contributor']), status=200
+            OUTINGS.prefix + '?u=' + str(self.global_userids['contributor']), status=200
         )
 
         documents = response.json['documents']
@@ -100,32 +100,44 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_collection_paginated(self):
         self.app.get('/outings?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, OUTINGS, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
+        )
 
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, OUTINGS, {'offset': 0, 'limit': 1}
+            ),
             [self.outing4.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, OUTINGS, {'offset': 0, 'limit': 2}
+            ),
             [self.outing4.document_id, self.outing3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, OUTINGS, {'offset': 1, 'limit': 2}
+            ),
             [self.outing3.document_id, self.outing2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, OUTINGS)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'act': 'skitouring'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, OUTINGS, {'act': 'skitouring'}),
             [
                 self.outing4.document_id,
                 self.outing3.document_id,
@@ -135,15 +147,19 @@ class TestOutingRest(BaseDocumentTestRest):
             4,
         )
 
-        body = self.get_collection_search({'act': 'skitouring', 'limit': 2})
+        body = scenarios.get_collection_search(
+            self.app, OUTINGS, {'act': 'skitouring', 'limit': 2}
+        )
         assert body.get('total') == 4
         assert len(body.get('documents')) == 2
 
-        body = self.get_collection_search({'date': '2015-12-31,2016-01-02'})
+        body = scenarios.get_collection_search(
+            self.app, OUTINGS, {'date': '2015-12-31,2016-01-02'}
+        )
         assert body.get('total') == 1
 
     def test_get(self):
-        body = self.get(self.outing)
+        body = scenarios.get(self.app, OUTINGS, self.outing, title=self.locale_en.title)
         assert body.get('activities') == self.outing.activities
         self._assert_geometry(body)
         assert 'frequentation' in body
@@ -183,7 +199,7 @@ class TestOutingRest(BaseDocumentTestRest):
 
     def test_get_edit(self):
         response = self.app.get(
-            self._prefix + '/' + str(self.outing.document_id) + '?e=1', status=200
+            OUTINGS.prefix + '/' + str(self.outing.document_id) + '?e=1', status=200
         )
         body = response.json
 
@@ -197,12 +213,12 @@ class TestOutingRest(BaseDocumentTestRest):
         assert 'images' not in associations
 
     def test_get_version(self):
-        self.get_version(self.outing, self.outing_version)
+        scenarios.get_version(self.app, OUTINGS, self.outing, self.outing_version)
 
     def test_get_sort_asc(self):
         """Test ascending sorting of results for height_diff_up keyword."""
         reset_search_index(self.session)
-        response = self.app.get(self._prefix + '?sort=height_diff_up', status=200)
+        response = self.app.get(OUTINGS.prefix + '?sort=height_diff_up', status=200)
         response_ids = [d['document_id'] for d in response.json['documents']]
         outing_ids = [
             d.document_id
@@ -213,7 +229,7 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_sort_desc(self):
         """Test descending sorting of results for elevation max keyword."""
         reset_search_index(self.session)
-        response = self.app.get(self._prefix + '?sort=-elevation_max', status=200)
+        response = self.app.get(OUTINGS.prefix + '?sort=-elevation_max', status=200)
         response_ids = [d['document_id'] for d in response.json['documents']]
         outing_ids = [
             d.document_id
@@ -226,7 +242,7 @@ class TestOutingRest(BaseDocumentTestRest):
         height_diff_up: asc)"""
         reset_search_index(self.session)
         response = self.app.get(
-            self._prefix + '?sort=-elevation_max,height_diff_up', status=200
+            OUTINGS.prefix + '?sort=-elevation_max,height_diff_up', status=200
         )
         response_ids = [d['document_id'] for d in response.json['documents']]
         outing_ids = [
@@ -240,7 +256,7 @@ class TestOutingRest(BaseDocumentTestRest):
         numeric (elevation_access) and enum (condition_rating)"""
         reset_search_index(self.session)
         response = self.app.get(
-            self._prefix + '?sort=-elevation_access,condition_rating', status=200
+            OUTINGS.prefix + '?sort=-elevation_access,condition_rating', status=200
         )
         response_ids = [d['document_id'] for d in response.json['documents']]
         outing_ids = [
@@ -254,7 +270,7 @@ class TestOutingRest(BaseDocumentTestRest):
         keyword is used.
         """
         reset_search_index(self.session)
-        self.app.get(self._prefix + '?sort=-elevation_axess', status=500)
+        self.app.get(OUTINGS.prefix + '?sort=-elevation_axess', status=500)
 
     def test_get_version_without_activity(self):
         """Tests that old outings versions without activity include the fields
@@ -262,51 +278,55 @@ class TestOutingRest(BaseDocumentTestRest):
         """
         self.outing_version.document_archive.activities = []
         self.session.flush()
-        body = self.get_version(self.outing, self.outing_version)
+        body = scenarios.get_version(
+            self.app, OUTINGS, self.outing, self.outing_version
+        )
         locale = body['document']['locales'][0]
         assert 'title' in locale
 
     def test_get_cooked(self):
-        self.get_cooked(self.outing)
+        scenarios.get_cooked(self.app, OUTINGS, self.outing)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.outing)
+        scenarios.get_cooked_with_defaulting(self.app, OUTINGS, self.outing)
 
     def test_get_lang(self):
-        self.get_lang(self.outing)
+        scenarios.get_lang(self.app, OUTINGS, self.outing)
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.outing)
+        scenarios.get_new_lang(self.app, OUTINGS, self.outing)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, OUTINGS)
 
     def test_get_caching(self):
-        self.get_caching(self.outing)
+        scenarios.get_caching(self.app, OUTINGS, self.outing)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.outing, 'en')
+        body, locale = scenarios.get_info(self.app, OUTINGS, self.outing, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.outing, 'es')
+        body, locale = scenarios.get_info(self.app, OUTINGS, self.outing, 'es')
         assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
-        self.get_info_404()
+        scenarios.get_info_404(self.app, OUTINGS)
 
     def test_post_error(self):
         # an invalid body: its errors alone, the rules of the API (the
         # associations) need a valid body (see test_post_missing_route_user_id)
-        body = self.post_error({}, status=422)
+        body = scenarios.post_error(self.app, OUTINGS, {}, status=422)
         errors = errors_of(body)
         assert len(errors) == 3
-        self.assertCorniceRequired(self.get_error(errors, 'activities'), 'activities')
-        self.assertCorniceRequired(self.get_error(errors, 'date_end'), 'date_end')
-        self.assertCorniceRequired(self.get_error(errors, 'date_start'), 'date_start')
+        assert_required(self.get_error(errors, 'activities'), 'activities')
+        assert_required(self.get_error(errors, 'date_end'), 'date_end')
+        assert_required(self.get_error(errors, 'date_start'), 'date_start')
 
     def test_post_empty_activities_error(self):
-        body = self.post_error(
+        body = scenarios.post_error(
+            self.app,
+            OUTINGS,
             {
                 'activities': [],
                 'date_start': '2016-01-01',
@@ -344,7 +364,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'users': [{'document_id': self.global_userids['contributor']}],
             },
         }
-        body = self.post_error(body_post, status=422)
+        body = scenarios.post_error(self.app, OUTINGS, body_post, status=422)
         # the schema rejects the body, so the association checks also miss
         # their data and add their own errors
         self.assertError(
@@ -374,7 +394,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'users': [{'document_id': self.global_userids['contributor']}],
             },
         }
-        body = self.post_missing_title(body_post)
+        body = scenarios.post_missing_title(self.app, OUTINGS, body_post)
         errors = errors_of(body)
         assert len(errors) == 1
 
@@ -405,7 +425,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'images': [{'document_id': self.route.document_id}],
             },
         }
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, OUTINGS, body_post)
         errors = body.get('errors')
         assert len(errors) == 1
         assert errors[0]['name'] == 'date_start'
@@ -438,7 +458,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'images': [{'document_id': self.route.document_id}],
             },
         }
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, OUTINGS, body_post)
         errors = body.get('errors')
         assert len(errors) == 1
         assert errors[0]['name'] == 'date_end'
@@ -472,7 +492,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'images': [{'document_id': self.route.document_id}],
             },
         }
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, OUTINGS, body_post)
         errors = body.get('errors')
         assert len(errors) == 1
         assert errors[0]['name'] == 'date_end'
@@ -500,10 +520,10 @@ class TestOutingRest(BaseDocumentTestRest):
                 'users': [{'document_id': self.global_userids['contributor']}],
             },
         }
-        self.post_non_whitelisted_attribute(body)
+        scenarios.post_non_whitelisted_attribute(self.app, self.session, OUTINGS, body)
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, OUTINGS, {})
 
     def test_post_missing_route_user_id(self):
         request_body = {
@@ -528,7 +548,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers, status=400
+            OUTINGS.prefix, request_body, headers=headers, status=400
         )
 
         body = response.json
@@ -561,7 +581,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         headers = self.add_authorization_header(username='contributor')
         response = self.app_post_json(
-            self._prefix, request_body, headers=headers, status=400
+            OUTINGS.prefix, request_body, headers=headers, status=400
         )
 
         body = response.json
@@ -608,7 +628,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'images': [{'document_id': self.route.document_id}],
             },
         }
-        body, doc = self.post_success(body)
+        body, doc = scenarios.post_success(self.app, self.session, OUTINGS, body)
         self._assert_geometry(body)
         self._assert_default_geometry(body)
         assert doc.date_start == date(2016, 1, 1)
@@ -686,7 +706,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 'routes': [{'document_id': self.route.document_id}],
             },
         }
-        body, doc = self.post_success(body)
+        body, doc = scenarios.post_success(self.app, self.session, OUTINGS, body)
         self._assert_default_geometry(body, x=635961, y=5723624)
 
     def test_put_wrong_document_id(self):
@@ -716,7 +736,7 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             }
         }
-        self.put_wrong_document_id(body, user='moderator')
+        scenarios.put_wrong_document_id(self.app, OUTINGS, body, user='moderator')
 
     def test_put_wrong_document_version(self):
         body = {
@@ -745,7 +765,9 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             }
         }
-        self.put_wrong_version(body, self.outing.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, OUTINGS, body, self.outing.document_id, user='moderator'
+        )
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -774,7 +796,9 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             }
         }
-        self.put_wrong_version(body, self.outing.document_id, user='moderator')
+        scenarios.put_wrong_version(
+            self.app, OUTINGS, body, self.outing.document_id, user='moderator'
+        )
 
     def test_put_wrong_ids(self):
         body = {
@@ -803,10 +827,12 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             }
         }
-        self.put_wrong_ids(body, self.outing.document_id, user='moderator')
+        scenarios.put_wrong_ids(
+            self.app, OUTINGS, body, self.outing.document_id, user='moderator'
+        )
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.outing.document_id)
+        scenarios.put_no_document(self.app, OUTINGS, self.outing.document_id)
 
     def test_put_wrong_user(self):
         """Test that a non-moderator user who is not associated to the outing
@@ -841,7 +867,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         headers = self.add_authorization_header(username='contributor2')
         self.app_put_json(
-            self._prefix + '/' + str(self.outing.document_id),
+            OUTINGS.prefix + '/' + str(self.outing.document_id),
             body,
             headers=headers,
             status=403,
@@ -881,7 +907,7 @@ class TestOutingRest(BaseDocumentTestRest):
         }
         headers = self.add_authorization_header(username='contributor')
         self.app_put_json(
-            self._prefix + '/' + str(self.outing.document_id),
+            OUTINGS.prefix + '/' + str(self.outing.document_id),
             body,
             headers=headers,
             status=200,
@@ -924,8 +950,15 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, outing) = self.put_success_all(
-            body, self.outing, user='moderator', cache_version=3
+        (body, outing) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            OUTINGS,
+            body,
+            self.outing,
+            user='moderator',
+            cache_version=3,
+            locale_fr=self.locale_fr,
         )
 
         # default geom is updated with the new track
@@ -938,7 +971,7 @@ class TestOutingRest(BaseDocumentTestRest):
 
         # version with lang 'en'
         versions = outing.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'Mont Blanc from the air'
         assert archive_locale.weather == 'mostly sunny'
@@ -951,7 +984,7 @@ class TestOutingRest(BaseDocumentTestRest):
         assert archive_geometry_en.version == 2
 
         # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
+        version_fr = scenarios.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == 'Mont Blanc du ciel'
         assert archive_locale.weather == 'grand beau'
@@ -1005,8 +1038,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_figures_only(
-            body, self.outing, user='moderator'
+        (body, route) = scenarios.put_success_figures_only(
+            self.app, self.session, OUTINGS, body, self.outing, user='moderator'
         )
 
         assert route.elevation_max == 1600
@@ -1045,8 +1078,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_figures_only(
-            body, self.outing, user='moderator'
+        (body, route) = scenarios.put_success_figures_only(
+            self.app, self.session, OUTINGS, body, self.outing, user='moderator'
         )
         self._assert_default_geometry(body, x=635000, y=5723000)
 
@@ -1059,15 +1092,15 @@ class TestOutingRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635000, 5723000]}',
             }
         )
-        (body, outing) = self.put_success_figures_only(
-            body, self.outing, user='moderator'
+        (body, outing) = scenarios.put_success_figures_only(
+            self.app, self.session, OUTINGS, body, self.outing, user='moderator'
         )
         self._assert_default_geometry(body, x=635000, y=5723000)
 
     def test_put_keep_default_geom_same_track(self):
         """Tests that a saved default geometry is kept when saving again."""
         headers = self.add_authorization_header(username='moderator')
-        url = self._prefix + '/' + str(self.outing.document_id)
+        url = OUTINGS.prefix + '/' + str(self.outing.document_id)
         geom = '{"type": "Point", "coordinates": [635000, 5723000]}'
 
         body = self._put_geometry_body(
@@ -1101,8 +1134,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635961, 5723624]}',
             }
         )
-        (body, outing) = self.put_success_figures_only(
-            body, self.outing, user='moderator'
+        (body, outing) = scenarios.put_success_figures_only(
+            self.app, self.session, OUTINGS, body, self.outing, user='moderator'
         )
         self._assert_default_geometry(body, x=635966, y=5723629)
 
@@ -1116,8 +1149,8 @@ class TestOutingRest(BaseDocumentTestRest):
                 'geom': '{"type": "Point", "coordinates": [635000, 5723000]}',
             }
         )
-        (body, outing) = self.put_success_figures_only(
-            body, self.outing, user='moderator'
+        (body, outing) = scenarios.put_success_figures_only(
+            self.app, self.session, OUTINGS, body, self.outing, user='moderator'
         )
         self._assert_default_geometry(body, x=635000, y=5723000)
 
@@ -1187,7 +1220,9 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_lang_only(body, self.outing, user='moderator')
+        (body, route) = scenarios.put_success_lang_only(
+            self.app, self.session, OUTINGS, body, self.outing, user='moderator'
+        )
 
         assert route.get_locale('en').weather == 'mostly sunny'
 
@@ -1222,7 +1257,9 @@ class TestOutingRest(BaseDocumentTestRest):
                 },
             },
         }
-        (body, route) = self.put_success_new_lang(body, self.outing, user='moderator')
+        (body, route) = scenarios.put_success_new_lang(
+            self.app, self.session, OUTINGS, body, self.outing, user='moderator'
+        )
 
         assert route.get_locale('es').weather == 'soleado'
 
@@ -1261,14 +1298,14 @@ class TestOutingRest(BaseDocumentTestRest):
 
         headers = self.add_authorization_header(username='moderator')
         self.app_put_json(
-            self._prefix + '/' + str(self.outing.document_id),
+            OUTINGS.prefix + '/' + str(self.outing.document_id),
             request_body,
             headers=headers,
             status=200,
         )
 
         response = self.app.get(
-            self._prefix + '/' + str(self.outing.document_id),
+            OUTINGS.prefix + '/' + str(self.outing.document_id),
             headers=headers,
             status=200,
         )
@@ -1282,21 +1319,21 @@ class TestOutingRest(BaseDocumentTestRest):
 
         # check that the document was updated correctly
         self.session.expire_all()
-        document = self.session.get(self._model, document_id)
+        document = self.session.get(OUTINGS.model, document_id)
         assert len(document.locales) == 2
 
         # check that no new archive_document was created
         archive_count = (
-            self.session.query(self._model_archive)
-            .filter(self._model_archive.document_id == document_id)
+            self.session.query(OUTINGS.model_archive)
+            .filter(OUTINGS.model_archive.document_id == document_id)
             .count()
         )
         assert archive_count == 1
 
         # check that no new archive_document_locale was created
         archive_locale_count = (
-            self.session.query(self._model_archive_locale)
-            .filter(document_id == self._model_archive_locale.document_id)
+            self.session.query(OUTINGS.model_archive_locale)
+            .filter(document_id == OUTINGS.model_archive_locale.document_id)
             .count()
         )
         assert archive_locale_count == 2
@@ -1330,7 +1367,7 @@ class TestOutingRest(BaseDocumentTestRest):
         self.app.get('/document/99999/history/es', status=404)
 
     def test_get_associations_history(self):
-        logs = self._get_association_logs(self.outing)
+        logs = scenarios.get_association_logs(self.app, self.outing)
 
         assert len(logs) == 4
 
@@ -1525,18 +1562,21 @@ class TestOutingRest(BaseDocumentTestRest):
         self.session.add(self.route)
         self.session.flush()
 
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.waypoint, child_document=self.route
             ),
             user_id=user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.route, child_document=self.outing),
             user_id=user_id,
         )
 
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association(
                 parent_document_id=user_id,
                 parent_document_type=USERPROFILE_TYPE,
@@ -1545,11 +1585,13 @@ class TestOutingRest(BaseDocumentTestRest):
             ),
             user_id=user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.outing, child_document=self.image),
             user_id=user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.outing, child_document=self.article1
             ),

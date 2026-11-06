@@ -23,13 +23,16 @@ from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import assert_required, errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest
+from c2corg_api.tests.views import BaseTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
+IMAGES = DocType('/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale)
 
-class BaseTestImage(BaseDocumentTestRest):
+
+class BaseTestImage(BaseTestRest):
     def _add_test_data(self):
         user_id = self.global_userids['contributor']
 
@@ -64,7 +67,8 @@ class BaseTestImage(BaseDocumentTestRest):
         )
         self.session.add(self.article1)
         self.session.flush()
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(
                 parent_document=self.article1, child_document=self.image
             ),
@@ -74,7 +78,8 @@ class BaseTestImage(BaseDocumentTestRest):
         self.book1 = Book(activities=['hiking'], book_types=['biography'])
         self.session.add(self.book1)
         self.session.flush()
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.book1, child_document=self.image),
             user_id,
         )
@@ -115,7 +120,8 @@ class BaseTestImage(BaseDocumentTestRest):
         create_new_version(self.image3, self.global_userids['contributor2'])
         create_new_version(self.image4, user_id)
 
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.image, child_document=self.image2),
             user_id,
         )
@@ -141,7 +147,9 @@ class BaseTestImage(BaseDocumentTestRest):
         self.session.add(self.area)
         self.session.flush()
 
-        self._add_association(Association.create(self.area, self.image), user_id)
+        scenarios.add_association(
+            self.session, Association.create(self.area, self.image), user_id
+        )
         self.session.flush()
 
         self.outing1 = Outing(
@@ -154,11 +162,13 @@ class BaseTestImage(BaseDocumentTestRest):
         )
         self.session.add(self.outing1)
         self.session.flush()
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association.create(parent_document=self.outing1, child_document=self.image),
             user_id,
         )
-        self._add_association(
+        scenarios.add_association(
+            self.session,
             Association(
                 parent_document_id=self.global_userids['contributor'],
                 parent_document_type=USERPROFILE_TYPE,
@@ -226,14 +236,11 @@ class BaseTestImage(BaseDocumentTestRest):
 
 class TestImageRest(BaseTestImage):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale
-        )
         BaseTestImage.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, IMAGES)
         doc = body['documents'][0]
         assert 'filename' in doc
         assert 'file_size' not in doc
@@ -253,36 +260,50 @@ class TestImageRest(BaseTestImage):
     def test_get_collection_paginated(self):
         self.app.get('/images?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}), [self.image4.document_id], 4
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, IMAGES, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, IMAGES, {'offset': 0, 'limit': 1}
+            ),
+            [self.image4.document_id],
+            4,
+        )
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, IMAGES, {'offset': 0, 'limit': 2}
+            ),
             [self.image4.document_id, self.image3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, IMAGES, {'offset': 1, 'limit': 2}
+            ),
             [self.image3.document_id, self.image2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, IMAGES)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, IMAGES, {'l': 'en'}),
             [self.image4.document_id, self.image.document_id],
             2,
         )
 
-        self.assertResultsEqual(
-            self.get_collection_search({'act': 'paragliding'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, IMAGES, {'act': 'paragliding'}),
             [
                 self.image4.document_id,
                 self.image3.document_id,
@@ -293,7 +314,7 @@ class TestImageRest(BaseTestImage):
         )
 
     def test_get(self):
-        body = self.get(self.image)
+        body = scenarios.get(self.app, IMAGES, self.image, title=self.locale_en.title)
         self._assert_geometry(body)
         assert body['license']['id'] == 'CC-BY-SA-3.0'
         assert body['license']['attribution_url'].startswith(
@@ -336,23 +357,23 @@ class TestImageRest(BaseTestImage):
         assert self.outing1.document_id == linked_outings[0].get('document_id')
 
     def test_get_cooked(self):
-        self.get_cooked(self.image)
+        scenarios.get_cooked(self.app, IMAGES, self.image)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.image)
+        scenarios.get_cooked_with_defaulting(self.app, IMAGES, self.image)
 
     def test_get_lang(self):
-        self.get_lang(self.image)
+        scenarios.get_lang(self.app, IMAGES, self.image)
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.image)
+        scenarios.get_new_lang(self.app, IMAGES, self.image)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, IMAGES)
 
     def test_get_edit(self):
         response = self.app.get(
-            self._prefix + '/' + str(self.image.document_id) + '?e=1', status=200
+            IMAGES.prefix + '/' + str(self.image.document_id) + '?e=1', status=200
         )
         body = response.json
 
@@ -367,27 +388,27 @@ class TestImageRest(BaseTestImage):
         assert 'articles' in associations
 
     def test_post_error(self):
-        body = self.post_error({}, status=422)
+        body = scenarios.post_error(self.app, IMAGES, {}, status=422)
         errors = errors_of(body)
         assert len(errors) == 1
-        self.assertCorniceRequired(errors[0], 'filename')
+        assert_required(errors[0], 'filename')
 
     def test_get_caching(self):
-        self.get_caching(self.image)
+        scenarios.get_caching(self.app, IMAGES, self.image)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.image, 'en')
+        body, locale = scenarios.get_info(self.app, IMAGES, self.image, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_version(self):
-        self.get_version(self.image, self.image_version)
+        scenarios.get_version(self.app, IMAGES, self.image, self.image_version)
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_missing_title(self, post_mock):
         request_body = self._post_success_document()
         del request_body['locales'][0]['title']
 
-        body, doc = self.post_success(request_body)
+        body, doc = scenarios.post_success(self.app, self.session, IMAGES, request_body)
         assert doc.locales[0].title == ''
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
@@ -395,7 +416,7 @@ class TestImageRest(BaseTestImage):
         request_body = self._post_success_document()
         request_body['locales'][0]['title'] = None
 
-        self.post_success(request_body)
+        scenarios.post_success(self.app, self.session, IMAGES, request_body)
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_non_whitelisted_attribute(self, post_mock):
@@ -407,17 +428,17 @@ class TestImageRest(BaseTestImage):
             'protected': True,
             'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
         }
-        self.post_non_whitelisted_attribute(body)
+        scenarios.post_non_whitelisted_attribute(self.app, self.session, IMAGES, body)
 
     def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
+        scenarios.post_missing_content_type(self.app, IMAGES, {})
 
     def test_post_missing_filename(self):
         body_post = self._post_success_document()
         del body_post['filename']
-        body = self.post_error(body_post, status=422)
+        body = scenarios.post_error(self.app, IMAGES, body_post, status=422)
         errors = errors_of(body)
-        self.assertCorniceRequired(errors[0], 'filename')
+        assert_required(errors[0], 'filename')
 
     @pytest.mark.parametrize('value', ['NaN', 'inf', float('nan')])
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
@@ -427,7 +448,7 @@ class TestImageRest(BaseTestImage):
         body_post['exposure_time'] = value
         body_post['focal_length'] = 26
 
-        body, doc = self.post_success(body_post)
+        body, doc = scenarios.post_success(self.app, self.session, IMAGES, body_post)
         assert doc.fnumber is None
         assert doc.exposure_time is None
         assert doc.focal_length == 26
@@ -438,7 +459,7 @@ class TestImageRest(BaseTestImage):
         self.session.flush()
 
         response = self.app.get(
-            self._prefix + '/' + str(self.image.document_id), status=200
+            IMAGES.prefix + '/' + str(self.image.document_id), status=200
         )
         assert 'NaN' not in response.text
         assert 'Infinity' not in response.text
@@ -449,7 +470,7 @@ class TestImageRest(BaseTestImage):
     def test_post_duplicated_filename(self):
         body_post = self._post_success_document()
         body_post['filename'] = 'image.jpg'
-        body = self.post_error(body_post)
+        body = scenarios.post_error(self.app, IMAGES, body_post)
         errors = body.get('errors')
         assert errors[0].get('description') == 'Unique'
 
@@ -460,7 +481,7 @@ class TestImageRest(BaseTestImage):
     def test_post_image_backend_error(self, post_mock):
         headers = self.add_authorization_header(username='contributor')
         r = self.app_post_json(
-            self._prefix, self._post_success_document(), headers=headers, status=500
+            IMAGES.prefix, self._post_success_document(), headers=headers, status=500
         )
         assert 'test error' in r.text
 
@@ -469,9 +490,13 @@ class TestImageRest(BaseTestImage):
         waypoint_cache_key = self.session.get(
             CacheVersion, self.waypoint.document_id
         ).version
-        body, doc = self.post_success(self._post_success_document())
+        body, doc = scenarios.post_success(
+            self.app, self.session, IMAGES, self._post_success_document()
+        )
         self._validate_post_success(body, doc)
-        self.check_cache_version(self.waypoint.document_id, waypoint_cache_key + 1)
+        scenarios.check_cache_version(
+            self.session, self.waypoint.document_id, waypoint_cache_key + 1
+        )
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_no_permission_for_outing_association(self, post_mock):
@@ -484,7 +509,7 @@ class TestImageRest(BaseTestImage):
 
         headers = self.add_authorization_header(username='contributor2')
         response = self.app_post_json(
-            self._prefix, body_post, headers=headers, expect_errors=True, status=400
+            IMAGES.prefix, body_post, headers=headers, expect_errors=True, status=400
         )
 
         body = response.json
@@ -513,7 +538,7 @@ class TestImageRest(BaseTestImage):
                 ],
             }
         }
-        self.put_wrong_document_id(body)
+        scenarios.put_wrong_document_id(self.app, IMAGES, body)
 
     def test_put_wrong_document_version(self):
         body = {
@@ -534,7 +559,7 @@ class TestImageRest(BaseTestImage):
                 ],
             }
         }
-        self.put_wrong_version(body, self.image.document_id)
+        scenarios.put_wrong_version(self.app, IMAGES, body, self.image.document_id)
 
     def test_put_wrong_locale_version(self):
         body = {
@@ -555,7 +580,7 @@ class TestImageRest(BaseTestImage):
                 ],
             }
         }
-        self.put_wrong_version(body, self.image.document_id)
+        scenarios.put_wrong_version(self.app, IMAGES, body, self.image.document_id)
 
     def test_put_wrong_ids(self):
         body = {
@@ -576,10 +601,12 @@ class TestImageRest(BaseTestImage):
                 ],
             }
         }
-        self.put_wrong_ids(body, self.image.document_id, user='moderator')
+        scenarios.put_wrong_ids(
+            self.app, IMAGES, body, self.image.document_id, user='moderator'
+        )
 
     def test_put_no_document(self):
-        self.put_put_no_document(self.image.document_id)
+        scenarios.put_no_document(self.app, IMAGES, self.image.document_id)
 
     def test_put_wrong_user(self):
         """Test that a non-moderator user who is not the creator of
@@ -607,7 +634,7 @@ class TestImageRest(BaseTestImage):
         }
         headers = self.add_authorization_header(username='contributor2')
         self.app_put_json(
-            self._prefix + '/' + str(self.image4.document_id),
+            IMAGES.prefix + '/' + str(self.image4.document_id),
             body,
             headers=headers,
             status=403,
@@ -638,7 +665,7 @@ class TestImageRest(BaseTestImage):
         }
         headers = self.add_authorization_header(username='contributor')
         self.app_put_json(
-            self._prefix + '/' + str(self.image4.document_id),
+            IMAGES.prefix + '/' + str(self.image4.document_id),
             body,
             headers=headers,
             status=200,
@@ -674,7 +701,15 @@ class TestImageRest(BaseTestImage):
                 },
             },
         }
-        (body, image) = self.put_success_all(body, self.image, cache_version=3)
+        (body, image) = scenarios.put_success_all(
+            self.app,
+            self.session,
+            IMAGES,
+            body,
+            self.image,
+            cache_version=3,
+            locale_fr=self.locale_fr,
+        )
 
         assert image.height == 2000
         locale_en = image.get_locale('en')
@@ -682,7 +717,7 @@ class TestImageRest(BaseTestImage):
 
         # version with lang 'en'
         versions = image.versions
-        version_en = self.get_latest_version('en', versions)
+        version_en = scenarios.get_latest_version('en', versions)
         archive_locale = version_en.document_locales_archive
         assert archive_locale.title == 'Mont Blanc from the air'
 
@@ -694,7 +729,7 @@ class TestImageRest(BaseTestImage):
         assert archive_geometry_en.version == 2
 
         # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
+        version_fr = scenarios.get_latest_version('fr', versions)
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == 'Mont Blanc du ciel'
 
@@ -728,7 +763,7 @@ class TestImageRest(BaseTestImage):
 
         headers = self.add_authorization_header(username='contributor2')
         response = self.app_put_json(
-            self._prefix + '/' + str(self.image.document_id),
+            IMAGES.prefix + '/' + str(self.image.document_id),
             body,
             headers=headers,
             expect_errors=True,
@@ -768,7 +803,9 @@ class TestImageRest(BaseTestImage):
                 ],
             },
         }
-        self.put_success_figures_only(body, self.image, user='contributor2')
+        scenarios.put_success_figures_only(
+            self.app, self.session, IMAGES, body, self.image, user='contributor2'
+        )
 
     def test_put_success_figures_only(self):
         body = {
@@ -791,7 +828,9 @@ class TestImageRest(BaseTestImage):
                 ],
             },
         }
-        (body, image) = self.put_success_figures_only(body, self.image)
+        (body, image) = scenarios.put_success_figures_only(
+            self.app, self.session, IMAGES, body, self.image
+        )
 
         assert image.height == 2000
 
@@ -816,7 +855,9 @@ class TestImageRest(BaseTestImage):
                 ],
             },
         }
-        (body, image) = self.put_success_lang_only(body, self.image)
+        (body, image) = scenarios.put_success_lang_only(
+            self.app, self.session, IMAGES, body, self.image
+        )
 
         assert image.get_locale('en').description == 'New description'
 
@@ -841,7 +882,9 @@ class TestImageRest(BaseTestImage):
                 ],
             },
         }
-        (body, image) = self.put_success_new_lang(body, self.image)
+        (body, image) = scenarios.put_success_new_lang(
+            self.app, self.session, IMAGES, body, self.image
+        )
 
         assert image.get_locale('es').description == '...'
 
@@ -871,7 +914,7 @@ class TestImageRest(BaseTestImage):
         }
         headers = self.add_authorization_header(username='contributor')
         self.app_put_json(
-            self._prefix + '/' + str(self.image.document_id),
+            IMAGES.prefix + '/' + str(self.image.document_id),
             body,
             headers=headers,
             status=400,
@@ -903,7 +946,7 @@ class TestImageRest(BaseTestImage):
         }
         headers = self.add_authorization_header(username='contributor')
         self.app_put_json(
-            self._prefix + '/' + str(self.image.document_id),
+            IMAGES.prefix + '/' + str(self.image.document_id),
             body,
             headers=headers,
             status=403,
@@ -935,7 +978,7 @@ class TestImageRest(BaseTestImage):
         }
         headers = self.add_authorization_header(username='moderator')
         self.app_put_json(
-            self._prefix + '/' + str(self.image.document_id),
+            IMAGES.prefix + '/' + str(self.image.document_id),
             body,
             headers=headers,
             status=200,
@@ -967,7 +1010,7 @@ class TestImageRest(BaseTestImage):
         }
         headers = self.add_authorization_header(username='moderator')
         self.app_put_json(
-            self._prefix + '/' + str(self.image.document_id),
+            IMAGES.prefix + '/' + str(self.image.document_id),
             body,
             headers=headers,
             status=200,
@@ -997,25 +1040,22 @@ class TestImageRest(BaseTestImage):
         }
         headers = self.add_authorization_header(username='contributor')
         self.app_put_json(
-            self._prefix + '/' + str(self.image4.document_id),
+            IMAGES.prefix + '/' + str(self.image4.document_id),
             body,
             headers=headers,
             status=200,
         )
 
     def test_get_associations_history(self):
-        self._get_association_logs(self.image)
+        scenarios.get_association_logs(self.app, self.image)
 
 
 class TestImageListRest(BaseTestImage):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale
-        )
         BaseTestImage.setUp(self)
         self._add_test_data()
 
-    def post_success(self, request_body, user='contributor'):
+    def post_list_success(self, request_body, user='contributor'):
         response = self.app_post_json('/images/list', request_body, status=403)
 
         headers = self.add_authorization_header(username=user)
@@ -1027,14 +1067,16 @@ class TestImageListRest(BaseTestImage):
         images = body.get('images')
         assert len(request_body['images']) == len(images)
         for image in images:
-            (body, doc) = self._validate_document(image)
+            (body, doc) = scenarios.validate_document(
+                self.app, self.session, IMAGES, image
+            )
 
         return (body, doc)
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_success(self, post_mock):
         body = {'images': [self._post_success_document()]}
-        body, doc = self.post_success(body)
+        body, doc = self.post_list_success(body)
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(self.waypoint.document_id)
@@ -1054,7 +1096,7 @@ class TestImageListRest(BaseTestImage):
                 self._post_success_document({'filename': 'post_image1.jpg'}),
             ]
         }
-        body, doc = self.post_success(body)
+        body, doc = self.post_list_success(body)
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(self.waypoint.document_id)
@@ -1080,7 +1122,7 @@ class TestImageListRest(BaseTestImage):
                 )
             ]
         }
-        body, doc = self.post_success(body)
+        body, doc = self.post_list_success(body)
         self._validate_post_success(body, doc, check_wp=False)
 
         # check that a link to the linked image is created
@@ -1106,7 +1148,7 @@ class TestImageListRest(BaseTestImage):
                 self._post_success_document({'filename': 'post_image2.jpg'}),
             ]
         }
-        body, doc = self.post_success(body_request, user='contributor2')
+        body, doc = self.post_list_success(body_request, user='contributor2')
         self._validate_post_success(body, doc)
 
         feed_change = self.get_feed_change(
@@ -1135,7 +1177,7 @@ class TestImageListRest(BaseTestImage):
                 self._post_success_document({'filename': 'post_image4.jpg'}),
             ]
         }
-        self.post_success(body_request, user='contributor2')
+        self.post_list_success(body_request, user='contributor2')
         assert 1 == q.count()
 
         self.session.refresh(feed_change)

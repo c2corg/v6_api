@@ -1,12 +1,14 @@
 from c2corg_api.models.stoparea import Stoparea
 from c2corg_api.tests import invalid_parameters
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests.views.scenarios import DocType
+
+STOPAREAS = DocType('/stopareas', 'sa', Stoparea)
 
 
-class TestStopareaRest(BaseDocumentTestRest):
+class TestStopareaRest(BaseTestRest):
     def setUp(self):
-        self.set_prefix_and_model('/stopareas', 'sa', Stoparea, None, None)
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def _add_test_data(self):
@@ -72,10 +74,9 @@ class TestStopareaRest(BaseDocumentTestRest):
         assert result['operator'] == 'operator1'
 
 
-class TestStopareaInfoRest(BaseDocumentTestRest):
+class TestStopareaInfoRest(BaseTestRest):
     def setUp(self):
-        self.set_prefix_and_model('/stopareas', 'sa', Stoparea, None, None)
-        BaseDocumentTestRest.setUp(self)
+        BaseTestRest.setUp(self)
         self._add_test_data()
 
     def _add_test_data(self):

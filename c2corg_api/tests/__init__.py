@@ -52,6 +52,29 @@ def errors_of(body):
     return body['errors']
 
 
+def assert_required(error, name):
+    """Check an error for a missing field."""
+    # FastAPI's text in a 422, the API's in its envelope
+    assert error.get('description') in ('Field required', 'Required')
+    assert error.get('name') == name
+
+
+def assert_not_in_enum(error, name):
+    """Check an error for a value outside of an enumeration."""
+    assert 'is not one of' in error.get('description')
+    assert error.get('name') == name
+
+
+def send_json(client, method, *args, status=200, **kwargs):
+    """Send a JSON body; fail unless the answer has the given status ('*': any)."""
+    kwargs['expect_errors'] = True
+    res = getattr(client, method + '_json')(*args, **kwargs)
+    if status != '*' and res.status_code != status:
+        errors = res.body if res.status_code == 400 else ''
+        pytest.fail(f'Bad response: {res.status} (not {status}) : {errors}')
+    return res
+
+
 def invalid_parameters(response):
     """Return the (location, name, message) of the errors of a 422 answer."""
     # FastAPI's validation errors: `loc` is the location and the name
@@ -318,18 +341,7 @@ class BaseTestCase(AssertionsMixin):
         return self.app_send_json('put', *args, **kwargs)
 
     def app_send_json(self, action, *args, **kwargs):
-        kwargs = dict(kwargs)
-        status = 200
-        if 'status' in kwargs:
-            status = kwargs['status']
-            del kwargs['status']
-        kwargs['expect_errors'] = True
-
-        res = getattr(self.app, action + '_json')(*args, **kwargs)
-        if status != '*' and res.status_code != status:
-            errors = res.body if res.status_code == 400 else ''
-            pytest.fail(f'Bad response: {res.status} (not {status}) : {errors}')
-        return res
+        return send_json(self.app, action, *args, **kwargs)
 
 
 def reset_queue(queue_config):
