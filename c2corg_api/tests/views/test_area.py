@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from shapely.geometry import Polygon, shape
 
 from c2corg_api.models.area import AREA_TYPE, ArchiveArea, Area
@@ -15,79 +16,71 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
-from c2corg_api.tests import assert_required
+from c2corg_api.tests import assert_required, auth_headers, send_json
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseTestRest, scenarios
+from c2corg_api.tests.views import scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
 AREAS = DocType('/areas', AREA_TYPE, Area, ArchiveArea, ArchiveDocumentLocale)
 
 
-class TestAreaRest(BaseTestRest):
-    def setUp(self):
-        BaseTestRest.setUp(self)
-        self._add_test_data()
+class TestAreaRest:
+    @pytest.fixture(autouse=True)
+    def _setup_test_area_rest(self, client, session, user_ids):
+        self._add_test_data(session, user_ids)
 
-    def test_get_collection(self):
-        body = scenarios.get_collection(self.app, self.session, AREAS)
+    def test_get_collection(self, client, session):
+        body = scenarios.get_collection(client, session, AREAS)
         doc = body['documents'][0]
         assert 'areas' not in doc
         assert 'geometry' not in doc
 
-    def test_get_collection_paginated(self):
-        self.app.get('/areas?offset=invalid', status=422)
+    def test_get_collection_paginated(self, client, session):
+        client.get('/areas?offset=invalid', status=422)
 
         scenarios.assert_results_equal(
-            scenarios.get_collection(
-                self.app, self.session, AREAS, {'offset': 0, 'limit': 0}
-            ),
+            scenarios.get_collection(client, session, AREAS, {'offset': 0, 'limit': 0}),
             [],
             4,
         )
 
         scenarios.assert_results_equal(
-            scenarios.get_collection(
-                self.app, self.session, AREAS, {'offset': 0, 'limit': 1}
-            ),
+            scenarios.get_collection(client, session, AREAS, {'offset': 0, 'limit': 1}),
             [self.area4.document_id],
             4,
         )
         scenarios.assert_results_equal(
-            scenarios.get_collection(
-                self.app, self.session, AREAS, {'offset': 0, 'limit': 2}
-            ),
+            scenarios.get_collection(client, session, AREAS, {'offset': 0, 'limit': 2}),
             [self.area4.document_id, self.area3.document_id],
             4,
         )
         scenarios.assert_results_equal(
-            scenarios.get_collection(
-                self.app, self.session, AREAS, {'offset': 1, 'limit': 2}
-            ),
+            scenarios.get_collection(client, session, AREAS, {'offset': 1, 'limit': 2}),
             [self.area3.document_id, self.area2.document_id],
             4,
         )
 
-    def test_get_collection_lang(self):
-        scenarios.get_collection_lang(self.app, AREAS)
+    def test_get_collection_lang(self, client):
+        scenarios.get_collection_lang(client, AREAS)
 
-    def test_get_collection_search(self):
-        reset_search_index(self.session)
+    def test_get_collection_search(self, client, session):
+        reset_search_index(session)
 
         scenarios.assert_results_equal(
-            scenarios.get_collection_search(self.app, AREAS, {'l': 'en'}),
+            scenarios.get_collection_search(client, AREAS, {'l': 'en'}),
             [self.area4.document_id, self.area1.document_id],
             2,
         )
 
         scenarios.assert_results_equal(
-            scenarios.get_collection_search(self.app, AREAS, {'atyp': 'admin_limits'}),
+            scenarios.get_collection_search(client, AREAS, {'atyp': 'admin_limits'}),
             [self.area4.document_id],
             1,
         )
 
-    def test_get(self):
-        body = scenarios.get(self.app, AREAS, self.area1, title=self.locale_en.title)
+    def test_get(self, client):
+        body = scenarios.get(client, AREAS, self.area1, title=self.locale_en.title)
         self._assert_geometry(body)
         assert 'maps' not in body
 
@@ -98,40 +91,40 @@ class TestAreaRest(BaseTestRest):
         assert 1 == len(images)
         assert images[0].get('document_id') == self.image.document_id
 
-    def test_get_cooked(self):
-        scenarios.get_cooked(self.app, AREAS, self.area1)
+    def test_get_cooked(self, client):
+        scenarios.get_cooked(client, AREAS, self.area1)
 
-    def test_get_cooked_with_defaulting(self):
-        scenarios.get_cooked_with_defaulting(self.app, AREAS, self.area1)
+    def test_get_cooked_with_defaulting(self, client):
+        scenarios.get_cooked_with_defaulting(client, AREAS, self.area1)
 
-    def test_get_lang(self):
-        scenarios.get_lang(self.app, AREAS, self.area1)
+    def test_get_lang(self, client):
+        scenarios.get_lang(client, AREAS, self.area1)
 
-    def test_get_new_lang(self):
-        scenarios.get_new_lang(self.app, AREAS, self.area1)
+    def test_get_new_lang(self, client):
+        scenarios.get_new_lang(client, AREAS, self.area1)
 
-    def test_get_404(self):
-        scenarios.get_404(self.app, AREAS)
+    def test_get_404(self, client):
+        scenarios.get_404(client, AREAS)
 
-    def test_get_caching(self):
-        scenarios.get_caching(self.app, AREAS, self.area1)
+    def test_get_caching(self, client):
+        scenarios.get_caching(client, AREAS, self.area1)
 
-    def test_get_info(self):
-        body, locale = scenarios.get_info(self.app, AREAS, self.area1, 'en')
+    def test_get_info(self, client):
+        body, locale = scenarios.get_info(client, AREAS, self.area1, 'en')
         assert locale.get('lang') == 'en'
 
-    def test_get_version(self):
-        scenarios.get_version(self.app, AREAS, self.area1, self.area1_version)
+    def test_get_version(self, client):
+        scenarios.get_version(client, AREAS, self.area1, self.area1_version)
 
-    def test_post_error(self):
-        body = scenarios.post_error(self.app, AREAS, {}, user='moderator')
+    def test_post_error(self, client):
+        body = scenarios.post_error(client, AREAS, {}, user='moderator')
         errors = body.get('errors')
         assert len(errors) == 3
         assert_required(errors[0], 'locales')
         assert_required(errors[1], 'geometry')
         assert_required(errors[2], 'area_type')
 
-    def test_post_missing_title(self):
+    def test_post_missing_title(self, client):
         body_post = {
             'area_type': 'range',
             'geometry': {
@@ -139,9 +132,9 @@ class TestAreaRest(BaseTestRest):
             },
             'locales': [{'lang': 'en'}],
         }
-        scenarios.post_missing_title(self.app, AREAS, body_post, user='moderator')
+        scenarios.post_missing_title(client, AREAS, body_post, user='moderator')
 
-    def test_post_non_whitelisted_attribute(self):
+    def test_post_non_whitelisted_attribute(self, client, session):
         body = {
             'area_type': 'range',
             'protected': True,
@@ -153,13 +146,13 @@ class TestAreaRest(BaseTestRest):
             'locales': [{'lang': 'en', 'title': 'Chartreuse'}],
         }
         scenarios.post_non_whitelisted_attribute(
-            self.app, self.session, AREAS, body, user='moderator'
+            client, session, AREAS, body, user='moderator'
         )
 
-    def test_post_missing_content_type(self):
-        scenarios.post_missing_content_type(self.app, AREAS, {})
+    def test_post_missing_content_type(self, client):
+        scenarios.post_missing_content_type(client, AREAS, {})
 
-    def test_post_success(self):
+    def test_post_success(self, client, session):
         body = {
             'area_type': 'range',
             'geometry': {
@@ -171,7 +164,7 @@ class TestAreaRest(BaseTestRest):
             'associations': {'images': [{'document_id': self.image.document_id}]},
         }
         body, doc = scenarios.post_success(
-            self.app, self.session, AREAS, body, user='moderator'
+            client, session, AREAS, body, user='moderator'
         )
         self._assert_geometry(body)
 
@@ -190,24 +183,24 @@ class TestAreaRest(BaseTestRest):
 
         # check that a link for intersecting documents is created
         links = (
-            self.session.query(AreaAssociation)
+            session.query(AreaAssociation)
             .filter(AreaAssociation.area_id == doc.document_id)
             .order_by(AreaAssociation.document_id)
             .all()
         )
         assert len(links) == 2
         assert links[0].document_id == self.waypoint1.document_id
-        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(session, self.waypoint1.document_id, 2)
         assert links[1].document_id == self.route.document_id
-        scenarios.check_cache_version(self.session, self.route.document_id, 2)
+        scenarios.check_cache_version(session, self.route.document_id, 2)
 
         # check that a link to the provided image is created
-        association_image = self.session.get(
+        association_image = session.get(
             Association, (doc.document_id, self.image.document_id)
         )
         assert association_image is not None
 
-    def test_put_wrong_document_id(self):
+    def test_put_wrong_document_id(self, client):
         body = {
             'document': {
                 'document_id': '9999999',
@@ -222,9 +215,9 @@ class TestAreaRest(BaseTestRest):
                 ],
             }
         }
-        scenarios.put_wrong_document_id(self.app, AREAS, body)
+        scenarios.put_wrong_document_id(client, AREAS, body)
 
-    def test_put_wrong_document_version(self):
+    def test_put_wrong_document_version(self, client):
         body = {
             'document': {
                 'document_id': self.area1.document_id,
@@ -239,9 +232,9 @@ class TestAreaRest(BaseTestRest):
                 ],
             }
         }
-        scenarios.put_wrong_version(self.app, AREAS, body, self.area1.document_id)
+        scenarios.put_wrong_version(client, AREAS, body, self.area1.document_id)
 
-    def test_put_wrong_locale_version(self):
+    def test_put_wrong_locale_version(self, client):
         body = {
             'document': {
                 'document_id': self.area1.document_id,
@@ -250,9 +243,9 @@ class TestAreaRest(BaseTestRest):
                 'locales': [{'lang': 'en', 'title': 'Chartreuse', 'version': -9999}],
             }
         }
-        scenarios.put_wrong_version(self.app, AREAS, body, self.area1.document_id)
+        scenarios.put_wrong_version(client, AREAS, body, self.area1.document_id)
 
-    def test_put_wrong_ids(self):
+    def test_put_wrong_ids(self, client):
         body = {
             'document': {
                 'document_id': self.area1.document_id,
@@ -267,12 +260,12 @@ class TestAreaRest(BaseTestRest):
                 ],
             }
         }
-        scenarios.put_wrong_ids(self.app, AREAS, body, self.area1.document_id)
+        scenarios.put_wrong_ids(client, AREAS, body, self.area1.document_id)
 
-    def test_put_no_document(self):
-        scenarios.put_no_document(self.app, AREAS, self.area1.document_id)
+    def test_put_no_document(self, client):
+        scenarios.put_no_document(client, AREAS, self.area1.document_id)
 
-    def test_put_update_geometry_fail(self):
+    def test_put_update_geometry_fail(self, client):
         body = {
             'message': 'Update',
             'document': {
@@ -292,8 +285,10 @@ class TestAreaRest(BaseTestRest):
                 ],
             },
         }
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_put_json(
+        headers = auth_headers(username='contributor')
+        response = send_json(
+            client,
+            'put',
             AREAS.prefix + '/' + str(self.area1.document_id),
             body,
             headers=headers,
@@ -307,7 +302,7 @@ class TestAreaRest(BaseTestRest):
             body['errors'][0]['description'] == 'No permission to change the geometry'
         )
 
-    def test_put_success_all(self):
+    def test_put_success_all(self, client, session):
         body = {
             'message': 'Update',
             'document': {
@@ -325,8 +320,8 @@ class TestAreaRest(BaseTestRest):
             },
         }
         (body, area) = scenarios.put_success_all(
-            self.app,
-            self.session,
+            client,
+            session,
             AREAS,
             body,
             self.area1,
@@ -357,7 +352,7 @@ class TestAreaRest(BaseTestRest):
         archive_locale = version_fr.document_locales_archive
         assert archive_locale.title == 'Chartreuse'
 
-    def test_put_success_all_as_moderator(self):
+    def test_put_success_all_as_moderator(self, client, session):
         body = {
             'message': 'Update',
             'document': {
@@ -380,8 +375,8 @@ class TestAreaRest(BaseTestRest):
             },
         }
         (body, area) = scenarios.put_success_all(
-            self.app,
-            self.session,
+            client,
+            session,
             AREAS,
             body,
             self.area1,
@@ -399,26 +394,26 @@ class TestAreaRest(BaseTestRest):
 
         # check that the links to intersecting documents are updated
         links = (
-            self.session.query(AreaAssociation)
+            session.query(AreaAssociation)
             .filter(AreaAssociation.area_id == self.area1.document_id)
             .order_by(AreaAssociation.document_id)
             .all()
         )
         assert len(links) == 2
         assert links[0].document_id == self.waypoint1.document_id
-        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(session, self.waypoint1.document_id, 2)
         assert links[1].document_id == self.route.document_id
-        scenarios.check_cache_version(self.session, self.route.document_id, 2)
+        scenarios.check_cache_version(session, self.route.document_id, 2)
         # waypoint 2 is no longer associated, the cache key was incremented
-        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 2)
+        scenarios.check_cache_version(session, self.waypoint2.document_id, 2)
 
         # check that existing link to the image is removed
-        association_image = self.session.get(
+        association_image = session.get(
             Association, (area.document_id, self.image.document_id)
         )
         assert association_image is None
 
-    def test_put_success_figures_only(self):
+    def test_put_success_figures_only(self, client, session):
         body = {
             'message': 'Changing figures',
             'document': {
@@ -436,7 +431,7 @@ class TestAreaRest(BaseTestRest):
             },
         }
         (body, area) = scenarios.put_success_figures_only(
-            self.app, self.session, AREAS, body, self.area1
+            client, session, AREAS, body, self.area1
         )
 
         assert area.area_type == 'admin_limits'
@@ -444,14 +439,14 @@ class TestAreaRest(BaseTestRest):
         # check that the links to intersecting documents are not updated,
         # because the geometry did not change
         links = (
-            self.session.query(AreaAssociation)
+            session.query(AreaAssociation)
             .filter(AreaAssociation.area_id == self.area1.document_id)
             .all()
         )
         assert len(links) == 1
         assert links[0].document_id == self.waypoint2.document_id
 
-    def test_put_success_lang_only(self):
+    def test_put_success_lang_only(self, client, session):
         body = {
             'message': 'Changing lang',
             'document': {
@@ -469,7 +464,7 @@ class TestAreaRest(BaseTestRest):
             },
         }
         (body, area) = scenarios.put_success_lang_only(
-            self.app, self.session, AREAS, body, self.area1
+            client, session, AREAS, body, self.area1
         )
 
         assert area.get_locale('en').title == 'New title'
@@ -477,14 +472,14 @@ class TestAreaRest(BaseTestRest):
         # check that the links to intersecting documents are not updated,
         # because the geometry did not change
         links = (
-            self.session.query(AreaAssociation)
+            session.query(AreaAssociation)
             .filter(AreaAssociation.area_id == self.area1.document_id)
             .all()
         )
         assert len(links) == 1
         assert links[0].document_id == self.waypoint2.document_id
 
-    def test_put_success_new_lang(self):
+    def test_put_success_new_lang(self, client, session):
         """Test updating a document by adding a new locale."""
         body = {
             'message': 'Adding lang',
@@ -497,13 +492,13 @@ class TestAreaRest(BaseTestRest):
             },
         }
         (body, area) = scenarios.put_success_new_lang(
-            self.app, self.session, AREAS, body, self.area1
+            client, session, AREAS, body, self.area1
         )
 
         assert area.get_locale('es').title == 'Chartreuse'
 
-    def test_get_associations_history(self):
-        scenarios.get_association_logs(self.app, self.area1)
+    def test_get_associations_history(self, client):
+        scenarios.get_association_logs(client, self.area1)
 
     def _assert_geometry(self, body):
         assert body.get('geometry') is not None
@@ -515,7 +510,7 @@ class TestAreaRest(BaseTestRest):
         polygon = shape(json.loads(geom))
         assert isinstance(polygon, Polygon)
 
-    def _add_test_data(self):
+    def _add_test_data(self, session, user_ids):
         self.area1 = Area(area_type='range')
 
         self.locale_en = DocumentLocale(lang='en', title='Chartreuse')
@@ -528,27 +523,27 @@ class TestAreaRest(BaseTestRest):
             geom_detail='SRID=3857;POLYGON((668518.249382151 5728802.39591739,668518.249382151 5745465.66808356,689156.247019149 5745465.66808356,689156.247019149 5728802.39591739,668518.249382151 5728802.39591739))'  # noqa
         )
 
-        self.session.add(self.area1)
-        self.session.flush()
+        session.add(self.area1)
+        session.flush()
 
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
         create_new_version(self.area1, user_id)
 
         self.area1_version = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.area1.document_id)
             .filter(DocumentVersion.lang == 'en')
             .first()
         )
 
         self.area2 = Area(area_type='range')
-        self.session.add(self.area2)
+        session.add(self.area2)
         self.area3 = Area(area_type='range')
-        self.session.add(self.area3)
+        session.add(self.area3)
         self.area4 = Area(area_type='admin_limits')
         self.area4.locales.append(DocumentLocale(lang='en', title='Isère'))
         self.area4.locales.append(DocumentLocale(lang='fr', title='Isère'))
-        self.session.add(self.area4)
+        session.add(self.area4)
 
         self.waypoint1 = Waypoint(
             waypoint_type='summit',
@@ -567,8 +562,8 @@ class TestAreaRest(BaseTestRest):
             activities=['skitouring'], geometry=DocumentGeometry(geom_detail=route_geom)
         )
 
-        self.session.add_all([self.waypoint1, self.waypoint2, self.route])
-        self.session.add(AreaAssociation(document=self.waypoint2, area=self.area1))
+        session.add_all([self.waypoint1, self.waypoint2, self.route])
+        session.add(AreaAssociation(document=self.waypoint2, area=self.area1))
 
         self.image = Image(
             filename='image.jpg',
@@ -582,10 +577,10 @@ class TestAreaRest(BaseTestRest):
             ],
         )
 
-        self.session.add(self.image)
-        self.session.flush()
+        session.add(self.image)
+        session.flush()
 
         scenarios.add_association(
-            self.session, Association.create(self.area1, self.image), user_id
+            session, Association.create(self.area1, self.image), user_id
         )
-        self.session.flush()
+        session.flush()

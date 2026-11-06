@@ -1,6 +1,7 @@
 import datetime
 from collections import Counter
 
+import pytest
 from httmock import HTTMock, all_requests
 from sqlalchemy.sql.expression import or_
 
@@ -49,16 +50,17 @@ from c2corg_api.models.xreport import (
     Xreport,
     XreportLocale,
 )
-from c2corg_api.tests.views import BaseTestRest, scenarios
+from c2corg_api.tests import assert_errors_contain, auth_headers
+from c2corg_api.tests.views import scenarios
 from c2corg_api.views.document import create_new_version, update_version
 
 
-class TestDocumentDeleteRest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
+class TestDocumentDeleteRest:
+    @pytest.fixture(autouse=True)
+    def _setup_test_document_delete_rest(self, client, session, user_ids):
         self._prefix = '/documents/delete/'
 
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
 
         self.waypoint1 = Waypoint(
             waypoint_type='summit',
@@ -73,7 +75,7 @@ class TestDocumentDeleteRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.waypoint1)
+        session.add(self.waypoint1)
 
         self.waypoint2 = Waypoint(
             waypoint_type='summit',
@@ -89,7 +91,7 @@ class TestDocumentDeleteRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.waypoint2)
+        session.add(self.waypoint2)
 
         self.waypoint3 = Waypoint(
             waypoint_type='summit',
@@ -114,8 +116,8 @@ class TestDocumentDeleteRest(BaseTestRest):
                 document_topic=DocumentTopic(topic_id=3),
             )
         )
-        self.session.add(self.waypoint3)
-        self.session.flush()
+        session.add(self.waypoint3)
+        session.flush()
 
         self.waypoint4 = Waypoint(
             waypoint_type='summit',
@@ -125,8 +127,8 @@ class TestDocumentDeleteRest(BaseTestRest):
         self.waypoint4.locales.append(
             WaypointLocale(lang='en', title='Mont Ventoux', description='...')
         )
-        self.session.add(self.waypoint4)
-        self.session.flush()
+        session.add(self.waypoint4)
+        session.flush()
 
         create_new_version(self.waypoint1, user_id)
         update_feed_document_create(self.waypoint1, user_id)
@@ -136,7 +138,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         update_feed_document_create(self.waypoint3, user_id)
         create_new_version(self.waypoint4, user_id)
         update_feed_document_create(self.waypoint4, user_id)
-        self.session.flush()
+        session.flush()
 
         route1_geometry = DocumentGeometry(
             geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
@@ -161,7 +163,7 @@ class TestDocumentDeleteRest(BaseTestRest):
                 gear='paraglider',
             )
         )
-        self.session.add(self.route1)
+        session.add(self.route1)
 
         route2_geometry = DocumentGeometry(
             geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
@@ -186,12 +188,12 @@ class TestDocumentDeleteRest(BaseTestRest):
                 document_topic=DocumentTopic(topic_id=4),
             )
         )
-        self.session.add(self.route2)
-        self.session.flush()
+        session.add(self.route2)
+        session.flush()
 
-        self._add_association(self.waypoint1, self.route1)
-        self._add_association(self.waypoint2, self.route2)
-        self.session.flush()
+        self._add_association(session, user_ids, self.waypoint1, self.route1)
+        self._add_association(session, user_ids, self.waypoint2, self.route2)
+        session.flush()
 
         route3_geometry = DocumentGeometry(
             geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
@@ -216,8 +218,8 @@ class TestDocumentDeleteRest(BaseTestRest):
                 document_topic=DocumentTopic(topic_id=5),
             )
         )
-        self.session.add(self.route3)
-        self.session.flush()
+        session.add(self.route3)
+        session.flush()
 
         create_new_version(self.route1, user_id)
         update_feed_document_create(self.route1, user_id)
@@ -226,11 +228,11 @@ class TestDocumentDeleteRest(BaseTestRest):
         create_new_version(self.route3, user_id)
         update_feed_document_create(self.route3, user_id)
 
-        self._add_association(self.waypoint1, self.route3)
-        self._add_association(self.waypoint2, self.route3)
-        self._add_association(self.waypoint3, self.route3)
-        self._add_tag(self.route3)
-        self.session.flush()
+        self._add_association(session, user_ids, self.waypoint1, self.route3)
+        self._add_association(session, user_ids, self.waypoint2, self.route3)
+        self._add_association(session, user_ids, self.waypoint3, self.route3)
+        self._add_tag(session, user_ids, self.route3)
+        session.flush()
 
         outing1_geometry = DocumentGeometry(
             geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
@@ -251,13 +253,13 @@ class TestDocumentDeleteRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.outing1)
-        self.session.flush()
+        session.add(self.outing1)
+        session.flush()
 
         create_new_version(self.outing1, user_id)
         update_feed_document_create(self.outing1, user_id)
-        self._add_association(self.route1, self.outing1)
-        self.session.flush()
+        self._add_association(session, user_ids, self.route1, self.outing1)
+        session.flush()
 
         outing1b_geometry = DocumentGeometry(
             geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
@@ -273,11 +275,11 @@ class TestDocumentDeleteRest(BaseTestRest):
                 OutingLocale(lang='en', title='...', description='...', weather='sunny')
             ],
         )
-        self.session.add(self.outing1b)
-        self.session.flush()
+        session.add(self.outing1b)
+        session.flush()
 
         create_new_version(self.outing1b, user_id)
-        self.session.flush()
+        session.flush()
 
         outing2_geometry = DocumentGeometry(
             geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
@@ -298,14 +300,14 @@ class TestDocumentDeleteRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.outing2)
-        self.session.flush()
+        session.add(self.outing2)
+        session.flush()
 
         create_new_version(self.outing2, user_id)
         update_feed_document_create(self.outing2, user_id)
-        self._add_association(self.route2, self.outing2)
-        self._add_association(self.route3, self.outing2)
-        self.session.flush()
+        self._add_association(session, user_ids, self.route2, self.outing2)
+        self._add_association(session, user_ids, self.route3, self.outing2)
+        session.flush()
 
         self.article1 = Article(
             activities=['skitouring'],
@@ -320,24 +322,24 @@ class TestDocumentDeleteRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.article1)
-        self.session.flush()
+        session.add(self.article1)
+        session.flush()
 
         create_new_version(self.article1, user_id)
         update_feed_document_create(self.article1, user_id)
-        self.session.flush()
+        session.flush()
 
         self.article1.locales[0].title = 'Some other article title'
         article1_lang = self.article1.locales[0].lang
-        self.session.flush()
+        session.flush()
         update_version(
             self.article1, user_id, 'new title', [UpdateType.LANG], [article1_lang]
         )
-        self.session.flush()
+        session.flush()
 
-        self._add_association(self.route2, self.article1)
-        self._add_association(self.outing2, self.article1)
-        self.session.flush()
+        self._add_association(session, user_ids, self.route2, self.article1)
+        self._add_association(session, user_ids, self.outing2, self.article1)
+        session.flush()
 
         self.article2 = Article(
             activities=['skitouring'],
@@ -349,14 +351,14 @@ class TestDocumentDeleteRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.article2)
-        self.session.flush()
+        session.add(self.article2)
+        session.flush()
 
         # Make the article older than 24h old
         written_at = datetime.datetime(2016, 1, 1, 0, 0, 0)
         create_new_version(self.article2, user_id, written_at)
         update_feed_document_create(self.article2, user_id)
-        self.session.flush()
+        session.flush()
 
         self.book1 = Book(
             activities=['skitouring'],
@@ -370,14 +372,14 @@ class TestDocumentDeleteRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.book1)
-        self.session.flush()
+        session.add(self.book1)
+        session.flush()
 
         create_new_version(self.book1, user_id)
         update_feed_document_create(self.book1, user_id)
-        self._add_association(self.book1, self.route2)
-        self._add_association(self.book1, self.route3)
-        self.session.flush()
+        self._add_association(session, user_ids, self.book1, self.route2)
+        self._add_association(session, user_ids, self.book1, self.route3)
+        session.flush()
 
         self.xreport1 = Xreport(
             event_activity='alpine_climbing',
@@ -397,14 +399,14 @@ class TestDocumentDeleteRest(BaseTestRest):
                 ),
             ],
         )
-        self.session.add(self.xreport1)
-        self.session.flush()
+        session.add(self.xreport1)
+        session.flush()
 
         create_new_version(self.xreport1, user_id)
         update_feed_document_create(self.xreport1, user_id)
-        self._add_association(self.outing2, self.xreport1)
-        self._add_association(self.route3, self.xreport1)
-        self.session.flush()
+        self._add_association(session, user_ids, self.outing2, self.xreport1)
+        self._add_association(session, user_ids, self.route3, self.xreport1)
+        session.flush()
 
         self.image1 = Image(
             filename='image1.jpg',
@@ -420,14 +422,14 @@ class TestDocumentDeleteRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.image1)
-        self.session.flush()
+        session.add(self.image1)
+        session.flush()
 
         create_new_version(self.image1, user_id)
-        self._add_association(self.outing1, self.image1)
-        self._add_association(self.route3, self.image1)
-        self._add_association(self.waypoint3, self.image1)
-        self.session.flush()
+        self._add_association(session, user_ids, self.outing1, self.image1)
+        self._add_association(session, user_ids, self.route3, self.image1)
+        self._add_association(session, user_ids, self.waypoint3, self.image1)
+        session.flush()
 
         update_feed_images_upload(
             [self.image1],
@@ -449,11 +451,11 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         self.image1.filename = 'image1.1.jpg'
-        self.session.flush()
+        session.flush()
         update_version(
             self.image1, user_id, 'changed filename', [UpdateType.FIGURES], []
         )
-        self.session.flush()
+        session.flush()
 
         self.topo_map1 = TopoMap(
             code='3232ET',
@@ -464,21 +466,17 @@ class TestDocumentDeleteRest(BaseTestRest):
                 geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))'  # noqa: E501
             ),
         )
-        self.session.add(self.topo_map1)
-        self.session.flush()
-        self.session.add(
+        session.add(self.topo_map1)
+        session.flush()
+        session.add(
             TopoMapAssociation(document=self.waypoint2, topo_map=self.topo_map1)
         )
-        self.session.add(
+        session.add(
             TopoMapAssociation(document=self.waypoint3, topo_map=self.topo_map1)
         )
-        self.session.add(
-            TopoMapAssociation(document=self.route2, topo_map=self.topo_map1)
-        )
-        self.session.add(
-            TopoMapAssociation(document=self.route3, topo_map=self.topo_map1)
-        )
-        self.session.flush()
+        session.add(TopoMapAssociation(document=self.route2, topo_map=self.topo_map1))
+        session.add(TopoMapAssociation(document=self.route3, topo_map=self.topo_map1))
+        session.flush()
 
         self.area1 = Area(
             area_type='range',
@@ -486,99 +484,99 @@ class TestDocumentDeleteRest(BaseTestRest):
                 geom_detail='SRID=3857;POLYGON((611774.917032556 5706934.10657514,611774.917032556 5744215.5846397,642834.402570357 5744215.5846397,642834.402570357 5706934.10657514,611774.917032556 5706934.10657514))'  # noqa
             ),
         )
-        self.session.add(self.area1)
-        self.session.flush()
-        self.session.add(AreaAssociation(document=self.waypoint2, area=self.area1))
-        self.session.add(AreaAssociation(document=self.waypoint3, area=self.area1))
-        self.session.add(AreaAssociation(document=self.route2, area=self.area1))
-        self.session.add(AreaAssociation(document=self.route3, area=self.area1))
-        self.session.flush()
+        session.add(self.area1)
+        session.flush()
+        session.add(AreaAssociation(document=self.waypoint2, area=self.area1))
+        session.add(AreaAssociation(document=self.waypoint3, area=self.area1))
+        session.add(AreaAssociation(document=self.route2, area=self.area1))
+        session.add(AreaAssociation(document=self.route3, area=self.area1))
+        session.flush()
 
-    def _add_association(self, parent_document, child_document):
+    def _add_association(self, session, user_ids, parent_document, child_document):
         association = Association.create(
             parent_document=parent_document, child_document=child_document
         )
-        self.session.add(association)
-        self.session.add(association.get_log(self.global_userids['contributor']))
+        session.add(association)
+        session.add(association.get_log(user_ids['contributor']))
 
-    def _add_tag(self, document):
+    def _add_tag(self, session, user_ids, document):
         document_id = document.document_id
         document_type = document.type
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
         tag = DocumentTag(
             document_id=document_id, document_type=document_type, user_id=user_id
         )
-        self.session.add(tag)
+        session.add(tag)
         log = DocumentTagLog(
             document_id=document_id,
             document_type=document_type,
             user_id=user_id,
             is_creation=True,
         )
-        self.session.add(log)
+        session.add(log)
 
-    def _delete(self, document_id, expected_status):
-        headers = self.add_authorization_header(username='moderator')
-        return self.app.delete_json(
+    def _delete(self, client, document_id, expected_status):
+        headers = auth_headers(username='moderator')
+        return client.delete_json(
             self._prefix + str(document_id), headers=headers, status=expected_status
         )
 
-    def test_non_unauthorized(self):
-        self.app.delete_json(
+    def test_non_unauthorized(self, client):
+        client.delete_json(
             self._prefix + str(self.waypoint1.document_id), {}, status=403
         )
 
-    def test_delete_non_existing_document(self):
-        self._delete(9999999, 404)
+    def test_delete_non_existing_document(self, client):
+        self._delete(client, 9999999, 404)
 
-    def test_delete_main_waypoint(self):
+    def test_delete_main_waypoint(self, client):
         """Test that a main waypoint cannot be deleted."""
-        response = self._delete(self.waypoint1.document_id, 400)
-        self.assertErrorsContain(
+        response = self._delete(client, self.waypoint1.document_id, 400)
+        assert_errors_contain(
             response.json,
             'document_id',
             'This waypoint cannot be deleted because it is a main waypoint.',
         )
 
-    def test_delete_former_main_waypoint(self):
+    def test_delete_former_main_waypoint(self, client, session, user_ids):
         """Test that a former main waypoint can be deleted."""
         self.route3.main_waypoint_id = self.waypoint3.document_id
-        self.session.flush()
+        session.flush()
         update_version(
             self.route3,
-            self.global_userids['contributor'],
+            user_ids['contributor'],
             'Update',
             [UpdateType.FIGURES],
             [],
         )
 
         self.route3.main_waypoint_id = self.waypoint1.document_id
-        self.session.flush()
+        session.flush()
         update_version(
             self.route3,
-            self.global_userids['contributor'],
+            user_ids['contributor'],
             'Update',
             [UpdateType.FIGURES],
             [],
         )
 
-        self._delete(self.waypoint3.document_id, 200)
+        self._delete(client, self.waypoint3.document_id, 200)
 
-    def test_delete_only_waypoint_of_route(self):
+    def test_delete_only_waypoint_of_route(self, client):
         """Test that the only waypoint of a route cannot be deleted."""
-        response = self._delete(self.waypoint2.document_id, 400)
-        self.assertErrorsContain(
+        response = self._delete(client, self.waypoint2.document_id, 400)
+        assert_errors_contain(
             response.json,
             'document_id',
             'This waypoint cannot be deleted because '
             'it is the only waypoint associated to some routes.',
         )
 
-    def test_delete_only_route_of_outing(self):
+    def test_delete_only_route_of_outing(self, client):
         """Test that a route cannot be deleted if it is the only route
         of some outing."""
-        response = self._delete(self.route1.document_id, 400)
-        self.assertErrorsContain(
+        response = self._delete(client, self.route1.document_id, 400)
+        assert_errors_contain(
             response.json,
             'document_id',
             'This route cannot be deleted because '
@@ -587,6 +585,8 @@ class TestDocumentDeleteRest(BaseTestRest):
 
     def _test_delete(
         self,
+        client,
+        session,
         document_id,
         clazz,
         clazz_locale,
@@ -596,51 +596,47 @@ class TestDocumentDeleteRest(BaseTestRest):
     ):
 
         # Get the number of documents before deleting
-        initial_count = self.session.query(clazz).count()
-        initial_doc_count = self.session.query(Document).count()
+        initial_count = session.query(clazz).count()
+        initial_doc_count = session.query(Document).count()
 
-        self._delete(document_id, 200)
+        self._delete(client, document_id, 200)
 
         # Check that only one document has been deleted
-        count = self.session.query(clazz).count()
+        count = session.query(clazz).count()
         assert initial_count - count == expected_deleted_docs_count
-        count = self.session.query(Document).count()
+        count = session.query(Document).count()
         assert initial_doc_count - count == expected_deleted_docs_count
 
         # Check that the document versions table is cleared
         count = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == document_id)
             .count()
         )
         assert 0 == count
 
         # Check that entries have been removed in the main tables
-        count = (
-            self.session.query(clazz).filter(clazz.document_id == document_id).count()
-        )
+        count = session.query(clazz).filter(clazz.document_id == document_id).count()
         assert 0 == count
         count = (
-            self.session.query(Document)
-            .filter(Document.document_id == document_id)
-            .count()
+            session.query(Document).filter(Document.document_id == document_id).count()
         )
         assert 0 == count
         if clazz_locale:
             count = (
-                self.session.query(clazz_locale)
+                session.query(clazz_locale)
                 .filter(clazz_locale.document_id == document_id)
                 .count()
             )
             assert 0 == count
         count = (
-            self.session.query(DocumentLocale)
+            session.query(DocumentLocale)
             .filter(DocumentLocale.document_id == document_id)
             .count()
         )
         assert 0 == count
         count = (
-            self.session.query(DocumentGeometry)
+            session.query(DocumentGeometry)
             .filter(DocumentGeometry.document_id == document_id)
             .count()
         )
@@ -648,32 +644,32 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check the archives have been cleared too
         count = (
-            self.session.query(archive_clazz)
+            session.query(archive_clazz)
             .filter(archive_clazz.document_id == document_id)
             .count()
         )
         assert 0 == count
         count = (
-            self.session.query(ArchiveDocument)
+            session.query(ArchiveDocument)
             .filter(ArchiveDocument.document_id == document_id)
             .count()
         )
         assert 0 == count
         if archive_clazz_locale:
             count = (
-                self.session.query(archive_clazz_locale)
+                session.query(archive_clazz_locale)
                 .filter(archive_clazz_locale.document_id == document_id)
                 .count()
             )
             assert 0 == count
         count = (
-            self.session.query(ArchiveDocumentLocale)
+            session.query(ArchiveDocumentLocale)
             .filter(ArchiveDocumentLocale.document_id == document_id)
             .count()
         )
         assert 0 == count
         count = (
-            self.session.query(ArchiveDocumentGeometry)
+            session.query(ArchiveDocumentGeometry)
             .filter(ArchiveDocumentGeometry.document_id == document_id)
             .count()
         )
@@ -681,7 +677,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # check associations have been cleared
         association_count = (
-            self.session.query(Association)
+            session.query(Association)
             .filter(
                 or_(
                     Association.parent_document_id == document_id,
@@ -692,7 +688,7 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
         assert 0 == association_count
         association_log_count = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(
                 or_(
                     AssociationLog.parent_document_id == document_id,
@@ -703,13 +699,13 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
         assert 0 == association_log_count
         association_count = (
-            self.session.query(TopoMapAssociation)
+            session.query(TopoMapAssociation)
             .filter(TopoMapAssociation.document_id == document_id)
             .count()
         )
         assert 0 == association_count
         association_count = (
-            self.session.query(AreaAssociation)
+            session.query(AreaAssociation)
             .filter(AreaAssociation.document_id == document_id)
             .count()
         )
@@ -717,14 +713,16 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check the feed has been cleared
         feed_count = (
-            self.session.query(DocumentChange)
+            session.query(DocumentChange)
             .filter(DocumentChange.document_id == document_id)
             .count()
         )
         assert 0 == feed_count
 
-    def test_delete_waypoint(self):
+    def test_delete_waypoint(self, client, session):
         self._test_delete(
+            client,
+            session,
             self.waypoint3.document_id,
             Waypoint,
             WaypointLocale,
@@ -733,11 +731,13 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.route3.document_id, 2)
-        scenarios.check_cache_version(self.session, self.image1.document_id, 2)
+        scenarios.check_cache_version(session, self.route3.document_id, 2)
+        scenarios.check_cache_version(session, self.image1.document_id, 2)
 
-    def test_delete_route(self):
+    def test_delete_route(self, client, session):
         self._test_delete(
+            client,
+            session,
             self.route3.document_id,
             Route,
             RouteLocale,
@@ -746,33 +746,35 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 3)
-        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 3)
-        scenarios.check_cache_version(self.session, self.waypoint3.document_id, 3)
-        scenarios.check_cache_version(self.session, self.outing2.document_id, 2)
-        scenarios.check_cache_version(self.session, self.book1.document_id, 2)
-        scenarios.check_cache_version(self.session, self.xreport1.document_id, 2)
-        scenarios.check_cache_version(self.session, self.image1.document_id, 2)
+        scenarios.check_cache_version(session, self.waypoint1.document_id, 3)
+        scenarios.check_cache_version(session, self.waypoint2.document_id, 3)
+        scenarios.check_cache_version(session, self.waypoint3.document_id, 3)
+        scenarios.check_cache_version(session, self.outing2.document_id, 2)
+        scenarios.check_cache_version(session, self.book1.document_id, 2)
+        scenarios.check_cache_version(session, self.xreport1.document_id, 2)
+        scenarios.check_cache_version(session, self.image1.document_id, 2)
 
-    def _count_tags(self, document_id):
+    def _count_tags(self, session, document_id):
         nb_tags = (
-            self.session.query(DocumentTag)
+            session.query(DocumentTag)
             .filter(DocumentTag.document_id == document_id)
             .count()
         )
         nb_logs = (
-            self.session.query(DocumentTagLog)
+            session.query(DocumentTagLog)
             .filter(DocumentTagLog.document_id == document_id)
             .count()
         )
         return nb_tags, nb_logs
 
-    def test_delete_route_with_tags(self):
-        nb_tags, nb_logs = self._count_tags(self.route3.document_id)
+    def test_delete_route_with_tags(self, client, session):
+        nb_tags, nb_logs = self._count_tags(session, self.route3.document_id)
         assert nb_tags == 1
         assert nb_logs == 1
 
         self._test_delete(
+            client,
+            session,
             self.route3.document_id,
             Route,
             RouteLocale,
@@ -781,13 +783,15 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check related tags have been removed
-        nb_tags, nb_logs = self._count_tags(self.route3.document_id)
+        nb_tags, nb_logs = self._count_tags(session, self.route3.document_id)
         assert nb_tags == 0
         assert nb_logs == 0
 
-    def test_delete_outing(self):
+    def test_delete_outing(self, client, session):
         # outing1b redirects to outing1 => 2 documents to delete
         self._test_delete(
+            client,
+            session,
             self.outing1.document_id,
             Outing,
             OutingLocale,
@@ -797,11 +801,13 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.route1.document_id, 2)
-        scenarios.check_cache_version(self.session, self.image1.document_id, 2)
+        scenarios.check_cache_version(session, self.route1.document_id, 2)
+        scenarios.check_cache_version(session, self.image1.document_id, 2)
 
-    def test_delete_outing_route_waypoint(self):
+    def test_delete_outing_route_waypoint(self, client, session):
         self._test_delete(
+            client,
+            session,
             self.outing2.document_id,
             Outing,
             OutingLocale,
@@ -810,12 +816,14 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.route2.document_id, 2)
-        scenarios.check_cache_version(self.session, self.route3.document_id, 2)
-        scenarios.check_cache_version(self.session, self.article1.document_id, 2)
-        scenarios.check_cache_version(self.session, self.xreport1.document_id, 2)
+        scenarios.check_cache_version(session, self.route2.document_id, 2)
+        scenarios.check_cache_version(session, self.route3.document_id, 2)
+        scenarios.check_cache_version(session, self.article1.document_id, 2)
+        scenarios.check_cache_version(session, self.xreport1.document_id, 2)
 
         self._test_delete(
+            client,
+            session,
             self.route2.document_id,
             Route,
             RouteLocale,
@@ -824,11 +832,13 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 4)
-        scenarios.check_cache_version(self.session, self.article1.document_id, 3)
-        scenarios.check_cache_version(self.session, self.book1.document_id, 2)
+        scenarios.check_cache_version(session, self.waypoint2.document_id, 4)
+        scenarios.check_cache_version(session, self.article1.document_id, 3)
+        scenarios.check_cache_version(session, self.book1.document_id, 2)
 
         self._test_delete(
+            client,
+            session,
             self.waypoint2.document_id,
             Waypoint,
             WaypointLocale,
@@ -837,26 +847,36 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.route3.document_id, 3)
+        scenarios.check_cache_version(session, self.route3.document_id, 3)
 
-    def test_delete_article(self):
+    def test_delete_article(self, client, session):
         self._test_delete(
-            self.article1.document_id, Article, None, ArchiveArticle, None
+            client,
+            session,
+            self.article1.document_id,
+            Article,
+            None,
+            ArchiveArticle,
+            None,
         )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.route2.document_id, 2)
-        scenarios.check_cache_version(self.session, self.outing2.document_id, 2)
+        scenarios.check_cache_version(session, self.route2.document_id, 2)
+        scenarios.check_cache_version(session, self.outing2.document_id, 2)
 
-    def test_delete_book(self):
-        self._test_delete(self.book1.document_id, Book, None, ArchiveBook, None)
+    def test_delete_book(self, client, session):
+        self._test_delete(
+            client, session, self.book1.document_id, Book, None, ArchiveBook, None
+        )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.route2.document_id, 2)
-        scenarios.check_cache_version(self.session, self.route3.document_id, 2)
+        scenarios.check_cache_version(session, self.route2.document_id, 2)
+        scenarios.check_cache_version(session, self.route3.document_id, 2)
 
-    def test_delete_xreport(self):
+    def test_delete_xreport(self, client, session):
         self._test_delete(
+            client,
+            session,
             self.xreport1.document_id,
             Xreport,
             XreportLocale,
@@ -865,10 +885,10 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Check that associated documents cache versions have been incremented
-        scenarios.check_cache_version(self.session, self.route3.document_id, 2)
-        scenarios.check_cache_version(self.session, self.outing2.document_id, 2)
+        scenarios.check_cache_version(session, self.route3.document_id, 2)
+        scenarios.check_cache_version(session, self.outing2.document_id, 2)
 
-    def test_delete_image(self):
+    def test_delete_image(self, client, session, settings):
         call = {'times': 0}
 
         @all_requests
@@ -879,16 +899,24 @@ class TestDocumentDeleteRest(BaseTestRest):
             return {'status_code': 200, 'content': ''}
 
         with HTTMock(image_service_mock):
-            self._test_delete(self.image1.document_id, Image, None, ArchiveImage, None)
+            self._test_delete(
+                client,
+                session,
+                self.image1.document_id,
+                Image,
+                None,
+                ArchiveImage,
+                None,
+            )
             assert call['times'] == 1
             assert 'filenames=image1.1.jpg' in call['request.body']
             assert 'filenames=image1.jpg' in call['request.body']
-            assert call['request.url'] == self.settings['image_backend.url'] + '/delete'
-            scenarios.check_cache_version(self.session, self.waypoint3.document_id, 2)
-            scenarios.check_cache_version(self.session, self.route3.document_id, 2)
-            scenarios.check_cache_version(self.session, self.outing1.document_id, 2)
+            assert call['request.url'] == settings['image_backend.url'] + '/delete'
+            scenarios.check_cache_version(session, self.waypoint3.document_id, 2)
+            scenarios.check_cache_version(session, self.route3.document_id, 2)
+            scenarios.check_cache_version(session, self.outing1.document_id, 2)
 
-    def test_delete_image_error_deleting_files(self):
+    def test_delete_image_error_deleting_files(self, client, session, settings):
         """Test that the delete request is also successful if the image files
         cannot be deleted.
         """
@@ -902,19 +930,27 @@ class TestDocumentDeleteRest(BaseTestRest):
             return {'status_code': 500, 'content': ''}
 
         with HTTMock(image_service_mock):
-            self._test_delete(self.image1.document_id, Image, None, ArchiveImage, None)
+            self._test_delete(
+                client,
+                session,
+                self.image1.document_id,
+                Image,
+                None,
+                ArchiveImage,
+                None,
+            )
             assert call['times'] == 1
             assert 'filenames=image1.1.jpg' in call['request.body']
             assert 'filenames=image1.jpg' in call['request.body']
-            assert call['request.url'] == self.settings['image_backend.url'] + '/delete'
-            scenarios.check_cache_version(self.session, self.waypoint3.document_id, 2)
-            scenarios.check_cache_version(self.session, self.route3.document_id, 2)
-            scenarios.check_cache_version(self.session, self.outing1.document_id, 2)
+            assert call['request.url'] == settings['image_backend.url'] + '/delete'
+            scenarios.check_cache_version(session, self.waypoint3.document_id, 2)
+            scenarios.check_cache_version(session, self.route3.document_id, 2)
+            scenarios.check_cache_version(session, self.outing1.document_id, 2)
 
-    def test_delete_collaborative_doc(self):
+    def test_delete_collaborative_doc(self, client):
         # Collaborative documents cannot be deleted, even by their authors:
-        headers = self.add_authorization_header(username='contributor')
-        self.app.delete_json(
+        headers = auth_headers(username='contributor')
+        client.delete_json(
             self._prefix + str(self.waypoint4.document_id),
             {},
             headers=headers,
@@ -922,18 +958,18 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Moderators can:
-        headers = self.add_authorization_header(username='moderator')
-        self.app.delete_json(
+        headers = auth_headers(username='moderator')
+        client.delete_json(
             self._prefix + str(self.waypoint4.document_id),
             {},
             headers=headers,
             status=200,
         )
 
-    def test_delete_personal_doc_not_author(self):
+    def test_delete_personal_doc_not_author(self, client):
         # Personal documents cannot be deleted by anyone:
-        headers = self.add_authorization_header(username='contributor2')
-        self.app.delete_json(
+        headers = auth_headers(username='contributor2')
+        client.delete_json(
             self._prefix + str(self.article1.document_id),
             {},
             headers=headers,
@@ -941,87 +977,87 @@ class TestDocumentDeleteRest(BaseTestRest):
         )
 
         # Except by moderators:
-        headers = self.add_authorization_header(username='moderator')
-        self.app.delete_json(
+        headers = auth_headers(username='moderator')
+        client.delete_json(
             self._prefix + str(self.article1.document_id),
             {},
             headers=headers,
             status=200,
         )
 
-    def test_delete_personal_doc_author_less_24h(self):
+    def test_delete_personal_doc_author_less_24h(self, client):
         # article1 has just been created by 'contributor'
-        headers = self.add_authorization_header(username='contributor')
-        self.app.delete_json(
+        headers = auth_headers(username='contributor')
+        client.delete_json(
             self._prefix + str(self.article1.document_id),
             {},
             headers=headers,
             status=200,
         )
 
-    def test_delete_personal_doc_author_more_24h(self):
+    def test_delete_personal_doc_author_more_24h(self, client):
         # article2 is older than 24h
-        headers = self.add_authorization_header(username='contributor')
-        self.app.delete_json(
+        headers = auth_headers(username='contributor')
+        client.delete_json(
             self._prefix + str(self.article2.document_id),
             {},
             headers=headers,
             status=400,
         )
 
-    def test_delete_locale_non_unauthorized(self):
-        self.app.delete_json(
+    def test_delete_locale_non_unauthorized(self, client):
+        client.delete_json(
             self._prefix + str(self.waypoint1.document_id) + '/fr', {}, status=403
         )
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app.delete_json(
+        headers = auth_headers(username='contributor')
+        client.delete_json(
             self._prefix + str(self.waypoint1.document_id) + '/fr',
             {},
             headers=headers,
             status=403,
         )
 
-    def _delete_locale(self, document_id, lang, expected_status):
-        headers = self.add_authorization_header(username='moderator')
-        return self.app.delete_json(
+    def _delete_locale(self, client, document_id, lang, expected_status):
+        headers = auth_headers(username='moderator')
+        return client.delete_json(
             self._prefix + str(document_id) + '/' + lang,
             headers=headers,
             status=expected_status,
         )
 
-    def test_delete_locale_non_existing_document(self):
-        self._delete_locale(9999999, 'fr', 404)
+    def test_delete_locale_non_existing_document(self, client):
+        self._delete_locale(client, 9999999, 'fr', 404)
 
-    def test_delete_locale_non_existing_locale(self):
-        self._delete_locale(self.waypoint1.document_id, 'de', 400)
+    def test_delete_locale_non_existing_locale(self, client):
+        self._delete_locale(client, self.waypoint1.document_id, 'de', 400)
 
-    def test_delete_locale_main_waypoint_with_only_one_locale(self):
-        response = self._delete_locale(self.waypoint1.document_id, 'fr', 400)
-        self.assertErrorsContain(
+    def test_delete_locale_main_waypoint_with_only_one_locale(self, client):
+        response = self._delete_locale(client, self.waypoint1.document_id, 'fr', 400)
+        assert_errors_contain(
             response.json,
             'document_id',
             'This waypoint cannot be deleted because it is a main waypoint.',
         )
 
-    def _test_delete_locale(self, document_id, lang):
+    def _test_delete_locale(self, client, session, document_id, lang):
         available_langs = get_available_langs(document_id)
 
         initial_other_locale_archives_count = (
-            self.session.query(ArchiveDocumentLocale)
+            session.query(ArchiveDocumentLocale)
             .filter(ArchiveDocumentLocale.document_id == document_id)
             .filter(ArchiveDocumentLocale.lang != lang)
             .count()
         )
 
         initial_other_locale_versions_count = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == document_id)
             .filter(DocumentVersion.lang != lang)
             .count()
         )
 
-        self._delete_locale(document_id, lang, 200)
+        self._delete_locale(client, document_id, lang, 200)
 
         # Check that deleted locale is no longer available
         available_langs.remove(lang)
@@ -1034,7 +1070,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check that archives have been removed too
         count = (
-            self.session.query(ArchiveDocumentLocale)
+            session.query(ArchiveDocumentLocale)
             .filter(ArchiveDocumentLocale.document_id == document_id)
             .filter(ArchiveDocumentLocale.lang == lang)
             .count()
@@ -1043,7 +1079,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # but not other locale archives
         other_locale_archives_count = (
-            self.session.query(ArchiveDocumentLocale)
+            session.query(ArchiveDocumentLocale)
             .filter(ArchiveDocumentLocale.document_id == document_id)
             .filter(ArchiveDocumentLocale.lang != lang)
             .count()
@@ -1052,7 +1088,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check that the document versions table is cleared
         count = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == document_id)
             .filter(DocumentVersion.lang == lang)
             .count()
@@ -1061,7 +1097,7 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # but not for other locales
         other_locale_versions_count = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == document_id)
             .filter(DocumentVersion.lang != lang)
             .count()
@@ -1070,90 +1106,88 @@ class TestDocumentDeleteRest(BaseTestRest):
 
         # Check the feed has been updated
         feed_items_langs = (
-            self.session.query(DocumentChange.langs)
+            session.query(DocumentChange.langs)
             .filter(DocumentChange.document_id == document_id)
             .all()
         )
         for langs in feed_items_langs:
             assert lang not in langs
 
-    def test_delete_locale_waypoint(self):
-        self._test_delete_locale(self.waypoint3.document_id, 'fr')
+    def test_delete_locale_waypoint(self, client, session):
+        self._test_delete_locale(client, session, self.waypoint3.document_id, 'fr')
 
-    def test_delete_locale_added_in_its_own_version(self):
+    def test_delete_locale_added_in_its_own_version(self, client, session, user_ids):
         # a translation added later has a history metadata entry of its own,
         # which the deletion removes too
         self.waypoint3.locales.append(
             WaypointLocale(lang='de', title='Granier', description='...')
         )
-        self.session.flush()
+        session.flush()
         update_version(
             self.waypoint3,
-            self.global_userids['contributor'],
+            user_ids['contributor'],
             'add de',
             [UpdateType.LANG],
             ['de'],
         )
         history_metadata_id = (
-            self.session.query(DocumentVersion.history_metadata_id)
+            session.query(DocumentVersion.history_metadata_id)
             .filter(DocumentVersion.document_id == self.waypoint3.document_id)
             .filter(DocumentVersion.lang == 'de')
             .scalar()
         )
 
-        self._test_delete_locale(self.waypoint3.document_id, 'de')
+        self._test_delete_locale(client, session, self.waypoint3.document_id, 'de')
 
-        assert self.session.get(HistoryMetaData, history_metadata_id) is None
+        assert session.get(HistoryMetaData, history_metadata_id) is None
 
-    def test_delete_locale_route_with_only_one_locale(self):
+    def test_delete_locale_route_with_only_one_locale(self, client, session):
         document_id = self.route3.document_id
-        self._test_delete_locale(document_id, 'en')
+        self._test_delete_locale(client, session, document_id, 'en')
 
         # Test that the document has fully been deleted
         count = (
-            self.session.query(Document)
-            .filter(Document.document_id == document_id)
-            .count()
+            session.query(Document).filter(Document.document_id == document_id).count()
         )
         assert count == 0
         count = (
-            self.session.query(ArchiveDocument)
+            session.query(ArchiveDocument)
             .filter(ArchiveDocument.document_id == document_id)
             .count()
         )
         assert count == 0
         count = (
-            self.session.query(DocumentLocale)
+            session.query(DocumentLocale)
             .filter(DocumentLocale.document_id == document_id)
             .count()
         )
         assert count == 0
         count = (
-            self.session.query(ArchiveDocumentLocale)
+            session.query(ArchiveDocumentLocale)
             .filter(ArchiveDocumentLocale.document_id == document_id)
             .count()
         )
         assert count == 0
         count = (
-            self.session.query(DocumentGeometry)
+            session.query(DocumentGeometry)
             .filter(DocumentGeometry.document_id == document_id)
             .count()
         )
         assert count == 0
         count = (
-            self.session.query(ArchiveDocumentGeometry)
+            session.query(ArchiveDocumentGeometry)
             .filter(ArchiveDocumentGeometry.document_id == document_id)
             .count()
         )
         assert count == 0
         count = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == document_id)
             .count()
         )
         assert count == 0
         count = (
-            self.session.query(Association)
+            session.query(Association)
             .filter(
                 or_(
                     Association.parent_document_id == document_id,
