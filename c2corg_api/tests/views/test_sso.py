@@ -81,14 +81,8 @@ class TestSsoSyncRest(BaseTestRest):
         request_body = {'sso_key': hash_token(sso_key), 'external_id': '1'}
         self.app_post_json(self._url, request_body, status=403)
 
-    @patch(
-        'c2corg_api.security.discourse_client.DiscourseClient',
-        return_value=Mock(
-            by_external_id=Mock(return_value={'id': 1, 'username': 'contributor'})
-        ),
-    )
-    def test_key_stored_as_is(self, discourse_mock):
-        # TODO(#2365): refused once migration b3d5f8a1c9e2 ran
+    def test_key_stored_as_is(self):
+        # only the hashes are accepted since migration b3d5f8a1c9e2
         self.session.add(SsoKey(domain='raw.domain.net', key='raw_key'))
         self.session.add(
             SsoExternalId(
@@ -98,7 +92,7 @@ class TestSsoSyncRest(BaseTestRest):
         self.session.flush()
 
         body = {'sso_key': 'raw_key', 'external_id': '1'}
-        self.app_post_json(self._url, body, status=200)
+        self.app_post_json(self._url, body, status=403)
 
     def test_no_external_id(self):
         request_body = {'sso_key': sso_key}
@@ -392,13 +386,13 @@ class TestSsoLoginRest(BaseTestRest):
         assert 'Invalid' == errors[0].get('description')
 
     def test_token_stored_as_is(self):
-        # TODO(#2365): refused once migration b3d5f8a1c9e2 ran
+        # only the hashes are accepted since migration b3d5f8a1c9e2
         # a test value, not a credential
         self.sso_external_id.token = 'raw_token'  # nosec B105
         self.sso_external_id.expire = sso_expire_from_now()
         self.session.flush()
 
-        self.app_post_json(self._url, {'token': 'raw_token'}, status=200)  # nosec B105
+        self.app_post_json(self._url, {'token': 'raw_token'}, status=403)  # nosec B105
 
     def test_the_hash_is_not_a_token(self):
         self.sso_external_id.expire = sso_expire_from_now()
