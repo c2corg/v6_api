@@ -19,18 +19,19 @@ sso_domain = 'external.domain.net'
 sso_key = 'sso_test_key'
 
 
+SYNC_URL = '/sso_sync'
+
+
 @dataclass
 class SyncDocs:
     """The documents of the tests, built by `sync_docs`."""
 
-    _url: object
-    contributor: object
+    contributor: User
     contributor_external_id: SsoExternalId
 
 
 @pytest.fixture
 def sync_docs(session) -> SyncDocs:
-    _url = '/sso_sync'
 
     contributor = session.query(User).filter(User.username == 'contributor').one()
 
@@ -50,7 +51,6 @@ def sync_docs(session) -> SyncDocs:
 
     set_discourse_client(None)
     return SyncDocs(
-        _url=_url,
         contributor=contributor,
         contributor_external_id=contributor_external_id,
     )
@@ -58,7 +58,7 @@ def sync_docs(session) -> SyncDocs:
 
 def test_no_sso_key(client, sync_docs):
     request_body = {'external_id': '999', 'email': 'newuser@external.domain.net'}
-    body = send_json(client, 'post', sync_docs._url, request_body, status=422).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=422).json
     errors = errors_of(body)
     assert 'sso_key' == errors[0].get('name')
     assert errors[0].get('description') == 'Field required'
@@ -76,7 +76,7 @@ def test_forum_disabled(client, session, sync_docs):
         'forum_username': 'NewUser',
         'lang': 'fr',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=503).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=503).json
     assert 'The forum is disabled' == body['errors'][0]['description']
     assert session.query(User).filter(User.username == 'newuser').count() == 0
 
@@ -87,7 +87,7 @@ def test_bad_sso_key(client, sync_docs):
         'external_id': '999',
         'email': 'newuser@external.domain.net',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=403).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=403).json
     errors = body.get('errors')
     assert 'sso_key' == errors[0].get('name')
     assert 'Invalid' == errors[0].get('description')
@@ -95,7 +95,7 @@ def test_bad_sso_key(client, sync_docs):
 
 def test_the_hash_is_not_a_key(client, sync_docs):
     request_body = {'sso_key': hash_token(sso_key), 'external_id': '1'}
-    send_json(client, 'post', sync_docs._url, request_body, status=403)
+    send_json(client, 'post', SYNC_URL, request_body, status=403)
 
 
 def test_key_stored_as_is(client, session, sync_docs):
@@ -109,12 +109,12 @@ def test_key_stored_as_is(client, session, sync_docs):
     session.flush()
 
     body = {'sso_key': 'raw_key', 'external_id': '1'}
-    send_json(client, 'post', sync_docs._url, body, status=403)
+    send_json(client, 'post', SYNC_URL, body, status=403)
 
 
 def test_no_external_id(client, sync_docs):
     request_body = {'sso_key': sso_key}
-    body = send_json(client, 'post', sync_docs._url, request_body, status=422).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=422).json
     errors = errors_of(body)
     assert 'external_id' == errors[0].get('name')
     assert errors[0].get('description') == 'Field required'
@@ -125,7 +125,7 @@ def test_new_user_no_email(client, sync_docs):
         'sso_key': sso_key,
         'external_id': '999',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=400).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=400).json
     errors = body.get('errors')
     assert 'email' == errors[0].get('name')
     assert errors[0].get('description') == 'Required'
@@ -140,7 +140,7 @@ def test_new_user_existing_username(client, sync_docs):
         'lang': 'fr',
         'groups': 'group1,group2',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=400).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=400).json
     errors = body.get('errors')
     assert 'already used username' == errors[0].get('description')
 
@@ -155,7 +155,7 @@ def test_new_user_existing_forum_username(client, sync_docs):
         'lang': 'fr',
         'groups': 'group1,group2',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=400).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=400).json
     errors = body.get('errors')
     assert 'already used forum_username' == errors[0].get('description')
 
@@ -170,7 +170,7 @@ def test_new_user_forum_username_too_long(client, sync_docs):
         'lang': 'fr',
         'groups': 'group1,group2',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=400).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=400).json
     errors = body.get('errors')
     assert 'forum_username' == errors[0].get('name')
     assert 'Longer than maximum length 25' == errors[0].get('description')
@@ -195,7 +195,7 @@ def test_new_user_success(discourse_mock, client, session, settings, sync_docs):
         'forum_username': 'NewUser',
         'lang': 'fr',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=200).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=200).json
 
     sso_external_id = (
         session.query(SsoExternalId)
@@ -240,7 +240,7 @@ def test_success_by_email(discourse_mock, client, session, sync_docs):
         'external_id': '1',
         'email': sync_docs.contributor.email,
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=200).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=200).json
 
     sso_external_id = (
         session.query(SsoExternalId)
@@ -270,7 +270,7 @@ def test_success_by_external_id(discourse_mock, client, session, sync_docs):
         'forum_username': sync_docs.contributor.forum_username,
         'lang': 'fr',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=200).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=200).json
 
     session.expire(sync_docs.contributor_external_id)
     assert sync_docs.contributor_external_id.token == hash_token(
@@ -295,7 +295,7 @@ def test_discourse_down(discourse_mock, client, sync_docs):
         'forum_username': 'NewUser',
         'lang': 'fr',
     }
-    body = send_json(client, 'post', sync_docs._url, request_body, status=500).json
+    body = send_json(client, 'post', SYNC_URL, request_body, status=500).json
     errors = body.get('errors')
     assert 'Error with Discourse' == errors[0].get('description')
 
@@ -318,7 +318,7 @@ def test_new_user_no_name(discourse_mock, client, session, sync_docs):
         'username': 'newuser',
         'lang': 'fr',
     }
-    send_json(client, 'post', sync_docs._url, request_body, status=200).json
+    send_json(client, 'post', SYNC_URL, request_body, status=200).json
 
     sso_external_id = (
         session.query(SsoExternalId)
@@ -347,7 +347,7 @@ def test_not_found_group(discourse_mock, client, sync_docs):
         'external_id': '1',
         'group': 'group_1',
     }
-    send_json(client, 'post', sync_docs._url, request_body, status=200).json
+    send_json(client, 'post', SYNC_URL, request_body, status=200).json
 
 
 @patch(
@@ -360,7 +360,7 @@ def test_not_found_group(discourse_mock, client, sync_docs):
 )
 def test_existing_group(discourse_mock, client, sync_docs):
     request_body = {'sso_key': sso_key, 'external_id': '1', 'groups': 'group_1'}
-    send_json(client, 'post', sync_docs._url, request_body, status=200).json
+    send_json(client, 'post', SYNC_URL, request_body, status=200).json
 
     discourse = discourse_mock.return_value
     discourse.add_user_to_group.assert_called_once_with(222, 1)
@@ -373,7 +373,7 @@ LOGIN_URL = '/sso_login'
 class LoginDocs:
     """The documents of the tests, built by `login_docs`."""
 
-    contributor: object
+    contributor: User
     sso_external_id: SsoExternalId
 
 
