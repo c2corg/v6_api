@@ -1,8 +1,10 @@
+import pytest
+
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_api.tests import BaseTestCase
 
 
-class TestOuting(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestOuting:
     def test_to_archive(self):
         outing = Outing(
             document_id=1,

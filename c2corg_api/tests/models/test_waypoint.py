@@ -9,19 +9,19 @@ from sqlalchemy.orm.exc import StaleDataError
 
 from c2corg_api.models.document import DocumentGeometry, UpdateType, set_available_langs
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests import BaseTestCase
 
 
-class TestWaypoint(BaseTestCase):
-    def test_inheritance(self):
+@pytest.mark.usefixtures('client')
+class TestWaypoint:
+    def test_inheritance(self, session):
         waypoint = Waypoint(
             waypoint_type='summit',
             elevation=2203,
             locales=[WaypointLocale(lang='en', title='A', description='abc')],
             geometry=DocumentGeometry(geom=from_shape(Point(1, 1), srid=3857)),
         )
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         assert waypoint.document_id is not None
         assert 'w' == waypoint.type
@@ -68,14 +68,14 @@ class TestWaypoint(BaseTestCase):
         assert archive_geometry.document_id == waypoint.document_id
         assert archive_geometry.geom is not None
 
-    def test_version_is_incremented(self):
+    def test_version_is_incremented(self, session):
         waypoint = Waypoint(
             waypoint_type='summit',
             elevation=2203,
             locales=[WaypointLocale(lang='en', title='A', description='abc')],
         )
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         version1 = waypoint.version
         assert version1 is not None
@@ -83,12 +83,12 @@ class TestWaypoint(BaseTestCase):
         # make a change to the waypoint and check that the version changes
         # once the waypoint is persisted
         waypoint.elevation = 1234
-        self.session.merge(waypoint)
-        self.session.flush()
+        session.merge(waypoint)
+        session.flush()
         version2 = waypoint.version
         assert version1 != version2
 
-    def test_version_concurrent_edit(self):
+    def test_version_concurrent_edit(self, session):
         """Test that a `StaleDataError` is thrown when trying to update a
         waypoint with an old version number.
         """
@@ -99,17 +99,17 @@ class TestWaypoint(BaseTestCase):
         )
 
         # add the initial waypoint
-        self.session.add(waypoint1)
-        self.session.flush()
-        self.session.expunge(waypoint1)
+        session.add(waypoint1)
+        session.flush()
+        session.expunge(waypoint1)
         version1 = waypoint1.version
         assert version1 is not None
 
         # change the waypoint
-        waypoint2 = self.session.get(Waypoint, waypoint1.document_id)
+        waypoint2 = session.get(Waypoint, waypoint1.document_id)
         waypoint2.elevation = 1234
-        self.session.merge(waypoint2)
-        self.session.flush()
+        session.merge(waypoint2)
+        session.flush()
         version2 = waypoint2.version
         assert version1 != version2
 
@@ -119,7 +119,7 @@ class TestWaypoint(BaseTestCase):
         # then try to update the waypoint again with the old version
         waypoint1.elevation = 2345
         with pytest.raises(StaleDataError):
-            self.session.merge(waypoint1)
+            session.merge(waypoint1)
 
     def test_geometry_update_optimization_4326(self):
         lat = 46.0
@@ -238,70 +238,70 @@ class TestWaypoint(BaseTestCase):
 
         assert waypoint_db.geometry.geom == 'SRID=3857;POINT(3 4)'
 
-    def test_get_update_type_figures_only(self):
+    def test_get_update_type_figures_only(self, session):
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         versions = waypoint.get_versions()
 
         waypoint.elevation = 1234
-        self.session.merge(waypoint)
-        self.session.flush()
+        session.merge(waypoint)
+        session.flush()
 
         (types, changed_langs) = waypoint.get_update_type(versions)
         assert UpdateType.FIGURES in types
         assert changed_langs == []
 
-    def test_get_update_type_geom_only(self):
+    def test_get_update_type_geom_only(self, session):
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         versions = waypoint.get_versions()
 
         waypoint.geometry.geom = 'SRID=3857;POINT(3 4)'
-        self.session.merge(waypoint)
-        self.session.flush()
+        session.merge(waypoint)
+        session.flush()
 
         (types, changed_langs) = waypoint.get_update_type(versions)
         assert UpdateType.GEOM in types
         assert changed_langs == []
 
-    def test_get_update_type_lang_only(self):
+    def test_get_update_type_lang_only(self, session):
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         versions = waypoint.get_versions()
 
         waypoint.get_locale('en').description = 'abcd'
-        self.session.merge(waypoint)
-        self.session.flush()
+        session.merge(waypoint)
+        session.flush()
 
         (types, changed_langs) = waypoint.get_update_type(versions)
         assert UpdateType.LANG in types
         assert changed_langs == ['en']
 
-    def test_get_update_type_lang_only_new_lang(self):
+    def test_get_update_type_lang_only_new_lang(self, session):
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         versions = waypoint.get_versions()
 
         waypoint.locales.append(WaypointLocale(lang='es', title='A', description='abc'))
-        self.session.merge(waypoint)
-        self.session.flush()
+        session.merge(waypoint)
+        session.flush()
 
         (types, changed_langs) = waypoint.get_update_type(versions)
         assert UpdateType.LANG in types
         assert changed_langs == ['es']
 
-    def test_get_update_type_all(self):
+    def test_get_update_type_all(self, session):
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         versions = waypoint.get_versions()
 
@@ -309,8 +309,8 @@ class TestWaypoint(BaseTestCase):
         waypoint.get_locale('en').description = 'abcd'
         waypoint.locales.append(WaypointLocale(lang='es', title='A', description='abc'))
 
-        self.session.merge(waypoint)
-        self.session.flush()
+        session.merge(waypoint)
+        session.flush()
 
         (types, changed_langs) = waypoint.get_update_type(versions)
         assert UpdateType.LANG in types
@@ -318,35 +318,35 @@ class TestWaypoint(BaseTestCase):
         assert UpdateType.GEOM not in types
         assert changed_langs == ['en', 'es']
 
-    def test_get_update_type_none(self):
+    def test_get_update_type_none(self, session):
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         versions = waypoint.get_versions()
-        self.session.merge(waypoint)
-        self.session.flush()
+        session.merge(waypoint)
+        session.flush()
 
         (types, changed_langs) = waypoint.get_update_type(versions)
         assert types == []
         assert changed_langs == []
 
-    def test_save_geometry(self):
+    def test_save_geometry(self, session):
         waypoint = self._get_waypoint()
         waypoint.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956.075332665 5723604.677994)'
         )
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
-    def test_get_geometry_lon_lat(self):
+    def test_get_geometry_lon_lat(self, session):
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
-        self.session.expire(waypoint)
+        session.add(waypoint)
+        session.flush()
+        session.expire(waypoint)
 
         waypoint = (
-            self.session.query(Waypoint)
+            session.query(Waypoint)
             .options(joinedload(Waypoint.geometry).load_only(DocumentGeometry.lon_lat))
             .filter(Waypoint.document_id == waypoint.document_id)
             .first()
@@ -356,15 +356,15 @@ class TestWaypoint(BaseTestCase):
         assert lon_lat_geojson['coordinates'][0] == pytest.approx(5.7128906, abs=5e-7)
         assert lon_lat_geojson['coordinates'][1] == pytest.approx(45.644768, abs=5e-7)
 
-    def test_get_geometry_lon_lat_none(self):
+    def test_get_geometry_lon_lat_none(self, session):
         waypoint = self._get_waypoint()
         waypoint.geometry = None
-        self.session.add(waypoint)
-        self.session.flush()
-        self.session.expire(waypoint)
+        session.add(waypoint)
+        session.flush()
+        session.expire(waypoint)
 
         waypoint = (
-            self.session.query(Waypoint)
+            session.query(Waypoint)
             .options(joinedload(Waypoint.geometry).load_only(DocumentGeometry.lon_lat))
             .filter(Waypoint.document_id == waypoint.document_id)
             .first()
@@ -372,100 +372,100 @@ class TestWaypoint(BaseTestCase):
 
         assert waypoint.geometry is None
 
-    def test_set_available_langs(self):
+    def test_set_available_langs(self, session):
         waypoint = self._get_waypoint()
         waypoint.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956.075332665 5723604.677994)'
         )
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         set_available_langs([waypoint])
         assert set(waypoint.available_langs) == set(['en', 'fr'])
 
-    def test_array_handling_non_empty(self):
+    def test_array_handling_non_empty(self, session):
         waypoint = Waypoint(
             waypoint_type='summit', elevation=2203, rock_types=['basalte']
         )
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
-        self.session.refresh(waypoint)
+        session.refresh(waypoint)
         assert waypoint.rock_types == ['basalte']
 
-    def test_array_handling_empty(self):
+    def test_array_handling_empty(self, session):
         waypoint = Waypoint(waypoint_type='summit', elevation=2203, rock_types=[])
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
-        self.session.refresh(waypoint)
+        session.refresh(waypoint)
         assert waypoint.rock_types == []
 
-    def test_array_handling_none(self):
+    def test_array_handling_none(self, session):
         waypoint = Waypoint(waypoint_type='summit', elevation=2203, rock_types=None)
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
-        self.session.refresh(waypoint)
+        session.refresh(waypoint)
         assert waypoint.rock_types is None
 
-    def test_archive_unique_version_document_id(self):
+    def test_archive_unique_version_document_id(self, session):
         """Tests that there can be only one entry for each version of a
         document.
         """
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         archive = waypoint.to_archive()
-        self.session.add(archive)
-        self.session.flush()
+        session.add(archive)
+        session.flush()
 
         # to try add an archive with the same version
         archive = waypoint.to_archive()
         with pytest.raises(IntegrityError):
-            self.session.add(archive)
-            self.session.flush()
+            session.add(archive)
+            session.flush()
 
-    def test_locale_archive_unique_version_document_id(self):
+    def test_locale_archive_unique_version_document_id(self, session):
         """Tests that there can be only one entry for each version and lang
         of a document locale.
         """
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         locale = waypoint.get_locale('en')
         archive = locale.to_archive()
-        self.session.add(archive)
-        self.session.flush()
+        session.add(archive)
+        session.flush()
 
         # to try add an archive with the same version
         archive = locale.to_archive()
         with pytest.raises(IntegrityError):
-            self.session.add(archive)
-            self.session.flush()
+            session.add(archive)
+            session.flush()
 
-    def test_geometry_unique_version_document_id(self):
+    def test_geometry_unique_version_document_id(self, session):
         """Tests that there can be only one entry for each version of a
         document geometry.
         """
         waypoint = self._get_waypoint()
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
         geometry = waypoint.geometry
         archive = geometry.to_archive()
-        self.session.add(archive)
-        self.session.flush()
+        session.add(archive)
+        session.flush()
 
         # to try add an archive with the same version
         archive = geometry.to_archive()
         with pytest.raises(IntegrityError):
-            self.session.add(archive)
-            self.session.flush()
+            session.add(archive)
+            session.flush()
 
-    def test_set_local_external_resource(self):
+    def test_set_local_external_resource(self, session):
         en_external_resources = 'https://wikipedia.com/en'
         fr_external_resources = 'https://wikipedia.com/fr'
         waypoint = Waypoint(
@@ -491,9 +491,9 @@ class TestWaypoint(BaseTestCase):
                 geom='SRID=3857;POINT(635956.075332665 5723604.677994)'
             ),
         )
-        self.session.add(waypoint)
-        self.session.flush()
-        self.session.refresh(waypoint)
+        session.add(waypoint)
+        session.flush()
+        session.refresh(waypoint)
         fr_local = [local for local in waypoint.locales if local.title == 'French'][0]
         en_local = [local for local in waypoint.locales if local.title == 'English'][0]
         assert en_local.external_resources == en_external_resources

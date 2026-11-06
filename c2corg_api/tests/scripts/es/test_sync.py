@@ -23,39 +23,33 @@ from c2corg_api.scripts.es.sync import (
     sync_deleted_documents,
     sync_documents,
 )
-from c2corg_api.tests import BaseTestCase, global_userids
+from c2corg_api.tests import global_userids
 from c2corg_api.views.document import create_new_version
 
 
-class TestSync(BaseTestCase):
-    def setUp(self):
-        BaseTestCase.setUp(self)
-        self._add_test_data()
+class TestSync:
+    @pytest.fixture(autouse=True)
+    def _setup_test_sync(self, client, session, user_ids):
+        self._add_test_data(session, user_ids)
 
-    def test_get_changed_documents(self):
-        last_update, _ = es_sync.get_status(self.session)
+    def test_get_changed_documents(self, session):
+        last_update, _ = es_sync.get_status(session)
 
-        changed_documents = get_changed_documents(self.session, last_update)
+        changed_documents = get_changed_documents(session, last_update)
         assert len(changed_documents) == 5
         assert 'o' == changed_documents[0][1]
         assert 'r' == changed_documents[1][1]
         assert 'w' == changed_documents[2][1]
 
         assert (
-            len(
-                get_changed_documents(
-                    self.session, last_update + datetime.timedelta(0, 1)
-                )
-            )
+            len(get_changed_documents(session, last_update + datetime.timedelta(0, 1)))
             == 0
         )
 
-    def test_get_changed_documents_for_associations(self):
-        last_update, _ = es_sync.get_status(self.session)
+    def test_get_changed_documents_for_associations(self, session):
+        last_update, _ = es_sync.get_status(session)
 
-        changed_documents = get_changed_documents_for_associations(
-            self.session, last_update
-        )
+        changed_documents = get_changed_documents_for_associations(session, last_update)
         # W1 -> R1 and W2 -> W1 give R1 and O1 each, R1 -> O1 and U -> O1 give O1
         assert sorted(changed_documents) == sorted(
             [
@@ -70,18 +64,18 @@ class TestSync(BaseTestCase):
         assert (
             len(
                 get_changed_documents_for_associations(
-                    self.session, last_update + datetime.timedelta(0, 1)
+                    session, last_update + datetime.timedelta(0, 1)
                 )
             )
             == 0
         )
 
-    def test_get_changed_routes_and_outings_wr(self):
-        last_update, _ = es_sync.get_status(self.session)
+    def test_get_changed_routes_and_outings_wr(self, session):
+        last_update, _ = es_sync.get_status(session)
 
         # the outings of R1 list the waypoints of R1, so they have to be
         # updated too when W1 -> R1 changes
-        changed_documents = get_changed_routes_and_outings_wr(self.session, last_update)
+        changed_documents = get_changed_routes_and_outings_wr(session, last_update)
         assert sorted(changed_documents) == sorted(
             [
                 (self.route1.document_id, 'r'),
@@ -91,43 +85,39 @@ class TestSync(BaseTestCase):
 
         assert (
             get_changed_routes_and_outings_wr(
-                self.session, last_update + datetime.timedelta(0, 1)
+                session, last_update + datetime.timedelta(0, 1)
             )
             == []
         )
 
-    def test_get_changed_users(self):
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
+    def test_get_changed_users(self, session, user_ids):
+        user_id = user_ids['contributor']
+        user = session.get(User, user_id)
         user.name = 'changed'
-        self.session.flush()
+        session.flush()
 
-        last_update, _ = es_sync.get_status(self.session)
+        last_update, _ = es_sync.get_status(session)
 
-        changed_users = get_changed_users(self.session, last_update)
+        changed_users = get_changed_users(session, last_update)
         assert len(changed_users) == 1
         assert user_id == changed_users[0][0]
         assert 'u' == changed_users[0][1]
 
         assert (
-            len(
-                get_changed_documents(
-                    self.session, last_update + datetime.timedelta(0, 1)
-                )
-            )
+            len(get_changed_documents(session, last_update + datetime.timedelta(0, 1)))
             == 0
         )
 
-    def test_get_deleted_locale_documents(self):
+    def test_get_deleted_locale_documents(self, session):
         # simulate removing a locale
-        self.session.add(
+        session.add(
             ESDeletedLocale(document_id=self.waypoint1.document_id, type='w', lang='fr')
         )
-        self.session.flush()
+        session.flush()
 
-        last_update, _ = es_sync.get_status(self.session)
+        last_update, _ = es_sync.get_status(session)
 
-        changed_documents = get_deleted_locale_documents(self.session, last_update)
+        changed_documents = get_deleted_locale_documents(session, last_update)
 
         assert len(changed_documents) == 1
         assert 'w' == changed_documents[0][1]
@@ -152,12 +142,12 @@ class TestSync(BaseTestCase):
         # self.assertEqual(doc['description_en'], '...')
         assert doc['geom'] == [6, 46]
 
-    def test_create_search_documents_user_profile(self):
+    def test_create_search_documents_user_profile(self, session):
         search_documents = []
         batch_mock = self._create_mock_match(search_documents)(None, 1000)
 
         document_id = global_userids['contributor']
-        user_profile = self.session.get(UserProfile, document_id)
+        user_profile = session.get(UserProfile, document_id)
 
         create_search_documents('u', [user_profile], batch_mock)
         doc = search_documents[0]
@@ -170,15 +160,15 @@ class TestSync(BaseTestCase):
         # self.assertEqual(doc['description_fr'], 'Moi')
 
     @patch('c2corg_api.scripts.es.sync.ElasticBatch')
-    def test_sync_documents(self, mock):
+    def test_sync_documents(self, mock, session, user_ids):
         search_documents = []
         mock.side_effect = self._create_mock_match(search_documents)
 
         # test that unconfirmed users are ignored
-        user_id = self.global_userids['contributor2']
-        user = self.session.get(User, user_id)
+        user_id = user_ids['contributor2']
+        user = session.get(User, user_id)
         user.email_validated = False
-        self.session.flush()
+        session.flush()
 
         changed_documents = [
             (self.waypoint1.document_id, 'w'),
@@ -188,7 +178,7 @@ class TestSync(BaseTestCase):
             (self.outing1.document_id, 'o'),
             (user_id, 'u'),
         ]
-        sync_documents(self.session, changed_documents, 1000)
+        sync_documents(session, changed_documents, 1000)
         assert len(search_documents) == 5
 
         redirected_doc = self._get_by_id(search_documents, self.waypoint3.document_id)
@@ -213,7 +203,7 @@ class TestSync(BaseTestCase):
         }
 
     @patch('c2corg_api.scripts.es.sync.ElasticBatch')
-    def test_sync_deleted_documents(self, mock):
+    def test_sync_deleted_documents(self, mock, session):
         search_documents = []
         mock.side_effect = self._create_mock_match(search_documents)
 
@@ -222,7 +212,7 @@ class TestSync(BaseTestCase):
             (self.route1.document_id, 'r'),
             (self.outing1.document_id, 'o'),
         ]
-        sync_deleted_documents(self.session, deleted_documents, 1000)
+        sync_deleted_documents(session, deleted_documents, 1000)
         assert len(search_documents) == 3
 
         waypoint1_doc = self._get_by_id(search_documents, self.waypoint1.document_id)
@@ -255,9 +245,9 @@ class TestSync(BaseTestCase):
 
         return MockBatch
 
-    def _add_test_data(self):
-        _, date_now = es_sync.get_status(self.session)
-        es_sync.mark_as_updated(self.session, date_now)
+    def _add_test_data(self, session, user_ids):
+        _, date_now = es_sync.get_status(session)
+        es_sync.mark_as_updated(session, date_now)
 
         self.waypoint1 = Waypoint(
             document_id=71171,
@@ -334,12 +324,12 @@ class TestSync(BaseTestCase):
                 OutingLocale(lang='en', title='...', description='...', weather='sunny')
             ],
         )
-        self.session.add_all(
+        session.add_all(
             [self.waypoint1, self.waypoint2, self.waypoint3, self.route1, self.outing1]
         )
-        self.session.flush()
+        session.flush()
 
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
         create_new_version(self.waypoint1, user_id)
         create_new_version(self.waypoint2, user_id)
         create_new_version(self.waypoint3, user_id)
@@ -349,9 +339,9 @@ class TestSync(BaseTestCase):
         association_wr = Association.create(self.waypoint1, self.route1)
         association_ww = Association.create(self.waypoint2, self.waypoint1)
         association_ro = Association.create(self.route1, self.outing1)
-        user = self.session.get(UserProfile, self.global_userids['contributor'])
+        user = session.get(UserProfile, user_ids['contributor'])
         association_uo = Association.create(user, self.outing1)
-        self.session.add_all(
+        session.add_all(
             [
                 association_wr,
                 association_ww,
@@ -363,4 +353,4 @@ class TestSync(BaseTestCase):
                 association_uo.get_log(user_id),
             ]
         )
-        self.session.flush()
+        session.flush()

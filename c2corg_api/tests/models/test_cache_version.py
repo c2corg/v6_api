@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
@@ -17,63 +19,63 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
-from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import create_new_version
 
 
-class TestCacheVersion(BaseTestCase):
-    def setUp(self):
-        BaseTestCase.setUp(self)
+class TestCacheVersion:
+    @pytest.fixture(autouse=True)
+    def _setup_test_cache_version(self, client):
+        pass
 
-    def test_trigger_create_cache_version(self):
+    def test_trigger_create_cache_version(self, session):
         waypoint = Waypoint(waypoint_type='summit')
-        self.session.add(waypoint)
-        self.session.flush()
+        session.add(waypoint)
+        session.flush()
 
-        cache_version = self.session.get(CacheVersion, waypoint.document_id)
+        cache_version = session.get(CacheVersion, waypoint.document_id)
         assert cache_version is not None
         assert cache_version.version is not None
         assert cache_version.last_updated is not None
 
-    def test_update_cache_version_single_wp(self):
+    def test_update_cache_version_single_wp(self, session):
         waypoint = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
-        self.session.add_all([waypoint, waypoint_unrelated])
-        self.session.flush()
+        session.add_all([waypoint, waypoint_unrelated])
+        session.flush()
 
-        cache_version = self.session.get(CacheVersion, waypoint.document_id)
+        cache_version = session.get(CacheVersion, waypoint.document_id)
         cache_version.last_updated = datetime.datetime(2016, 1, 1, 12, 1, 0)
-        self.session.flush()
+        session.flush()
         current_version = cache_version.version
         current_last_updated = cache_version.last_updated
 
         update_cache_version(waypoint)
-        self.session.refresh(cache_version)
+        session.refresh(cache_version)
         assert cache_version.version == current_version + 1
         assert cache_version.last_updated != current_last_updated
 
-        cache_version_untouched = self.session.get(
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
         assert cache_version_untouched.version == 1
 
-    def test_update_cache_version_wp_with_associations(self):
+    def test_update_cache_version_wp_with_associations(self, session):
         waypoint1 = Waypoint(waypoint_type='summit')
         waypoint2 = Waypoint(waypoint_type='summit')
         waypoint3 = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
-        self.session.add_all([waypoint1, waypoint2, waypoint3, waypoint_unrelated])
-        self.session.flush()
+        session.add_all([waypoint1, waypoint2, waypoint3, waypoint_unrelated])
+        session.flush()
 
-        self.session.add(Association.create(waypoint1, waypoint2))
-        self.session.add(Association.create(waypoint3, waypoint1))
-        self.session.flush()
+        session.add(Association.create(waypoint1, waypoint2))
+        session.add(Association.create(waypoint3, waypoint1))
+        session.flush()
 
         update_cache_version(waypoint1)
-        cache_version1 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version2 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version3 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version1 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version2 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version3 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
 
@@ -82,28 +84,26 @@ class TestCacheVersion(BaseTestCase):
         assert cache_version3.version == 2
         assert cache_version_untouched.version == 1
 
-    def test_update_cache_version_wp_as_main_wp(self):
+    def test_update_cache_version_wp_as_main_wp(self, session):
         waypoint1 = Waypoint(waypoint_type='summit')
         waypoint2 = Waypoint(waypoint_type='summit')
         waypoint3 = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
         route = Route(main_waypoint=waypoint1, activities=['skitouring'])
-        self.session.add_all(
-            [waypoint1, waypoint2, waypoint3, waypoint_unrelated, route]
-        )
-        self.session.flush()
+        session.add_all([waypoint1, waypoint2, waypoint3, waypoint_unrelated, route])
+        session.flush()
 
-        self.session.add(Association.create(waypoint1, route))
-        self.session.add(Association.create(waypoint2, route))
-        self.session.add(Association.create(waypoint3, waypoint2))
-        self.session.flush()
+        session.add(Association.create(waypoint1, route))
+        session.add(Association.create(waypoint2, route))
+        session.add(Association.create(waypoint3, waypoint2))
+        session.flush()
 
         update_cache_version(waypoint1)
-        cache_version_wp1 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version_wp2 = self.session.get(CacheVersion, waypoint2.document_id)
-        cache_version_wp3 = self.session.get(CacheVersion, waypoint3.document_id)
-        cache_version_route = self.session.get(CacheVersion, route.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version_wp1 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version_wp2 = session.get(CacheVersion, waypoint2.document_id)
+        cache_version_wp3 = session.get(CacheVersion, waypoint3.document_id)
+        cache_version_route = session.get(CacheVersion, route.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
 
@@ -113,26 +113,26 @@ class TestCacheVersion(BaseTestCase):
         assert cache_version_route.version == 2
         assert cache_version_untouched.version == 1
 
-    def test_update_cache_version_route(self):
+    def test_update_cache_version_route(self, session):
         route1 = Route(activities=['skitouring'])
         route2 = Route(activities=['skitouring'])
         waypoint1 = Waypoint(waypoint_type='summit')
         waypoint2 = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
-        self.session.add_all([waypoint1, waypoint2, waypoint_unrelated, route1, route2])
-        self.session.flush()
+        session.add_all([waypoint1, waypoint2, waypoint_unrelated, route1, route2])
+        session.flush()
 
-        self.session.add(Association.create(waypoint1, route1))
-        self.session.add(Association.create(route2, route1))
-        self.session.add(Association.create(waypoint2, waypoint1))
-        self.session.flush()
+        session.add(Association.create(waypoint1, route1))
+        session.add(Association.create(route2, route1))
+        session.add(Association.create(waypoint2, waypoint1))
+        session.flush()
 
         update_cache_version(route1)
-        cache_version_route1 = self.session.get(CacheVersion, route1.document_id)
-        cache_version_route2 = self.session.get(CacheVersion, route2.document_id)
-        cache_version_wp1 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version_wp2 = self.session.get(CacheVersion, waypoint2.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version_route1 = session.get(CacheVersion, route1.document_id)
+        cache_version_route2 = session.get(CacheVersion, route2.document_id)
+        cache_version_wp1 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version_wp2 = session.get(CacheVersion, waypoint2.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
 
@@ -142,7 +142,7 @@ class TestCacheVersion(BaseTestCase):
         assert cache_version_wp2.version == 2
         assert cache_version_untouched.version == 1
 
-    def test_update_cache_version_outing(self):
+    def test_update_cache_version_outing(self, session):
         outing = Outing(
             activities=['skitouring'],
             date_start=datetime.date(2016, 2, 1),
@@ -153,24 +153,24 @@ class TestCacheVersion(BaseTestCase):
         waypoint1 = Waypoint(waypoint_type='summit')
         waypoint2 = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
-        self.session.add_all(
+        session.add_all(
             [outing, waypoint1, waypoint2, waypoint_unrelated, route1, route2]
         )
-        self.session.flush()
+        session.flush()
 
-        self.session.add(Association.create(route1, outing))
-        self.session.add(Association.create(waypoint1, route1))
-        self.session.add(Association.create(route2, outing))
-        self.session.add(Association.create(waypoint2, waypoint1))
-        self.session.flush()
+        session.add(Association.create(route1, outing))
+        session.add(Association.create(waypoint1, route1))
+        session.add(Association.create(route2, outing))
+        session.add(Association.create(waypoint2, waypoint1))
+        session.flush()
 
         update_cache_version(outing)
-        cache_version_outing = self.session.get(CacheVersion, outing.document_id)
-        cache_version_route1 = self.session.get(CacheVersion, route1.document_id)
-        cache_version_route2 = self.session.get(CacheVersion, route2.document_id)
-        cache_version_wp1 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version_wp2 = self.session.get(CacheVersion, waypoint2.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version_outing = session.get(CacheVersion, outing.document_id)
+        cache_version_route1 = session.get(CacheVersion, route1.document_id)
+        cache_version_route2 = session.get(CacheVersion, route2.document_id)
+        cache_version_wp1 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version_wp2 = session.get(CacheVersion, waypoint2.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
 
@@ -181,7 +181,7 @@ class TestCacheVersion(BaseTestCase):
         assert cache_version_wp2.version == 2
         assert cache_version_untouched.version == 1
 
-    def test_update_cache_version_user(self):
+    def test_update_cache_version_user(self, session):
         """Test that outings are invalidated if an user name changes."""
         outing = Outing(
             activities=['skitouring'],
@@ -189,22 +189,20 @@ class TestCacheVersion(BaseTestCase):
             date_end=datetime.date(2016, 2, 1),
         )
         user_profile = UserProfile()
-        self.session.add_all([outing, user_profile])
-        self.session.flush()
+        session.add_all([outing, user_profile])
+        session.flush()
 
-        self.session.add(Association.create(user_profile, outing))
-        self.session.flush()
+        session.add(Association.create(user_profile, outing))
+        session.flush()
 
         update_cache_version(user_profile)
-        cache_version_user_profile = self.session.get(
-            CacheVersion, user_profile.document_id
-        )
-        cache_version_outing = self.session.get(CacheVersion, outing.document_id)
+        cache_version_user_profile = session.get(CacheVersion, user_profile.document_id)
+        cache_version_outing = session.get(CacheVersion, outing.document_id)
 
         assert cache_version_outing.version == 2
         assert cache_version_user_profile.version == 2
 
-    def test_update_cache_version_user_document_version(self):
+    def test_update_cache_version_user_document_version(self, session):
         """Test that a document is invalidated if a user name of a user that
         edited one of the document versions is changed.
         """
@@ -224,27 +222,25 @@ class TestCacheVersion(BaseTestCase):
             email_validated=True,
             profile=user_profile,
         )
-        self.session.add_all([waypoint, user_profile, user])
-        self.session.flush()
+        session.add_all([waypoint, user_profile, user])
+        session.flush()
 
         create_new_version(waypoint, user.id)
 
         update_cache_version(user_profile)
-        cache_version_user_profile = self.session.get(
-            CacheVersion, user_profile.document_id
-        )
-        cache_version_waypoint = self.session.get(CacheVersion, waypoint.document_id)
+        cache_version_user_profile = session.get(CacheVersion, user_profile.document_id)
+        cache_version_waypoint = session.get(CacheVersion, waypoint.document_id)
 
         assert cache_version_waypoint.version == 2
         assert cache_version_user_profile.version == 2
 
-    def test_update_cache_version_associations_removed_wp(self):
+    def test_update_cache_version_associations_removed_wp(self, session):
         waypoint1 = Waypoint(waypoint_type='summit')
         waypoint2 = Waypoint(waypoint_type='summit')
         waypoint3 = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
-        self.session.add_all([waypoint1, waypoint2, waypoint3, waypoint_unrelated])
-        self.session.flush()
+        session.add_all([waypoint1, waypoint2, waypoint3, waypoint_unrelated])
+        session.flush()
 
         update_cache_version_associations(
             [],
@@ -264,10 +260,10 @@ class TestCacheVersion(BaseTestCase):
             ],
         )
 
-        cache_version1 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version2 = self.session.get(CacheVersion, waypoint2.document_id)
-        cache_version3 = self.session.get(CacheVersion, waypoint3.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version1 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version2 = session.get(CacheVersion, waypoint2.document_id)
+        cache_version3 = session.get(CacheVersion, waypoint3.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
 
@@ -276,20 +272,18 @@ class TestCacheVersion(BaseTestCase):
         assert cache_version3.version == 2
         assert cache_version_untouched.version == 1
 
-    def test_update_cache_version_associations_removed_wp_route(self):
+    def test_update_cache_version_associations_removed_wp_route(self, session):
         waypoint1 = Waypoint(waypoint_type='summit')
         waypoint2 = Waypoint(waypoint_type='summit')
         waypoint3 = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
         route = Route(activities=['skitouring'])
-        self.session.add_all(
-            [waypoint1, waypoint2, waypoint3, waypoint_unrelated, route]
-        )
-        self.session.flush()
+        session.add_all([waypoint1, waypoint2, waypoint3, waypoint_unrelated, route])
+        session.flush()
 
-        self.session.add(Association.create(waypoint2, waypoint1))
-        self.session.add(Association.create(waypoint3, waypoint2))
-        self.session.flush()
+        session.add(Association.create(waypoint2, waypoint1))
+        session.add(Association.create(waypoint3, waypoint2))
+        session.flush()
 
         update_cache_version_associations(
             [],
@@ -303,11 +297,11 @@ class TestCacheVersion(BaseTestCase):
             ],
         )
 
-        cache_version1 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version2 = self.session.get(CacheVersion, waypoint2.document_id)
-        cache_version3 = self.session.get(CacheVersion, waypoint3.document_id)
-        cache_version_route = self.session.get(CacheVersion, route.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version1 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version2 = session.get(CacheVersion, waypoint2.document_id)
+        cache_version3 = session.get(CacheVersion, waypoint3.document_id)
+        cache_version_route = session.get(CacheVersion, route.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
 
@@ -317,7 +311,7 @@ class TestCacheVersion(BaseTestCase):
         assert cache_version_route.version == 2
         assert cache_version_untouched.version == 1
 
-    def test_update_cache_version_associations_removed_route_outing(self):
+    def test_update_cache_version_associations_removed_route_outing(self, session):
         waypoint1 = Waypoint(waypoint_type='summit')
         waypoint2 = Waypoint(waypoint_type='summit')
         waypoint3 = Waypoint(waypoint_type='summit')
@@ -328,15 +322,15 @@ class TestCacheVersion(BaseTestCase):
             date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 1),
         )
-        self.session.add_all(
+        session.add_all(
             [waypoint1, waypoint2, waypoint3, waypoint_unrelated, route, outing]
         )
-        self.session.flush()
+        session.flush()
 
-        self.session.add(Association.create(waypoint1, route))
-        self.session.add(Association.create(waypoint2, waypoint1))
-        self.session.add(Association.create(waypoint3, waypoint2))
-        self.session.flush()
+        session.add(Association.create(waypoint1, route))
+        session.add(Association.create(waypoint2, waypoint1))
+        session.add(Association.create(waypoint3, waypoint2))
+        session.flush()
 
         update_cache_version_associations(
             [],
@@ -350,12 +344,12 @@ class TestCacheVersion(BaseTestCase):
             ],
         )
 
-        cache_version1 = self.session.get(CacheVersion, waypoint1.document_id)
-        cache_version2 = self.session.get(CacheVersion, waypoint2.document_id)
-        cache_version3 = self.session.get(CacheVersion, waypoint3.document_id)
-        cache_version_route = self.session.get(CacheVersion, route.document_id)
-        cache_version_outing = self.session.get(CacheVersion, outing.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version1 = session.get(CacheVersion, waypoint1.document_id)
+        cache_version2 = session.get(CacheVersion, waypoint2.document_id)
+        cache_version3 = session.get(CacheVersion, waypoint3.document_id)
+        cache_version_route = session.get(CacheVersion, route.document_id)
+        cache_version_outing = session.get(CacheVersion, outing.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
 
@@ -366,52 +360,52 @@ class TestCacheVersion(BaseTestCase):
         assert cache_version_outing.version == 2
         assert cache_version_untouched.version == 1
 
-    def test_update_cache_version_for_area(self):
+    def test_update_cache_version_for_area(self, session):
         waypoint = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
         area = Area()
-        self.session.add_all([waypoint, waypoint_unrelated, area])
-        self.session.flush()
+        session.add_all([waypoint, waypoint_unrelated, area])
+        session.flush()
 
-        self.session.add(
+        session.add(
             AreaAssociation(document_id=waypoint.document_id, area_id=area.document_id)
         )
-        self.session.flush()
+        session.flush()
 
         update_cache_version_for_area(area)
 
-        cache_version_waypoint = self.session.get(CacheVersion, waypoint.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version_waypoint = session.get(CacheVersion, waypoint.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
-        cache_version_area = self.session.get(CacheVersion, area.document_id)
+        cache_version_area = session.get(CacheVersion, area.document_id)
 
         assert cache_version_waypoint.version == 2
         assert cache_version_untouched.version == 1
         # the cache key of the area is also not updated!
         assert cache_version_area.version == 1
 
-    def test_update_cache_version_for_map(self):
+    def test_update_cache_version_for_map(self, session):
         waypoint = Waypoint(waypoint_type='summit')
         waypoint_unrelated = Waypoint(waypoint_type='summit')
         topo_map = TopoMap()
-        self.session.add_all([waypoint, waypoint_unrelated, topo_map])
-        self.session.flush()
+        session.add_all([waypoint, waypoint_unrelated, topo_map])
+        session.flush()
 
-        self.session.add(
+        session.add(
             TopoMapAssociation(
                 document_id=waypoint.document_id, topo_map_id=topo_map.document_id
             )
         )
-        self.session.flush()
+        session.flush()
 
         update_cache_version_for_map(topo_map)
 
-        cache_version_waypoint = self.session.get(CacheVersion, waypoint.document_id)
-        cache_version_untouched = self.session.get(
+        cache_version_waypoint = session.get(CacheVersion, waypoint.document_id)
+        cache_version_untouched = session.get(
             CacheVersion, waypoint_unrelated.document_id
         )
-        cache_version_map = self.session.get(CacheVersion, topo_map.document_id)
+        cache_version_map = session.get(CacheVersion, topo_map.document_id)
 
         assert cache_version_waypoint.version == 2
         assert cache_version_untouched.version == 1

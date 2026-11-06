@@ -1,9 +1,11 @@
+import pytest
+
 from c2corg_api.models.article import Article
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.tests import BaseTestCase
 
 
-class TestArticle(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestArticle:
     def test_to_archive(self):
         article = Article(
             document_id=1,

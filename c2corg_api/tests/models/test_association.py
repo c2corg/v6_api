@@ -1,3 +1,5 @@
+import pytest
+
 from c2corg_api.models.association import (
     Association,
     _diff_associations,
@@ -7,12 +9,11 @@ from c2corg_api.models.association import (
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
-from c2corg_api.tests import BaseTestCase
 
 
-class TestAssociation(BaseTestCase):
-    def setUp(self):
-        BaseTestCase.setUp(self)
+class TestAssociation:
+    @pytest.fixture(autouse=True)
+    def _setup_test_association(self, client, session):
 
         self.waypoint1 = Waypoint(waypoint_type='summit')
         self.waypoint2 = Waypoint(waypoint_type='summit')
@@ -20,7 +21,7 @@ class TestAssociation(BaseTestCase):
         self.route2 = Route(activities=['hiking'])
         self.user_profile1 = UserProfile()
         self.user_profile2 = UserProfile()
-        self.session.add_all(
+        session.add_all(
             [
                 self.waypoint1,
                 self.waypoint2,
@@ -30,10 +31,10 @@ class TestAssociation(BaseTestCase):
                 self.user_profile2,
             ]
         )
-        self.session.flush()
+        session.flush()
 
-    def _add_test_data_routes(self):
-        self.session.add_all(
+    def _add_test_data_routes(self, session):
+        session.add_all(
             [
                 Association.create(
                     parent_document=self.route1, child_document=self.route2
@@ -46,10 +47,10 @@ class TestAssociation(BaseTestCase):
                 ),
             ]
         )
-        self.session.flush()
+        session.flush()
 
-    def test_get_current_associations_routes(self):
-        self._add_test_data_routes()
+    def test_get_current_associations_routes(self, session):
+        self._add_test_data_routes(session)
 
         new_associations = {
             'routes': [{'document_id': 1, 'is_parent': True}],
@@ -67,12 +68,12 @@ class TestAssociation(BaseTestCase):
         }
         assert current_associations == expected_current_associations
 
-    def test_get_current_associations_routes_partial(self):
+    def test_get_current_associations_routes_partial(self, session):
         """Check that only those types are loaded that are also given in the
         new associations (e.g. waypoints are not loaded in this case because
         the type is not given as input).
         """
-        self._add_test_data_routes()
+        self._add_test_data_routes(session)
 
         new_associations = {'routes': [{'document_id': 1, 'is_parent': True}]}
 
@@ -83,11 +84,11 @@ class TestAssociation(BaseTestCase):
         }
         assert current_associations == expected_current_associations
 
-    def test_get_current_associations_waypoints(self):
+    def test_get_current_associations_waypoints(self, session):
         self.waypoint3 = Waypoint(waypoint_type='summit')
-        self.session.add(self.waypoint3)
-        self.session.flush()
-        self.session.add_all(
+        session.add(self.waypoint3)
+        session.flush()
+        session.add_all(
             [
                 Association.create(
                     parent_document=self.waypoint1, child_document=self.waypoint2
@@ -103,7 +104,7 @@ class TestAssociation(BaseTestCase):
                 ),
             ]
         )
-        self.session.flush()
+        session.flush()
 
         new_associations = {
             # routes are ignored
@@ -129,13 +130,13 @@ class TestAssociation(BaseTestCase):
         }
         assert current_associations == expected_current_associations
 
-    def test_get_current_associations_waypoints_partial(self):
-        self.session.add(
+    def test_get_current_associations_waypoints_partial(self, session):
+        session.add(
             Association.create(
                 parent_document=self.waypoint1, child_document=self.waypoint2
             )
         )
-        self.session.flush()
+        session.flush()
 
         new_associations = {}
         current_associations = _get_current_associations(
@@ -175,12 +176,12 @@ class TestAssociation(BaseTestCase):
         assert _get_document_ids(to_add) == _get_document_ids(expected_to_add)
         assert _get_document_ids(to_remove) == _get_document_ids(expected_to_remove)
 
-    def test_synchronize_associations(self):
+    def test_synchronize_associations(self, session, user_ids):
         self.route3 = Route(activities=['hiking'])
         self.route4 = Route(activities=['hiking'])
-        self.session.add_all([self.route3, self.route4])
-        self.session.flush()
-        self.session.add_all(
+        session.add_all([self.route3, self.route4])
+        session.flush()
+        session.add_all(
             [
                 Association.create(
                     parent_document=self.route1, child_document=self.route2
@@ -190,7 +191,7 @@ class TestAssociation(BaseTestCase):
                 ),
             ]
         )
-        self.session.flush()
+        session.flush()
 
         new_associations = {
             'routes': [
@@ -201,20 +202,16 @@ class TestAssociation(BaseTestCase):
                 {'document_id': self.waypoint1.document_id, 'is_parent': True}
             ],
         }
-        synchronize_associations(
-            self.route1, new_associations, self.global_userids['contributor']
-        )
+        synchronize_associations(self.route1, new_associations, user_ids['contributor'])
 
-        assert self._get_association(self.route1, self.route2) is not None
-        assert self._get_association(self.route4, self.route1) is not None
-        assert self._get_association(self.route2, self.route1) is None
-        assert self._get_association(self.route1, self.route3) is None
-        assert self._get_association(self.waypoint1, self.route1) is not None
+        assert self._get_association(session, self.route1, self.route2) is not None
+        assert self._get_association(session, self.route4, self.route1) is not None
+        assert self._get_association(session, self.route2, self.route1) is None
+        assert self._get_association(session, self.route1, self.route3) is None
+        assert self._get_association(session, self.waypoint1, self.route1) is not None
 
-    def _get_association(self, main_doc, child_doc):
-        return self.session.get(
-            Association, (main_doc.document_id, child_doc.document_id)
-        )
+    def _get_association(self, session, main_doc, child_doc):
+        return session.get(Association, (main_doc.document_id, child_doc.document_id))
 
 
 def _get_document_ids(docs):

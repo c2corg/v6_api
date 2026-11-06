@@ -1,12 +1,15 @@
 import json
 
+import pytest
+
 from c2corg_api.ext.wkb import geojson_from_wkbelement, wkbelement_from_geojson
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
-from c2corg_api.tests import BaseTestCase
+from c2corg_api.tests import assert_coordinates_equal
 
 
-class TestRoute(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestRoute:
     def test_to_archive(self):
         route = Route(
             document_id=1,
@@ -85,7 +88,7 @@ class TestRoute(BaseTestCase):
         assert route_db.geometry.geom_detail is not geom1
         assert route_db.geometry.geom_detail is geom3
 
-    def test_simplify(self):
+    def test_simplify(self, session):
         geom = wkbelement_from_geojson(
             json.loads(
                 '{"type": "LineString", "coordinates": '
@@ -97,12 +100,12 @@ class TestRoute(BaseTestCase):
             activities=['hiking'],
             geometry=DocumentGeometry(geom=None, geom_detail=geom),
         )
-        self.session.add(route)
-        self.session.flush()
+        session.add(route)
+        session.flush()
 
         # check that the line was simplified on insertion
         simplified_geom = route.geometry
-        self.session.refresh(simplified_geom)
+        session.refresh(simplified_geom)
         geojson = json.loads(geojson_from_wkbelement(simplified_geom.geom_detail))
         assert len(geojson['coordinates']) == 2
 
@@ -115,9 +118,9 @@ class TestRoute(BaseTestCase):
             3857,
         )
 
-        self.session.flush()
+        session.flush()
         simplified_geom = route.geometry
-        self.session.refresh(simplified_geom)
+        session.refresh(simplified_geom)
         geojson = json.loads(geojson_from_wkbelement(simplified_geom.geom_detail))
         assert len(geojson['coordinates']) == 2
-        self.assertCoodinateEquals([635901, 5723600], geojson['coordinates'][0])
+        assert_coordinates_equal([635901, 5723600], geojson['coordinates'][0])

@@ -1,8 +1,10 @@
+import pytest
+
 from c2corg_api.search.utils import strip_bbcodes
-from c2corg_api.tests import BaseTestCase
 
 
-class TestUtils(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestUtils:
     def test_strip_bbcodes(self):
         assert None is strip_bbcodes(None)
         assert '  Test   [boom]  <b>' == strip_bbcodes(

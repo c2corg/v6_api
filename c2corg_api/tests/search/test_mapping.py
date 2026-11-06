@@ -1,3 +1,5 @@
+import pytest
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.article import Article
 from c2corg_api.models.book import Book
@@ -17,10 +19,10 @@ from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.topo_map_mapping import SearchTopoMap
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
-from c2corg_api.tests import BaseTestCase
 
 
-class TestMapping(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestMapping:
     def test_waypoint_mapping(self):
         self._test_mapping(SearchWaypoint, Waypoint)
 

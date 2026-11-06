@@ -17,13 +17,13 @@ from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.mappings.xreport_mapping import SearchXreport
-from c2corg_api.tests import BaseTestCase
 
 
-class TestFillIndex(BaseTestCase):
-    def test_fill_index(self):
+@pytest.mark.usefixtures('client')
+class TestFillIndex:
+    def test_fill_index(self, session):
         """Tests that documents are inserted into the ElasticSearch index."""
-        self.session.add(
+        session.add(
             Waypoint(
                 document_id=71171,
                 waypoint_type='summit',
@@ -47,7 +47,7 @@ class TestFillIndex(BaseTestCase):
                 ],
             )
         )
-        self.session.add(
+        session.add(
             Waypoint(
                 document_id=71172,
                 waypoint_type='summit',
@@ -63,7 +63,7 @@ class TestFillIndex(BaseTestCase):
                 ],
             )
         )
-        self.session.add(
+        session.add(
             Route(
                 document_id=71173,
                 activities=['skitouring'],
@@ -83,7 +83,7 @@ class TestFillIndex(BaseTestCase):
                 ],
             )
         )
-        self.session.add(
+        session.add(
             Waypoint(
                 document_id=71174,
                 redirects_to=71171,
@@ -100,7 +100,7 @@ class TestFillIndex(BaseTestCase):
                 ],
             )
         )
-        self.session.add(
+        session.add(
             Outing(
                 document_id=71175,
                 activities=['skitouring'],
@@ -117,7 +117,7 @@ class TestFillIndex(BaseTestCase):
                 ],
             )
         )
-        self.session.add(
+        session.add(
             Article(
                 document_id=71176,
                 categories=['site_info'],
@@ -134,9 +134,9 @@ class TestFillIndex(BaseTestCase):
                 ],
             )
         )
-        self.session.flush()
+        session.flush()
 
-        self.session.add(
+        session.add(
             Book(
                 document_id=71177,
                 activities=['hiking'],
@@ -159,9 +159,9 @@ class TestFillIndex(BaseTestCase):
                 ],
             )
         )
-        self.session.flush()
+        session.flush()
 
-        self.session.add(
+        session.add(
             Xreport(
                 document_id=71178,
                 event_type='person_fall',
@@ -179,10 +179,10 @@ class TestFillIndex(BaseTestCase):
                 ],
             )
         )
-        self.session.flush()
+        session.flush()
 
         # fill the ElasticSearch index
-        fill_index(self.session)
+        fill_index(session)
 
         waypoint1 = SearchWaypoint.get(id=71171)
         assert waypoint1 is not None
@@ -237,5 +237,5 @@ class TestFillIndex(BaseTestCase):
         assert SearchWaypoint.get(id=71174, ignore=404) is None
 
         # check that the sync. status was updated
-        last_update, _ = es_sync.get_status(self.session)
+        last_update, _ = es_sync.get_status(session)
         assert last_update is not None

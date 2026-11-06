@@ -10,22 +10,21 @@ from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
-from c2corg_api.tests import BaseTestCase
 
 
-class TestDocumentChange(BaseTestCase):
-    def setUp(self):
-        BaseTestCase.setUp(self)
-        self.user1 = self.session.get(User, self.global_userids['contributor'])
-        self.user2 = self.session.get(User, self.global_userids['contributor2'])
+class TestDocumentChange:
+    @pytest.fixture(autouse=True)
+    def _setup_test_document_change(self, client, session, user_ids):
+        self.user1 = session.get(User, user_ids['contributor'])
+        self.user2 = session.get(User, user_ids['contributor2'])
         self.waypoint = Waypoint(waypoint_type='summit')
-        self.session.add(self.waypoint)
+        session.add(self.waypoint)
         self.area1 = Area(area_type='range')
         self.area2 = Area(area_type='range')
-        self.session.add_all([self.waypoint, self.area1, self.area2])
-        self.session.flush()
+        session.add_all([self.waypoint, self.area1, self.area2])
+        session.flush()
 
-    def test_check_user_and_area_ids_on_create_valid(self):
+    def test_check_user_and_area_ids_on_create_valid(self, session):
         users_ids = [self.user1.id, self.user2.id]
         area_ids = [self.area1.document_id, self.area2.document_id]
         change = DocumentChange(
@@ -36,11 +35,11 @@ class TestDocumentChange(BaseTestCase):
             area_ids=area_ids,
             user_ids=users_ids,
         )
-        self.session.add(change)
-        self.session.flush()
+        session.add(change)
+        session.flush()
         # no error, ok
 
-    def test_check_user_ids_on_create_invalid(self):
+    def test_check_user_ids_on_create_invalid(self, session):
         """try to create a "change" with an invalid user id"""
         users_ids = [self.user1.id, -12345678]
         change = DocumentChange(
@@ -52,14 +51,14 @@ class TestDocumentChange(BaseTestCase):
             user_ids=users_ids,
         )
         try:
-            self.session.add(change)
-            self.session.flush()
+            session.add(change)
+            session.flush()
         except Exception as exc:
             assert 'Invalid user id: -12345678' in exc.orig.pgerror
         else:
             pytest.fail('invalid user id not detected')
 
-    def test_check_area_ids_on_create_invalid(self):
+    def test_check_area_ids_on_create_invalid(self, session):
         """try to create a "change" with an invalid area id"""
         area_ids = [self.area1.document_id, -123456]
         change = DocumentChange(
@@ -71,14 +70,14 @@ class TestDocumentChange(BaseTestCase):
             user_ids=[],
         )
         try:
-            self.session.add(change)
-            self.session.flush()
+            session.add(change)
+            session.flush()
         except Exception as exc:
             assert 'Invalid area id: -123456' in exc.orig.pgerror
         else:
             pytest.fail('invalid area id not detected')
 
-    def test_check_user_ids_on_update_invalid(self):
+    def test_check_user_ids_on_update_invalid(self, session):
         """try to update a "change" with an invalid user id"""
         # first create the change without user ids
         change = DocumentChange(
@@ -89,20 +88,20 @@ class TestDocumentChange(BaseTestCase):
             area_ids=[],
             user_ids=[],
         )
-        self.session.add(change)
-        self.session.flush()
+        session.add(change)
+        session.flush()
 
         # then set the user ids and save
         users_ids = [self.user1.id, -12345678]
         change.user_ids = users_ids
         try:
-            self.session.flush()
+            session.flush()
         except Exception as exc:
             assert 'Invalid user id: -12345678' in exc.orig.pgerror
         else:
             pytest.fail('invalid user id not detected')
 
-    def test_check_changes_on_user_deletion_ok(self):
+    def test_check_changes_on_user_deletion_ok(self, session):
         """try to delete a user that is not referenced in a "change" """
         user = User(
             name='test',
@@ -114,13 +113,13 @@ class TestDocumentChange(BaseTestCase):
             email_validated=True,
             profile=UserProfile(categories=['amateur']),
         )
-        self.session.add(user)
-        self.session.flush()
-        self.session.delete(user)
-        self.session.flush()
+        session.add(user)
+        session.flush()
+        session.delete(user)
+        session.flush()
         # no error, ok
 
-    def test_check_changes_on_user_deletion_error(self):
+    def test_check_changes_on_user_deletion_error(self, session):
         """try to delete a user that is still referenced in a "change" """
         user = User(
             name='test',
@@ -132,8 +131,8 @@ class TestDocumentChange(BaseTestCase):
             email_validated=True,
             profile=UserProfile(categories=['amateur']),
         )
-        self.session.add(user)
-        self.session.flush()
+        session.add(user)
+        session.flush()
 
         participant_ids = [user.id]
         change = DocumentChange(
@@ -144,27 +143,27 @@ class TestDocumentChange(BaseTestCase):
             area_ids=[],
             user_ids=participant_ids,
         )
-        self.session.add(change)
-        self.session.flush()
+        session.add(change)
+        session.flush()
 
         try:
-            self.session.delete(user)
-            self.session.flush()
+            session.delete(user)
+            session.flush()
         except Exception as exc:
             assert 'still references user id' in exc.orig.pgerror
         else:
             pytest.fail('user is still referenced in change')
 
-    def test_check_changes_on_area_deletion_ok(self):
+    def test_check_changes_on_area_deletion_ok(self, session):
         """try to delete an area that is not referenced in a "change" """
-        self.session.query(CacheVersion).filter(
+        session.query(CacheVersion).filter(
             CacheVersion.document_id == self.area1.document_id
         ).delete()
-        self.session.delete(self.area1)
-        self.session.flush()
+        session.delete(self.area1)
+        session.flush()
         # no error, ok
 
-    def test_check_changes_on_area_deletion_error(self):
+    def test_check_changes_on_area_deletion_error(self, session):
         """try to delete an area that is still referenced in a "change" """
         area_ids = [self.area1.document_id]
         change = DocumentChange(
@@ -175,23 +174,24 @@ class TestDocumentChange(BaseTestCase):
             area_ids=area_ids,
             user_ids=[],
         )
-        self.session.add(change)
-        self.session.flush()
+        session.add(change)
+        session.flush()
 
         try:
-            self.session.query(CacheVersion).filter(
+            session.query(CacheVersion).filter(
                 CacheVersion.document_id == self.area1.document_id
             ).delete()
-            self.session.delete(self.area1)
-            self.session.flush()
+            session.delete(self.area1)
+            session.flush()
         except Exception as exc:
             assert 'still references area id' in exc.orig.pgerror
         else:
             pytest.fail('area is still referenced in change')
 
 
-class TestParticipantsOfOuting(BaseTestCase):
-    def test_in_order(self):
+@pytest.mark.usefixtures('client')
+class TestParticipantsOfOuting:
+    def test_in_order(self, session, user_ids):
         # by user id, whatever the order of the associations (the feed
         # compares and stores them as sorted lists)
         outing = Outing(
@@ -199,14 +199,12 @@ class TestParticipantsOfOuting(BaseTestCase):
             date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 1),
         )
-        self.session.add(outing)
-        self.session.flush()
-        user_ids = sorted(
-            [self.global_userids['contributor'], self.global_userids['contributor2']]
-        )
-        for user_id in reversed(user_ids):
-            profile = self.session.get(User, user_id).profile
-            self.session.add(Association.create(profile, outing))
-            self.session.flush()
+        session.add(outing)
+        session.flush()
+        participant_ids = sorted([user_ids['contributor'], user_ids['contributor2']])
+        for user_id in reversed(participant_ids):
+            profile = session.get(User, user_id).profile
+            session.add(Association.create(profile, outing))
+            session.flush()
 
-        assert _get_participants_of_outing(outing.document_id) == user_ids
+        assert _get_participants_of_outing(outing.document_id) == participant_ids

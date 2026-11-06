@@ -1,9 +1,11 @@
+import pytest
+
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.tests import BaseTestCase
 
 
-class TestUserProfile(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestUserProfile:
     def test_to_archive(self):
         user_profile = UserProfile(
             document_id=1,

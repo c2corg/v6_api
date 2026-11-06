@@ -6,10 +6,10 @@ from c2corg_api.ext.wkb import wkbelement_from_geojson
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.utils import wkb_to_shape
 from c2corg_api.schemas.waypoint import waypoint_schema
-from c2corg_api.tests import AssertionsMixin
+from c2corg_api.tests import assert_coordinates_equal
 
 
-class TestUtils(AssertionsMixin):
+class TestUtils:
     def test_restrict_schema(self):
         fields = fields_waypoint.get('summit').get('fields')
         schema = waypoint_schema.restrict(fields)
@@ -46,8 +46,8 @@ class TestUtils(AssertionsMixin):
 
         assert len(line.coords) == 2
         assert len(line.coords[0]) == 2
-        self.assertCoodinateEquals(line.coords[0], [635956.0, 5723604.0])
-        self.assertCoodinateEquals(line.coords[1], [635966.0, 5723644.0])
+        assert_coordinates_equal(line.coords[0], [635956.0, 5723604.0])
+        assert_coordinates_equal(line.coords[1], [635966.0, 5723644.0])
 
     def test_wkb_to_shape_multilinestring(self):
         wkb = wkbelement_from_geojson(
@@ -63,8 +63,8 @@ class TestUtils(AssertionsMixin):
         assert len(line.geoms) == 1
         assert len(line.geoms[0].coords) == 2
         assert len(line.geoms[0].coords[0]) == 2
-        self.assertCoodinateEquals(line.geoms[0].coords[0], [635956.0, 5723604.0])
-        self.assertCoodinateEquals(line.geoms[0].coords[1], [635966.0, 5723644.0])
+        assert_coordinates_equal(line.geoms[0].coords[0], [635956.0, 5723604.0])
+        assert_coordinates_equal(line.geoms[0].coords[1], [635966.0, 5723644.0])
 
     def test_wkb_to_shape_polygon(self):
         wkb = wkbelement_from_geojson(

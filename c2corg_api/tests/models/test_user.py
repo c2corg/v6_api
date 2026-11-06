@@ -3,7 +3,6 @@ import pytest
 
 from c2corg_api.models.user import PasswordUtil, Purpose, User
 from c2corg_api.models.user_profile import UserProfile
-from c2corg_api.tests import BaseTestCase
 
 
 class TestPasswordUtil:
@@ -37,7 +36,8 @@ class TestPasswordUtil:
         assert PasswordUtil.is_password_valid(b'super pass', encrypted)
 
 
-class Testuser(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class Testuser:
     def test_validate_password(self):
         tony = User(
             username='tonymontana',
@@ -62,11 +62,11 @@ class Testuser(BaseTestCase):
         tony.email_validated = True
         change_email()
 
-    def test_last_modified(self):
+    def test_last_modified(self, session):
         """Check that the last modified field is set."""
         profile = UserProfile()
-        self.session.add(profile)
-        self.session.flush()
+        session.add(profile)
+        session.flush()
 
         user = User(
             id=profile.document_id,
@@ -77,14 +77,14 @@ class Testuser(BaseTestCase):
             email='user@mail.com',
             password='foobar',
         )
-        self.session.add(user)
-        self.session.flush()
-        self.session.refresh(user)
+        session.add(user)
+        session.flush()
+        session.refresh(user)
 
         assert user.last_modified is not None
 
         user.name = 'changed'
-        self.session.flush()
-        self.session.refresh(user)
+        session.flush()
+        session.refresh(user)
 
         assert user.last_modified is not None

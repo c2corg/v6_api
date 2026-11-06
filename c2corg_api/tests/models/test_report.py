@@ -1,8 +1,10 @@
+import pytest
+
 from c2corg_api.models.xreport import Xreport, XreportLocale
-from c2corg_api.tests import BaseTestCase
 
 
-class TestXreport(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestXreport:
     def test_to_archive(self):
         xreport = Xreport(
             document_id=1,

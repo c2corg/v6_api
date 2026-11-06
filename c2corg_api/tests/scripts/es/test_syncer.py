@@ -9,12 +9,12 @@ from c2corg_api.scripts.es.syncer import SyncWorker
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.document import create_new_version
 
 
-class TestSyncWorker(BaseTestCase):
-    def test_process_task(self):
+@pytest.mark.usefixtures('client')
+class TestSyncWorker:
+    def test_process_task(self, session, user_ids, queue_config):
         """Tests that the syncer listens to messages and sends changes to
         ElasticSearch.
         """
@@ -33,21 +33,21 @@ class TestSyncWorker(BaseTestCase):
                 )
             ],
         )
-        self.session.add(waypoint)
-        self.session.flush()
-        user_id = self.global_userids['contributor']
+        session.add(waypoint)
+        session.flush()
+        user_id = user_ids['contributor']
         create_new_version(waypoint, user_id)
-        self.session.flush()
+        session.flush()
 
         # the notification is sent when the session of the views commits
-        notify_es_syncer(self.queue_config)
+        notify_es_syncer(queue_config)
         DBSession.commit()
 
         syncer = SyncWorker(
-            self.queue_config.connection,
-            self.queue_config.queue,
+            queue_config.connection,
+            queue_config.queue,
             1000,
-            session=self.session,
+            session=session,
         )
         next(syncer.consume(limit=1))
 
@@ -57,11 +57,11 @@ class TestSyncWorker(BaseTestCase):
         assert doc['doc_type'] == 'w'
 
         # simulate removing a document
-        self.session.add(ESDeletedDocument(document_id=document_id, type=WAYPOINT_TYPE))
-        self.session.flush()
+        session.add(ESDeletedDocument(document_id=document_id, type=WAYPOINT_TYPE))
+        session.flush()
 
         # the notification is sent when the session of the views commits
-        notify_es_syncer(self.queue_config)
+        notify_es_syncer(queue_config)
         DBSession.commit()
 
         next(syncer.consume(limit=1))

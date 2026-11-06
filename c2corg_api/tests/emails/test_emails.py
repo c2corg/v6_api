@@ -6,20 +6,18 @@ import pytest
 from c2corg_api.emails.email_service import EmailLocalizator
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.user import User
-from c2corg_api.tests import BaseTestCase
 
 
-class TestEmails(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestEmails:
     @patch('c2corg_api.emails.email_service.smtplib.SMTP')
-    def test_send_email(self, smtp):
-        self.email_service._send_email('toto@localhost', subject='s', body='b')
+    def test_send_email(self, smtp, settings, email_service):
+        email_service._send_email('toto@localhost', subject='s', body='b')
 
-        smtp.assert_called_once_with(
-            self.settings['mail.host'], port=self.settings['mail.port']
-        )
+        smtp.assert_called_once_with(settings['mail.host'], port=settings['mail.port'])
 
         smtp.return_value.sendmail.assert_called_once_with(
-            self.settings['mail.from'], 'toto@localhost', ANY
+            settings['mail.from'], 'toto@localhost', ANY
         )
 
         msg = smtp.return_value.sendmail.call_args_list[0][0][2]
@@ -31,10 +29,10 @@ class TestEmails(BaseTestCase):
         assert b64encode(b'b').decode('utf8') in msg
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_registration_confirmation(self, _send_email):
+    def test_registration_confirmation(self, _send_email, email_service):
         user = User(email='me@localhost', lang='en')
         link = 'http://somelink'
-        self.email_service.send_registration_confirmation(user, link)
+        email_service.send_registration_confirmation(user, link)
 
         _send_email.assert_called_once_with(
             'me@localhost',

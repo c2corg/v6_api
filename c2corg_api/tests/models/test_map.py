@@ -1,9 +1,11 @@
+import pytest
+
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.topo_map import TopoMap
-from c2corg_api.tests import BaseTestCase
 
 
-class TestMap(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestMap:
     def test_to_archive(self):
         m = TopoMap(
             document_id=1,

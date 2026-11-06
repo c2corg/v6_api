@@ -1,9 +1,11 @@
+import pytest
+
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.image import Image
-from c2corg_api.tests import BaseTestCase
 
 
-class TestImage(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestImage:
     def test_to_archive(self):
         image = Image(
             document_id=1,

@@ -1,9 +1,11 @@
+import pytest
+
 from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.tests import BaseTestCase
 
 
-class TestArea(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestArea:
     def test_to_archive(self):
         area = Area(
             document_id=1,

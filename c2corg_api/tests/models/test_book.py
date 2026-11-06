@@ -1,9 +1,11 @@
+import pytest
+
 from c2corg_api.models.book import Book
 from c2corg_api.models.document import DocumentLocale
-from c2corg_api.tests import BaseTestCase
 
 
-class TestBook(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestBook:
     def test_to_archive(self):
         book = Book(
             document_id=1,
