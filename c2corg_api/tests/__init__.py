@@ -220,17 +220,8 @@ def get_feed_change(session, document_id, change_type=None):
 
 def extract_urls(text):
     """Return the URLs in a text (an email)."""
-    return re.findall(
-        r'http[s]?://'
-        r'(?:'
-        r'[a-zA-Z]|'
-        r'[0-9]|'
-        r'[$-_@#.&+]|'
-        r'[!*\(\),]|'
-        r'(?:%[0-9a-fA-F][0-9a-fA-F])'
-        r')+[0-9a-zA-Z]',
-        text,
-    )
+    # up to the last letter or digit before a space: no punctuation after it
+    return re.findall(r'https?://\S*[0-9a-zA-Z]', text)
 
 
 def extract_nonce(send_mail, key):
