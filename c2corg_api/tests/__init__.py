@@ -450,65 +450,6 @@ def teardown_package():
         initializees.drop_index()
 
 
-class AssertionsMixin:
-    def assertCoodinateEquals(self, coord1, coord2):  # noqa
-        assert_coordinates_equal(coord1, coord2)
-
-
-class BaseTestCase(AssertionsMixin):
-    """The idea for unit tests is, that the database tables
-    are created only once per test run and every test case uses a
-    transaction which is rolled back at the end. This avoids that
-    the database is set up and teared down after each test case.
-
-    See also:
-    http://www.sontek.net/blog/2011/12/01/writing_tests_for_pyramid_and_sqlalchemy.html
-    """
-
-    @pytest.fixture(autouse=True)
-    def _base_fixtures(
-        self,
-        client,
-        db_connection,
-        session,
-        email_service,
-        queue_config,
-    ):
-        """Expose the pytest fixtures to the tests and run setUp/tearDown."""
-        # The fixtures are defined in conftest.py.
-        self.global_userids = global_userids
-        self.global_tokens = global_tokens
-        self.global_passwords = global_passwords
-        self.settings = settings
-        self.app = client
-        self.connection = db_connection
-        # the session used in the test code, bound to the test's connection
-        # (the views use DBSession, bound to the same connection)
-        self.session = session
-        self.email_service = email_service
-        self.queue_config = queue_config
-        # pytest does not call setUp/tearDown on plain classes: the
-        # subclasses still define them, so call them here
-        self.setUp()
-        yield
-        self.tearDown()
-
-    def setUp(self):
-        """Prepare the test; subclasses override it."""
-
-    def tearDown(self):
-        """Clean up after the test; subclasses override it."""
-
-    def app_post_json(self, *args, **kwargs):
-        return self.app_send_json('post', *args, **kwargs)
-
-    def app_put_json(self, *args, **kwargs):
-        return self.app_send_json('put', *args, **kwargs)
-
-    def app_send_json(self, action, *args, **kwargs):
-        return send_json(self.app, action, *args, **kwargs)
-
-
 def reset_queue(queue_config):
     queue = queue_config.queue(queue_config.connection)
     while queue.get():

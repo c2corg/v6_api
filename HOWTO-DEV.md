@@ -226,6 +226,8 @@ pytest -n 4
 
 - Or directly in your favorite development IDE (pycharm, vscode...)
 
+- Write new tests as plain functions asking for the fixtures of `c2corg_api/tests/conftest.py` (`client`, `session`, `user_ids`, `tokens`, `settings`...) and the helpers of `c2corg_api.tests` (`auth_headers`, `send_json`...); the shared document scenarios are in `c2corg_api/tests/views/scenarios.py`. See #2610.
+
 ### API contract tests
 
 `c2corg_api/tests/contract/` checks what the clients of the API rely on, so that a change of framework or library cannot change it unnoticed:
