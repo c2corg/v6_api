@@ -23,58 +23,73 @@ from c2corg_api.models.xreport import (
 )
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
+
+XREPORTS = DocType(
+    '/xreports', XREPORT_TYPE, Xreport, ArchiveXreport, ArchiveXreportLocale
+)
 
 
 class TestXreportRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/xreports', XREPORT_TYPE, Xreport, ArchiveXreport, ArchiveXreportLocale
-        )
+        self.set_doc_type(XREPORTS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, XREPORTS)
         doc = body['documents'][0]
         assert 'geometry' in doc
 
     def test_get_collection_paginated(self):
         self.app.get('/xreports?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, XREPORTS, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
+        )
 
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, XREPORTS, {'offset': 0, 'limit': 1}
+            ),
             [self.xreport4.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, XREPORTS, {'offset': 0, 'limit': 2}
+            ),
             [self.xreport4.document_id, self.xreport3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, XREPORTS, {'offset': 1, 'limit': 2}
+            ),
             [self.xreport3.document_id, self.xreport2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, XREPORTS)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, XREPORTS, {'l': 'en'}),
             [self.xreport4.document_id, self.xreport1.document_id],
             2,
         )
 
-        self.assertResultsEqual(
-            self.get_collection_search({'act': 'skitouring'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, XREPORTS, {'act': 'skitouring'}),
             [
                 self.xreport4.document_id,
                 self.xreport3.document_id,
@@ -85,7 +100,13 @@ class TestXreportRest(BaseDocumentTestRest):
         )
 
     def test_get(self):
-        body = self.get(self.xreport1, user='moderator')
+        body = scenarios.get(
+            self.app,
+            XREPORTS,
+            self.xreport1,
+            user='moderator',
+            title=self.locale_en.title,
+        )
         assert 'xreport' not in body
         assert body['license']['id'] == 'CC-BY-NC-ND-3.0'
         assert 'geometry' in body
@@ -125,7 +146,9 @@ class TestXreportRest(BaseDocumentTestRest):
         assert locale_fr.get('place') == 'some place descrip. in french'
 
     def test_get_as_guest(self):
-        body = self.get(self.xreport1, user=None)
+        body = scenarios.get(
+            self.app, XREPORTS, self.xreport1, user=None, title=self.locale_en.title
+        )
 
         # common user should not see personal data in the xreport
         assert 'author_status' not in body
@@ -136,7 +159,13 @@ class TestXreportRest(BaseDocumentTestRest):
         assert 'autonomy' not in body
 
     def test_get_as_contributor_not_author(self):
-        body = self.get(self.xreport1, user='contributor2')
+        body = scenarios.get(
+            self.app,
+            XREPORTS,
+            self.xreport1,
+            user='contributor2',
+            title=self.locale_en.title,
+        )
 
         # common user should not see personal data in the xreport
         assert 'author_status' not in body
@@ -147,7 +176,13 @@ class TestXreportRest(BaseDocumentTestRest):
         assert 'autonomy' not in body
 
     def test_get_as_moderator(self):
-        body = self.get(self.xreport1, user='moderator')
+        body = scenarios.get(
+            self.app,
+            XREPORTS,
+            self.xreport1,
+            user='moderator',
+            title=self.locale_en.title,
+        )
 
         # moderator can see personal data in the xreport
         assert 'author_status' in body
@@ -158,19 +193,19 @@ class TestXreportRest(BaseDocumentTestRest):
         assert 'autonomy' in body
 
     def test_get_cooked(self):
-        self.get_cooked(self.xreport1)
+        scenarios.get_cooked(self.app, XREPORTS, self.xreport1)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.xreport1)
+        scenarios.get_cooked_with_defaulting(self.app, XREPORTS, self.xreport1)
 
     def test_get_lang(self):
-        self.get_lang(self.xreport1, user='contributor')
+        scenarios.get_lang(self.app, XREPORTS, self.xreport1, user='contributor')
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.xreport1, user='moderator')
+        scenarios.get_new_lang(self.app, XREPORTS, self.xreport1, user='moderator')
 
     def test_get_404(self):
-        self.get_404(user='moderator')
+        scenarios.get_404(self.app, XREPORTS, user='moderator')
 
     def test_get_cache_headers(self):
         response = self.app.get(
@@ -183,7 +218,9 @@ class TestXreportRest(BaseDocumentTestRest):
         assert response.headers.get('Cache-Control') == 'private'
 
     def test_get_version(self):
-        self.get_version(self.xreport1, self.xreport1_version, user='contributor')
+        scenarios.get_version(
+            self.app, XREPORTS, self.xreport1, self.xreport1_version, user='contributor'
+        )
 
     def test_get_version_etag(self):
         auth_headers = self.add_authorization_header(username='contributor')
@@ -236,18 +273,18 @@ class TestXreportRest(BaseDocumentTestRest):
         assert body == fake_cache_value
 
     def test_get_caching(self):
-        self.get_caching(self.xreport1)
+        scenarios.get_caching(self.app, XREPORTS, self.xreport1)
 
     def test_get_info(self):
-        _, locale = self.get_info(self.xreport1, 'en')
+        _, locale = scenarios.get_info(self.app, XREPORTS, self.xreport1, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_info_best_lang(self):
-        _, locale = self.get_info(self.xreport1, 'es')
+        _, locale = scenarios.get_info(self.app, XREPORTS, self.xreport1, 'es')
         assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
-        self.get_info_404()
+        scenarios.get_info_404(self.app, XREPORTS)
 
     def test_post_error(self):
         body = self.post_error({}, user='moderator', status=422)
@@ -426,7 +463,14 @@ class TestXreportRest(BaseDocumentTestRest):
         assert meta_data.user_id == user_id
 
         # authorized contributor can see personal data in the xreport
-        body = self.get(doc, user='contributor', ignore_checks=True)
+        body = scenarios.get(
+            self.app,
+            XREPORTS,
+            doc,
+            user='contributor',
+            ignore_checks=True,
+            title=self.locale_en.title,
+        )
         assert 'xreport' not in body
 
         assert 'author_status' in body

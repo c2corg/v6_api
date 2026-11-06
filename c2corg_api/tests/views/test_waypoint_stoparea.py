@@ -3,13 +3,14 @@ from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.waypoint_stoparea import WaypointStoparea
 from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views.scenarios import DocType
+
+WAYPOINTS_STOPAREAS = DocType('/waypoints_stopareas', 'ws', WaypointStoparea)
 
 
 class TestWaypointStopareaRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/waypoints_stopareas', 'ws', WaypointStoparea, None, None
-        )
+        self.set_doc_type(WAYPOINTS_STOPAREAS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 

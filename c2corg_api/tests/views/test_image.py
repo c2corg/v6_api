@@ -25,8 +25,11 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, BaseTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
+
+IMAGES = DocType('/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale)
 
 
 class BaseTestImage(BaseDocumentTestRest):
@@ -226,14 +229,12 @@ class BaseTestImage(BaseDocumentTestRest):
 
 class TestImageRest(BaseTestImage):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale
-        )
+        self.set_doc_type(IMAGES)
         BaseTestImage.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, IMAGES)
         doc = body['documents'][0]
         assert 'filename' in doc
         assert 'file_size' not in doc
@@ -253,36 +254,50 @@ class TestImageRest(BaseTestImage):
     def test_get_collection_paginated(self):
         self.app.get('/images?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}), [self.image4.document_id], 4
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, IMAGES, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, IMAGES, {'offset': 0, 'limit': 1}
+            ),
+            [self.image4.document_id],
+            4,
+        )
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, IMAGES, {'offset': 0, 'limit': 2}
+            ),
             [self.image4.document_id, self.image3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, IMAGES, {'offset': 1, 'limit': 2}
+            ),
             [self.image3.document_id, self.image2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, IMAGES)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, IMAGES, {'l': 'en'}),
             [self.image4.document_id, self.image.document_id],
             2,
         )
 
-        self.assertResultsEqual(
-            self.get_collection_search({'act': 'paragliding'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, IMAGES, {'act': 'paragliding'}),
             [
                 self.image4.document_id,
                 self.image3.document_id,
@@ -293,7 +308,7 @@ class TestImageRest(BaseTestImage):
         )
 
     def test_get(self):
-        body = self.get(self.image)
+        body = scenarios.get(self.app, IMAGES, self.image, title=self.locale_en.title)
         self._assert_geometry(body)
         assert body['license']['id'] == 'CC-BY-SA-3.0'
         assert body['license']['attribution_url'].startswith(
@@ -336,19 +351,19 @@ class TestImageRest(BaseTestImage):
         assert self.outing1.document_id == linked_outings[0].get('document_id')
 
     def test_get_cooked(self):
-        self.get_cooked(self.image)
+        scenarios.get_cooked(self.app, IMAGES, self.image)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.image)
+        scenarios.get_cooked_with_defaulting(self.app, IMAGES, self.image)
 
     def test_get_lang(self):
-        self.get_lang(self.image)
+        scenarios.get_lang(self.app, IMAGES, self.image)
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.image)
+        scenarios.get_new_lang(self.app, IMAGES, self.image)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, IMAGES)
 
     def test_get_edit(self):
         response = self.app.get(
@@ -373,14 +388,14 @@ class TestImageRest(BaseTestImage):
         self.assertCorniceRequired(errors[0], 'filename')
 
     def test_get_caching(self):
-        self.get_caching(self.image)
+        scenarios.get_caching(self.app, IMAGES, self.image)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.image, 'en')
+        body, locale = scenarios.get_info(self.app, IMAGES, self.image, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_version(self):
-        self.get_version(self.image, self.image_version)
+        scenarios.get_version(self.app, IMAGES, self.image, self.image_version)
 
     @patch('c2corg_api.views.image.requests.post', return_value=Mock(status_code=200))
     def test_post_missing_title(self, post_mock):
@@ -1009,9 +1024,7 @@ class TestImageRest(BaseTestImage):
 
 class TestImageListRest(BaseTestImage):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/images', IMAGE_TYPE, Image, ArchiveImage, ArchiveDocumentLocale
-        )
+        self.set_doc_type(IMAGES)
         BaseTestImage.setUp(self)
         self._add_test_data()
 

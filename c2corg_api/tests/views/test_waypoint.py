@@ -42,26 +42,25 @@ from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 from c2corg_api.views.document_listings import get_documents
 from c2corg_api.views.waypoint import waypoint_documents_config
 
+WAYPOINTS = DocType(
+    '/waypoints', WAYPOINT_TYPE, Waypoint, ArchiveWaypoint, ArchiveWaypointLocale
+)
+
 
 class TestWaypointRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/waypoints',
-            WAYPOINT_TYPE,
-            Waypoint,
-            ArchiveWaypoint,
-            ArchiveWaypointLocale,
-        )
+        self.set_doc_type(WAYPOINTS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, WAYPOINTS)
         doc = body['documents'][0]
         assert 'waypoint_type' in doc
         assert 'elevation' in doc
@@ -74,25 +73,37 @@ class TestWaypointRest(BaseDocumentTestRest):
         assert 'areas' in doc
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, WAYPOINTS)
 
     def test_get_collection_paginated(self):
         self.app.get('/waypoints?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 5)
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, WAYPOINTS, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            5,
+        )
 
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, WAYPOINTS, {'offset': 0, 'limit': 1}
+            ),
             [self.waypoint6.document_id],
             5,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, WAYPOINTS, {'offset': 0, 'limit': 2}
+            ),
             [self.waypoint6.document_id, self.waypoint4.document_id],
             5,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, WAYPOINTS, {'offset': 1, 'limit': 2}
+            ),
             [self.waypoint4.document_id, self.waypoint3.document_id],
             5,
         )
@@ -107,8 +118,10 @@ class TestWaypointRest(BaseDocumentTestRest):
         assert cache_document_listing.get(cache_key_6) == NO_VALUE
 
         # check that documents returned in the response are cached
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, WAYPOINTS, {'offset': 0, 'limit': 2}
+            ),
             [self.waypoint6.document_id, self.waypoint4.document_id],
             5,
         )
@@ -120,15 +133,19 @@ class TestWaypointRest(BaseDocumentTestRest):
         fake_cache_value = {'document_id': 'fake_id'}
         cache_document_listing.set(cache_key_3, fake_cache_value)
 
-        body = self.get_collection({'offset': 1, 'limit': 2})
-        self.assertResultsEqual(body, [self.waypoint4.document_id, 'fake_id'], 5)
+        body = scenarios.get_collection(
+            self.app, self.session, WAYPOINTS, {'offset': 1, 'limit': 2}
+        )
+        scenarios.assert_results_equal(body, [self.waypoint4.document_id, 'fake_id'], 5)
         assert cache_document_listing.get(cache_key_3) != NO_VALUE
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'wtyp': 'climbing_outdoor,summit'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(
+                self.app, WAYPOINTS, {'wtyp': 'climbing_outdoor,summit'}
+            ),
             [
                 self.waypoint4.document_id,
                 self.waypoint3.document_id,
@@ -138,23 +155,27 @@ class TestWaypointRest(BaseDocumentTestRest):
             4,
         )
 
-        body = self.get_collection_search(
-            {'wtyp': 'climbing_outdoor,summit', 'limit': 2}
+        body = scenarios.get_collection_search(
+            self.app, WAYPOINTS, {'wtyp': 'climbing_outdoor,summit', 'limit': 2}
         )
         assert body.get('total') == 4
         assert len(body.get('documents')) == 2
 
-        body = self.get_collection_search({'a': str(self.area2.document_id)})
+        body = scenarios.get_collection_search(
+            self.app, WAYPOINTS, {'a': str(self.area2.document_id)}
+        )
         assert body.get('total') == 1
 
-        body = self.get_collection_search({'walt': '2000'})
+        body = scenarios.get_collection_search(self.app, WAYPOINTS, {'walt': '2000'})
         assert body.get('total') == 1
 
     def test_get_collection_search_bbox(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'bbox': '659000,5694000,660000,5695000'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(
+                self.app, WAYPOINTS, {'bbox': '659000,5694000,660000,5695000'}
+            ),
             [self.waypoint4.document_id],
             1,
         )
@@ -168,7 +189,9 @@ class TestWaypointRest(BaseDocumentTestRest):
         self.app.get(url, status=200)
 
     def test_get(self):
-        body = self.get(self.waypoint)
+        body = scenarios.get(
+            self.app, WAYPOINTS, self.waypoint, title=self.locale_en.title
+        )
         self._assert_geometry(body)
         assert 'waypoint_type' in body
         assert 'routes_quantity' not in body
@@ -256,7 +279,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         assert 'images' not in associations
 
     def test_get_version(self):
-        self.get_version(self.waypoint, self.waypoint_version)
+        scenarios.get_version(self.app, WAYPOINTS, self.waypoint, self.waypoint_version)
 
     def test_get_version_etag(self):
         url = (
@@ -302,21 +325,21 @@ class TestWaypointRest(BaseDocumentTestRest):
         assert body == fake_cache_value
 
     def test_get_cooked(self):
-        self.get_cooked(self.waypoint)
+        scenarios.get_cooked(self.app, WAYPOINTS, self.waypoint)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.waypoint)
+        scenarios.get_cooked_with_defaulting(self.app, WAYPOINTS, self.waypoint)
 
     def test_get_lang(self):
-        body = self.get_lang(self.waypoint)
+        body = scenarios.get_lang(self.app, WAYPOINTS, self.waypoint)
 
         assert 'Mont Granier' == body.get('locales')[0].get('title')
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.waypoint)
+        scenarios.get_new_lang(self.app, WAYPOINTS, self.waypoint)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, WAYPOINTS)
 
     def test_get_redirected_wp(self):
         response = self.app.get(
@@ -347,7 +370,7 @@ class TestWaypointRest(BaseDocumentTestRest):
         )
 
     def test_get_caching(self):
-        self.get_caching(self.waypoint)
+        scenarios.get_caching(self.app, WAYPOINTS, self.waypoint)
 
     def test_get_cache_down(self):
         """Check that the request does not fail even if Redis errors."""
@@ -390,15 +413,15 @@ class TestWaypointRest(BaseDocumentTestRest):
             assert not fn2.called
 
     def test_get_info(self):
-        body, locale = self.get_info(self.waypoint, 'en')
+        body, locale = scenarios.get_info(self.app, WAYPOINTS, self.waypoint, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.waypoint, 'es')
+        body, locale = scenarios.get_info(self.app, WAYPOINTS, self.waypoint, 'es')
         assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
-        self.get_info_404()
+        scenarios.get_info_404(self.app, WAYPOINTS)
 
     def test_get_info_redirect(self):
         response = self.app.get(
@@ -1481,7 +1504,9 @@ class TestWaypointRest(BaseDocumentTestRest):
 
     def test_get_with_external_resources(self):
         """Test getting a document with locale and external resources."""
-        response = self.get(self.waypoint4)
+        response = scenarios.get(
+            self.app, WAYPOINTS, self.waypoint4, title=self.locale_en.title
+        )
         locale_en = self.get_locale('en', response.get('locales'))
         assert locale_en.get('external_resources') == 'https://wikipedia.com/en'
 

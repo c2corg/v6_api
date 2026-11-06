@@ -18,56 +18,71 @@ from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
+
+BOOKS = DocType('/books', BOOK_TYPE, Book, ArchiveBook, ArchiveDocumentLocale)
 
 
 class TestBookRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/books', BOOK_TYPE, Book, ArchiveBook, ArchiveDocumentLocale
-        )
+        self.set_doc_type(BOOKS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, BOOKS)
         doc = body['documents'][0]
         assert 'geometry' not in doc
 
     def test_get_collection_paginated(self):
         self.app.get('/books?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}), [self.book4.document_id], 4
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, BOOKS, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, BOOKS, {'offset': 0, 'limit': 1}
+            ),
+            [self.book4.document_id],
+            4,
+        )
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, BOOKS, {'offset': 0, 'limit': 2}
+            ),
             [self.book4.document_id, self.book3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, BOOKS, {'offset': 1, 'limit': 2}
+            ),
             [self.book3.document_id, self.book2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, BOOKS)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, BOOKS, {'l': 'en'}),
             [self.book4.document_id, self.book1.document_id],
             2,
         )
 
-        self.assertResultsEqual(
-            self.get_collection_search({'btyp': ['biography']}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, BOOKS, {'btyp': ['biography']}),
             [
                 self.book4.document_id,
                 self.book3.document_id,
@@ -78,7 +93,7 @@ class TestBookRest(BaseDocumentTestRest):
         )
 
     def test_get(self):
-        body = self.get(self.book1)
+        body = scenarios.get(self.app, BOOKS, self.book1, title=self.locale_en.title)
         assert 'book' not in body
         assert 'geometry' not in body
         assert body.get('geometry') is None
@@ -99,22 +114,22 @@ class TestBookRest(BaseDocumentTestRest):
         assert len(linked_images) == 0
 
     def test_get_cooked(self):
-        self.get_cooked(self.book1)
+        scenarios.get_cooked(self.app, BOOKS, self.book1)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.book1)
+        scenarios.get_cooked_with_defaulting(self.app, BOOKS, self.book1)
 
     def test_get_lang(self):
-        self.get_lang(self.book1)
+        scenarios.get_lang(self.app, BOOKS, self.book1)
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.book1)
+        scenarios.get_new_lang(self.app, BOOKS, self.book1)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, BOOKS)
 
     def test_get_version(self):
-        self.get_version(self.book1, self.book1_version)
+        scenarios.get_version(self.app, BOOKS, self.book1, self.book1_version)
 
     def test_get_version_etag(self):
         url = f'{self._prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
@@ -154,18 +169,18 @@ class TestBookRest(BaseDocumentTestRest):
         assert body == fake_cache_value
 
     def test_get_caching(self):
-        self.get_caching(self.book1)
+        scenarios.get_caching(self.app, BOOKS, self.book1)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.book1, 'en')
+        body, locale = scenarios.get_info(self.app, BOOKS, self.book1, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.book1, 'es')
+        body, locale = scenarios.get_info(self.app, BOOKS, self.book1, 'es')
         assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
-        self.get_info_404()
+        scenarios.get_info_404(self.app, BOOKS)
 
     def test_post_error(self):
         body = self.post_error({}, user='moderator')

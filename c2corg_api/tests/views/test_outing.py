@@ -25,20 +25,21 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
+
+OUTINGS = DocType('/outings', OUTING_TYPE, Outing, ArchiveOuting, ArchiveOutingLocale)
 
 
 class TestOutingRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/outings', OUTING_TYPE, Outing, ArchiveOuting, ArchiveOutingLocale
-        )
+        self.set_doc_type(OUTINGS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, OUTINGS)
         assert len(body['documents']) == 4
         doc1 = body['documents'][0]
         assert 'frequentation' not in doc1
@@ -100,32 +101,44 @@ class TestOutingRest(BaseDocumentTestRest):
     def test_get_collection_paginated(self):
         self.app.get('/outings?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, OUTINGS, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
+        )
 
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, OUTINGS, {'offset': 0, 'limit': 1}
+            ),
             [self.outing4.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, OUTINGS, {'offset': 0, 'limit': 2}
+            ),
             [self.outing4.document_id, self.outing3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, OUTINGS, {'offset': 1, 'limit': 2}
+            ),
             [self.outing3.document_id, self.outing2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, OUTINGS)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'act': 'skitouring'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, OUTINGS, {'act': 'skitouring'}),
             [
                 self.outing4.document_id,
                 self.outing3.document_id,
@@ -135,15 +148,19 @@ class TestOutingRest(BaseDocumentTestRest):
             4,
         )
 
-        body = self.get_collection_search({'act': 'skitouring', 'limit': 2})
+        body = scenarios.get_collection_search(
+            self.app, OUTINGS, {'act': 'skitouring', 'limit': 2}
+        )
         assert body.get('total') == 4
         assert len(body.get('documents')) == 2
 
-        body = self.get_collection_search({'date': '2015-12-31,2016-01-02'})
+        body = scenarios.get_collection_search(
+            self.app, OUTINGS, {'date': '2015-12-31,2016-01-02'}
+        )
         assert body.get('total') == 1
 
     def test_get(self):
-        body = self.get(self.outing)
+        body = scenarios.get(self.app, OUTINGS, self.outing, title=self.locale_en.title)
         assert body.get('activities') == self.outing.activities
         self._assert_geometry(body)
         assert 'frequentation' in body
@@ -197,7 +214,7 @@ class TestOutingRest(BaseDocumentTestRest):
         assert 'images' not in associations
 
     def test_get_version(self):
-        self.get_version(self.outing, self.outing_version)
+        scenarios.get_version(self.app, OUTINGS, self.outing, self.outing_version)
 
     def test_get_sort_asc(self):
         """Test ascending sorting of results for height_diff_up keyword."""
@@ -262,38 +279,40 @@ class TestOutingRest(BaseDocumentTestRest):
         """
         self.outing_version.document_archive.activities = []
         self.session.flush()
-        body = self.get_version(self.outing, self.outing_version)
+        body = scenarios.get_version(
+            self.app, OUTINGS, self.outing, self.outing_version
+        )
         locale = body['document']['locales'][0]
         assert 'title' in locale
 
     def test_get_cooked(self):
-        self.get_cooked(self.outing)
+        scenarios.get_cooked(self.app, OUTINGS, self.outing)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.outing)
+        scenarios.get_cooked_with_defaulting(self.app, OUTINGS, self.outing)
 
     def test_get_lang(self):
-        self.get_lang(self.outing)
+        scenarios.get_lang(self.app, OUTINGS, self.outing)
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.outing)
+        scenarios.get_new_lang(self.app, OUTINGS, self.outing)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, OUTINGS)
 
     def test_get_caching(self):
-        self.get_caching(self.outing)
+        scenarios.get_caching(self.app, OUTINGS, self.outing)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.outing, 'en')
+        body, locale = scenarios.get_info(self.app, OUTINGS, self.outing, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.outing, 'es')
+        body, locale = scenarios.get_info(self.app, OUTINGS, self.outing, 'es')
         assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
-        self.get_info_404()
+        scenarios.get_info_404(self.app, OUTINGS)
 
     def test_post_error(self):
         # an invalid body: its errors alone, the rules of the API (the

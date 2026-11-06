@@ -13,81 +13,96 @@ from c2corg_api.models.topo_map import MAP_TYPE, ArchiveTopoMap, TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
+
+MAPS = DocType('/maps', MAP_TYPE, TopoMap, ArchiveTopoMap, ArchiveDocumentLocale)
 
 
 class TestTopoMapRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/maps', MAP_TYPE, TopoMap, ArchiveTopoMap, ArchiveDocumentLocale
-        )
+        self.set_doc_type(MAPS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, MAPS)
         doc = body['documents'][0]
         assert 'geometry' not in doc
 
     def test_get_collection_paginated(self):
         self.app.get('/maps?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}), [self.map4.document_id], 4
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, MAPS, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, MAPS, {'offset': 0, 'limit': 1}
+            ),
+            [self.map4.document_id],
+            4,
+        )
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, MAPS, {'offset': 0, 'limit': 2}
+            ),
             [self.map4.document_id, self.map3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, MAPS, {'offset': 1, 'limit': 2}
+            ),
             [self.map3.document_id, self.map2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, MAPS)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, MAPS, {'l': 'en'}),
             [self.map4.document_id, self.map1.document_id],
             2,
         )
 
     def test_get(self):
-        body = self.get(self.map1)
+        body = scenarios.get(self.app, MAPS, self.map1, title=self.locale_en.title)
         self._assert_geometry(body)
         assert 'maps' not in body
         # topo maps are not user content
         assert body['license'] is None
 
     def test_get_cooked(self):
-        self.get_cooked(self.map1)
+        scenarios.get_cooked(self.app, MAPS, self.map1)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.map1)
+        scenarios.get_cooked_with_defaulting(self.app, MAPS, self.map1)
 
     def test_get_lang(self):
-        self.get_lang(self.map1)
+        scenarios.get_lang(self.app, MAPS, self.map1)
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.map1)
+        scenarios.get_new_lang(self.app, MAPS, self.map1)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, MAPS)
 
     def test_get_caching(self):
-        self.get_caching(self.map1)
+        scenarios.get_caching(self.app, MAPS, self.map1)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.map1, 'en')
+        body, locale = scenarios.get_info(self.app, MAPS, self.map1, 'en')
         assert locale.get('lang') == 'en'
 
     def test_post_not_moderator(self):

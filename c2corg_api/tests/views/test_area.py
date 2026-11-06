@@ -16,20 +16,21 @@ from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
+
+AREAS = DocType('/areas', AREA_TYPE, Area, ArchiveArea, ArchiveDocumentLocale)
 
 
 class TestAreaRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/areas', AREA_TYPE, Area, ArchiveArea, ArchiveDocumentLocale
-        )
+        self.set_doc_type(AREAS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, AREAS)
         doc = body['documents'][0]
         assert 'areas' not in doc
         assert 'geometry' not in doc
@@ -37,42 +38,56 @@ class TestAreaRest(BaseDocumentTestRest):
     def test_get_collection_paginated(self):
         self.app.get('/areas?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}), [self.area4.document_id], 4
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, AREAS, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, AREAS, {'offset': 0, 'limit': 1}
+            ),
+            [self.area4.document_id],
+            4,
+        )
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, AREAS, {'offset': 0, 'limit': 2}
+            ),
             [self.area4.document_id, self.area3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, AREAS, {'offset': 1, 'limit': 2}
+            ),
             [self.area3.document_id, self.area2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, AREAS)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, AREAS, {'l': 'en'}),
             [self.area4.document_id, self.area1.document_id],
             2,
         )
 
-        self.assertResultsEqual(
-            self.get_collection_search({'atyp': 'admin_limits'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, AREAS, {'atyp': 'admin_limits'}),
             [self.area4.document_id],
             1,
         )
 
     def test_get(self):
-        body = self.get(self.area1)
+        body = scenarios.get(self.app, AREAS, self.area1, title=self.locale_en.title)
         self._assert_geometry(body)
         assert 'maps' not in body
 
@@ -84,29 +99,29 @@ class TestAreaRest(BaseDocumentTestRest):
         assert images[0].get('document_id') == self.image.document_id
 
     def test_get_cooked(self):
-        self.get_cooked(self.area1)
+        scenarios.get_cooked(self.app, AREAS, self.area1)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.area1)
+        scenarios.get_cooked_with_defaulting(self.app, AREAS, self.area1)
 
     def test_get_lang(self):
-        self.get_lang(self.area1)
+        scenarios.get_lang(self.app, AREAS, self.area1)
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.area1)
+        scenarios.get_new_lang(self.app, AREAS, self.area1)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, AREAS)
 
     def test_get_caching(self):
-        self.get_caching(self.area1)
+        scenarios.get_caching(self.app, AREAS, self.area1)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.area1, 'en')
+        body, locale = scenarios.get_info(self.app, AREAS, self.area1, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_version(self):
-        self.get_version(self.area1, self.area1_version)
+        scenarios.get_version(self.app, AREAS, self.area1, self.area1_version)
 
     def test_post_error(self):
         body = self.post_error({}, user='moderator')

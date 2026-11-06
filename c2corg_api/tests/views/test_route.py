@@ -28,7 +28,8 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests import errors_of
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 from c2corg_api.views.route import (
     _find_starting_and_ending_points,
@@ -36,41 +37,55 @@ from c2corg_api.views.route import (
     check_title_prefix,
 )
 
+ROUTES = DocType('/routes', ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale)
+
 
 class TestRouteRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/routes', ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale
-        )
+        self.set_doc_type(ROUTES)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, ROUTES)
         doc = body['documents'][0]
         assert 'height_diff_access' not in doc
 
     def test_get_collection_paginated(self):
         self.app.get('/routes?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}), [self.route4.document_id], 4
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, ROUTES, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, ROUTES, {'offset': 0, 'limit': 1}
+            ),
+            [self.route4.document_id],
+            4,
+        )
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, ROUTES, {'offset': 0, 'limit': 2}
+            ),
             [self.route4.document_id, self.route3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, ROUTES, {'offset': 1, 'limit': 2}
+            ),
             [self.route3.document_id, self.route2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, ROUTES)
 
     def test_get_collection_for_waypoint(self):
         reset_search_index(self.session)
@@ -85,26 +100,28 @@ class TestRouteRest(BaseDocumentTestRest):
         assert documents[0]['document_id'] == self.route.document_id
 
     def test_get_collection_has_geom(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, ROUTES)
         doc = body['documents'][3]
         assert doc['geometry']['has_geom_detail'] is True
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        body = self.get_collection_search({'act': 'skitouring'})
+        body = scenarios.get_collection_search(self.app, ROUTES, {'act': 'skitouring'})
         assert body.get('total') == 3
         assert len(body.get('documents')) == 3
 
-        body = self.get_collection_search({'act': 'skitouring', 'limit': 2})
+        body = scenarios.get_collection_search(
+            self.app, ROUTES, {'act': 'skitouring', 'limit': 2}
+        )
         assert body.get('total') == 3
         assert len(body.get('documents')) == 2
 
-        body = self.get_collection_search({'hdif': '700,900'})
+        body = scenarios.get_collection_search(self.app, ROUTES, {'hdif': '700,900'})
         assert body.get('total') == 2
 
     def test_get(self):
-        body = self.get(self.route)
+        body = scenarios.get(self.app, ROUTES, self.route, title=self.locale_en.title)
         assert body.get('activities') == self.route.activities
         self._assert_geometry(body)
         assert 'climbing_outdoor_type' not in body
@@ -204,11 +221,11 @@ class TestRouteRest(BaseDocumentTestRest):
             {'id': self.route.document_id},
         )
         self.session.flush()
-        body = self.get(self.route)
+        body = scenarios.get(self.app, ROUTES, self.route, title=self.locale_en.title)
         assert body['geometry']['geom_detail'] is None
 
     def test_get_version(self):
-        body = self.get_version(self.route, self.route_version)
+        body = scenarios.get_version(self.app, ROUTES, self.route, self.route_version)
         assert body['document']['license'] == {
             'id': 'CC-BY-SA-3.0',
             'url': 'https://creativecommons.org/licenses/by-sa/3.0/',
@@ -223,27 +240,27 @@ class TestRouteRest(BaseDocumentTestRest):
         """
         self.route_version.document_archive.activities = []
         self.session.flush()
-        body = self.get_version(self.route, self.route_version)
+        body = scenarios.get_version(self.app, ROUTES, self.route, self.route_version)
         locale = body['document']['locales'][0]
         assert 'title' in locale
 
     def test_get_cooked(self):
-        self.get_cooked(self.route)
+        scenarios.get_cooked(self.app, ROUTES, self.route)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.route)
+        scenarios.get_cooked_with_defaulting(self.app, ROUTES, self.route)
 
     def test_get_lang(self):
-        body = self.get_lang(self.route)
+        body = scenarios.get_lang(self.app, ROUTES, self.route)
 
         assert 'Mont Blanc from the air' == body.get('locales')[0].get('title')
         assert 'Main waypoint title' == body.get('locales')[0].get('title_prefix')
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.route)
+        scenarios.get_new_lang(self.app, ROUTES, self.route)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, ROUTES)
 
     def test_get_edit(self):
         response = self.app.get(
@@ -262,19 +279,19 @@ class TestRouteRest(BaseDocumentTestRest):
         assert 'users' not in associations
 
     def test_get_caching(self):
-        self.get_caching(self.route)
+        scenarios.get_caching(self.app, ROUTES, self.route)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.route, 'en')
+        body, locale = scenarios.get_info(self.app, ROUTES, self.route, 'en')
         assert locale.get('lang') == 'en'
         assert locale.get('title_prefix') == self.locale_en.title_prefix
 
     def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.route, 'es')
+        body, locale = scenarios.get_info(self.app, ROUTES, self.route, 'es')
         assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
-        self.get_info_404()
+        scenarios.get_info_404(self.app, ROUTES)
 
     def test_post_error(self):
         # an invalid body: its errors alone, the rules of the API need a

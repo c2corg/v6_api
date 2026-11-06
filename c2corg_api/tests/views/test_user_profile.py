@@ -14,18 +14,21 @@ from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
+
+PROFILES = DocType(
+    '/profiles',
+    USERPROFILE_TYPE,
+    UserProfile,
+    ArchiveUserProfile,
+    ArchiveDocumentLocale,
+)
 
 
 class TestUserProfileRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/profiles',
-            USERPROFILE_TYPE,
-            UserProfile,
-            ArchiveUserProfile,
-            ArchiveDocumentLocale,
-        )
+        self.set_doc_type(PROFILES)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -41,7 +44,9 @@ class TestUserProfileRest(BaseDocumentTestRest):
         ]
 
     def test_get_collection(self):
-        body = self.get_collection(user='contributor')
+        body = scenarios.get_collection(
+            self.app, self.session, PROFILES, user='contributor'
+        )
         doc = body['documents'][0]
         assert 'areas' in doc
         assert 'name' in doc
@@ -49,22 +54,48 @@ class TestUserProfileRest(BaseDocumentTestRest):
         assert 'geometry' not in doc
 
     def test_get_collection_paginated(self):
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 0}, user='contributor'), [], 8
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app,
+                self.session,
+                PROFILES,
+                {'offset': 0, 'limit': 0},
+                user='contributor',
+            ),
+            [],
+            8,
         )
 
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}, user='contributor'),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app,
+                self.session,
+                PROFILES,
+                {'offset': 0, 'limit': 1},
+                user='contributor',
+            ),
             [self.profile4.document_id],
             8,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}, user='contributor'),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app,
+                self.session,
+                PROFILES,
+                {'offset': 0, 'limit': 2},
+                user='contributor',
+            ),
             [self.profile4.document_id, self.profile2.document_id],
             8,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 3}, user='contributor'),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app,
+                self.session,
+                PROFILES,
+                {'offset': 1, 'limit': 3},
+                user='contributor',
+            ),
             [
                 self.profile2.document_id,
                 self.global_userids['contributornotos'],
@@ -74,13 +105,15 @@ class TestUserProfileRest(BaseDocumentTestRest):
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang(user='contributor')
+        scenarios.get_collection_lang(self.app, PROFILES, user='contributor')
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}, user='contributor'),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(
+                self.app, PROFILES, {'l': 'en'}, user='contributor'
+            ),
             [
                 self.profile4.document_id,
                 self.global_userids['contributornotos'],
@@ -116,14 +149,14 @@ class TestUserProfileRest(BaseDocumentTestRest):
         contributor.is_profile_public = True
         self.session.flush()
 
-        body = self.get(self.profile1, check_title=False)
+        body = scenarios.get(self.app, PROFILES, self.profile1)
         assert 'username' not in body
         assert 'name' in body
         assert 'locales' in body
         assert 'geometry' in body
 
     def test_get(self):
-        body = self.get(self.profile1, user='contributor', check_title=False)
+        body = scenarios.get(self.app, PROFILES, self.profile1, user='contributor')
         self._assert_geometry(body)
         assert body['license']['id'] == 'CC-BY-NC-ND-3.0'
         assert body['license']['attribution_url'].startswith(
@@ -144,25 +177,27 @@ class TestUserProfileRest(BaseDocumentTestRest):
         )
 
     def test_get_cooked(self):
-        self.get_cooked(self.profile1, user='contributor')
+        scenarios.get_cooked(self.app, PROFILES, self.profile1, user='contributor')
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.profile1, user='contributor')
+        scenarios.get_cooked_with_defaulting(
+            self.app, PROFILES, self.profile1, user='contributor'
+        )
 
     def test_get_lang(self):
-        self.get_lang(self.profile1, user='contributor')
+        scenarios.get_lang(self.app, PROFILES, self.profile1, user='contributor')
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.profile1, user='contributor')
+        scenarios.get_new_lang(self.app, PROFILES, self.profile1, user='contributor')
 
     def test_get_404(self):
-        self.get_404(user='contributor')
+        scenarios.get_404(self.app, PROFILES, user='contributor')
 
     def test_get_caching(self):
-        self.get_caching(self.profile1, user='contributor')
+        scenarios.get_caching(self.app, PROFILES, self.profile1, user='contributor')
 
     def test_get_info(self):
-        body, locale = self.get_info(self.profile1, 'en')
+        body, locale = scenarios.get_info(self.app, PROFILES, self.profile1, 'en')
         assert locale.get('lang') == 'en'
         assert locale.get('title') == 'Contributor'
 

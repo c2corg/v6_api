@@ -1,11 +1,14 @@
 from c2corg_api.models.stoparea import Stoparea
 from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views.scenarios import DocType
+
+STOPAREAS = DocType('/stopareas', 'sa', Stoparea)
 
 
 class TestStopareaRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model('/stopareas', 'sa', Stoparea, None, None)
+        self.set_doc_type(STOPAREAS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
@@ -74,7 +77,7 @@ class TestStopareaRest(BaseDocumentTestRest):
 
 class TestStopareaInfoRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model('/stopareas', 'sa', Stoparea, None, None)
+        self.set_doc_type(STOPAREAS)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 

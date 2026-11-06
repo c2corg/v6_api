@@ -13,20 +13,23 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
+from c2corg_api.tests.views import BaseDocumentTestRest, scenarios
+from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
+
+ARTICLES = DocType(
+    '/articles', ARTICLE_TYPE, Article, ArchiveArticle, ArchiveDocumentLocale
+)
 
 
 class TestArticleRest(BaseDocumentTestRest):
     def setUp(self):
-        self.set_prefix_and_model(
-            '/articles', ARTICLE_TYPE, Article, ArchiveArticle, ArchiveDocumentLocale
-        )
+        self.set_doc_type(ARTICLES)
         BaseDocumentTestRest.setUp(self)
         self._add_test_data()
 
     def test_get_collection(self):
-        body = self.get_collection()
+        body = scenarios.get_collection(self.app, self.session, ARTICLES)
         doc = body['documents'][0]
         assert 'geometry' not in doc
 
@@ -40,38 +43,50 @@ class TestArticleRest(BaseDocumentTestRest):
     def test_get_collection_paginated(self):
         self.app.get('/articles?offset=invalid', status=422)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, ARTICLES, {'offset': 0, 'limit': 0}
+            ),
+            [],
+            4,
+        )
 
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, ARTICLES, {'offset': 0, 'limit': 1}
+            ),
             [self.article4.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, ARTICLES, {'offset': 0, 'limit': 2}
+            ),
             [self.article4.document_id, self.article3.document_id],
             4,
         )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection(
+                self.app, self.session, ARTICLES, {'offset': 1, 'limit': 2}
+            ),
             [self.article3.document_id, self.article2.document_id],
             4,
         )
 
     def test_get_collection_lang(self):
-        self.get_collection_lang()
+        scenarios.get_collection_lang(self.app, ARTICLES)
 
     def test_get_collection_search(self):
         reset_search_index(self.session)
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, ARTICLES, {'l': 'en'}),
             [self.article4.document_id, self.article1.document_id],
             2,
         )
 
-        self.assertResultsEqual(
-            self.get_collection_search({'act': ['hiking']}),
+        scenarios.assert_results_equal(
+            scenarios.get_collection_search(self.app, ARTICLES, {'act': ['hiking']}),
             [
                 self.article4.document_id,
                 self.article3.document_id,
@@ -82,7 +97,9 @@ class TestArticleRest(BaseDocumentTestRest):
         )
 
     def test_get(self):
-        body = self.get(self.article1)
+        body = scenarios.get(
+            self.app, ARTICLES, self.article1, title=self.locale_en.title
+        )
         assert 'article' not in body
         assert 'geometry' not in body
         assert body.get('geometry') is None
@@ -104,22 +121,22 @@ class TestArticleRest(BaseDocumentTestRest):
         assert len(linked_articles) == 2
 
     def test_get_cooked(self):
-        self.get_cooked(self.article1)
+        scenarios.get_cooked(self.app, ARTICLES, self.article1)
 
     def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.article1)
+        scenarios.get_cooked_with_defaulting(self.app, ARTICLES, self.article1)
 
     def test_get_lang(self):
-        self.get_lang(self.article1)
+        scenarios.get_lang(self.app, ARTICLES, self.article1)
 
     def test_get_new_lang(self):
-        self.get_new_lang(self.article1)
+        scenarios.get_new_lang(self.app, ARTICLES, self.article1)
 
     def test_get_404(self):
-        self.get_404()
+        scenarios.get_404(self.app, ARTICLES)
 
     def test_get_version(self):
-        self.get_version(self.article1, self.article1_version)
+        scenarios.get_version(self.app, ARTICLES, self.article1, self.article1_version)
 
     def test_get_version_etag(self):
         url = (
@@ -165,18 +182,18 @@ class TestArticleRest(BaseDocumentTestRest):
         assert body == fake_cache_value
 
     def test_get_caching(self):
-        self.get_caching(self.article1)
+        scenarios.get_caching(self.app, ARTICLES, self.article1)
 
     def test_get_info(self):
-        body, locale = self.get_info(self.article1, 'en')
+        body, locale = scenarios.get_info(self.app, ARTICLES, self.article1, 'en')
         assert locale.get('lang') == 'en'
 
     def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.article1, 'es')
+        body, locale = scenarios.get_info(self.app, ARTICLES, self.article1, 'es')
         assert locale.get('lang') == 'fr'
 
     def test_get_info_404(self):
-        self.get_info_404()
+        scenarios.get_info_404(self.app, ARTICLES)
 
     def test_post_error(self):
         body = self.post_error({}, user='moderator')
