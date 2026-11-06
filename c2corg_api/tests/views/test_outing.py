@@ -55,7 +55,7 @@ class Docs:
     outing: Outing
     locale_en: OutingLocale
     locale_fr: OutingLocale
-    outing_version: object
+    outing_version: DocumentVersion
     outing2: Outing
     outing3: Outing
     outing4: Outing

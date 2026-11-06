@@ -41,7 +41,7 @@ class Docs:
     book1: Book
     locale_en: DocumentLocale
     locale_fr: DocumentLocale
-    book1_version: object
+    book1_version: DocumentVersion
     book2: Book
     book3: Book
     book4: Book

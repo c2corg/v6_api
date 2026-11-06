@@ -48,7 +48,7 @@ class Docs:
     xreport1: Xreport
     locale_en: XreportLocale
     locale_fr: XreportLocale
-    xreport1_version: object
+    xreport1_version: DocumentVersion
     xreport2: Xreport
     xreport3: Xreport
     xreport4: Xreport

@@ -54,7 +54,7 @@ class Docs:
     route: Route
     locale_en: RouteLocale
     locale_fr: RouteLocale
-    route_version: object
+    route_version: DocumentVersion
     article1: Article
     book1: Book
     route2: Route

@@ -70,7 +70,7 @@ class Docs:
     waypoint: Waypoint
     locale_en: WaypointLocale
     locale_fr: WaypointLocale
-    waypoint_version: object
+    waypoint_version: DocumentVersion
     waypoint2: Waypoint
     waypoint3: Waypoint
     waypoint4: Waypoint

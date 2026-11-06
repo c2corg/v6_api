@@ -33,7 +33,7 @@ class Docs:
     area1: Area
     locale_en: DocumentLocale
     locale_fr: DocumentLocale
-    area1_version: object
+    area1_version: DocumentVersion
     area2: Area
     area3: Area
     area4: Area

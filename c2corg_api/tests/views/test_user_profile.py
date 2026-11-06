@@ -34,8 +34,8 @@ class Docs:
     """The documents of the tests, built by `docs`."""
 
     profile1: UserProfile
-    locale_en: object
-    locale_fr: object
+    locale_en: DocumentLocale
+    locale_fr: DocumentLocale
     profile2: UserProfile
     profile3: UserProfile
     profile4: UserProfile

@@ -33,11 +33,11 @@ class Docs:
     article1: Article
     locale_en: DocumentLocale
     locale_fr: DocumentLocale
-    article1_version: object
+    article1_version: DocumentVersion
     article2: Article
     article3: Article
     article4: Article
-    article4_version: object
+    article4_version: DocumentVersion
     waypoint1: Waypoint
     waypoint2: Waypoint
 
