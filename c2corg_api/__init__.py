@@ -620,12 +620,8 @@ def _update_route_duration(connection, route_id, calculated_duration_in_days):
         ),
         {'duration': calculated_duration_in_days, 'route_id': route_id},
     )
-    if calculated_duration_in_days is None:
-        calculated_duration_in_days_str = 'None'
-    else:
-        calculated_duration_in_days_str = '%f', calculated_duration_in_days
     log.info(
         'Route %d: Database updated with calculated_duration = %s days.',
         route_id,
-        calculated_duration_in_days_str,
+        calculated_duration_in_days,
     )
