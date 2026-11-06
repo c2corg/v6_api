@@ -68,7 +68,7 @@ def docs(session, user_ids) -> Docs:
         username='user2',
         email='user2@c2c.org',
         forum_username='user2',
-        password='pass',
+        password='pass',  # nosec B106 (a test user)
         email_validated=True,
         profile=profile2,
     )
@@ -77,7 +77,7 @@ def docs(session, user_ids) -> Docs:
         username='user3',
         email='user3@c2c.org',
         forum_username='user3',
-        password='pass',
+        password='pass',  # nosec B106 (a test user)
         email_validated=False,
         profile=profile3,
     )
@@ -86,7 +86,7 @@ def docs(session, user_ids) -> Docs:
         username='user4',
         email='user4@c2c.org',
         forum_username='user4',
-        password='pass',
+        password='pass',  # nosec B106 (a test user)
         email_validated=True,
         profile=profile4,
     )
