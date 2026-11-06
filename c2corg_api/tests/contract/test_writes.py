@@ -3,6 +3,10 @@ from unittest.mock import Mock, patch
 import pytest
 
 from c2corg_api.tests.contract import check_snapshot, contract
+from c2corg_api.tests.contract.documents import (
+    MODERATED_TYPES,
+    writable,
+)
 from c2corg_api.tests.contract.test_documents import (
     DOCUMENT_TYPES,
     POINT,
@@ -12,28 +16,6 @@ from c2corg_api.tests.contract.test_documents import (
 
 # the types created in DocumentContractTest.setUp (profiles come with users)
 CREATED_TYPES = [t for t in DOCUMENT_TYPES if t != 'profiles']
-# only moderators may change these
-MODERATED_TYPES = ('areas', 'maps')
-
-# what a GET returns but a POST or PUT does not take
-READ_ONLY_FIELDS = ('areas', 'maps', 'available_langs', 'cooked')
-
-
-def writable(document, keep_ids=True):
-    """Turn a document as GET returns it into a POST or PUT body."""
-    for field in READ_ONLY_FIELDS:
-        document.pop(field, None)
-    if not keep_ids:
-        document.pop('document_id', None)
-        document.pop('version', None)
-    # GET returns the associated documents, a write takes their ids
-    associations = document.pop('associations', None) or {}
-    document['associations'] = {
-        kind: [{'document_id': d['document_id']} for d in docs]
-        for kind, docs in associations.items()
-        if isinstance(docs, list)
-    }
-    return document
 
 
 @pytest.fixture(autouse=True)
@@ -49,32 +31,13 @@ class WriteContractTest(DocumentContractTest):
     def update(
         self, client, settings, user_ids, prefix, change, user='contributor', status=200
     ):
-        """Change a document through the API and return the response."""
-        document = writable(
-            self.get(client, settings, self.url(user_ids, prefix), user=user).json
-        )
-        change(document)
-        body = {'message': 'contract test', 'document': document}
-        return self.put(
-            client, settings, self.url(user_ids, prefix), body, user=user, status=status
-        )
+        return self.documents.update(prefix, change, user=user, status=status)
 
     def history(self, client, settings, prefix, lang='en'):
-        """Return the version ids of a document, oldest first."""
-        versions = self.get(
-            client, settings, f'/document/{self.ids[prefix]}/history/{lang}'
-        ).json
-        return sorted(v['version_id'] for v in versions['versions'])
+        return self.documents.history(prefix, lang)
 
     def retitle(self, client, settings, user_ids, prefix):
-        def change(document):
-            # profiles have no title
-            field = 'description' if prefix == 'profiles' else 'title'
-            locale = document['locales'][0]
-            locale[field] = (locale.get(field) or '') + ' (2)'
-
-        user = 'moderator' if prefix in MODERATED_TYPES else 'contributor'
-        return self.update(client, settings, user_ids, prefix, change, user=user)
+        return self.documents.retitle(prefix)
 
 
 class TestDocumentCreate(WriteContractTest):

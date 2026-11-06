@@ -1,17 +1,16 @@
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from c2corg_api.models.user import User
-from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
-from c2corg_api.tests.search.__init__ import reset_search_index
-
-POINT = '{"type": "Point", "coordinates": [635956, 5723604]}'
-LINE = '{"type": "LineString", "coordinates": [[635956, 5723604], [635966, 5723644]]}'
-POLYGON = (
-    '{"type": "Polygon", "coordinates": [[[635000, 5723000], [635000, 5724000], '
-    '[637000, 5724000], [637000, 5723000], [635000, 5723000]]]}'
+from c2corg_api.tests.contract import Browser, ContractTest, check_snapshot, contract
+from c2corg_api.tests.contract.documents import (  # noqa: F401 (re-exported)
+    LINE,
+    POINT,
+    POLYGON,
+    create_documents,
 )
+from c2corg_api.tests.search.__init__ import reset_search_index
 
 # the document types, by URL prefix
 DOCUMENT_TYPES = [
@@ -42,146 +41,11 @@ class DocumentContractTest(ContractTest):
 
     @pytest.fixture(autouse=True)
     def _setup_document_contract_test(self, client, settings, user_ids):
-        self.ids = {'profiles': user_ids['contributor']}
-        self.ids['waypoints'] = self.create(
-            client,
-            settings,
-            'waypoints',
-            {
-                'waypoint_type': 'summit',
-                'elevation': 3779,
-                'geometry': {'geom': POINT},
-                'locales': [{'lang': 'en', 'title': 'Mont Pourri', 'access': 'y'}],
-            },
-        )
-        waypoint = [{'document_id': self.ids['waypoints']}]
-        self.ids['routes'] = self.create(
-            client,
-            settings,
-            'routes',
-            {
-                'main_waypoint_id': self.ids['waypoints'],
-                'activities': ['hiking'],
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'geometry': {'geom_detail': LINE},
-                'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-                'associations': {'waypoints': waypoint},
-            },
-        )
-        self.ids['outings'] = self.create(
-            client,
-            settings,
-            'outings',
-            {
-                'activities': ['hiking'],
-                'date_start': '2016-01-01',
-                'date_end': '2016-01-02',
-                'elevation_max': 1500,
-                'geometry': {'geom_detail': LINE},
-                'locales': [{'lang': 'en', 'title': 'A nice day', 'weather': 'sunny'}],
-                'associations': {
-                    'users': [{'document_id': user_ids['contributor']}],
-                    'routes': [{'document_id': self.ids['routes']}],
-                },
-            },
-        )
-        self.ids['articles'] = self.create(
-            client,
-            settings,
-            'articles',
-            {
-                'categories': ['site_info'],
-                'activities': ['hiking'],
-                'article_type': 'collab',
-                'locales': [{'lang': 'en', 'title': "Lac d'Annecy"}],
-                'associations': {'waypoints': waypoint},
-            },
-        )
-        self.ids['books'] = self.create(
-            client,
-            settings,
-            'books',
-            {
-                'activities': ['hiking'],
-                'book_types': ['biography'],
-                'author': 'Author',
-                'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
-                'associations': {'waypoints': waypoint},
-            },
-        )
-        with patch(
-            'c2corg_api.views.image.requests.post', return_value=Mock(status_code=200)
-        ):
-            self.ids['images'] = self.create(
-                client,
-                settings,
-                'images',
-                {
-                    'filename': 'image.jpg',
-                    'activities': ['hiking'],
-                    'image_type': 'collaborative',
-                    'height': 1500,
-                    'geometry': {'geom': POINT},
-                    'locales': [{'lang': 'en', 'title': 'A view'}],
-                    'associations': {'waypoints': waypoint},
-                },
-            )
-        self.ids['xreports'] = self.create(
-            client,
-            settings,
-            'xreports',
-            {
-                'event_activity': 'skitouring',
-                'event_type': 'stone_ice_fall',
-                'nb_participants': 5,
-                'geometry': {'geom': POINT},
-                'locales': [{'lang': 'en', 'title': 'Stone fall'}],
-            },
-        )
-        self.ids['areas'] = self.create(
-            client,
-            settings,
-            'areas',
-            {
-                'area_type': 'range',
-                'geometry': {'geom_detail': POLYGON},
-                'locales': [{'lang': 'en', 'title': 'Chartreuse'}],
-            },
-            user='moderator',
-        )
-        self.ids['maps'] = self.create(
-            client,
-            settings,
-            'maps',
-            {
-                'editor': 'IGN',
-                'scale': '25000',
-                'code': '3432OT',
-                'geometry': {'geom_detail': POLYGON},
-                'locales': [{'lang': 'en', 'title': 'Annecy'}],
-            },
-            user='moderator',
-        )
-        self.ids['coverages'] = self.create(
-            client,
-            settings,
-            'coverages',
-            {
-                'coverage_type': 'fr-se',
-                'geometry': {'geom_detail': POLYGON},
-                'locales': [{'lang': 'en', 'title': 'Coverage'}],
-            },
-        )
+        self.documents = create_documents(Browser(client, settings), user_ids)
+        self.ids = self.documents.ids
 
     def create(self, client, settings, prefix, body, user='contributor'):
-        """Create a document through the API and return its id."""
-        return self.post(client, settings, f'/{prefix}', body, user=user).json[
-            'document_id'
-        ]
+        return Browser(client, settings).create(prefix, body, user=user)
 
     def url(self, user_ids, prefix, path=''):
         return f'/{prefix}/{self.ids[prefix]}{path}'
