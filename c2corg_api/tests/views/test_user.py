@@ -139,7 +139,7 @@ def test_always_register_non_validated_users(_send_email, client, session):
         'username': 'test',
         'forum_username': 'test',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email_validated': True,
         'email': 'some_user@camptocamp.org',
     }
@@ -160,7 +160,7 @@ def test_register_default_lang(_send_email, client, session):
         'username': 'test',
         'forum_username': 'test',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -179,7 +179,7 @@ def test_register_passed_lang(_send_email, client, session):
         'forum_username': 'test',
         'lang': 'en',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -197,7 +197,7 @@ def test_register_invalid_lang(client):
         'forum_username': 'test',
         'lang': 'nn',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -214,7 +214,7 @@ def test_register_forum_username_validity(_send_email, client):
             'username': f'test{i}',
             'forum_username': forum_username,
             'name': f'Max Mustermann{i}',
-            'password': 'Super$ecret1',
+            'password': 'Super$ecret1',  # nosec B105 (a test password)
             'email': f'some_user{i}@camptocamp.org',
         }
         if value is False:
@@ -231,7 +231,7 @@ def test_register_forum_username_unique(_send_email, client):
         'username': 'test',
         'forum_username': 'Contributor',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -245,7 +245,7 @@ def test_register_stripped_username(_send_email, client, session):
         'username': ' contributor ',
         'forum_username': 'Foo',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -256,7 +256,7 @@ def test_register_stripped_username(_send_email, client, session):
         'username': ' username with spaces ',
         'forum_username': 'Spaceman',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'space@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -274,7 +274,7 @@ def test_register_username_email_not_equals_email(_send_email, client):
         'username': 'someone_else@camptocamp.org',
         'forum_username': 'Contributor4',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -292,7 +292,7 @@ def test_register_username_email_equals_email(_send_email, client):
         'username': 'some_user@camptocamp.org',
         'forum_username': 'Contributor4',
         'name': 'Frankie Vincent',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -305,7 +305,7 @@ def test_register_invalid_email(_send_email, client):
         'username': 'test',
         'forum_username': 'Contributor',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_useratcamptocamp.org',
     }
     url = PREFIX + '/register'
@@ -319,7 +319,7 @@ def test_register_discourse_up(_send_email, client, session):
         'username': 'test',
         'forum_username': 'testf',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -391,7 +391,7 @@ def test_register_search_index(_send_email, client, session, queue_config):
         'username': 'test',
         'forum_username': 'testf',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -430,7 +430,7 @@ def test_register_discourse_down(_send_email, client, settings, discourse):
         'username': 'test',
         'forum_username': 'testf',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
     url = PREFIX + '/register'
@@ -539,7 +539,7 @@ def test_purge_accounts(_send_email, client, session):
         'username': 'test',
         'forum_username': 'testf',
         'name': 'Max Mustermann',
-        'password': 'Super$ecret1',
+        'password': 'Super$ecret1',  # nosec B105 (a test password)
         'email': 'some_user@camptocamp.org',
     }
 
@@ -686,7 +686,12 @@ def test_login_success_with_legacy_short_password(
     session.flush()
 
     body = login(
-        client, settings, passwords, 'contributor', password='abc', status=200
+        client,
+        settings,
+        passwords,
+        'contributor',
+        password='abc',
+        status=200,  # nosec B106 (a test password)
     ).json
     assert 'token' in body
 
@@ -837,7 +842,7 @@ def test_login_failure(client, settings, passwords):
         settings,
         passwords,
         'moderator',
-        password='invalid_password',
+        password='invalid_password',  # nosec B106 (a test password)
         status=401,
     ).json
     assert body['status'] == 'error'
@@ -849,7 +854,7 @@ def test_login_no_tos_failure(client, settings, passwords):
         settings,
         passwords,
         'contributornotos',
-        password='some password',
+        password='some password',  # nosec B106 (a test password)
         status=403,
     ).json
     assert_errors_contain(body, 'Forbidden', 'Terms of Service need to be accepted')
@@ -863,7 +868,7 @@ def test_login_no_tos_success(client, session, settings, passwords):
         settings,
         passwords,
         'contributornotos',
-        password='some password',
+        password='some password',  # nosec B106 (a test password)
         accept_tos=True,
         status=200,
     ).json

@@ -77,7 +77,7 @@ class TestRegisterAndLogin:
 
     @contract(('POST', '/users/login'))
     def test_login_failure(self, browser):
-        body = {'username': 'contributor', 'password': 'wrong'}
+        body = {'username': 'contributor', 'password': 'wrong'}  # nosec B105 (a test password)
         check_snapshot(
             'users_login_failure',
             browser.post('/users/login', body, status=401),
