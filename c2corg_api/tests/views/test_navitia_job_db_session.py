@@ -1,4 +1,5 @@
 import threading
+from dataclasses import dataclass
 from unittest import mock
 
 import pytest
@@ -29,66 +30,70 @@ def _query_using_db(fail=False):
     return query, 0
 
 
-class TestNavitiaJobDbSession:
-    """Background jobs must give their connection back to the pool."""
+@dataclass
+class Docs:
+    """The documents of the tests, built by `docs`."""
 
-    # The jobs run in their own thread, outside of the request session: they end
-    # their transaction and remove their scoped session themselves.
+    job_engine: object
 
-    @pytest.fixture(autouse=True)
-    def _setup_test_navitia_job_db_session(self, client, db_connection):
-        # Use a real pool (not the test connection) to count connections.
-        self.job_engine = get_engine()
-        DBSession.configure(bind=self.job_engine)
-        yield
-        DBSession.configure(bind=db_connection)
-        self.job_engine.dispose()
 
-    def _run_in_thread(self, job, request):
-        state = {}
+@pytest.fixture
+def docs(db_connection):
+    job_engine = get_engine()
+    DBSession.configure(bind=job_engine)
+    yield Docs(job_engine=job_engine)
+    DBSession.configure(bind=db_connection)
+    job_engine.dispose()
 
-        def target():
-            job('job-123', request)
-            state['session_left'] = DBSession.registry.has()
 
-        with (
-            mock.patch(NAVITIA + 'redis_client') as redis_client,
-            mock.patch(NAVITIA + 'extract_meta_params'),
-            mock.patch(NAVITIA + 'extract_journey_params'),
-        ):
-            thread = threading.Thread(target=target)
-            thread.start()
-            thread.join(timeout=30)
-            assert not thread.is_alive()
-        return state, redis_client.return_value
+def _run_in_thread(job, request):
+    state = {}
 
-    def _assert_connection_released(self, state):
-        pool = self.job_engine.pool
-        # the job did use a connection ...
-        assert pool.checkedin() == 1
-        # ... and gave it back to the pool
-        assert pool.checkedout() == 0
-        assert not state['session_left']
+    def target():
+        job('job-123', request)
+        state['session_left'] = DBSession.registry.has()
 
-    def test_waypoints_job_releases_connection(self):
-        request = mock.Mock()
-        request.GET = {'a': '1'}
-        with mock.patch(
-            NAVITIA + 'build_reachable_waypoints_query', return_value=_query_using_db()
-        ):
-            state, r = self._run_in_thread(compute_journey_reachable_waypoints, request)
+    with (
+        mock.patch(NAVITIA + 'redis_client') as redis_client,
+        mock.patch(NAVITIA + 'extract_meta_params'),
+        mock.patch(NAVITIA + 'extract_journey_params'),
+    ):
+        thread = threading.Thread(target=target)
+        thread.start()
+        thread.join(timeout=30)
+        assert not thread.is_alive()
+    return state, redis_client.return_value
 
-        r.set.assert_any_call('job:job-123:status', 'done', ex=JOB_TTL)
-        self._assert_connection_released(state)
 
-    def test_routes_job_releases_connection_on_error(self):
-        request = mock.Mock()
-        request.GET = {}
-        with mock.patch(
-            NAVITIA + 'build_reachable_route_query_with_waypoints',
-            return_value=_query_using_db(fail=True),
-        ):
-            state, r = self._run_in_thread(compute_journey_reachable_routes, request)
+def _assert_connection_released(docs, state):
+    pool = docs.job_engine.pool
+    # the job did use a connection ...
+    assert pool.checkedin() == 1
+    # ... and gave it back to the pool
+    assert pool.checkedout() == 0
+    assert not state['session_left']
 
-        r.set.assert_any_call('job:job-123:status', 'error', ex=JOB_TTL)
-        self._assert_connection_released(state)
+
+def test_waypoints_job_releases_connection(docs):
+    request = mock.Mock()
+    request.GET = {'a': '1'}
+    with mock.patch(
+        NAVITIA + 'build_reachable_waypoints_query', return_value=_query_using_db()
+    ):
+        state, r = _run_in_thread(compute_journey_reachable_waypoints, request)
+
+    r.set.assert_any_call('job:job-123:status', 'done', ex=JOB_TTL)
+    _assert_connection_released(docs, state)
+
+
+def test_routes_job_releases_connection_on_error(docs):
+    request = mock.Mock()
+    request.GET = {}
+    with mock.patch(
+        NAVITIA + 'build_reachable_route_query_with_waypoints',
+        return_value=_query_using_db(fail=True),
+    ):
+        state, r = _run_in_thread(compute_journey_reachable_routes, request)
+
+    r.set.assert_any_call('job:job-123:status', 'error', ex=JOB_TTL)
+    _assert_connection_released(docs, state)
