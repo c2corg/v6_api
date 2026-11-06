@@ -5,6 +5,7 @@ from os import urandom
 from urllib.parse import urlencode
 
 from pydiscourse.exceptions import DiscourseClientError
+from sqlalchemy import and_, not_, or_
 
 from c2corg_api.httpexceptions import (
     HTTPInternalServerError,
@@ -22,7 +23,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import OneOf, Str
 from c2corg_api.security.discourse_client import get_discourse_client
-from c2corg_api.security.roles import log_validated_user_i_know_what_i_do
+from c2corg_api.security.roles import hash_token, log_validated_user_i_know_what_i_do
 from c2corg_api.views.resource import write
 from c2corg_api.views.user import (
     token_to_response,
@@ -46,12 +47,28 @@ class SsoSyncSchema(Schema):
     groups: Str() = None
 
 
+# a SHA-256 in hex, as the hashed secrets are stored
+HASHED = '^[0-9a-f]{64}$'
+
+
+def _stored(column, secret):
+    """Return the condition matching the stored hash of an SSO secret."""
+    # TODO(#2365): match the hash only, in the release after the migration
+    # b3d5f8a1c9e2. Until it ran, a row may hold the secret itself; a row
+    # holding a hash never matches the secret as is, else the stored hash
+    # would be a secret.
+    return or_(
+        column == hash_token(secret),
+        and_(column == secret, not_(column.op('~')(HASHED))),
+    )
+
+
 def sso_sync_validator(request, **kwargs):
     if 'sso_key' not in request.validated:
         return  # invalid body, see the schema
     sso_key = (
         DBSession.query(SsoKey)
-        .filter(SsoKey.key == request.validated['sso_key'])
+        .filter(_stored(SsoKey.key, request.validated['sso_key']))
         .one_or_none()
     )
     if sso_key is None:
@@ -155,7 +172,9 @@ def sso_sync(request):
         )
         DBSession.add(sso_external_id)
 
-    sso_external_id.token = generate_token()
+    # the database keeps the hash of the token, given once to the service
+    token = generate_token()
+    sso_external_id.token = hash_token(token)
     sso_external_id.expire = sso_expire_from_now()
 
     discourse_userid = call_discourse(get_discourse_userid, client, user.id)
@@ -192,7 +211,7 @@ def sso_sync(request):
     return {
         'url': '{}/sso-login?no_redirect&{}'.format(
             request.registry.settings['ui.url'],
-            urlencode({'token': sso_external_id.token}),
+            urlencode({'token': token}),
         )
     }
 
@@ -237,7 +256,7 @@ def validate_token(request, **kwargs):
 
     sso_external_id = (
         DBSession.query(SsoExternalId)
-        .filter(SsoExternalId.token == request.validated['token'])
+        .filter(_stored(SsoExternalId.token, request.validated['token']))
         .filter(SsoExternalId.expire > localized_now())
         .one_or_none()
     )

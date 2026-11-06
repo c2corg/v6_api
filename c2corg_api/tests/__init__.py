@@ -21,7 +21,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.scripts import initializedb, initializees
 from c2corg_api.scripts.es.fill_index import fill_index
 from c2corg_api.search import configure_es_from_config
-from c2corg_api.security.roles import add_token, create_claims
+from c2corg_api.security.roles import add_token, create_claims, hash_token
 
 load_dotenv()
 
@@ -217,7 +217,7 @@ def _add_global_test_data(session):
         create_new_version(user.profile, user.id)
 
     domain = 'www.somewhere.com'
-    sso_key = SsoKey(domain=domain, key=domain)
+    sso_key = SsoKey(domain=domain, key=hash_token(domain))
     session.add(sso_key)
 
     sso_external_id = SsoExternalId(

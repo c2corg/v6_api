@@ -1,7 +1,9 @@
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
+from c2corg_api.security.roles import hash_token
 from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import POINT
 from c2corg_api.tests.views.test_user import BaseUserTestRest
@@ -371,7 +373,9 @@ class TestDocumentUserActions(UserContractTest):
 class TestSso(UserContractTest):
     def setUp(self):
         super().setUp()
-        self.session.add(SsoKey(domain='external.domain.net', key='sso_test_key'))
+        self.session.add(
+            SsoKey(domain='external.domain.net', key=hash_token('sso_test_key'))
+        )
         contributor = self.session.get(User, self.global_userids['contributor'])
         self.external_id = SsoExternalId(
             domain='external.domain.net', external_id='1', user=contributor
@@ -386,5 +390,7 @@ class TestSso(UserContractTest):
         self.session.expire(self.external_id)
         self.external_id.expire = sso_expire_from_now()
         self.session.flush()
-        login = self.post('/sso_login', {'token': self.external_id.token})
+        # the token is in the URL answered: the database keeps its hash
+        token = parse_qs(urlparse(synced.json['url']).query)['token'][0]
+        login = self.post('/sso_login', {'token': token})
         check_snapshot('sso_login', login)

@@ -12,6 +12,7 @@ class SsoKey(Base):
     __table_args__ = {'schema': users_schema}
 
     domain = Column(String(), nullable=False, primary_key=True)
+    # the SHA-256 of the key (security.roles.hash_token), never the key
     key = Column(String(), nullable=False, unique=True)
 
 
@@ -29,6 +30,7 @@ class SsoExternalId(Base):
     )
     external_id = Column(Integer, nullable=False, primary_key=True)
     user_id = Column(Integer, ForeignKey(users_schema + '.user.id'), nullable=False)
+    # the SHA-256 of the login token given to the service, never the token
     token = Column(String())
     expire = Column(DateTime(timezone=True))
 
