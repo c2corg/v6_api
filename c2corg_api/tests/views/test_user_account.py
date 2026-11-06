@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import pytest
+
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.search import elasticsearch_config, search_documents
@@ -7,16 +9,18 @@ from c2corg_api.tests import (
     assert_body_equal,
     assert_errors_contain,
     errors_of,
+    extract_nonce,
     get_json_with_contributor,
     post_json_with_contributor,
     send_json,
     sync_es_queue,
 )
 from c2corg_api.tests.views import scenarios
-from c2corg_api.tests.views.test_user import BaseUserTestRest, forum_username_tests
+from c2corg_api.tests.views.test_user import PREFIX, forum_username_tests
 
 
-class TestUserAccountRest(BaseUserTestRest):
+@pytest.mark.usefixtures('discourse')
+class TestUserAccountRest:
     def test_read_account_info(self, client):
         url = '/users/account'
         body = get_json_with_contributor(client, url, status=200)
@@ -33,7 +37,9 @@ class TestUserAccountRest(BaseUserTestRest):
         body = get_json_with_contributor(client, '/users/account', status=403)
         assert_errors_contain(body, 'Forbidden', 'account blocked')
 
-    def _update_account_field_discourse_up(self, client, passwords, field, value):
+    def _update_account_field_discourse_up(
+        self, discourse, client, passwords, field, value
+    ):
         url = '/users/account'
         currentpassword = passwords['contributor']
 
@@ -41,12 +47,12 @@ class TestUserAccountRest(BaseUserTestRest):
         data[field] = value
         post_json_with_contributor(client, url, data, status=200)
 
-        assert 1 == int(self.discourse_client.sso_sync.called_count)
+        assert 1 == int(discourse.client.sso_sync.called_count)
 
     def _update_account_field_discourse_down(
-        self, client, settings, passwords, field, value
+        self, discourse, client, settings, passwords, field, value
     ):
-        self.set_discourse_down(settings)
+        discourse.down()
 
         url = '/users/account'
         currentpassword = passwords['contributor']
@@ -55,14 +61,16 @@ class TestUserAccountRest(BaseUserTestRest):
         data[field] = value
         post_json_with_contributor(client, url, data, status=500)
 
-        assert 1 == int(self.discourse_client.sso_sync.called_count)
+        assert 1 == int(discourse.client.sso_sync.called_count)
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_update_account_email_discourse_up(
-        self, _send_email, client, session, user_ids, passwords
+        self, _send_email, client, session, user_ids, passwords, discourse
     ):
         new_email = 'superemail@localhost.localhost'
-        self._update_account_field_discourse_up(client, passwords, 'email', new_email)
+        self._update_account_field_discourse_up(
+            discourse, client, passwords, 'email', new_email
+        )
 
         user_id = user_ids['contributor']
         user = session.get(User, user_id)
@@ -72,7 +80,7 @@ class TestUserAccountRest(BaseUserTestRest):
         _send_email.assert_called_once()
 
         # Simulate confirmation email validation
-        nonce = self.extract_nonce(_send_email, 'validate_change_email')
+        nonce = extract_nonce(_send_email, 'validate_change_email')
         url_api_validation = f'/users/validate_change_email/{nonce}'
         send_json(client, 'post', url_api_validation, {}, status=200)
 
@@ -81,16 +89,20 @@ class TestUserAccountRest(BaseUserTestRest):
         assert user.email == new_email
         assert user.validation_nonce is None
 
-    def test_update_account_email_discourse_down(self, client, settings, passwords):
+    def test_update_account_email_discourse_down(
+        self, client, settings, passwords, discourse
+    ):
         new_email = 'superemail@localhost.localhost'
         self._update_account_field_discourse_down(
-            client, settings, passwords, 'email', new_email
+            discourse, client, settings, passwords, 'email', new_email
         )
 
     def test_update_account_name_discourse_up(
-        self, client, session, user_ids, passwords, queue_config
+        self, client, session, user_ids, passwords, queue_config, discourse
     ):
-        self._update_account_field_discourse_up(client, passwords, 'name', 'changed')
+        self._update_account_field_discourse_up(
+            discourse, client, passwords, 'name', 'changed'
+        )
 
         user_id = user_ids['contributor']
         user = session.get(User, user_id)
@@ -109,9 +121,11 @@ class TestUserAccountRest(BaseUserTestRest):
         assert search_doc['doc_type'] is not None
         assert search_doc['title_en'] == 'changed contributor'
 
-    def test_update_account_name_discourse_down(self, client, settings, passwords):
+    def test_update_account_name_discourse_down(
+        self, client, settings, passwords, discourse
+    ):
         self._update_account_field_discourse_down(
-            client, settings, passwords, 'name', 'changed'
+            discourse, client, settings, passwords, 'name', 'changed'
         )
 
     def test_update_account_forum_username_validity(self, client, passwords):
@@ -149,10 +163,10 @@ class TestUserAccountRest(BaseUserTestRest):
         assert errors_of(json)[0]['description'] == 'Already used forum name'
 
     def test_update_account_forum_username_discourse_up(
-        self, client, session, user_ids, passwords
+        self, client, session, user_ids, passwords, discourse
     ):
         self._update_account_field_discourse_up(
-            client, passwords, 'forum_username', 'changed'
+            discourse, client, passwords, 'forum_username', 'changed'
         )
 
         user_id = user_ids['contributor']
@@ -160,10 +174,10 @@ class TestUserAccountRest(BaseUserTestRest):
         assert user.forum_username == 'changed'
 
     def test_update_account_forum_username_discourse_down(
-        self, client, settings, passwords
+        self, client, settings, passwords, discourse
     ):
         self._update_account_field_discourse_down(
-            client, settings, passwords, 'forum_username', 'changed'
+            discourse, client, settings, passwords, 'forum_username', 'changed'
         )
 
     def test_update_is_profile_public_discourse_down(
@@ -210,7 +224,7 @@ class TestUserAccountRest(BaseUserTestRest):
         assert user.lang == 'fr'
 
         request_body = {'lang': 'en'}
-        url = self._prefix + '/update_preferred_language'
+        url = PREFIX + '/update_preferred_language'
         post_json_with_contributor(client, url, request_body, status=200)
 
         session.expunge(user)

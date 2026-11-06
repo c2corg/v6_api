@@ -1,30 +1,26 @@
+import pytest
+
 from c2corg_api.tests.contract import check_snapshot, contract
-from c2corg_api.tests.contract.test_documents import DocumentContractTest
-from c2corg_api.tests.contract.test_users import UserContractTest
 
 
-class TestForumTopicWrites(UserContractTest):
+@pytest.mark.usefixtures('discourse')
+class TestForumTopicWrites:
     @contract(('POST', '/forum/topics'))
-    def test_refused(self, client, settings):
+    def test_refused(self, browser):
         body = {'document_id': 9999999, 'lang': 'en'}
-        response = self.post(client, settings, '/forum/topics', body, status=403)
+        response = browser.post('/forum/topics', body, status=403)
         check_snapshot('forum_topics_anonymous', response)
-        response = self.post(
-            client, settings, '/forum/topics', body, user='contributor', status=400
-        )
+        response = browser.post('/forum/topics', body, user='contributor', status=400)
         check_snapshot('forum_topics_unknown_document', response)
 
 
-class TestImageListWrites(DocumentContractTest):
+@pytest.mark.usefixtures('documents')
+class TestImageListWrites:
     @contract(('POST', '/images/list'))
-    def test_refused(self, client, settings):
-        response = self.post(
-            client, settings, '/images/list', {'images': []}, status=403
-        )
+    def test_refused(self, browser):
+        response = browser.post('/images/list', {'images': []}, status=403)
         check_snapshot('images_list_anonymous', response)
-        response = self.post(
-            client,
-            settings,
+        response = browser.post(
             '/images/list',
             {'images': [{'filename': 1}]},
             user='contributor',
@@ -33,21 +29,20 @@ class TestImageListWrites(DocumentContractTest):
         check_snapshot('images_list_invalid', response)
 
 
-class TestCookerAndCoverageWrites(DocumentContractTest):
+@pytest.mark.usefixtures('documents')
+class TestCookerAndCoverageWrites:
     @contract(('POST', '/cooker'))
-    def test_cooker(self, client, settings):
-        response = self.post(
-            client, settings, '/cooker', {'lang': 'en', 'description': '**bold**'}
-        )
+    def test_cooker(self, browser):
+        response = browser.post('/cooker', {'lang': 'en', 'description': '**bold**'})
         check_snapshot('cooker', response)
         assert response.json == {
             'lang': 'en',
             'description': '<p><strong>bold</strong></p>',
         }
-        response = self.post(client, settings, '/cooker', ['**bold**'], status=400)
+        response = browser.post('/cooker', ['**bold**'], status=400)
         check_snapshot('cooker_not_an_object', response)
 
     @contract(('POST', '/getpolygoncoverage'))
-    def test_invalid_polygon(self, client, settings):
-        response = self.post(client, settings, '/getpolygoncoverage', {}, status=400)
+    def test_invalid_polygon(self, browser):
+        response = browser.post('/getpolygoncoverage', {}, status=400)
         check_snapshot('getpolygoncoverage_invalid', response)

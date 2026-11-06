@@ -2,10 +2,9 @@ import base64
 import datetime
 import hashlib
 import hmac
-import re
 import time
-from unittest.mock import MagicMock, Mock, patch
-from urllib.parse import quote, urlencode, urlparse
+from unittest.mock import Mock, patch
+from urllib.parse import quote, urlencode
 
 import jwt
 import pytest
@@ -19,10 +18,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.security.discourse_client import (
-    APIDiscourseClient,
     DisabledDiscourseClient,
-    get_discourse_client,
-    set_discourse_client,
 )
 from c2corg_api.security.roles import (
     add_token,
@@ -34,6 +30,7 @@ from c2corg_api.tests import (
     assert_body_equal,
     assert_errors_contain,
     errors_of,
+    extract_nonce,
     get_json_with_token,
     post_json_with_token,
     send_json,
@@ -61,65 +58,11 @@ forum_username_tests = {
 }
 
 
-class BaseUserTestRest:
-    @pytest.fixture(autouse=True)
-    def _setup_base_user_test_rest(self, client, settings):
-        self.original_discourse_client = get_discourse_client(settings)
-        self._prefix = '/users'
-        self._model = User
-        self.set_discourse_up()
-        yield
-        self.set_discourse_not_mocked()
-
-    def set_discourse_client_mock(self, client):
-        self.discourse_client = client
-        set_discourse_client(client)
-
-    def set_discourse_not_mocked(self):
-        self.set_discourse_client_mock(self.original_discourse_client)
-
-    def set_discourse_up(self):
-        # unittest.Mock works great with a completely fake object
-        mock = Mock()
-        mock.redirect_without_nonce = MagicMock(
-            return_value='https://discourse_redirect'
-        )
-        mock.redirect = MagicMock()
-        mock.sso_sync = MagicMock()
-        self.set_discourse_client_mock(mock)
-
-    def set_discourse_down(self, settings):
-        # unittest.Mock wants a concrete object to throw correctly
-        mock = APIDiscourseClient(settings)
-        mock.redirect_without_nonce = MagicMock(
-            return_value='https://discourse_redirect', side_effect=Exception
-        )
-        mock.redirect = MagicMock(side_effect=Exception)
-        mock.sso_sync = MagicMock(side_effect=Exception)
-        self.set_discourse_client_mock(mock)
-
-    def extract_urls(self, data):
-        return re.findall(
-            r'http[s]?://'
-            r'(?:'
-            r'[a-zA-Z]|'
-            r'[0-9]|'
-            r'[$-_@#.&+]|'
-            r'[!*\(\),]|'
-            r'(?:%[0-9a-fA-F][0-9a-fA-F])'
-            r')+[0-9a-zA-Z]',
-            data,
-        )
-
-    def extract_nonce(self, _send_mail, key):
-        match = self.extract_urls(_send_mail.call_args_list[0][1]['body'])
-        validation_url = match[0]
-        fragment = urlparse(validation_url).fragment
-        nonce = fragment.replace(key + '=', '')
-        return nonce
+PREFIX = '/users'
 
 
-class TestUserRest(BaseUserTestRest):
+@pytest.mark.usefixtures('discourse')
+class TestUserRest:
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_always_register_non_validated_users(self, _send_email, client, session):
         request_body = {
@@ -130,7 +73,7 @@ class TestUserRest(BaseUserTestRest):
             'email_validated': True,
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
 
         # First succeed in creating a new user
         body = send_json(client, 'post', url, request_body, status=200).json
@@ -149,7 +92,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
 
         body = send_json(client, 'post', url, request_body, status=200).json
         user_id = body.get('id')
@@ -167,7 +110,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
 
         body = send_json(client, 'post', url, request_body, status=200).json
         user_id = body.get('id')
@@ -184,12 +127,12 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
         send_json(client, 'post', url, request_body, status=422).json
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_register_forum_username_validity(self, _send_email, client):
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
         i = 0
         for forum_username, value in forum_username_tests.items():
             i += 1
@@ -216,7 +159,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
         json = send_json(client, 'post', url, request_body, status=400).json
         assert json['errors'][0]['description'] == 'already used forum_username'
 
@@ -229,7 +172,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
         json = send_json(client, 'post', url, request_body, status=400).json
         assert json['errors'][0]['description'] == 'This username already exists'
 
@@ -240,7 +183,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'space@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
         body = send_json(client, 'post', url, request_body, status=200).json
         assert_body_equal(body, 'username', 'username with spaces')
         user_id = body.get('id')
@@ -257,7 +200,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
         json = send_json(client, 'post', url, request_body, status=400).json
         assert (
             json['errors'][0]['description']
@@ -274,7 +217,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
         send_json(client, 'post', url, request_body, status=200)
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
@@ -286,7 +229,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_useratcamptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
         json = send_json(client, 'post', url, request_body, status=422).json
         assert errors_of(json)[0]['description'] == 'Invalid email address'
 
@@ -299,7 +242,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
 
         # First succeed in creating a new user
         body = send_json(client, 'post', url, request_body, status=200).json
@@ -320,7 +263,7 @@ class TestUserRest(BaseUserTestRest):
 
         assert user.lang == 'fr'
         # Simulate confirmation email validation
-        nonce = self.extract_nonce(_send_email, 'validate_register_email')
+        nonce = extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = f'/users/validate_register_email/{nonce}'
         send_json(client, 'post', url_api_validation, {}, status=200)
 
@@ -370,7 +313,7 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
 
         body = send_json(client, 'post', url, request_body, status=200).json
         assert 'id' in body
@@ -384,7 +327,7 @@ class TestUserRest(BaseUserTestRest):
         assert search_doc is None
 
         # Simulate confirmation email validation
-        nonce = self.extract_nonce(_send_email, 'validate_register_email')
+        nonce = extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = f'/users/validate_register_email/{nonce}'
         send_json(client, 'post', url_api_validation, {}, status=200)
 
@@ -399,8 +342,8 @@ class TestUserRest(BaseUserTestRest):
         assert search_doc['title_fr'] == 'Max Mustermann testf'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_discourse_down(self, _send_email, client, settings):
-        self.set_discourse_down(settings)
+    def test_register_discourse_down(self, _send_email, client, settings, discourse):
+        discourse.down()
         request_body = {
             'username': 'test',
             'forum_username': 'testf',
@@ -408,13 +351,13 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Super$ecret1',
             'email': 'some_user@camptocamp.org',
         }
-        url = self._prefix + '/register'
+        url = PREFIX + '/register'
 
         # First succeed in creating a new user
         send_json(client, 'post', url, request_body, status=200)
 
         # Simulate confirmation email validation
-        nonce = self.extract_nonce(_send_email, 'validate_register_email')
+        nonce = extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = f'/users/validate_register_email/{nonce}'
 
         send_json(client, 'post', url_api_validation, {}, status=500)
@@ -442,7 +385,7 @@ class TestUserRest(BaseUserTestRest):
         _send_email.check_call_once()
 
         # Simulate confirmation email validation
-        nonce = self.extract_nonce(_send_email, 'change_password')
+        nonce = extract_nonce(_send_email, 'change_password')
         url_api_validation = f'/users/validate_new_password/{nonce}'
 
         send_json(
@@ -464,9 +407,9 @@ class TestUserRest(BaseUserTestRest):
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
     def test_forgot_password_discourse_down(
-        self, _send_email, client, session, settings, user_ids
+        self, _send_email, client, session, settings, user_ids, discourse
     ):
-        self.set_discourse_down(settings)
+        discourse.down()
         user_id = user_ids['contributor']
         user = session.get(User, user_id)
 
@@ -476,7 +419,7 @@ class TestUserRest(BaseUserTestRest):
         _send_email.check_call_once()
 
         # Simulate confirmation email validation
-        nonce = self.extract_nonce(_send_email, 'change_password')
+        nonce = extract_nonce(_send_email, 'change_password')
         url_api_validation = f'/users/validate_new_password/{nonce}'
 
         # Succeed anyway since only the password has changed
@@ -653,9 +596,9 @@ class TestUserRest(BaseUserTestRest):
         body = self.login(client, settings, passwords, 'moderator', status=200).json
         assert 'token' in body
 
-    def test_login_discourse_disabled(self, client, settings, passwords):
+    def test_login_discourse_disabled(self, client, settings, passwords, discourse):
         """Log in, without a forum session to open, when the forum is disabled."""
-        self.set_discourse_client_mock(DisabledDiscourseClient())
+        discourse.use(DisabledDiscourseClient())
         body = self.login(
             client, settings, passwords, 'moderator', discourse=True, status=200
         ).json
@@ -714,19 +657,21 @@ class TestUserRest(BaseUserTestRest):
         body = self.login(client, settings, passwords, 'contributor', status=403).json
         assert_errors_contain(body, 'Forbidden', 'account blocked')
 
-    def test_login_discourse_success(self, client, session, settings, passwords):
-        self.set_discourse_not_mocked()
+    def test_login_discourse_success(
+        self, client, session, settings, passwords, discourse
+    ):
+        discourse.restore()
         # return_sso_url tells the SSO provider (us) which Discourse
         # instance to redirect back to - not a real secret, only used to
         # sign this test's own fixture.
-        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        discourse.client.sso_key = 'test_only_shared_secret_not_a_real_credential'
         return_sso_url = 'https://forum-test.example.org/session/sso_login'
-        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+        discourse.client.allowed_sso_hosts = {'forum-test.example.org'}
 
-        sso, sig = self._build_signed_sso_payload(return_sso_url)
+        sso, sig = self._build_signed_sso_payload(discourse, return_sso_url)
 
         moderator = session.query(User).filter(User.username == 'moderator').one()
-        redirect1 = self.discourse_client.redirect(moderator, sso, sig)
+        redirect1 = discourse.client.redirect(moderator, sso, sig)
         assert redirect1.startswith(return_sso_url + '?')
 
         body = self.login(
@@ -737,33 +682,33 @@ class TestUserRest(BaseUserTestRest):
 
         assert redirect1 == redirect2
 
-    def test_login_discourse_rejects_unlisted_return_sso_url(self, session):
-        self.set_discourse_not_mocked()
-        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
-        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+    def test_login_discourse_rejects_unlisted_return_sso_url(self, session, discourse):
+        discourse.restore()
+        discourse.client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        discourse.client.allowed_sso_hosts = {'forum-test.example.org'}
 
         # correctly signed (same secret), but pointing somewhere not on
         # the allowlist - must be rejected even though the signature is
         # valid, otherwise a leaked sso_secret could redirect an
         # authenticated user's browser anywhere.
         sso, sig = self._build_signed_sso_payload(
-            'https://not-allowed.example.org/session/sso_login'
+            discourse, 'https://not-allowed.example.org/session/sso_login'
         )
 
         moderator = session.query(User).filter(User.username == 'moderator').one()
         with pytest.raises(HTTPBadRequest):
-            self.discourse_client.redirect(moderator, sso, sig)
+            discourse.client.redirect(moderator, sso, sig)
 
-    def test_discourse_redirect_success(self, client, session, tokens):
-        self.set_discourse_not_mocked()
-        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+    def test_discourse_redirect_success(self, client, session, tokens, discourse):
+        discourse.restore()
+        discourse.client.sso_key = 'test_only_shared_secret_not_a_real_credential'
         return_sso_url = 'https://forum-test.example.org/session/sso_login'
-        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+        discourse.client.allowed_sso_hosts = {'forum-test.example.org'}
 
-        sso, sig = self._build_signed_sso_payload(return_sso_url)
+        sso, sig = self._build_signed_sso_payload(discourse, return_sso_url)
 
         moderator = session.query(User).filter(User.username == 'moderator').one()
-        expected = self.discourse_client.redirect(moderator, sso, sig)
+        expected = discourse.client.redirect(moderator, sso, sig)
 
         body = post_json_with_token(
             client,
@@ -774,13 +719,13 @@ class TestUserRest(BaseUserTestRest):
         )
         assert body['redirect'] == expected
 
-    def test_discourse_redirect_bad_signature(self, client, tokens):
-        self.set_discourse_not_mocked()
-        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
-        self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
+    def test_discourse_redirect_bad_signature(self, client, tokens, discourse):
+        discourse.restore()
+        discourse.client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+        discourse.client.allowed_sso_hosts = {'forum-test.example.org'}
 
         sso, _ = self._build_signed_sso_payload(
-            'https://forum-test.example.org/session/sso_login'
+            discourse, 'https://forum-test.example.org/session/sso_login'
         )
 
         post_json_with_token(
@@ -791,12 +736,12 @@ class TestUserRest(BaseUserTestRest):
             status=400,
         )
 
-    def test_discourse_redirect_without_return_sso_url(self, client, tokens):
-        self.set_discourse_not_mocked()
-        self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
+    def test_discourse_redirect_without_return_sso_url(self, client, tokens, discourse):
+        discourse.restore()
+        discourse.client.sso_key = 'test_only_shared_secret_not_a_real_credential'
         payload = base64.b64encode(b'nonce=cb68251e').decode('ascii')
         sig = hmac.new(
-            self.discourse_client.sso_key.encode('utf-8'),
+            discourse.client.sso_key.encode('utf-8'),
             payload.encode('utf-8'),
             digestmod=hashlib.sha256,
         ).hexdigest()
@@ -826,7 +771,7 @@ class TestUserRest(BaseUserTestRest):
             status=403,
         )
 
-    def _build_signed_sso_payload(self, return_sso_url):
+    def _build_signed_sso_payload(self, discourse, return_sso_url):
         payload = urlencode(
             {
                 'nonce': 'cb68251eefb5211e58c00ff1395f0c0b',
@@ -835,7 +780,7 @@ class TestUserRest(BaseUserTestRest):
         )
         b64_payload = base64.b64encode(payload.encode('utf-8')).decode('ascii')
         sig = hmac.new(
-            self.discourse_client.sso_key.encode('utf-8'),
+            discourse.client.sso_key.encode('utf-8'),
             b64_payload.encode('utf-8'),
             digestmod=hashlib.sha256,
         ).hexdigest()

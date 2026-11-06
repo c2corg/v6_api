@@ -179,3 +179,15 @@ def reset_discourse_client():
     from c2corg_api.security.discourse_client import set_discourse_client
 
     set_discourse_client(None)
+
+
+@pytest.fixture
+def discourse(settings):
+    """Fake the Discourse client (up); restore the real one after the test."""
+    # the Discourse client is global: without the restore, the fake leaks
+    # into the tests that run after this one
+    from c2corg_api.tests.forum import FakeDiscourse
+
+    discourse = FakeDiscourse(settings)
+    yield discourse
+    discourse.restore()

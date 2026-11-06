@@ -17,6 +17,13 @@ def browser(client, settings):
 
 
 @pytest.fixture
+def discourse(discourse):
+    """The fake Discourse client of the tests, redirecting to Discourse."""
+    discourse.client.redirect.return_value = 'https://discourse_redirect'
+    return discourse
+
+
+@pytest.fixture
 def documents(browser, user_ids) -> Documents:
     """Create one document of each type through the API."""
     return create_documents(browser, user_ids)
