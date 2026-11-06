@@ -25,7 +25,6 @@ from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.schemas.route import route_schema
-from c2corg_api.tests import BaseTestCase
 from c2corg_api.views import to_json_dict
 from c2corg_api.views.navitia import (
     BASE_URL,
@@ -83,82 +82,83 @@ def _events(stream, count=None):
     return anyio.run(read)
 
 
-class TestNavitiaRestParams(BaseTestCase):
+@pytest.mark.usefixtures('client')
+class TestNavitiaRestParams:
     # /navitia/journeys endpoint
-    def test_journey_missing_required_params(self):
+    def test_journey_missing_required_params(self, client):
         with mock.patch.dict(os.environ, {'NAVITIA_API_KEY': NAVITIA_KEY}):
             # missing to
-            self.app.get(
+            client.get(
                 '/navitia/journeys?from=5.0;45.0&datetime=20260116T115100&datetime_represents=departure',
                 status=422,
             )
             # missing from
-            self.app.get(
+            client.get(
                 '/navitia/journeys?to=5.0;45.0&datetime=20260116T115100&datetime_represents=departure',
                 status=422,
             )
             # missing datetime
-            self.app.get(
+            client.get(
                 '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime_represents=departure',
                 status=422,
             )
             # missing datetime_represents
-            self.app.get(
+            client.get(
                 '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100',
                 status=422,
             )
 
-    def test_journey_invalid_coordinate_format(self):
+    def test_journey_invalid_coordinate_format(self, client):
         with mock.patch.dict(os.environ, {'NAVITIA_API_KEY': NAVITIA_KEY}):
             # 200 OK is expected since wrong values for from or to parameter
             # are not considered as bad request but as 404 not found
             # invalid 'from'
-            self.app.get(
+            client.get(
                 '/navitia/journeys?from=invalid&to=5.1;45.1&datetime=20260116T115100&datetime_represents=departure',
                 status=200,
             )
             # invalid 'to'
-            self.app.get(
+            client.get(
                 '/navitia/journeys?from=5.0;45.0&to=notcoords&datetime=20260116T115100&datetime_represents=departure',
                 status=200,
             )
 
-    def test_journey_invalid_datetime(self):
+    def test_journey_invalid_datetime(self, client):
         with mock.patch.dict(os.environ, {'NAVITIA_API_KEY': NAVITIA_KEY}):
             # invalid datetime
             # should be status = 500 but
             # conftest mocks every call to return 200 OK.
-            self.app.get(
+            client.get(
                 '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=invalid&datetime_represents=departure',
                 status=200,
             )
 
-    def test_journey_invalid_datetime_represents(self):
+    def test_journey_invalid_datetime_represents(self, client):
         with mock.patch.dict(os.environ, {'NAVITIA_API_KEY': NAVITIA_KEY}):
             # invalid datetime_represents
             # should be status = 500 but
             # conftest mocks every call to return 200 OK.
-            self.app.get(
+            client.get(
                 '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100&datetime_represents=invalid',
                 status=200,
             )
 
-    def test_journey_missing_api_key(self):
+    def test_journey_missing_api_key(self, client):
         # ensure NAVITIA_API_KEY not set in env
         with mock.patch.dict(os.environ, {}, clear=True):
-            self.app.get(
+            client.get(
                 '/navitia/journeys?from=5.0;45.0&to=5.1;45.1&datetime=20260116T115100&datetime_represents=departure',
                 status=500,
             )
 
-    def test_navitia_journey_success(self):
+    def test_navitia_journey_success(self, client):
         # datetime parameter is today's date 08:00
         # so that we don't face the datetime out of production error
         dt = datetime.combine(datetime.today().date(), time(hour=8, minute=0, second=0))
         dt_str = dt.strftime('%Y%m%dT%H%M%S')
 
         with mock.patch.dict(os.environ, {'NAVITIA_API_KEY': NAVITIA_KEY}):
-            self.app.get(
+            client.get(
                 f'/navitia/journeys?'
                 f'from=5.7357819%3B45.1875602&'
                 f'to=5.166955054538887%3B45.07757475794273&'
@@ -171,12 +171,12 @@ class TestNavitiaRestParams(BaseTestCase):
             )
 
     # individual job handling functions
-    def test_get_redis_client(self):
+    def test_get_redis_client(self, settings):
         # the Redis of the settings, not a fixed host and database
         kwargs = redis_client().connection_pool.connection_kwargs
-        url = self.settings['redis.url']
+        url = settings['redis.url']
         assert kwargs['host'] == url.split('//')[1].split(':')[0]
-        assert kwargs['db'] == int(self.settings.get('redis.db_jobs', 0))
+        assert kwargs['db'] == int(settings.get('redis.db_jobs', 0))
 
     def test_start_job(self):
         with mock.patch(NAVITIA_REDIS_CLIENT_PATH) as mock_redis_client:
@@ -522,7 +522,7 @@ class TestNavitiaRestParams(BaseTestCase):
     # /navitia/journeyreachableroutes endpoints (includes job handling)
     # /navitia/journeyreachableroutes/start endpoint
     # /navitia/journeyreachablewaypoints/start endpoint
-    def test_navitia_journeyreachabledocs_start(self, subtests):
+    def test_navitia_journeyreachabledocs_start(self, subtests, client):
         test_cases = [
             ('/navitia/journeyreachableroutes', compute_journey_reachable_routes),
             ('/navitia/journeyreachablewaypoints', compute_journey_reachable_waypoints),
@@ -538,7 +538,7 @@ class TestNavitiaRestParams(BaseTestCase):
                     # call with any parameters that
                     # passes the function validate_journey_params,
                     # as the result will anyway be mocked
-                    response = self.app.get(
+                    response = client.get(
                         (
                             base_url + '/start?'
                             'datetime=20260122T143500&'
@@ -552,7 +552,7 @@ class TestNavitiaRestParams(BaseTestCase):
                     assert json.loads(response.body.decode()) == 'job-123'
                     mock_start.assert_called_once_with(func, mock.ANY)
 
-    def test_navitia_journeyreachabledocs_start_missing_params(self, subtests):
+    def test_navitia_journeyreachabledocs_start_missing_params(self, subtests, client):
         base_urls = [
             '/navitia/journeyreachableroutes',
             '/navitia/journeyreachablewaypoints',
@@ -561,35 +561,35 @@ class TestNavitiaRestParams(BaseTestCase):
         for base_url in base_urls:
             with subtests.test(base_url=base_url):
                 # missing datetime
-                self.app.get(
+                client.get(
                     base_url
                     + '/start?&datetime_represents=departure&from=5.677893899999996%3B45.1929973&walking_speed=1.12&max_walking_duration_to_pt=4464',  # noqa
                     status=422,
                 )
 
                 # missing datetime represents
-                self.app.get(
+                client.get(
                     base_url
                     + '/start?datetime=20260122T143500&from=5.677893899999996%3B45.1929973&walking_speed=1.12&max_walking_duration_to_pt=4464',  # noqa
                     status=422,
                 )
 
                 # missing from
-                self.app.get(
+                client.get(
                     base_url
                     + '/start?datetime=20260122T143500&datetime_represents=departure&walking_speed=1.12&max_walking_duration_to_pt=4464',  # noqa
                     status=422,
                 )
 
                 # missing walking speed
-                self.app.get(
+                client.get(
                     base_url
                     + '/start?datetime=20260122T143500&datetime_represents=departure&from=5.677893899999996%3B45.1929973&max_walking_duration_to_pt=4464',  # noqa
                     status=422,
                 )
 
                 # missing max_walking_duration_to_pt
-                self.app.get(
+                client.get(
                     base_url
                     + '/start?datetime=20260122T143500&datetime_represents=departure&from=5.677893899999996%3B45.1929973&walking_speed=1.12',  # noqa
                     status=422,
@@ -597,7 +597,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
     # /navitia/journeyreachableroutes/progress endpoint
     # /navitia/journeyreachablewaypoints/progress endpoint
-    def test_navitia_journeyreachabledocs_progress(self, subtests):
+    def test_navitia_journeyreachabledocs_progress(self, subtests, client):
         urls = [
             '/navitia/journeyreachableroutes/progress/job-123',
             '/navitia/journeyreachablewaypoints/progress/job-123',
@@ -634,7 +634,7 @@ class TestNavitiaRestParams(BaseTestCase):
                 ):
                     mock_redis.return_value = mock.Mock()
 
-                    response = self.app.get(url, status=200)
+                    response = client.get(url, status=200)
 
                     # Content type should be SSE
                     assert response.content_type == 'text/event-stream'
@@ -647,7 +647,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
     # /navitia/journeyreachableroutes/result endpoint
     # /navitia/journeyreachablewaypoints/result endpoint
-    def test_navitia_journeyreachabledocs_result(self, subtests):
+    def test_navitia_journeyreachabledocs_result(self, subtests, client):
         urls = [
             '/navitia/journeyreachableroutes/result/job-123',
             '/navitia/journeyreachablewaypoints/result/job-123',
@@ -669,7 +669,7 @@ class TestNavitiaRestParams(BaseTestCase):
                 ):
                     mock_redis.return_value = mock.Mock()
 
-                    response = self.app.get(url, status=200)
+                    response = client.get(url, status=200)
 
                     body = response.body
                     assert json.loads(body.decode()) == {
@@ -682,7 +682,7 @@ class TestNavitiaRestParams(BaseTestCase):
                     )
 
     # /navitia/isochronereachableroutes endpoint
-    def test_navitia_isochronereachableroutes(self):
+    def test_navitia_isochronereachableroutes(self, client):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
@@ -768,7 +768,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
             mock_to_json.side_effect = to_json_side_effect
 
-            result = self.app.get(
+            result = client.get(
                 '/navitia/isochronesreachableroutes?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',
                 status=200,
             )
@@ -783,7 +783,7 @@ class TestNavitiaRestParams(BaseTestCase):
                 'coordinates': [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]],
             }
 
-    def test_navitia_isochrone_errors_are_http_errors(self):
+    def test_navitia_isochrone_errors_are_http_errors(self, client):
         # an error answered a 200 with the message as a JSON string, which
         # the UI could not tell from a result
         url = (
@@ -795,17 +795,17 @@ class TestNavitiaRestParams(BaseTestCase):
                 'c2corg_api.views.navitia.get_navitia_isochrone',
                 side_effect=HTTPNotFound('no_solution'),
             ):
-                response = self.app.get(url.format(kind), status=404)
+                response = client.get(url.format(kind), status=404)
             assert response.json['errors'][0]['description'] == 'no_solution'
 
             with mock.patch(
                 'c2corg_api.views.navitia.get_navitia_isochrone',
                 side_effect=RuntimeError('boom'),
             ):
-                response = self.app.get(url.format(kind), status=500)
+                response = client.get(url.format(kind), status=500)
             assert response.json['errors'][0]['name'] == 'unexpected error'
 
-    def test_navitia_isochronereachableroutes_no_result(self):
+    def test_navitia_isochronereachableroutes_no_result(self, client):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
@@ -867,7 +867,7 @@ class TestNavitiaRestParams(BaseTestCase):
             # any polygon
             mock_get_iso.return_value = {'isochrones': []}
 
-            result = self.app.get(
+            result = client.get(
                 '/navitia/isochronesreachableroutes?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',
                 status=200,
             )
@@ -879,7 +879,7 @@ class TestNavitiaRestParams(BaseTestCase):
             assert result_data['isochron_geom'] == ''
 
     # /navitia/isochronereachablewaypoints endpoint
-    def test_navitia_isochronereachablewaypoints(self):
+    def test_navitia_isochronereachablewaypoints(self, client):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
@@ -962,7 +962,7 @@ class TestNavitiaRestParams(BaseTestCase):
 
             mock_to_json.side_effect = to_json_side_effect
 
-            result = self.app.get(
+            result = client.get(
                 '/navitia/isochronesreachablewaypoints?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',
                 status=200,
             )
@@ -977,7 +977,7 @@ class TestNavitiaRestParams(BaseTestCase):
                 'coordinates': [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]],
             }
 
-    def test_navitia_isochronereachablewaypoints_no_result(self):
+    def test_navitia_isochronereachablewaypoints_no_result(self, client):
         with (
             mock.patch(
                 'c2corg_api.views.navitia.extract_meta_params'
@@ -1036,7 +1036,7 @@ class TestNavitiaRestParams(BaseTestCase):
             # any polygon
             mock_get_iso.return_value = {'isochrones': []}
 
-            result = self.app.get(
+            result = client.get(
                 '/navitia/isochronesreachablewaypoints?from=5.7357819%3B45.1875602&datetime=20260116T115100&datetime_represents=departure&boundary_duration=3600',
                 status=200,
             )

@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import dataclass
 from unittest.mock import patch
 
 import pytest
@@ -23,344 +24,354 @@ from c2corg_api.scripts.es.sync import (
     sync_deleted_documents,
     sync_documents,
 )
-from c2corg_api.tests import BaseTestCase, global_userids
+from c2corg_api.tests import global_userids
 from c2corg_api.views.document import create_new_version
 
 
-class TestSync(BaseTestCase):
-    def setUp(self):
-        BaseTestCase.setUp(self)
-        self._add_test_data()
+@dataclass
+class Docs:
+    """The documents of the tests, built by `docs`."""
 
-    def test_get_changed_documents(self):
-        last_update, _ = es_sync.get_status(self.session)
+    waypoint1: Waypoint
+    waypoint2: Waypoint
+    route1: Route
+    waypoint3: Waypoint
+    outing1: Outing
 
-        changed_documents = get_changed_documents(self.session, last_update)
-        assert len(changed_documents) == 5
-        assert 'o' == changed_documents[0][1]
-        assert 'r' == changed_documents[1][1]
-        assert 'w' == changed_documents[2][1]
 
-        assert (
-            len(
-                get_changed_documents(
-                    self.session, last_update + datetime.timedelta(0, 1)
-                )
+@pytest.fixture(autouse=True)
+def docs(session, user_ids) -> Docs:
+    _, date_now = es_sync.get_status(session)
+    es_sync.mark_as_updated(session, date_now)
+
+    waypoint1 = Waypoint(
+        document_id=71171,
+        waypoint_type='summit',
+        elevation=2000,
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+        locales=[
+            WaypointLocale(
+                lang='fr',
+                title='Mont Granier',
+                description='...',
+                summary='Le Mont [b]Granier[/b]',
+            ),
+            WaypointLocale(
+                lang='en',
+                title='Mont Granier',
+                description='...',
+                summary='The Mont Granier',
+            ),
+        ],
+    )
+    waypoint2 = Waypoint(
+        document_id=71172,
+        waypoint_type='summit',
+        elevation=4985,
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+        locales=[
+            WaypointLocale(
+                lang='en',
+                title='Mont Blanc',
+                description='...',
+                summary='The heighest point in Europe',
             )
-            == 0
-        )
-
-    def test_get_changed_documents_for_associations(self):
-        last_update, _ = es_sync.get_status(self.session)
-
-        changed_documents = get_changed_documents_for_associations(
-            self.session, last_update
-        )
-        # W1 -> R1 and W2 -> W1 give R1 and O1 each, R1 -> O1 and U -> O1 give O1
-        assert sorted(changed_documents) == sorted(
-            [
-                (self.route1.document_id, 'r'),
-                (self.outing1.document_id, 'o'),
-                (self.route1.document_id, 'r'),
-                (self.outing1.document_id, 'o'),
-                (self.outing1.document_id, 'o'),
-            ]
-        )
-
-        assert (
-            len(
-                get_changed_documents_for_associations(
-                    self.session, last_update + datetime.timedelta(0, 1)
-                )
+        ],
+    )
+    route1 = Route(
+        document_id=71173,
+        activities=['skitouring'],
+        elevation_max=1500,
+        elevation_min=700,
+        height_diff_up=800,
+        height_diff_down=800,
+        durations='1',
+        locales=[
+            RouteLocale(
+                lang='en',
+                title='Face N',
+                description='...',
+                gear='paraglider',
+                title_prefix='Mont Blanc',
             )
-            == 0
-        )
-
-    def test_get_changed_routes_and_outings_wr(self):
-        last_update, _ = es_sync.get_status(self.session)
-
-        # the outings of R1 list the waypoints of R1, so they have to be
-        # updated too when W1 -> R1 changes
-        changed_documents = get_changed_routes_and_outings_wr(self.session, last_update)
-        assert sorted(changed_documents) == sorted(
-            [
-                (self.route1.document_id, 'r'),
-                (self.outing1.document_id, 'o'),
-            ]
-        )
-
-        assert (
-            get_changed_routes_and_outings_wr(
-                self.session, last_update + datetime.timedelta(0, 1)
+        ],
+    )
+    waypoint3 = Waypoint(
+        document_id=71174,
+        redirects_to=71171,
+        waypoint_type='summit',
+        elevation=4985,
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+        locales=[
+            WaypointLocale(
+                lang='en',
+                title='Mont Blanc',
+                description='...',
+                summary='The heighest point in Europe',
             )
-            == []
-        )
+        ],
+    )
+    outing1 = Outing(
+        activities=['skitouring'],
+        date_start=datetime.date(2016, 1, 1),
+        date_end=datetime.date(2016, 1, 1),
+        locales=[
+            OutingLocale(lang='en', title='...', description='...', weather='sunny')
+        ],
+    )
+    session.add_all([waypoint1, waypoint2, waypoint3, route1, outing1])
+    session.flush()
 
-    def test_get_changed_users(self):
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
-        user.name = 'changed'
-        self.session.flush()
+    user_id = user_ids['contributor']
+    create_new_version(waypoint1, user_id)
+    create_new_version(waypoint2, user_id)
+    create_new_version(waypoint3, user_id)
+    create_new_version(route1, user_id)
+    create_new_version(outing1, user_id)
 
-        last_update, _ = es_sync.get_status(self.session)
-
-        changed_users = get_changed_users(self.session, last_update)
-        assert len(changed_users) == 1
-        assert user_id == changed_users[0][0]
-        assert 'u' == changed_users[0][1]
-
-        assert (
-            len(
-                get_changed_documents(
-                    self.session, last_update + datetime.timedelta(0, 1)
-                )
-            )
-            == 0
-        )
-
-    def test_get_deleted_locale_documents(self):
-        # simulate removing a locale
-        self.session.add(
-            ESDeletedLocale(document_id=self.waypoint1.document_id, type='w', lang='fr')
-        )
-        self.session.flush()
-
-        last_update, _ = es_sync.get_status(self.session)
-
-        changed_documents = get_deleted_locale_documents(self.session, last_update)
-
-        assert len(changed_documents) == 1
-        assert 'w' == changed_documents[0][1]
-
-    def test_get_documents_per_type(self):
-        changed_documents = [(1, 'r'), (2, 'w'), (3, 'r'), (4, 'r'), (4, 'r')]
-        docs_per_type = get_documents_per_type(changed_documents)
-        assert docs_per_type == {'r': {1, 3, 4}, 'w': {2}}
-
-    def test_create_search_documents(self):
-        search_documents = []
-        batch_mock = self._create_mock_match(search_documents)(None, 1000)
-
-        self.route1.geometry = DocumentGeometry()
-        self.route1.geometry.lon_lat = '{"type": "Point", "coordinates": [6, 46]}'
-        create_search_documents('r', [self.route1], batch_mock)
-        doc = search_documents[0]
-
-        assert doc['_op_type'] == 'index'
-        assert doc['_id'] == self.route1.document_id
-        assert doc['title_en'] == 'Mont Blanc : Face N'
-        # self.assertEqual(doc['description_en'], '...')
-        assert doc['geom'] == [6, 46]
-
-    def test_create_search_documents_user_profile(self):
-        search_documents = []
-        batch_mock = self._create_mock_match(search_documents)(None, 1000)
-
-        document_id = global_userids['contributor']
-        user_profile = self.session.get(UserProfile, document_id)
-
-        create_search_documents('u', [user_profile], batch_mock)
-        doc = search_documents[0]
-
-        assert doc['_op_type'] == 'index'
-        assert doc['_id'] == document_id
-        assert doc['title_en'] == 'Contributor contributor'
-        # self.assertEqual(doc['description_en'], 'Me')
-        assert doc['title_fr'] == 'Contributor contributor'
-        # self.assertEqual(doc['description_fr'], 'Moi')
-
-    @patch('c2corg_api.scripts.es.sync.ElasticBatch')
-    def test_sync_documents(self, mock):
-        search_documents = []
-        mock.side_effect = self._create_mock_match(search_documents)
-
-        # test that unconfirmed users are ignored
-        user_id = self.global_userids['contributor2']
-        user = self.session.get(User, user_id)
-        user.email_validated = False
-        self.session.flush()
-
-        changed_documents = [
-            (self.waypoint1.document_id, 'w'),
-            (self.waypoint2.document_id, 'w'),
-            (self.waypoint3.document_id, 'w'),
-            (self.route1.document_id, 'r'),
-            (self.outing1.document_id, 'o'),
-            (user_id, 'u'),
+    association_wr = Association.create(waypoint1, route1)
+    association_ww = Association.create(waypoint2, waypoint1)
+    association_ro = Association.create(route1, outing1)
+    user = session.get(UserProfile, user_ids['contributor'])
+    association_uo = Association.create(user, outing1)
+    session.add_all(
+        [
+            association_wr,
+            association_ww,
+            association_ro,
+            association_uo,
+            association_wr.get_log(user_id),
+            association_ww.get_log(user_id),
+            association_ro.get_log(user_id),
+            association_uo.get_log(user_id),
         ]
-        sync_documents(self.session, changed_documents, 1000)
-        assert len(search_documents) == 5
+    )
+    session.flush()
+    return Docs(
+        waypoint1=waypoint1,
+        waypoint2=waypoint2,
+        route1=route1,
+        waypoint3=waypoint3,
+        outing1=outing1,
+    )
 
-        redirected_doc = self._get_by_id(search_documents, self.waypoint3.document_id)
-        assert redirected_doc['_op_type'] == 'delete'
 
-        waypoint1_doc = self._get_by_id(search_documents, self.waypoint1.document_id)
-        assert waypoint1_doc['geom'][0] == pytest.approx(5.71288995, abs=5e-8)
-        assert waypoint1_doc['geom'][1] == pytest.approx(45.64476395, abs=5e-8)
+def test_get_changed_documents(session):
+    last_update, _ = es_sync.get_status(session)
 
-        route_doc = self._get_by_id(search_documents, self.route1.document_id)
-        assert route_doc['title_en'] == 'Mont Blanc : Face N'
-        assert set(route_doc['waypoints']) == {
-            self.waypoint1.document_id,
-            self.waypoint2.document_id,
-        }
+    changed_documents = get_changed_documents(session, last_update)
+    assert len(changed_documents) == 5
+    assert 'o' == changed_documents[0][1]
+    assert 'r' == changed_documents[1][1]
+    assert 'w' == changed_documents[2][1]
 
-        outing_doc = self._get_by_id(search_documents, self.outing1.document_id)
-        assert outing_doc['title_en'] == '...'
-        assert set(outing_doc['waypoints']) == {
-            self.waypoint1.document_id,
-            self.waypoint2.document_id,
-        }
+    assert (
+        len(get_changed_documents(session, last_update + datetime.timedelta(0, 1))) == 0
+    )
 
-    @patch('c2corg_api.scripts.es.sync.ElasticBatch')
-    def test_sync_deleted_documents(self, mock):
-        search_documents = []
-        mock.side_effect = self._create_mock_match(search_documents)
 
-        deleted_documents = [
-            (self.waypoint1.document_id, 'w'),
-            (self.route1.document_id, 'r'),
-            (self.outing1.document_id, 'o'),
+def test_get_changed_documents_for_associations(session, docs):
+    last_update, _ = es_sync.get_status(session)
+
+    changed_documents = get_changed_documents_for_associations(session, last_update)
+    # W1 -> R1 and W2 -> W1 give R1 and O1 each, R1 -> O1 and U -> O1 give O1
+    assert sorted(changed_documents) == sorted(
+        [
+            (docs.route1.document_id, 'r'),
+            (docs.outing1.document_id, 'o'),
+            (docs.route1.document_id, 'r'),
+            (docs.outing1.document_id, 'o'),
+            (docs.outing1.document_id, 'o'),
         ]
-        sync_deleted_documents(self.session, deleted_documents, 1000)
-        assert len(search_documents) == 3
+    )
 
-        waypoint1_doc = self._get_by_id(search_documents, self.waypoint1.document_id)
-        assert waypoint1_doc['_op_type'] == 'delete'
-
-        route_doc = self._get_by_id(search_documents, self.route1.document_id)
-        assert route_doc['_op_type'] == 'delete'
-
-        outing_doc = self._get_by_id(search_documents, self.outing1.document_id)
-        assert outing_doc['_op_type'] == 'delete'
-
-    def _get_by_id(self, search_documents, document_id):
-        return next(
-            filter(lambda doc: doc['_id'] == document_id, search_documents), None
+    assert (
+        len(
+            get_changed_documents_for_associations(
+                session, last_update + datetime.timedelta(0, 1)
+            )
         )
+        == 0
+    )
 
-    def _create_mock_match(self, actions):
-        class MockBatch:
-            def __init__(self, client, batch_size):
-                pass
 
-            def add(self, action):
-                actions.append(action)
+def test_get_changed_routes_and_outings_wr(session, docs):
+    last_update, _ = es_sync.get_status(session)
 
-            def __enter__(self):
-                pass
+    # the outings of R1 list the waypoints of R1, so they have to be
+    # updated too when W1 -> R1 changes
+    changed_documents = get_changed_routes_and_outings_wr(session, last_update)
+    assert sorted(changed_documents) == sorted(
+        [
+            (docs.route1.document_id, 'r'),
+            (docs.outing1.document_id, 'o'),
+        ]
+    )
 
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                pass
-
-        return MockBatch
-
-    def _add_test_data(self):
-        _, date_now = es_sync.get_status(self.session)
-        es_sync.mark_as_updated(self.session, date_now)
-
-        self.waypoint1 = Waypoint(
-            document_id=71171,
-            waypoint_type='summit',
-            elevation=2000,
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-            locales=[
-                WaypointLocale(
-                    lang='fr',
-                    title='Mont Granier',
-                    description='...',
-                    summary='Le Mont [b]Granier[/b]',
-                ),
-                WaypointLocale(
-                    lang='en',
-                    title='Mont Granier',
-                    description='...',
-                    summary='The Mont Granier',
-                ),
-            ],
+    assert (
+        get_changed_routes_and_outings_wr(
+            session, last_update + datetime.timedelta(0, 1)
         )
-        self.waypoint2 = Waypoint(
-            document_id=71172,
-            waypoint_type='summit',
-            elevation=4985,
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-            locales=[
-                WaypointLocale(
-                    lang='en',
-                    title='Mont Blanc',
-                    description='...',
-                    summary='The heighest point in Europe',
-                )
-            ],
-        )
-        self.route1 = Route(
-            document_id=71173,
-            activities=['skitouring'],
-            elevation_max=1500,
-            elevation_min=700,
-            height_diff_up=800,
-            height_diff_down=800,
-            durations='1',
-            locales=[
-                RouteLocale(
-                    lang='en',
-                    title='Face N',
-                    description='...',
-                    gear='paraglider',
-                    title_prefix='Mont Blanc',
-                )
-            ],
-        )
-        self.waypoint3 = Waypoint(
-            document_id=71174,
-            redirects_to=71171,
-            waypoint_type='summit',
-            elevation=4985,
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-            locales=[
-                WaypointLocale(
-                    lang='en',
-                    title='Mont Blanc',
-                    description='...',
-                    summary='The heighest point in Europe',
-                )
-            ],
-        )
-        self.outing1 = Outing(
-            activities=['skitouring'],
-            date_start=datetime.date(2016, 1, 1),
-            date_end=datetime.date(2016, 1, 1),
-            locales=[
-                OutingLocale(lang='en', title='...', description='...', weather='sunny')
-            ],
-        )
-        self.session.add_all(
-            [self.waypoint1, self.waypoint2, self.waypoint3, self.route1, self.outing1]
-        )
-        self.session.flush()
+        == []
+    )
 
-        user_id = self.global_userids['contributor']
-        create_new_version(self.waypoint1, user_id)
-        create_new_version(self.waypoint2, user_id)
-        create_new_version(self.waypoint3, user_id)
-        create_new_version(self.route1, user_id)
-        create_new_version(self.outing1, user_id)
 
-        association_wr = Association.create(self.waypoint1, self.route1)
-        association_ww = Association.create(self.waypoint2, self.waypoint1)
-        association_ro = Association.create(self.route1, self.outing1)
-        user = self.session.get(UserProfile, self.global_userids['contributor'])
-        association_uo = Association.create(user, self.outing1)
-        self.session.add_all(
-            [
-                association_wr,
-                association_ww,
-                association_ro,
-                association_uo,
-                association_wr.get_log(user_id),
-                association_ww.get_log(user_id),
-                association_ro.get_log(user_id),
-                association_uo.get_log(user_id),
-            ]
-        )
-        self.session.flush()
+def test_get_changed_users(session, user_ids):
+    user_id = user_ids['contributor']
+    user = session.get(User, user_id)
+    user.name = 'changed'
+    session.flush()
+
+    last_update, _ = es_sync.get_status(session)
+
+    changed_users = get_changed_users(session, last_update)
+    assert len(changed_users) == 1
+    assert user_id == changed_users[0][0]
+    assert 'u' == changed_users[0][1]
+
+    assert (
+        len(get_changed_documents(session, last_update + datetime.timedelta(0, 1))) == 0
+    )
+
+
+def test_get_deleted_locale_documents(session, docs):
+    # simulate removing a locale
+    session.add(
+        ESDeletedLocale(document_id=docs.waypoint1.document_id, type='w', lang='fr')
+    )
+    session.flush()
+
+    last_update, _ = es_sync.get_status(session)
+
+    changed_documents = get_deleted_locale_documents(session, last_update)
+
+    assert len(changed_documents) == 1
+    assert 'w' == changed_documents[0][1]
+
+
+def test_get_documents_per_type():
+    changed_documents = [(1, 'r'), (2, 'w'), (3, 'r'), (4, 'r'), (4, 'r')]
+    docs_per_type = get_documents_per_type(changed_documents)
+    assert docs_per_type == {'r': {1, 3, 4}, 'w': {2}}
+
+
+def test_create_search_documents(docs):
+    search_documents = []
+    batch_mock = _create_mock_match(search_documents)(None, 1000)
+
+    docs.route1.geometry = DocumentGeometry()
+    docs.route1.geometry.lon_lat = '{"type": "Point", "coordinates": [6, 46]}'
+    create_search_documents('r', [docs.route1], batch_mock)
+    doc = search_documents[0]
+
+    assert doc['_op_type'] == 'index'
+    assert doc['_id'] == docs.route1.document_id
+    assert doc['title_en'] == 'Mont Blanc : Face N'
+    # self.assertEqual(doc['description_en'], '...')
+    assert doc['geom'] == [6, 46]
+
+
+def test_create_search_documents_user_profile(session):
+    search_documents = []
+    batch_mock = _create_mock_match(search_documents)(None, 1000)
+
+    document_id = global_userids['contributor']
+    user_profile = session.get(UserProfile, document_id)
+
+    create_search_documents('u', [user_profile], batch_mock)
+    doc = search_documents[0]
+
+    assert doc['_op_type'] == 'index'
+    assert doc['_id'] == document_id
+    assert doc['title_en'] == 'Contributor contributor'
+    # self.assertEqual(doc['description_en'], 'Me')
+    assert doc['title_fr'] == 'Contributor contributor'
+    # self.assertEqual(doc['description_fr'], 'Moi')
+
+
+@patch('c2corg_api.scripts.es.sync.ElasticBatch')
+def test_sync_documents(mock, session, user_ids, docs):
+    search_documents = []
+    mock.side_effect = _create_mock_match(search_documents)
+
+    # test that unconfirmed users are ignored
+    user_id = user_ids['contributor2']
+    user = session.get(User, user_id)
+    user.email_validated = False
+    session.flush()
+
+    changed_documents = [
+        (docs.waypoint1.document_id, 'w'),
+        (docs.waypoint2.document_id, 'w'),
+        (docs.waypoint3.document_id, 'w'),
+        (docs.route1.document_id, 'r'),
+        (docs.outing1.document_id, 'o'),
+        (user_id, 'u'),
+    ]
+    sync_documents(session, changed_documents, 1000)
+    assert len(search_documents) == 5
+
+    redirected_doc = _get_by_id(search_documents, docs.waypoint3.document_id)
+    assert redirected_doc['_op_type'] == 'delete'
+
+    waypoint1_doc = _get_by_id(search_documents, docs.waypoint1.document_id)
+    assert waypoint1_doc['geom'][0] == pytest.approx(5.71288995, abs=5e-8)
+    assert waypoint1_doc['geom'][1] == pytest.approx(45.64476395, abs=5e-8)
+
+    route_doc = _get_by_id(search_documents, docs.route1.document_id)
+    assert route_doc['title_en'] == 'Mont Blanc : Face N'
+    assert set(route_doc['waypoints']) == {
+        docs.waypoint1.document_id,
+        docs.waypoint2.document_id,
+    }
+
+    outing_doc = _get_by_id(search_documents, docs.outing1.document_id)
+    assert outing_doc['title_en'] == '...'
+    assert set(outing_doc['waypoints']) == {
+        docs.waypoint1.document_id,
+        docs.waypoint2.document_id,
+    }
+
+
+@patch('c2corg_api.scripts.es.sync.ElasticBatch')
+def test_sync_deleted_documents(mock, session, docs):
+    search_documents = []
+    mock.side_effect = _create_mock_match(search_documents)
+
+    deleted_documents = [
+        (docs.waypoint1.document_id, 'w'),
+        (docs.route1.document_id, 'r'),
+        (docs.outing1.document_id, 'o'),
+    ]
+    sync_deleted_documents(session, deleted_documents, 1000)
+    assert len(search_documents) == 3
+
+    waypoint1_doc = _get_by_id(search_documents, docs.waypoint1.document_id)
+    assert waypoint1_doc['_op_type'] == 'delete'
+
+    route_doc = _get_by_id(search_documents, docs.route1.document_id)
+    assert route_doc['_op_type'] == 'delete'
+
+    outing_doc = _get_by_id(search_documents, docs.outing1.document_id)
+    assert outing_doc['_op_type'] == 'delete'
+
+
+def _get_by_id(search_documents, document_id):
+    return next(filter(lambda doc: doc['_id'] == document_id, search_documents), None)
+
+
+def _create_mock_match(actions):
+    class MockBatch:
+        def __init__(self, client, batch_size):
+            pass
+
+        def add(self, action):
+            actions.append(action)
+
+        def __enter__(self):
+            pass
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    return MockBatch

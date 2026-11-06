@@ -14,7 +14,7 @@ from sqlalchemy.engine import make_url
 
 from c2corg_api import caching as caching_common
 from c2corg_api.config import get_appsettings
-from c2corg_api.models import DBSession, commit_or_rollback, sessionmaker
+from c2corg_api.models import DBSession, commit_or_rollback
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
@@ -97,6 +97,123 @@ def send_json(client, method, *args, status=200, **kwargs):
         errors = res.body if res.status_code == 400 else ''
         pytest.fail(f'Bad response: {res.status} (not {status}) : {errors}')
     return res
+
+
+def auth_headers(username=None, token=None, headers=None):
+    """Return the headers with the token of the given user (or token)."""
+    if not headers:
+        headers = {}
+    if not token:
+        token = global_tokens[username]
+    headers['Authorization'] = 'JWT token="' + token + '"'
+    return headers
+
+
+def get_error(errors, name):
+    """Return the error about the given name; fail without one."""
+    for error in errors:
+        if name == error.get('name'):
+            return error
+    pytest.fail(f'no error for {name}')
+
+
+def get_locale(locales, lang):
+    """Return the locale of the given language in a JSON list of locales."""
+    return next(filter(lambda locale: locale['lang'] == lang, locales), None)
+
+
+def assert_errors_contain(body, key, value=None):
+    """Check that an answer has an error about `key` (with this description)."""
+    for error in errors_of(body):
+        if error.get('name') == key:
+            if value is not None:
+                assert error.get('description') == value
+            return
+    pytest.fail(str(body) + ' does not contain ' + key)
+
+
+def assert_body_equal(body, key, expected):
+    """Check a value of a JSON body."""
+    assert body.get(key) == expected
+
+
+def assert_error(errors, name, description):
+    """Check that the errors include this one."""
+    for error in errors:
+        if description == error.get('description') and name == error.get('name'):
+            return
+    pytest.fail(f'no error ({name}, {description}) in {errors}')
+
+
+def assert_coordinates_equal(coord1, coord2):
+    """Check two coordinates, to the nearest 5e-8."""
+    assert len(coord1) == len(coord2), 'not the same dimension'
+    for i in range(0, len(coord1)):
+        assert coord1[i] == pytest.approx(coord2[i], abs=5e-8), (
+            f'{coord1[i]} does not almost equal {coord2[i]}'
+        )
+
+
+def get_json_with_token(client, url, token, status=200):
+    """GET a URL with the given token; return the JSON body."""
+    headers = auth_headers(token=token)
+    return client.get(url, headers=headers, status=status).json
+
+
+def get_json_with_contributor(client, url, status=200):
+    """GET a URL as the contributor; return the JSON body."""
+    headers = auth_headers(username='contributor')
+    return client.get(url, headers=headers, status=status).json
+
+
+def get_json_with_moderator(client, url, status):
+    """GET a URL as the moderator; return the JSON body."""
+    headers = auth_headers(username='moderator')
+    return client.get(url, headers=headers, status=status).json
+
+
+def post_json_with_token(client, url, token, body={}, status=200):
+    """POST a JSON body with the given token; return the JSON answer."""
+    headers = auth_headers(token=token)
+    return send_json(client, 'post', url, body, headers=headers, status=status).json
+
+
+def post_json_with_contributor(
+    client, url, body={}, status=200, username='contributor', headers={}
+):
+    """POST a JSON body as a user (the contributor); return the JSON answer."""
+    headers = auth_headers(username=username, headers=headers)
+    return send_json(client, 'post', url, body, headers=headers, status=status).json
+
+
+def assert_notified_es(queue_config):
+    """Check that a sync. notification was sent for ES, and take it."""
+    queue = queue_config.queue(queue_config.connection)
+    assert queue.get() is not None, 'no sync. notification sent for ES'
+
+
+def assert_not_notified_es(queue_config):
+    """Check that no sync. notification was sent for ES."""
+    queue = queue_config.queue(queue_config.connection)
+    assert queue.get() is None, 'unexpected sync. notification sent for ES'
+
+
+def sync_es_queue(session, queue_config):
+    """Check the sync. notification for ES, then sync. the index."""
+    from c2corg_api.scripts.es.sync import sync_es
+
+    assert_notified_es(queue_config)
+    sync_es(session)
+
+
+def get_feed_change(session, document_id, change_type=None):
+    """Return the feed entry of a document (of the given type of change)."""
+    from c2corg_api.models.feed import DocumentChange
+
+    q = session.query(DocumentChange).filter(DocumentChange.document_id == document_id)
+    if change_type:
+        q = q.filter(DocumentChange.change_type == change_type)
+    return q.first()
 
 
 def invalid_parameters(response):
@@ -331,70 +448,6 @@ def teardown_package():
         alembic_config = _get_alembic_config()
         downgrade(alembic_config, 'base')
         initializees.drop_index()
-
-
-class AssertionsMixin:
-    def assertCoodinateEquals(self, coord1, coord2):  # noqa
-        assert len(coord1) == len(coord2), 'not the same dimension'
-        for i in range(0, len(coord1)):
-            assert coord1[i] == pytest.approx(coord2[i], abs=5e-8), (
-                f'{coord1[i]} does not almost equal {coord2[i]}'
-            )
-
-
-class BaseTestCase(AssertionsMixin):
-    """The idea for unit tests is, that the database tables
-    are created only once per test run and every test case uses a
-    transaction which is rolled back at the end. This avoids that
-    the database is set up and teared down after each test case.
-
-    See also:
-    http://www.sontek.net/blog/2011/12/01/writing_tests_for_pyramid_and_sqlalchemy.html
-    """
-
-    @pytest.fixture(autouse=True)
-    def _base_fixtures(
-        self,
-        client,
-        db_connection,
-        email_service,
-        queue_config,
-        app_state,
-    ):
-        """Expose the pytest fixtures to the tests and run setUp/tearDown."""
-        # The fixtures are defined in conftest.py.
-        self.global_userids = global_userids
-        self.global_tokens = global_tokens
-        self.global_passwords = global_passwords
-        self.settings = settings
-        self.app = client
-        self.connection = db_connection
-        # the session used in the test code, bound to the test's connection
-        # (the views use DBSession, bound to the same connection)
-        self.session = sessionmaker()(bind=db_connection)
-        self.email_service = email_service
-        self.queue_config = queue_config
-        # pytest does not call setUp/tearDown on plain classes: the
-        # subclasses still define them, so call them here
-        self.setUp()
-        yield
-        self.tearDown()
-        self.session.close()
-
-    def setUp(self):
-        """Prepare the test; subclasses override it."""
-
-    def tearDown(self):
-        """Clean up after the test; subclasses override it."""
-
-    def app_post_json(self, *args, **kwargs):
-        return self.app_send_json('post', *args, **kwargs)
-
-    def app_put_json(self, *args, **kwargs):
-        return self.app_send_json('put', *args, **kwargs)
-
-    def app_send_json(self, action, *args, **kwargs):
-        return send_json(self.app, action, *args, **kwargs)
 
 
 def reset_queue(queue_config):

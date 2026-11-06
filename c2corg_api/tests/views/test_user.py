@@ -30,8 +30,15 @@ from c2corg_api.security.roles import (
     hash_token,
     log_validated_user_i_know_what_i_do,
 )
-from c2corg_api.tests import errors_of
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import (
+    assert_body_equal,
+    assert_errors_contain,
+    errors_of,
+    get_json_with_token,
+    post_json_with_token,
+    send_json,
+    sync_es_queue,
+)
 
 forum_username_tests = {
     # min length
@@ -54,16 +61,14 @@ forum_username_tests = {
 }
 
 
-class BaseUserTestRest(BaseTestRest):
-    def setUp(self):
-        self.original_discourse_client = get_discourse_client(self.settings)
+class BaseUserTestRest:
+    @pytest.fixture(autouse=True)
+    def _setup_base_user_test_rest(self, client, settings):
+        self.original_discourse_client = get_discourse_client(settings)
         self._prefix = '/users'
         self._model = User
-        BaseTestRest.setUp(self)
         self.set_discourse_up()
-
-    def tearDown(self):
-        BaseTestRest.tearDown(self)
+        yield
         self.set_discourse_not_mocked()
 
     def set_discourse_client_mock(self, client):
@@ -83,9 +88,9 @@ class BaseUserTestRest(BaseTestRest):
         mock.sso_sync = MagicMock()
         self.set_discourse_client_mock(mock)
 
-    def set_discourse_down(self):
+    def set_discourse_down(self, settings):
         # unittest.Mock wants a concrete object to throw correctly
-        mock = APIDiscourseClient(self.settings)
+        mock = APIDiscourseClient(settings)
         mock.redirect_without_nonce = MagicMock(
             return_value='https://discourse_redirect', side_effect=Exception
         )
@@ -116,7 +121,7 @@ class BaseUserTestRest(BaseTestRest):
 
 class TestUserRest(BaseUserTestRest):
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_always_register_non_validated_users(self, _send_email):
+    def test_always_register_non_validated_users(self, _send_email, client, session):
         request_body = {
             'username': 'test',
             'forum_username': 'test',
@@ -128,15 +133,15 @@ class TestUserRest(BaseUserTestRest):
         url = self._prefix + '/register'
 
         # First succeed in creating a new user
-        body = self.app_post_json(url, request_body, status=200).json
+        body = send_json(client, 'post', url, request_body, status=200).json
         user_id = body.get('id')
-        user = self.session.get(User, user_id)
+        user = session.get(User, user_id)
         assert not user.email_validated
         assert user.tos_validated is not None
         _send_email.check_call_once()
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_default_lang(self, _send_email):
+    def test_register_default_lang(self, _send_email, client, session):
         request_body = {
             'username': 'test',
             'forum_username': 'test',
@@ -146,14 +151,14 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
 
-        body = self.app_post_json(url, request_body, status=200).json
+        body = send_json(client, 'post', url, request_body, status=200).json
         user_id = body.get('id')
-        user = self.session.get(User, user_id)
+        user = session.get(User, user_id)
         assert user.lang == 'fr'
         _send_email.check_call_once()
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_passed_lang(self, _send_email):
+    def test_register_passed_lang(self, _send_email, client, session):
         request_body = {
             'username': 'test',
             'forum_username': 'test',
@@ -164,13 +169,13 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
 
-        body = self.app_post_json(url, request_body, status=200).json
+        body = send_json(client, 'post', url, request_body, status=200).json
         user_id = body.get('id')
-        user = self.session.get(User, user_id)
+        user = session.get(User, user_id)
         assert user.lang == 'en'
         _send_email.check_call_once()
 
-    def test_register_invalid_lang(self):
+    def test_register_invalid_lang(self, client):
         request_body = {
             'username': 'test',
             'forum_username': 'test',
@@ -180,10 +185,10 @@ class TestUserRest(BaseUserTestRest):
             'email': 'some_user@camptocamp.org',
         }
         url = self._prefix + '/register'
-        self.app_post_json(url, request_body, status=422).json
+        send_json(client, 'post', url, request_body, status=422).json
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_forum_username_validity(self, _send_email):
+    def test_register_forum_username_validity(self, _send_email, client):
         url = self._prefix + '/register'
         i = 0
         for forum_username, value in forum_username_tests.items():
@@ -196,14 +201,14 @@ class TestUserRest(BaseUserTestRest):
                 'email': f'some_user{i}@camptocamp.org',
             }
             if value is False:
-                self.app_post_json(url, request_body, status=200).json
+                send_json(client, 'post', url, request_body, status=200).json
             else:
                 # the schema checks it: 422
-                json = self.app_post_json(url, request_body, status=422).json
+                json = send_json(client, 'post', url, request_body, status=422).json
                 assert errors_of(json)[0]['description'] == value
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_forum_username_unique(self, _send_email):
+    def test_register_forum_username_unique(self, _send_email, client):
         request_body = {
             'username': 'test',
             'forum_username': 'Contributor',
@@ -212,11 +217,11 @@ class TestUserRest(BaseUserTestRest):
             'email': 'some_user@camptocamp.org',
         }
         url = self._prefix + '/register'
-        json = self.app_post_json(url, request_body, status=400).json
+        json = send_json(client, 'post', url, request_body, status=400).json
         assert json['errors'][0]['description'] == 'already used forum_username'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_stripped_username(self, _send_email):
+    def test_register_stripped_username(self, _send_email, client, session):
         request_body = {
             'username': ' contributor ',
             'forum_username': 'Foo',
@@ -225,7 +230,7 @@ class TestUserRest(BaseUserTestRest):
             'email': 'some_user@camptocamp.org',
         }
         url = self._prefix + '/register'
-        json = self.app_post_json(url, request_body, status=400).json
+        json = send_json(client, 'post', url, request_body, status=400).json
         assert json['errors'][0]['description'] == 'This username already exists'
 
         request_body = {
@@ -236,15 +241,15 @@ class TestUserRest(BaseUserTestRest):
             'email': 'space@camptocamp.org',
         }
         url = self._prefix + '/register'
-        body = self.app_post_json(url, request_body, status=200).json
-        self.assertBodyEqual(body, 'username', 'username with spaces')
+        body = send_json(client, 'post', url, request_body, status=200).json
+        assert_body_equal(body, 'username', 'username with spaces')
         user_id = body.get('id')
-        user = self.session.get(User, user_id)
+        user = session.get(User, user_id)
         assert user is not None
         assert user.username == 'username with spaces'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_username_email_not_equals_email(self, _send_email):
+    def test_register_username_email_not_equals_email(self, _send_email, client):
         request_body = {
             'username': 'someone_else@camptocamp.org',
             'forum_username': 'Contributor4',
@@ -253,7 +258,7 @@ class TestUserRest(BaseUserTestRest):
             'email': 'some_user@camptocamp.org',
         }
         url = self._prefix + '/register'
-        json = self.app_post_json(url, request_body, status=400).json
+        json = send_json(client, 'post', url, request_body, status=400).json
         assert (
             json['errors'][0]['description']
             == 'An email address used as username should be the '
@@ -261,7 +266,7 @@ class TestUserRest(BaseUserTestRest):
         )
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_username_email_equals_email(self, _send_email):
+    def test_register_username_email_equals_email(self, _send_email, client):
         request_body = {
             'username': 'some_user@camptocamp.org',
             'forum_username': 'Contributor4',
@@ -270,10 +275,10 @@ class TestUserRest(BaseUserTestRest):
             'email': 'some_user@camptocamp.org',
         }
         url = self._prefix + '/register'
-        self.app_post_json(url, request_body, status=200)
+        send_json(client, 'post', url, request_body, status=200)
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_invalid_email(self, _send_email):
+    def test_register_invalid_email(self, _send_email, client):
         request_body = {
             'username': 'test',
             'forum_username': 'Contributor',
@@ -282,11 +287,11 @@ class TestUserRest(BaseUserTestRest):
             'email': 'some_useratcamptocamp.org',
         }
         url = self._prefix + '/register'
-        json = self.app_post_json(url, request_body, status=422).json
+        json = send_json(client, 'post', url, request_body, status=422).json
         assert errors_of(json)[0]['description'] == 'Invalid email address'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_discourse_up(self, _send_email):
+    def test_register_discourse_up(self, _send_email, client, session):
         request_body = {
             'username': 'test',
             'forum_username': 'testf',
@@ -297,18 +302,18 @@ class TestUserRest(BaseUserTestRest):
         url = self._prefix + '/register'
 
         # First succeed in creating a new user
-        body = self.app_post_json(url, request_body, status=200).json
-        self.assertBodyEqual(body, 'username', 'test')
-        self.assertBodyEqual(body, 'forum_username', 'testf')
-        self.assertBodyEqual(body, 'name', 'Max Mustermann')
-        self.assertBodyEqual(body, 'email', 'some_user@camptocamp.org')
+        body = send_json(client, 'post', url, request_body, status=200).json
+        assert_body_equal(body, 'username', 'test')
+        assert_body_equal(body, 'forum_username', 'testf')
+        assert_body_equal(body, 'name', 'Max Mustermann')
+        assert_body_equal(body, 'email', 'some_user@camptocamp.org')
         assert 'password' not in body
         assert 'id' in body
         user_id = body.get('id')
-        user = self.session.get(User, user_id)
+        user = session.get(User, user_id)
         assert user is not None
         assert not user.email_validated
-        profile = self.session.get(UserProfile, user_id)
+        profile = session.get(UserProfile, user_id)
         assert profile is not None
         assert len(profile.versions) == 1
         _send_email.check_call_once()
@@ -317,31 +322,31 @@ class TestUserRest(BaseUserTestRest):
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = f'/users/validate_register_email/{nonce}'
-        self.app_post_json(url_api_validation, {}, status=200)
+        send_json(client, 'post', url_api_validation, {}, status=200)
 
         # Need to expunge the profile and user so that the latest
         # version (the one from the view) is actually picked up.
-        self.session.expunge(profile)
-        self.session.expunge(user)
-        profile = self.session.get(UserProfile, user_id)
+        session.expunge(profile)
+        session.expunge(user)
+        profile = session.get(UserProfile, user_id)
         assert len(profile.versions) == 1
-        user = self.session.get(User, user_id)
+        user = session.get(User, user_id)
         assert user.email_validated
 
         # Now reject non unique attributes
-        body = self.app_post_json(url, request_body, status=400).json
-        self.assertErrorsContain(body, 'email')
-        self.assertErrorsContain(body, 'username')
+        body = send_json(client, 'post', url, request_body, status=400).json
+        assert_errors_contain(body, 'email')
+        assert_errors_contain(body, 'username')
 
         # Require username and email attributes (the schema: 422)
-        body = self.app_post_json(url, {}, status=422).json
-        self.assertErrorsContain(body, 'email')
-        self.assertErrorsContain(body, 'username')
+        body = send_json(client, 'post', url, {}, status=422).json
+        assert_errors_contain(body, 'email')
+        assert_errors_contain(body, 'username')
         # and the password (its validator, with a valid body: 400)
         without_password = {**request_body, 'username': 'other', 'email': 'o@x.org'}
         del without_password['password']
-        body = self.app_post_json(url, without_password, status=400).json
-        self.assertErrorsContain(body, 'password', 'Required')
+        body = send_json(client, 'post', url, without_password, status=400).json
+        assert_errors_contain(body, 'password', 'Required')
 
         # Usage of utf8 password
         request_utf8 = {
@@ -353,10 +358,10 @@ class TestUserRest(BaseUserTestRest):
             'password': 'Élève 日本!1234',  # nosec
             'email': 'utf8@camptocamp.org',
         }
-        body = self.app_post_json(url, request_utf8, status=200).json
+        body = send_json(client, 'post', url, request_utf8, status=200).json
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_search_index(self, _send_email):
+    def test_register_search_index(self, _send_email, client, session, queue_config):
         """Tests that user accounts are only indexed once they are confirmed."""
         request_body = {
             'username': 'test',
@@ -367,12 +372,12 @@ class TestUserRest(BaseUserTestRest):
         }
         url = self._prefix + '/register'
 
-        body = self.app_post_json(url, request_body, status=200).json
+        body = send_json(client, 'post', url, request_body, status=200).json
         assert 'id' in body
         user_id = body.get('id')
 
         # check that the profile is not inserted in the search index
-        sync_es(self.session)
+        sync_es(session)
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id, index=elasticsearch_config['index'], ignore=404
         )
@@ -381,10 +386,10 @@ class TestUserRest(BaseUserTestRest):
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = f'/users/validate_register_email/{nonce}'
-        self.app_post_json(url_api_validation, {}, status=200)
+        send_json(client, 'post', url_api_validation, {}, status=200)
 
         # check that the profile is inserted in the index after confirmation
-        self.sync_es()
+        sync_es_queue(session, queue_config)
         search_doc = search_documents[USERPROFILE_TYPE].get(
             id=user_id, index=elasticsearch_config['index']
         )
@@ -394,8 +399,8 @@ class TestUserRest(BaseUserTestRest):
         assert search_doc['title_fr'] == 'Max Mustermann testf'
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_register_discourse_down(self, _send_email):
-        self.set_discourse_down()
+    def test_register_discourse_down(self, _send_email, client, settings):
+        self.set_discourse_down(settings)
         request_body = {
             'username': 'test',
             'forum_username': 'testf',
@@ -406,29 +411,33 @@ class TestUserRest(BaseUserTestRest):
         url = self._prefix + '/register'
 
         # First succeed in creating a new user
-        self.app_post_json(url, request_body, status=200)
+        send_json(client, 'post', url, request_body, status=200)
 
         # Simulate confirmation email validation
         nonce = self.extract_nonce(_send_email, 'validate_register_email')
         url_api_validation = f'/users/validate_register_email/{nonce}'
 
-        self.app_post_json(url_api_validation, {}, status=500)
+        send_json(client, 'post', url_api_validation, {}, status=500)
 
-    def test_forgot_password_non_existing_email(self):
+    def test_forgot_password_non_existing_email(self, client):
         url = '/users/request_password_change'
-        body = self.app_post_json(
-            url, {'email': 'non_existing_oeuhsaeuh@camptocamp.org'}, status=400
+        body = send_json(
+            client,
+            'post',
+            url,
+            {'email': 'non_existing_oeuhsaeuh@camptocamp.org'},
+            status=400,
         ).json
-        self.assertErrorsContain(body, 'email', 'No user with this email')
+        assert_errors_contain(body, 'email', 'No user with this email')
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_forgot_password_discourse_up(self, _send_email):
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
+    def test_forgot_password_discourse_up(self, _send_email, client, session, user_ids):
+        user_id = user_ids['contributor']
+        user = session.get(User, user_id)
         initial_encoded_password = user.password
 
         url = '/users/request_password_change'
-        self.app_post_json(url, {'email': user.email}, status=200).json
+        send_json(client, 'post', url, {'email': user.email}, status=200).json
 
         _send_email.check_call_once()
 
@@ -436,7 +445,9 @@ class TestUserRest(BaseUserTestRest):
         nonce = self.extract_nonce(_send_email, 'change_password')
         url_api_validation = f'/users/validate_new_password/{nonce}'
 
-        self.app_post_json(
+        send_json(
+            client,
+            'post',
             url_api_validation,
             {
                 'password': 'New$Password1'  # nosec - test fixture
@@ -444,21 +455,23 @@ class TestUserRest(BaseUserTestRest):
             status=200,
         )
 
-        self.session.expunge(user)
-        user = self.session.get(User, user_id)
+        session.expunge(user)
+        user = session.get(User, user_id)
         assert user.validation_nonce is None
         modified_encoded_password = user.password
 
         assert initial_encoded_password != modified_encoded_password
 
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_forgot_password_discourse_down(self, _send_email):
-        self.set_discourse_down()
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
+    def test_forgot_password_discourse_down(
+        self, _send_email, client, session, settings, user_ids
+    ):
+        self.set_discourse_down(settings)
+        user_id = user_ids['contributor']
+        user = session.get(User, user_id)
 
         url = '/users/request_password_change'
-        self.app_post_json(url, {'email': user.email}, status=200).json
+        send_json(client, 'post', url, {'email': user.email}, status=200).json
 
         _send_email.check_call_once()
 
@@ -467,7 +480,9 @@ class TestUserRest(BaseUserTestRest):
         url_api_validation = f'/users/validate_new_password/{nonce}'
 
         # Succeed anyway since only the password has changed
-        self.app_post_json(
+        send_json(
+            client,
+            'post',
             url_api_validation,
             {
                 'password': 'New$Password1'  # nosec - test fixture
@@ -475,18 +490,18 @@ class TestUserRest(BaseUserTestRest):
             status=200,
         )
 
-    def test_forgot_password_blocked_account(self):
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
+    def test_forgot_password_blocked_account(self, client, session, user_ids):
+        user_id = user_ids['contributor']
+        user = session.get(User, user_id)
         user.blocked = True
-        self.session.flush()
+        session.flush()
 
         url = '/users/request_password_change'
-        self.app_post_json(url, {'email': user.email}, status=403)
+        send_json(client, 'post', url, {'email': user.email}, status=403)
 
     # @mark.jobs
     @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_purge_accounts(self, _send_email):
+    def test_purge_accounts(self, _send_email, client, session):
         from datetime import datetime
 
         from c2corg_api.jobs.purge_non_activated_accounts import purge_account
@@ -500,11 +515,11 @@ class TestUserRest(BaseUserTestRest):
         }
 
         now = datetime.utcnow()
-        query = self.session.query(User).filter(User.username == 'test')
+        query = session.query(User).filter(User.username == 'test')
 
         # First succeed in creating a new user
         url = '/users/register'
-        self.app_post_json(url, request_body, status=200)
+        send_json(client, 'post', url, request_body, status=200)
 
         # Then simulate a scheduled call to purge accounts
         purge_account()
@@ -514,22 +529,22 @@ class TestUserRest(BaseUserTestRest):
 
         # Expire nonce
         user.validation_nonce_expire = now
-        self.session.commit()
+        session.commit()
 
         # The user should be removed
         purge_account()
         assert 0 == query.count()
 
     # @mark.jobs
-    def test_purge_tokens(self):
+    def test_purge_tokens(self, client, session, settings, passwords):
         from datetime import datetime
 
         from c2corg_api.jobs.purge_expired_tokens import purge_token
 
-        body = self.login('moderator', status=200).json
+        body = self.login(client, settings, passwords, 'moderator', status=200).json
         token_value = body['token']
 
-        query = self.session.query(Token).filter(Token.value == hash_token(token_value))
+        query = session.query(Token).filter(Token.value == hash_token(token_value))
 
         now = datetime.utcnow()
 
@@ -540,64 +555,69 @@ class TestUserRest(BaseUserTestRest):
         # Expire token
         token = query.one()
         token.expire = now
-        self.session.commit()
+        session.commit()
 
         # The token should be removed
         purge_token()
         assert 0 == query.count()
 
-    def test_purge_tokens_logs_out_from_the_forum(self):
+    def test_purge_tokens_logs_out_from_the_forum(
+        self, client, session, settings, user_ids, passwords
+    ):
         from c2corg_api.jobs import purge_expired_tokens
 
-        contributor = self.global_userids['contributor']
-        moderator = self.global_userids['moderator']
+        contributor = user_ids['contributor']
+        moderator = user_ids['moderator']
         past = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=1)
         # the contributor: every token expired (the global one too)
-        self.login('contributor')
-        self.session.query(Token).filter(Token.userid == contributor).update(
+        self.login(client, settings, passwords, 'contributor')
+        session.query(Token).filter(Token.userid == contributor).update(
             {'expire': past}
         )
         # the moderator: one token expired, the global one still valid
-        moderator_token = self.login('moderator').json['token']
-        self.session.query(Token).filter(
-            Token.value == hash_token(moderator_token)
-        ).update({'expire': past})
-        self.session.commit()
+        moderator_token = self.login(client, settings, passwords, 'moderator').json[
+            'token'
+        ]
+        session.query(Token).filter(Token.value == hash_token(moderator_token)).update(
+            {'expire': past}
+        )
+        session.commit()
 
-        client = Mock()
+        forum = Mock()
         with (
             patch.object(
-                purge_expired_tokens, 'get_discourse_client', return_value=client
+                purge_expired_tokens, 'get_discourse_client', return_value=forum
             ),
             patch.object(purge_expired_tokens.time, 'sleep'),
         ):
-            purge_expired_tokens.purge_token(self.settings)
+            purge_expired_tokens.purge_token(settings)
 
-        client.logout.assert_called_once_with(contributor)
-        assert (
-            self.session.query(Token).filter(Token.userid == contributor).count() == 0
-        )
-        assert self.session.query(Token).filter(Token.userid == moderator).count() == 1
+        forum.logout.assert_called_once_with(contributor)
+        assert session.query(Token).filter(Token.userid == contributor).count() == 0
+        assert session.query(Token).filter(Token.userid == moderator).count() == 1
 
-    def test_logout_from_forum(self):
+    def test_logout_from_forum(self, settings):
         from c2corg_api.jobs import purge_expired_tokens
 
-        client = Mock()
-        client.logout.side_effect = [Exception('not on the forum'), None]
+        forum = Mock()
+        forum.logout.side_effect = [Exception('not on the forum'), None]
         with (
             patch.object(
-                purge_expired_tokens, 'get_discourse_client', return_value=client
+                purge_expired_tokens, 'get_discourse_client', return_value=forum
             ),
             patch.object(purge_expired_tokens.time, 'sleep') as sleep,
         ):
-            purge_expired_tokens.logout_from_forum(self.settings, [3, 4])
+            purge_expired_tokens.logout_from_forum(settings, [3, 4])
 
         # a failure does not stop the others
-        assert [c.args for c in client.logout.call_args_list] == [(3,), (4,)]
+        assert [c.args for c in forum.logout.call_args_list] == [(3,), (4,)]
         sleep.assert_called_once_with(purge_expired_tokens.FORUM_LOGOUT_INTERVAL)
 
     def login(
         self,
+        client,
+        settings,
+        passwords,
         username,
         password=None,
         status=200,
@@ -607,7 +627,7 @@ class TestUserRest(BaseUserTestRest):
         accept_tos=None,
     ):
         if not password:
-            password = self.global_passwords[username]
+            password = passwords[username]
 
         request_body = {'username': username, 'password': password}
 
@@ -621,65 +641,80 @@ class TestUserRest(BaseUserTestRest):
             request_body['accept_tos'] = accept_tos
 
         url = '/users/login'
-        response = self.app_post_json(url, request_body, status=status)
+        response = send_json(client, 'post', url, request_body, status=status)
         return response
 
-    def test_login_success_discourse_up(self):
-        body = self.login('moderator', status=200).json
+    def test_login_success_discourse_up(self, client, settings, passwords):
+        body = self.login(client, settings, passwords, 'moderator', status=200).json
         assert 'token' in body
 
-    def test_login_success_discourse_down(self):
+    def test_login_success_discourse_down(self, client, settings, passwords):
         # Topoguide login allowed even if Discourse is down.
-        body = self.login('moderator', status=200).json
+        body = self.login(client, settings, passwords, 'moderator', status=200).json
         assert 'token' in body
 
-    def test_login_discourse_disabled(self):
+    def test_login_discourse_disabled(self, client, settings, passwords):
         """Log in, without a forum session to open, when the forum is disabled."""
         self.set_discourse_client_mock(DisabledDiscourseClient())
-        body = self.login('moderator', discourse=True, status=200).json
+        body = self.login(
+            client, settings, passwords, 'moderator', discourse=True, status=200
+        ).json
         assert 'token' in body
         assert body.get('redirect_internal') is None
 
-    def test_login_success_use_email(self):
+    def test_login_success_use_email(self, client, settings, passwords):
         # login allowed if providing the email instead of login
         body = self.login(
-            'moderator@camptocamp.org', self.global_passwords['moderator'], status=200
+            client,
+            settings,
+            passwords,
+            'moderator@camptocamp.org',
+            passwords['moderator'],
+            status=200,
         ).json
         assert 'token' in body
 
-    def test_login_success_with_legacy_short_password(self):
+    def test_login_success_with_legacy_short_password(
+        self, client, session, settings, user_ids, passwords
+    ):
         # Regression test: MINIMUM_PASSWORD_LENGTH/complexity are policy
         # for *setting* a password (register, reset), not for checking an
         # existing one - an account created before this policy existed
         # must still be able to log in with its original short/simple
         # password.
-        contributor = self.session.get(User, self.global_userids['contributor'])
+        contributor = session.get(User, user_ids['contributor'])
         # Test fixture, not a real credential; deliberately weak/short
         # to simulate a pre-policy account.
         contributor.password = 'abc'  # nosec
-        self.session.flush()
+        session.flush()
 
-        body = self.login('contributor', password='abc', status=200).json
+        body = self.login(
+            client, settings, passwords, 'contributor', password='abc', status=200
+        ).json
         assert 'token' in body
 
-    def test_login_with_a_stored_password_not_a_bcrypt_hash(self):
+    def test_login_with_a_stored_password_not_a_bcrypt_hash(
+        self, client, session, settings, user_ids, passwords
+    ):
         # #592: "Invalid salt" answered a 500
-        contributor = self.session.get(User, self.global_userids['contributor'])
+        contributor = session.get(User, user_ids['contributor'])
         contributor._password = 'not a bcrypt hash'  # nosec B105
-        self.session.flush()
+        session.flush()
 
-        body = self.login('contributor', status=401).json
+        body = self.login(client, settings, passwords, 'contributor', status=401).json
         assert body['status'] == 'error'
 
-    def test_login_blocked_account(self):
-        contributor = self.session.get(User, self.global_userids['contributor'])
+    def test_login_blocked_account(
+        self, client, session, settings, user_ids, passwords
+    ):
+        contributor = session.get(User, user_ids['contributor'])
         contributor.blocked = True
-        self.session.flush()
+        session.flush()
 
-        body = self.login('contributor', status=403).json
-        self.assertErrorsContain(body, 'Forbidden', 'account blocked')
+        body = self.login(client, settings, passwords, 'contributor', status=403).json
+        assert_errors_contain(body, 'Forbidden', 'account blocked')
 
-    def test_login_discourse_success(self):
+    def test_login_discourse_success(self, client, session, settings, passwords):
         self.set_discourse_not_mocked()
         # return_sso_url tells the SSO provider (us) which Discourse
         # instance to redirect back to - not a real secret, only used to
@@ -690,17 +725,19 @@ class TestUserRest(BaseUserTestRest):
 
         sso, sig = self._build_signed_sso_payload(return_sso_url)
 
-        moderator = self.session.query(User).filter(User.username == 'moderator').one()
+        moderator = session.query(User).filter(User.username == 'moderator').one()
         redirect1 = self.discourse_client.redirect(moderator, sso, sig)
         assert redirect1.startswith(return_sso_url + '?')
 
-        body = self.login('moderator', sso=sso, sig=sig, discourse=True).json
+        body = self.login(
+            client, settings, passwords, 'moderator', sso=sso, sig=sig, discourse=True
+        ).json
         assert 'token' in body
         redirect2 = body['redirect']
 
         assert redirect1 == redirect2
 
-    def test_login_discourse_rejects_unlisted_return_sso_url(self):
+    def test_login_discourse_rejects_unlisted_return_sso_url(self, session):
         self.set_discourse_not_mocked()
         self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
         self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
@@ -713,11 +750,11 @@ class TestUserRest(BaseUserTestRest):
             'https://not-allowed.example.org/session/sso_login'
         )
 
-        moderator = self.session.query(User).filter(User.username == 'moderator').one()
+        moderator = session.query(User).filter(User.username == 'moderator').one()
         with pytest.raises(HTTPBadRequest):
             self.discourse_client.redirect(moderator, sso, sig)
 
-    def test_discourse_redirect_success(self):
+    def test_discourse_redirect_success(self, client, session, tokens):
         self.set_discourse_not_mocked()
         self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
         return_sso_url = 'https://forum-test.example.org/session/sso_login'
@@ -725,18 +762,19 @@ class TestUserRest(BaseUserTestRest):
 
         sso, sig = self._build_signed_sso_payload(return_sso_url)
 
-        moderator = self.session.query(User).filter(User.username == 'moderator').one()
+        moderator = session.query(User).filter(User.username == 'moderator').one()
         expected = self.discourse_client.redirect(moderator, sso, sig)
 
-        body = self.post_json_with_token(
+        body = post_json_with_token(
+            client,
             '/users/discourse-redirect',
-            self.global_tokens['moderator'],
+            tokens['moderator'],
             {'sso': sso, 'sig': sig},
             status=200,
         )
         assert body['redirect'] == expected
 
-    def test_discourse_redirect_bad_signature(self):
+    def test_discourse_redirect_bad_signature(self, client, tokens):
         self.set_discourse_not_mocked()
         self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
         self.discourse_client.allowed_sso_hosts = {'forum-test.example.org'}
@@ -745,14 +783,15 @@ class TestUserRest(BaseUserTestRest):
             'https://forum-test.example.org/session/sso_login'
         )
 
-        self.post_json_with_token(
+        post_json_with_token(
+            client,
             '/users/discourse-redirect',
-            self.global_tokens['moderator'],
+            tokens['moderator'],
             {'sso': sso, 'sig': 'not-the-right-signature'},
             status=400,
         )
 
-    def test_discourse_redirect_without_return_sso_url(self):
+    def test_discourse_redirect_without_return_sso_url(self, client, tokens):
         self.set_discourse_not_mocked()
         self.discourse_client.sso_key = 'test_only_shared_secret_not_a_real_credential'
         payload = base64.b64encode(b'nonce=cb68251e').decode('ascii')
@@ -762,24 +801,29 @@ class TestUserRest(BaseUserTestRest):
             digestmod=hashlib.sha256,
         ).hexdigest()
 
-        self.post_json_with_token(
+        post_json_with_token(
+            client,
             '/users/discourse-redirect',
-            self.global_tokens['moderator'],
+            tokens['moderator'],
             {'sso': quote(payload), 'sig': sig},
             status=400,
         )
 
-    def test_log_in_a_user_whose_email_is_not_validated(self):
-        contributor = self.session.get(User, self.global_userids['contributor'])
+    def test_log_in_a_user_whose_email_is_not_validated(self, session, user_ids):
+        contributor = session.get(User, user_ids['contributor'])
         contributor.email_validated = False
-        self.session.flush()
+        session.flush()
 
         with pytest.raises(ValueError):
             log_validated_user_i_know_what_i_do(contributor, None)
 
-    def test_discourse_redirect_unauthenticated(self):
-        self.app_post_json(
-            '/users/discourse-redirect', {'sso': 'x', 'sig': 'y'}, status=403
+    def test_discourse_redirect_unauthenticated(self, client):
+        send_json(
+            client,
+            'post',
+            '/users/discourse-redirect',
+            {'sso': 'x', 'sig': 'y'},
+            status=403,
         )
 
     def _build_signed_sso_payload(self, return_sso_url):
@@ -797,26 +841,42 @@ class TestUserRest(BaseUserTestRest):
         ).hexdigest()
         return quote(b64_payload), sig
 
-    def test_login_failure(self):
-        body = self.login('moderator', password='invalid_password', status=401).json
+    def test_login_failure(self, client, settings, passwords):
+        body = self.login(
+            client,
+            settings,
+            passwords,
+            'moderator',
+            password='invalid_password',
+            status=401,
+        ).json
         assert body['status'] == 'error'
 
-    def test_login_no_tos_failure(self):
-        body = self.login('contributornotos', password='some password', status=403).json
-        self.assertErrorsContain(
-            body, 'Forbidden', 'Terms of Service need to be accepted'
-        )
+    def test_login_no_tos_failure(self, client, settings, passwords):
+        body = self.login(
+            client,
+            settings,
+            passwords,
+            'contributornotos',
+            password='some password',
+            status=403,
+        ).json
+        assert_errors_contain(body, 'Forbidden', 'Terms of Service need to be accepted')
 
-    def test_login_no_tos_success(self):
+    def test_login_no_tos_success(self, client, session, settings, passwords):
         # A user which did not previously accepted ToS can login
         # if he accepts them. It is stored in the db.
         body = self.login(
-            'contributornotos', password='some password', accept_tos=True, status=200
+            client,
+            settings,
+            passwords,
+            'contributornotos',
+            password='some password',
+            accept_tos=True,
+            status=200,
         ).json
         assert 'token' in body
-        user = (
-            self.session.query(User).filter(User.username == 'contributornotos').one()
-        )
+        user = session.query(User).filter(User.username == 'contributornotos').one()
         assert (
             datetime.datetime.now(datetime.UTC) - user.tos_validated
         ).total_seconds() < 5
@@ -829,188 +889,194 @@ class TestUserRest(BaseUserTestRest):
                 f'{expected!r} == {expire!r} within {seconds_delta!r} seconds'
             )
 
-    def test_login_logout_success(self):
-        body = self.login('moderator').json
+    def test_login_logout_success(self, client, settings, passwords):
+        body = self.login(client, settings, passwords, 'moderator').json
         token = body['token']
         expire = body['expire']
         self.assertExpireAlmostEqual(expire, 14, 5)
 
-        body = self.post_json_with_token('/users/logout', token)
+        body = post_json_with_token(client, '/users/logout', token)
 
-    def test_renew_success(self):
-        token = self.global_tokens['contributor']
+    def test_renew_success(self, client, tokens):
+        token = tokens['contributor']
 
-        body = self.post_json_with_token('/users/renew', token)
+        body = post_json_with_token(client, '/users/renew', token)
         expire = body['expire']
         self.assertExpireAlmostEqual(expire, 14, 5)
 
         token2 = body['token']
-        body = self.get_json_with_token('/users/account', token2, status=200)
-        self.assertBodyEqual(body, 'name', 'Contributor')
+        body = get_json_with_token(client, '/users/account', token2, status=200)
+        assert_body_equal(body, 'name', 'Contributor')
 
-    def test_renew_token_different_success(self):
-        token1 = self.login('contributor').json['token']
-        token2 = self.post_json_with_token('/users/renew', token1)['token']
+    def test_renew_token_different_success(self, client, settings, passwords):
+        token1 = self.login(client, settings, passwords, 'contributor').json['token']
+        token2 = post_json_with_token(client, '/users/renew', token1)['token']
         assert token1 != token2
 
-        body = self.get_json_with_token('/users/account', token2, status=200)
-        self.assertBodyEqual(body, 'name', 'Contributor')
+        body = get_json_with_token(client, '/users/account', token2, status=200)
+        assert_body_equal(body, 'name', 'Contributor')
 
-        self.post_json_with_token('/users/logout', token2)
+        post_json_with_token(client, '/users/logout', token2)
 
-    def test_logout_invalidates_the_token(self):
-        token = self.login('contributor').json['token']
-        self.get_json_with_token('/users/account', token, status=200)
+    def test_logout_invalidates_the_token(self, client, settings, passwords):
+        token = self.login(client, settings, passwords, 'contributor').json['token']
+        get_json_with_token(client, '/users/account', token, status=200)
 
-        self.post_json_with_token('/users/logout', token)
+        post_json_with_token(client, '/users/logout', token)
 
-        body = self.get_json_with_token('/users/account', token, status=401)
-        self.assertErrorsContain(body, 'Unauthorized', 'Invalid token')
-        self.post_json_with_token('/users/logout', token, status=401)
+        body = get_json_with_token(client, '/users/account', token, status=401)
+        assert_errors_contain(body, 'Unauthorized', 'Invalid token')
+        post_json_with_token(client, '/users/logout', token, status=401)
 
-    def test_logout_keeps_the_other_sessions(self):
+    def test_logout_keeps_the_other_sessions(self, client, settings, passwords):
         # two logins, most likely in the same second
-        token = self.login('contributor').json['token']
-        other_token = self.login('contributor').json['token']
+        token = self.login(client, settings, passwords, 'contributor').json['token']
+        other_token = self.login(client, settings, passwords, 'contributor').json[
+            'token'
+        ]
         assert token != other_token
 
-        self.post_json_with_token('/users/logout', token)
+        post_json_with_token(client, '/users/logout', token)
 
-        self.get_json_with_token('/users/account', other_token, status=200)
+        get_json_with_token(client, '/users/account', other_token, status=200)
 
-    def test_only_the_hash_of_the_token_is_stored(self):
-        token = self.login('contributor').json['token']
-        assert self.session.query(Token).filter(Token.value == token).count() == 0
-        stored = self.session.query(Token).filter(Token.value == hash_token(token))
-        assert stored.one().userid == self.global_userids['contributor']
+    def test_only_the_hash_of_the_token_is_stored(
+        self, client, session, settings, user_ids, passwords
+    ):
+        token = self.login(client, settings, passwords, 'contributor').json['token']
+        assert session.query(Token).filter(Token.value == token).count() == 0
+        stored = session.query(Token).filter(Token.value == hash_token(token))
+        assert stored.one().userid == user_ids['contributor']
 
-    def test_a_token_stored_as_is_is_refused(self):
+    def test_a_token_stored_as_is_is_refused(
+        self, client, session, settings, passwords
+    ):
         # since migration a7c3e1f05b2d, a row holds the hash of a token: a row
         # holding the token itself (a copy of the table) gives no session
-        token = self.login('contributor').json['token']
-        stored = self.session.query(Token).filter(Token.value == hash_token(token))
+        token = self.login(client, settings, passwords, 'contributor').json['token']
+        stored = session.query(Token).filter(Token.value == hash_token(token))
         stored.one().value = token
-        self.session.flush()
+        session.flush()
 
-        self.get_json_with_token('/users/account', token, status=401)
+        get_json_with_token(client, '/users/account', token, status=401)
 
-    def _login_remember(self, remember, status=200):
+    def _login_remember(self, client, passwords, remember, status=200):
         body = {
             'username': 'contributor',
-            'password': self.global_passwords['contributor'],
+            'password': passwords['contributor'],
             'remember': remember,
         }
-        return self.app_post_json('/users/login', body, status=status).json
+        return send_json(client, 'post', '/users/login', body, status=status).json
 
-    def _lifetime(self, token):
-        claims = jwt.decode(
-            token, self.settings['jwt.private_key'], algorithms=['HS256']
-        )
+    def _lifetime(self, settings, token):
+        claims = jwt.decode(token, settings['jwt.private_key'], algorithms=['HS256'])
         return claims['exp'] - claims['iat']
 
-    def test_login_not_remembered(self):
-        body = self._login_remember(False)
+    def test_login_not_remembered(self, client, settings, passwords):
+        body = self._login_remember(client, passwords, False)
         self.assertExpireAlmostEqual(body['expire'], 1, 5)
-        assert self._lifetime(body['token']) == 24 * 3600
-        self.get_json_with_token('/users/account', body['token'], status=200)
+        assert self._lifetime(settings, body['token']) == 24 * 3600
+        get_json_with_token(client, '/users/account', body['token'], status=200)
 
-    def test_login_remembered(self):
-        body = self._login_remember(True)
+    def test_login_remembered(self, client, settings, passwords):
+        body = self._login_remember(client, passwords, True)
         self.assertExpireAlmostEqual(body['expire'], 14, 5)
-        assert self._lifetime(body['token']) == 14 * 24 * 3600
+        assert self._lifetime(settings, body['token']) == 14 * 24 * 3600
 
-    def test_login_remember_as_a_string(self):
+    def test_login_remember_as_a_string(self, client, passwords):
         # as every Bool: only 'false' and '0' are false
-        body = self._login_remember('false')
+        body = self._login_remember(client, passwords, 'false')
         self.assertExpireAlmostEqual(body['expire'], 1, 5)
-        body = self._login_remember('yes')
+        body = self._login_remember(client, passwords, 'yes')
         self.assertExpireAlmostEqual(body['expire'], 14, 5)
 
-    def test_renew_keeps_the_lifetime(self):
+    def test_renew_keeps_the_lifetime(self, client, settings, passwords):
         for remember, days in ((False, 1), (True, 14)):
-            token = self._login_remember(remember)['token']
-            body = self.post_json_with_token('/users/renew', token)
+            token = self._login_remember(client, passwords, remember)['token']
+            body = post_json_with_token(client, '/users/renew', token)
             self.assertExpireAlmostEqual(body['expire'], days, 5)
-            assert self._lifetime(body['token']) == days * 24 * 3600
+            assert self._lifetime(settings, body['token']) == days * 24 * 3600
 
-    def test_renew_of_a_token_without_iat(self):
+    def test_renew_of_a_token_without_iat(self, client, session, settings, user_ids):
         # a token issued before the lifetimes (no `iat`): remembered
-        user = self.session.get(User, self.global_userids['contributor'])
+        user = session.get(User, user_ids['contributor'])
         exp = datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=3)
         claims = create_claims(user, datetime.datetime.now(datetime.UTC), exp)
         del claims['iat']
-        token = jwt.encode(claims, self.settings['jwt.private_key'], algorithm='HS256')
+        token = jwt.encode(claims, settings['jwt.private_key'], algorithm='HS256')
         add_token(token, exp, user.id)
 
-        body = self.post_json_with_token('/users/renew', token)
+        body = post_json_with_token(client, '/users/renew', token)
         self.assertExpireAlmostEqual(body['expire'], 14, 5)
 
-    def test_token_check(self):
-        body = self.login('contributor').json
+    def test_token_check(self, client, settings, user_ids, passwords):
+        body = self.login(client, settings, passwords, 'contributor').json
         token = body['token']
 
-        checked = self.get_json_with_token('/users/token', token)
+        checked = get_json_with_token(client, '/users/token', token)
         assert checked == {
-            'user': self.global_userids['contributor'],
+            'user': user_ids['contributor'],
             'expire': body['expire'],
         }
 
-        self.post_json_with_token('/users/logout', token)
-        self.get_json_with_token('/users/token', token, status=401)
+        post_json_with_token(client, '/users/logout', token)
+        get_json_with_token(client, '/users/token', token, status=401)
 
-    def test_token_check_of_a_blocked_user(self):
-        user = self.session.get(User, self.global_userids['contributor'])
+    def test_token_check_of_a_blocked_user(self, client, session, user_ids, tokens):
+        user = session.get(User, user_ids['contributor'])
         user.blocked = True
-        self.session.flush()
+        session.flush()
 
-        body = self.get_json_with_token(
-            '/users/token', self.global_tokens['contributor'], status=403
+        body = get_json_with_token(
+            client, '/users/token', tokens['contributor'], status=403
         )
-        self.assertErrorsContain(body, 'Forbidden', 'account blocked')
+        assert_errors_contain(body, 'Forbidden', 'account blocked')
 
-    def test_token_check_without_a_token(self):
-        self.app.get('/users/token', status=403)
+    def test_token_check_without_a_token(self, client):
+        client.get('/users/token', status=403)
 
-    def test_token_claims(self):
+    def test_token_claims(self, client, settings, user_ids, passwords):
         before = int(time.time())
-        token = self.login('contributor').json['token']
-        claims = jwt.decode(
-            token, self.settings['jwt.private_key'], algorithms=['HS256']
-        )
+        token = self.login(client, settings, passwords, 'contributor').json['token']
+        claims = jwt.decode(token, settings['jwt.private_key'], algorithms=['HS256'])
         assert set(claims) == {'sub', 'username', 'iat', 'exp', 'jti'}
-        assert claims['sub'] == str(self.global_userids['contributor'])
+        assert claims['sub'] == str(user_ids['contributor'])
         assert before <= claims['iat'] <= int(time.time())
         assert claims['exp'] - claims['iat'] == 14 * 24 * 3600
         assert len(claims['jti']) >= 16
 
-    def test_renew_revokes_the_old_token_after_a_minute(self):
-        old_token = self.login('contributor').json['token']
-        new_token = self.post_json_with_token('/users/renew', old_token)['token']
+    def test_renew_revokes_the_old_token_after_a_minute(
+        self, client, session, settings, passwords
+    ):
+        old_token = self.login(client, settings, passwords, 'contributor').json['token']
+        new_token = post_json_with_token(client, '/users/renew', old_token)['token']
         assert new_token != old_token
-        self.get_json_with_token('/users/account', new_token, status=200)
+        get_json_with_token(client, '/users/account', new_token, status=200)
 
         # the requests sent with it meanwhile (page loading, other tabs) pass
-        self.get_json_with_token('/users/account', old_token, status=200)
-        row = self.session.query(Token).filter(Token.value == hash_token(old_token))
+        get_json_with_token(client, '/users/account', old_token, status=200)
+        row = session.query(Token).filter(Token.value == hash_token(old_token))
         expire = row.one().expire
         now = datetime.datetime.now(datetime.UTC)
         assert expire <= now + datetime.timedelta(minutes=1)
 
         # then it is refused, and cannot be renewed
         row.one().expire = now - datetime.timedelta(seconds=1)
-        self.session.flush()
-        body = self.get_json_with_token('/users/account', old_token, status=401)
-        self.assertErrorsContain(body, 'Unauthorized', 'Invalid token')
-        self.post_json_with_token('/users/renew', old_token, status=401)
+        session.flush()
+        body = get_json_with_token(client, '/users/account', old_token, status=401)
+        assert_errors_contain(body, 'Unauthorized', 'Invalid token')
+        post_json_with_token(client, '/users/renew', old_token, status=401)
 
-    def test_renew_keeps_the_other_sessions(self):
-        token = self.login('contributor').json['token']
-        other_token = self.login('contributor').json['token']
+    def test_renew_keeps_the_other_sessions(self, client, settings, passwords):
+        token = self.login(client, settings, passwords, 'contributor').json['token']
+        other_token = self.login(client, settings, passwords, 'contributor').json[
+            'token'
+        ]
 
-        self.post_json_with_token('/users/renew', token)
+        post_json_with_token(client, '/users/renew', token)
 
-        self.get_json_with_token('/users/account', other_token, status=200)
+        get_json_with_token(client, '/users/account', other_token, status=200)
 
-    def test_renew_of_an_unknown_token(self):
-        body = self.post_json_with_token('/users/renew', 'not-a-token', status=401)
-        self.assertErrorsContain(body, 'Unauthorized', 'Invalid token')
+    def test_renew_of_an_unknown_token(self, client):
+        body = post_json_with_token(client, '/users/renew', 'not-a-token', status=401)
+        assert_errors_contain(body, 'Unauthorized', 'Invalid token')

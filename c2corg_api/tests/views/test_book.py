@@ -1,3 +1,4 @@
+import pytest
 from dogpile.cache.api import NO_VALUE
 
 from c2corg_api.caching import cache_document_version
@@ -16,72 +17,70 @@ from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint
-from c2corg_api.tests import assert_required, errors_of
+from c2corg_api.tests import (
+    assert_error,
+    assert_required,
+    auth_headers,
+    errors_of,
+    send_json,
+)
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseTestRest, scenarios
+from c2corg_api.tests.views import scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
 BOOKS = DocType('/books', BOOK_TYPE, Book, ArchiveBook, ArchiveDocumentLocale)
 
 
-class TestBookRest(BaseTestRest):
-    def setUp(self):
-        BaseTestRest.setUp(self)
-        self._add_test_data()
+class TestBookRest:
+    @pytest.fixture(autouse=True)
+    def _setup_test_book_rest(self, client, session, user_ids):
+        self._add_test_data(session, user_ids)
 
-    def test_get_collection(self):
-        body = scenarios.get_collection(self.app, self.session, BOOKS)
+    def test_get_collection(self, client, session):
+        body = scenarios.get_collection(client, session, BOOKS)
         doc = body['documents'][0]
         assert 'geometry' not in doc
 
-    def test_get_collection_paginated(self):
-        self.app.get('/books?offset=invalid', status=422)
+    def test_get_collection_paginated(self, client, session):
+        client.get('/books?offset=invalid', status=422)
 
         scenarios.assert_results_equal(
-            scenarios.get_collection(
-                self.app, self.session, BOOKS, {'offset': 0, 'limit': 0}
-            ),
+            scenarios.get_collection(client, session, BOOKS, {'offset': 0, 'limit': 0}),
             [],
             4,
         )
 
         scenarios.assert_results_equal(
-            scenarios.get_collection(
-                self.app, self.session, BOOKS, {'offset': 0, 'limit': 1}
-            ),
+            scenarios.get_collection(client, session, BOOKS, {'offset': 0, 'limit': 1}),
             [self.book4.document_id],
             4,
         )
         scenarios.assert_results_equal(
-            scenarios.get_collection(
-                self.app, self.session, BOOKS, {'offset': 0, 'limit': 2}
-            ),
+            scenarios.get_collection(client, session, BOOKS, {'offset': 0, 'limit': 2}),
             [self.book4.document_id, self.book3.document_id],
             4,
         )
         scenarios.assert_results_equal(
-            scenarios.get_collection(
-                self.app, self.session, BOOKS, {'offset': 1, 'limit': 2}
-            ),
+            scenarios.get_collection(client, session, BOOKS, {'offset': 1, 'limit': 2}),
             [self.book3.document_id, self.book2.document_id],
             4,
         )
 
-    def test_get_collection_lang(self):
-        scenarios.get_collection_lang(self.app, BOOKS)
+    def test_get_collection_lang(self, client):
+        scenarios.get_collection_lang(client, BOOKS)
 
-    def test_get_collection_search(self):
-        reset_search_index(self.session)
+    def test_get_collection_search(self, client, session):
+        reset_search_index(session)
 
         scenarios.assert_results_equal(
-            scenarios.get_collection_search(self.app, BOOKS, {'l': 'en'}),
+            scenarios.get_collection_search(client, BOOKS, {'l': 'en'}),
             [self.book4.document_id, self.book1.document_id],
             2,
         )
 
         scenarios.assert_results_equal(
-            scenarios.get_collection_search(self.app, BOOKS, {'btyp': ['biography']}),
+            scenarios.get_collection_search(client, BOOKS, {'btyp': ['biography']}),
             [
                 self.book4.document_id,
                 self.book3.document_id,
@@ -91,8 +90,8 @@ class TestBookRest(BaseTestRest):
             4,
         )
 
-    def test_get(self):
-        body = scenarios.get(self.app, BOOKS, self.book1, title=self.locale_en.title)
+    def test_get(self, client):
+        body = scenarios.get(client, BOOKS, self.book1, title=self.locale_en.title)
         assert 'book' not in body
         assert 'geometry' not in body
         assert body.get('geometry') is None
@@ -112,27 +111,27 @@ class TestBookRest(BaseTestRest):
         linked_images = associations.get('images')
         assert len(linked_images) == 0
 
-    def test_get_cooked(self):
-        scenarios.get_cooked(self.app, BOOKS, self.book1)
+    def test_get_cooked(self, client):
+        scenarios.get_cooked(client, BOOKS, self.book1)
 
-    def test_get_cooked_with_defaulting(self):
-        scenarios.get_cooked_with_defaulting(self.app, BOOKS, self.book1)
+    def test_get_cooked_with_defaulting(self, client):
+        scenarios.get_cooked_with_defaulting(client, BOOKS, self.book1)
 
-    def test_get_lang(self):
-        scenarios.get_lang(self.app, BOOKS, self.book1)
+    def test_get_lang(self, client):
+        scenarios.get_lang(client, BOOKS, self.book1)
 
-    def test_get_new_lang(self):
-        scenarios.get_new_lang(self.app, BOOKS, self.book1)
+    def test_get_new_lang(self, client):
+        scenarios.get_new_lang(client, BOOKS, self.book1)
 
-    def test_get_404(self):
-        scenarios.get_404(self.app, BOOKS)
+    def test_get_404(self, client):
+        scenarios.get_404(client, BOOKS)
 
-    def test_get_version(self):
-        scenarios.get_version(self.app, BOOKS, self.book1, self.book1_version)
+    def test_get_version(self, client):
+        scenarios.get_version(client, BOOKS, self.book1, self.book1_version)
 
-    def test_get_version_etag(self):
+    def test_get_version_etag(self, client):
         url = f'{BOOKS.prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
-        response = self.app.get(url, status=200)
+        response = client.get(url, status=200)
 
         # check that the ETag header is set
         headers = response.headers
@@ -141,9 +140,9 @@ class TestBookRest(BaseTestRest):
 
         # then request the document again with the etag
         headers = {'If-None-Match': etag}
-        self.app.get(url, status=304, headers=headers)
+        client.get(url, status=304, headers=headers)
 
-    def test_get_version_caching(self):
+    def test_get_version_caching(self, client):
         url = f'{BOOKS.prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
         cache_key = '{}-{}'.format(
             get_cache_key(self.book1.document_id, 'en', BOOK_TYPE),
@@ -154,7 +153,7 @@ class TestBookRest(BaseTestRest):
         assert cache_value == NO_VALUE
 
         # check that the response is cached
-        self.app.get(url, status=200)
+        client.get(url, status=200)
 
         cache_value = cache_document_version.get(cache_key)
         assert cache_value != NO_VALUE
@@ -163,67 +162,69 @@ class TestBookRest(BaseTestRest):
         fake_cache_value = {'document': 'fake doc'}
         cache_document_version.set(cache_key, fake_cache_value)
 
-        response = self.app.get(url, status=200)
+        response = client.get(url, status=200)
         body = response.json
         assert body == fake_cache_value
 
-    def test_get_caching(self):
-        scenarios.get_caching(self.app, BOOKS, self.book1)
+    def test_get_caching(self, client):
+        scenarios.get_caching(client, BOOKS, self.book1)
 
-    def test_get_info(self):
-        body, locale = scenarios.get_info(self.app, BOOKS, self.book1, 'en')
+    def test_get_info(self, client):
+        body, locale = scenarios.get_info(client, BOOKS, self.book1, 'en')
         assert locale.get('lang') == 'en'
 
-    def test_get_info_best_lang(self):
-        body, locale = scenarios.get_info(self.app, BOOKS, self.book1, 'es')
+    def test_get_info_best_lang(self, client):
+        body, locale = scenarios.get_info(client, BOOKS, self.book1, 'es')
         assert locale.get('lang') == 'fr'
 
-    def test_get_info_404(self):
-        scenarios.get_info_404(self.app, BOOKS)
+    def test_get_info_404(self, client):
+        scenarios.get_info_404(client, BOOKS)
 
-    def test_post_error(self):
-        body = scenarios.post_error(self.app, BOOKS, {}, user='moderator')
+    def test_post_error(self, client):
+        body = scenarios.post_error(client, BOOKS, {}, user='moderator')
         errors = body.get('errors')
         assert len(errors) == 2
         assert_required(errors[0], 'locales')
 
-    def test_post_invalid_enum_item(self):
+    def test_post_invalid_enum_item(self, client):
         # an unknown activity used to reach the database enum (500)
         body = {
             'activities': ['hiking', 'not-an-activity'],
             'book_types': ['biography'],
             'locales': [{'lang': 'en', 'title': 'Book'}],
         }
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(BOOKS.prefix, body, headers=headers, status=422)
-        self.assertError(
+        headers = auth_headers(username='contributor')
+        response = send_json(
+            client, 'post', BOOKS.prefix, body, headers=headers, status=422
+        )
+        assert_error(
             errors_of(response.json),
             'activities.1',
             f'"not-an-activity" is not one of {", ".join(activities)}',
         )
 
-    def test_post_missing_title(self):
+    def test_post_missing_title(self, client):
         body_post = {
             'activities': ['hiking'],
             'book_types': ['biography'],
             'locales': [{'lang': 'en'}],
         }
-        scenarios.post_missing_title(self.app, BOOKS, body_post, user='moderator')
+        scenarios.post_missing_title(client, BOOKS, body_post, user='moderator')
 
-    def test_post_non_whitelisted_attribute(self):
+    def test_post_non_whitelisted_attribute(self, client, session):
         body = {
             'book_types': ['biography'],
             'protected': True,
             'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
         }
         scenarios.post_non_whitelisted_attribute(
-            self.app, self.session, BOOKS, body, user='moderator'
+            client, session, BOOKS, body, user='moderator'
         )
 
-    def test_post_missing_content_type(self):
-        scenarios.post_missing_content_type(self.app, BOOKS, {})
+    def test_post_missing_content_type(self, client):
+        scenarios.post_missing_content_type(client, BOOKS, {})
 
-    def test_post_success(self):
+    def test_post_success(self, client, session):
         body = {
             'document_id': 12345678,
             'version': 98765432,
@@ -247,7 +248,7 @@ class TestBookRest(BaseTestRest):
             'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
         }
         body, doc = scenarios.post_success(
-            self.app, self.session, BOOKS, body, user='moderator'
+            client, session, BOOKS, body, user='moderator'
         )
         version = doc.versions[0]
 
@@ -263,13 +264,13 @@ class TestBookRest(BaseTestRest):
         assert doc.geometry is None
 
         # check that a link to the associated waypoint is created
-        association_wp = self.session.get(
+        association_wp = session.get(
             Association, (doc.document_id, self.waypoint2.document_id)
         )
         assert association_wp is not None
 
         association_wp_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == doc.document_id)
             .filter(AssociationLog.child_document_id == self.waypoint2.document_id)
             .first()
@@ -277,20 +278,20 @@ class TestBookRest(BaseTestRest):
         assert association_wp_log is not None
 
         # check that a link to the associated article is created
-        association_art = self.session.get(
+        association_art = session.get(
             Association, (doc.document_id, self.article2.document_id)
         )
         assert association_art is not None
 
         association_art_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == doc.document_id)
             .filter(AssociationLog.child_document_id == self.article2.document_id)
             .first()
         )
         assert association_art_log is not None
 
-    def test_put_wrong_document_id(self):
+    def test_put_wrong_document_id(self, client):
         body = {
             'document': {
                 'document_id': '9999999',
@@ -306,9 +307,9 @@ class TestBookRest(BaseTestRest):
                 ],
             }
         }
-        scenarios.put_wrong_document_id(self.app, BOOKS, body, user='moderator')
+        scenarios.put_wrong_document_id(client, BOOKS, body, user='moderator')
 
-    def test_put_wrong_document_version(self):
+    def test_put_wrong_document_version(self, client):
         body = {
             'document': {
                 'document_id': self.book1.document_id,
@@ -325,10 +326,10 @@ class TestBookRest(BaseTestRest):
             }
         }
         scenarios.put_wrong_version(
-            self.app, BOOKS, body, self.book1.document_id, user='moderator'
+            client, BOOKS, body, self.book1.document_id, user='moderator'
         )
 
-    def test_put_wrong_locale_version(self):
+    def test_put_wrong_locale_version(self, client):
         body = {
             'document': {
                 'document_id': self.book1.document_id,
@@ -341,10 +342,10 @@ class TestBookRest(BaseTestRest):
             }
         }
         scenarios.put_wrong_version(
-            self.app, BOOKS, body, self.book1.document_id, user='moderator'
+            client, BOOKS, body, self.book1.document_id, user='moderator'
         )
 
-    def test_put_wrong_ids(self):
+    def test_put_wrong_ids(self, client):
         body = {
             'document': {
                 'document_id': self.book1.document_id,
@@ -361,15 +362,15 @@ class TestBookRest(BaseTestRest):
             }
         }
         scenarios.put_wrong_ids(
-            self.app, BOOKS, body, self.book1.document_id, user='moderator'
+            client, BOOKS, body, self.book1.document_id, user='moderator'
         )
 
-    def test_put_no_document(self):
+    def test_put_no_document(self, client):
         scenarios.put_no_document(
-            self.app, BOOKS, self.book1.document_id, user='moderator'
+            client, BOOKS, self.book1.document_id, user='moderator'
         )
 
-    def test_put_success_all(self):
+    def test_put_success_all(self, client, session):
         body = {
             'message': 'Update',
             'document': {
@@ -399,8 +400,8 @@ class TestBookRest(BaseTestRest):
         }
 
         (body, book1) = scenarios.put_success_all(
-            self.app,
-            self.session,
+            client,
+            session,
             BOOKS,
             body,
             self.book1,
@@ -432,13 +433,13 @@ class TestBookRest(BaseTestRest):
         assert book1.geometry is None
 
         # check that a link to the associated image is created
-        association_img = self.session.get(
+        association_img = session.get(
             Association, (book1.document_id, self.image2.document_id)
         )
         assert association_img is not None
 
         association_img_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == book1.document_id)
             .filter(AssociationLog.child_document_id == self.image2.document_id)
             .first()
@@ -446,20 +447,20 @@ class TestBookRest(BaseTestRest):
         assert association_img_log is not None
 
         # check that a link to the associated route is created
-        association_rou = self.session.get(
+        association_rou = session.get(
             Association, (book1.document_id, self.route2.document_id)
         )
         assert association_rou is not None
 
         association_rou_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == book1.document_id)
             .filter(AssociationLog.child_document_id == self.route2.document_id)
             .first()
         )
         assert association_rou_log is not None
 
-    def test_put_success_figures_only(self):
+    def test_put_success_figures_only(self, client, session):
         body = {
             'message': 'Changing figures',
             'document': {
@@ -473,13 +474,13 @@ class TestBookRest(BaseTestRest):
             },
         }
         (body, book1) = scenarios.put_success_figures_only(
-            self.app, self.session, BOOKS, body, self.book1, user='moderator'
+            client, session, BOOKS, body, self.book1, user='moderator'
         )
 
         assert book1.activities == ['hiking']
         assert book1.book_types == ['biography']
 
-    def test_put_success_lang_only(self):
+    def test_put_success_lang_only(self, client, session):
         body = {
             'message': 'Changing lang',
             'document': {
@@ -498,12 +499,12 @@ class TestBookRest(BaseTestRest):
             },
         }
         (body, book1) = scenarios.put_success_lang_only(
-            self.app, self.session, BOOKS, body, self.book1, user='moderator'
+            client, session, BOOKS, body, self.book1, user='moderator'
         )
 
         assert book1.get_locale('en').title == 'New title'
 
-    def test_put_success_new_lang(self):
+    def test_put_success_new_lang(self, client, session):
         """Test updating a document by adding a new locale."""
         body = {
             'message': 'Adding lang',
@@ -517,15 +518,15 @@ class TestBookRest(BaseTestRest):
             },
         }
         (body, book1) = scenarios.put_success_new_lang(
-            self.app, self.session, BOOKS, body, self.book1, user='moderator'
+            client, session, BOOKS, body, self.book1, user='moderator'
         )
 
         assert book1.get_locale('es').title == 'Escalades au Thaurac'
 
-    def test_get_associations_history(self):
-        scenarios.get_association_logs(self.app, self.book1)
+    def test_get_associations_history(self, client):
+        scenarios.get_association_logs(client, self.book1)
 
-    def _add_test_data(self):
+    def _add_test_data(self, session, user_ids):
         self.book1 = Book(activities=['hiking'], book_types=['biography'])
         self.locale_en = DocumentLocale(lang='en', title='Escalades au Thaurac')
         self.locale_fr = DocumentLocale(lang='fr', title='Escalades au Thaurac')
@@ -533,22 +534,22 @@ class TestBookRest(BaseTestRest):
         self.book1.locales.append(self.locale_en)
         self.book1.locales.append(self.locale_fr)
 
-        self.session.add(self.book1)
-        self.session.flush()
+        session.add(self.book1)
+        session.flush()
 
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
         create_new_version(self.book1, user_id)
         self.book1_version = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.book1.document_id)
             .filter(DocumentVersion.lang == 'en')
             .first()
         )
 
         self.book2 = Book(activities=['hiking'], book_types=['biography'])
-        self.session.add(self.book2)
+        session.add(self.book2)
         self.book3 = Book(activities=['hiking'], book_types=['biography'])
-        self.session.add(self.book3)
+        session.add(self.book3)
         self.book4 = Book(activities=['hiking'], book_types=['biography'])
         self.book4.locales.append(
             DocumentLocale(lang='en', title='Escalades au Thaurac')
@@ -556,23 +557,23 @@ class TestBookRest(BaseTestRest):
         self.book4.locales.append(
             DocumentLocale(lang='fr', title='Escalades au Thaurac')
         )
-        self.session.add(self.book4)
+        session.add(self.book4)
         self.waypoint1 = Waypoint(waypoint_type='summit', elevation=2203)
-        self.session.add(self.waypoint1)
+        session.add(self.waypoint1)
         self.waypoint2 = Waypoint(
             waypoint_type='climbing_outdoor',
             elevation=2,
             rock_types=[],
             geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
         )
-        self.session.add(self.waypoint2)
-        self.session.flush()
+        session.add(self.waypoint2)
+        session.flush()
 
         self.article2 = Article(
             categories=['site_info'], activities=['hiking'], article_type='collab'
         )
-        self.session.add(self.article2)
-        self.session.flush()
+        session.add(self.article2)
+        session.flush()
 
         self.image = Image(
             filename='image.jpg',
@@ -597,14 +598,14 @@ class TestBookRest(BaseTestRest):
 
         self.image.geometry = DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)')
 
-        self.session.add(self.image)
-        self.session.flush()
+        session.add(self.image)
+        session.flush()
 
         self.image2 = Image(
             filename='image2.jpg', activities=['paragliding'], height=1500
         )
-        self.session.add(self.image2)
-        self.session.flush()
+        session.add(self.image2)
+        session.flush()
 
         self.route2 = Route(
             activities=['skitouring'],
@@ -628,8 +629,8 @@ class TestBookRest(BaseTestRest):
                 ),
             ],
         )
-        self.session.add(self.route2)
-        self.session.flush()
+        session.add(self.route2)
+        session.flush()
 
         self.route3 = Route(
             activities=['skitouring'],
@@ -639,22 +640,22 @@ class TestBookRest(BaseTestRest):
             height_diff_down=500,
             durations='1',
         )
-        self.session.add(self.route3)
-        self.session.flush()
+        session.add(self.route3)
+        session.flush()
 
         # scenarios.add_association(self.session, Association.create(
         #     parent_document=self.book1,
         #     child_document=self.image2), user_id)
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(parent_document=self.book1, child_document=self.route3),
             user_id,
         )
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(
                 parent_document=self.book2, child_document=self.waypoint2
             ),
             user_id,
         )
-        self.session.flush()
+        session.flush()

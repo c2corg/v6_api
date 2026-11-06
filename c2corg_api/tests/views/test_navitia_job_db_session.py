@@ -1,10 +1,11 @@
 import threading
 from unittest import mock
 
+import pytest
 from sqlalchemy import text
 
 from c2corg_api.models import DBSession
-from c2corg_api.tests import BaseTestCase, get_engine
+from c2corg_api.tests import get_engine
 from c2corg_api.views.navitia import (
     JOB_TTL,
     compute_journey_reachable_routes,
@@ -28,22 +29,20 @@ def _query_using_db(fail=False):
     return query, 0
 
 
-class TestNavitiaJobDbSession(BaseTestCase):
+class TestNavitiaJobDbSession:
     """Background jobs must give their connection back to the pool."""
 
     # The jobs run in their own thread, outside of the request session: they end
     # their transaction and remove their scoped session themselves.
 
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_navitia_job_db_session(self, client, db_connection):
         # Use a real pool (not the test connection) to count connections.
         self.job_engine = get_engine()
         DBSession.configure(bind=self.job_engine)
-
-    def tearDown(self):
-        DBSession.configure(bind=self.connection)
+        yield
+        DBSession.configure(bind=db_connection)
         self.job_engine.dispose()
-        super().tearDown()
 
     def _run_in_thread(self, job, request):
         state = {}

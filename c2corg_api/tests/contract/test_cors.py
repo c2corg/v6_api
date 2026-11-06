@@ -1,3 +1,5 @@
+import pytest
+
 from c2corg_api.tests.contract import ContractTest, check_snapshot, contract
 
 # the CORS headers, recorded for these tests only (they are the same for
@@ -10,6 +12,7 @@ CORS_HEADERS = (
 )
 
 
+@pytest.mark.usefixtures('client')
 class TestCors(ContractTest):
     """CORS as the clients see it, on a public route (/health)."""
 
@@ -17,17 +20,23 @@ class TestCors(ContractTest):
         check_snapshot(f'cors_{name}', response, CORS_HEADERS)
 
     @contract(('GET', '/health'))
-    def test_allowed_origin(self):
-        self.check('allowed_origin', self.get('/health'))
+    def test_allowed_origin(self, client, settings):
+        self.check('allowed_origin', self.get(client, settings, '/health'))
 
     @contract(('GET', '/health'))
-    def test_no_origin(self):
-        self.check('no_origin', self.get('/health', headers={'Origin': None}))
+    def test_no_origin(self, client, settings):
+        self.check(
+            'no_origin', self.get(client, settings, '/health', headers={'Origin': None})
+        )
 
     @contract(('GET', '/health'))
-    def test_other_origin(self):
+    def test_other_origin(self, client, settings):
         response = self.get(
-            '/health', headers={'Origin': 'https://evil.example.org'}, status='*'
+            client,
+            settings,
+            '/health',
+            headers={'Origin': 'https://evil.example.org'},
+            status='*',
         )
         self.check('other_origin', response)
         assert response.json['errors'] == [
@@ -39,30 +48,36 @@ class TestCors(ContractTest):
         ]
 
     @contract(('GET', '/health'))
-    def test_head(self):
-        self.check('head', self.request('HEAD', '/health'))
+    def test_head(self, client, settings):
+        self.check('head', self.request(client, settings, 'HEAD', '/health'))
 
-    def preflight(self, status=200, **headers):
-        return self.request('OPTIONS', '/health', headers=headers, status=status)
+    def preflight(self, client, settings, status=200, **headers):
+        return self.request(
+            client, settings, 'OPTIONS', '/health', headers=headers, status=status
+        )
 
     @contract(('GET', '/health'))
-    def test_preflight(self):
-        response = self.preflight(**{'Access-Control-Request-Method': 'GET'})
+    def test_preflight(self, client, settings):
+        response = self.preflight(
+            client, settings, **{'Access-Control-Request-Method': 'GET'}
+        )
         self.check('preflight', response)
 
     @contract(('GET', '/health'))
-    def test_preflight_with_headers(self):
+    def test_preflight_with_headers(self, client, settings):
         response = self.preflight(
+            client,
+            settings,
             **{
                 'Access-Control-Request-Method': 'GET',
                 'Access-Control-Request-Headers': 'Authorization, Content-Type',
-            }
+            },
         )
         self.check('preflight_with_headers', response)
 
     @contract(('GET', '/health'))
-    def test_preflight_without_method(self):
-        response = self.preflight(status='*')
+    def test_preflight_without_method(self, client, settings):
+        response = self.preflight(client, settings, status='*')
         self.check('preflight_without_method', response)
         assert response.json['errors'] == [
             {
@@ -73,8 +88,10 @@ class TestCors(ContractTest):
         ]
 
     @contract(('GET', '/health'))
-    def test_preflight_other_origin(self):
+    def test_preflight_other_origin(self, client, settings):
         response = self.preflight(
+            client,
+            settings,
             status='*',
             **{
                 'Origin': 'https://evil.example.org',

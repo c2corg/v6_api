@@ -1,17 +1,17 @@
+import pytest
 from dateutil import parser as datetime_parser
 
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
-from c2corg_api.tests import BaseTestCase
 from c2corg_api.views.resource import Errors
 from c2corg_api.views.validation import parse_datetime, validate_associations_in
 
 
-class TestValidation(BaseTestCase):
-    def setUp(self):
-        BaseTestCase.setUp(self)
+class TestValidation:
+    @pytest.fixture(autouse=True)
+    def _setup_test_validation(self, client, session):
 
         self.waypoint1 = Waypoint(waypoint_type='summit')
         self.waypoint2 = Waypoint(waypoint_type='summit')
@@ -19,7 +19,7 @@ class TestValidation(BaseTestCase):
         self.route2 = Route(activities=['hiking'])
         self.user_profile1 = UserProfile()
         self.user_profile2 = UserProfile()
-        self.session.add_all(
+        session.add_all(
             [
                 self.waypoint1,
                 self.waypoint2,
@@ -29,7 +29,7 @@ class TestValidation(BaseTestCase):
                 self.user_profile2,
             ]
         )
-        self.session.flush()
+        session.flush()
 
     def test_validate_associations_outing(self):
         associations_in = {

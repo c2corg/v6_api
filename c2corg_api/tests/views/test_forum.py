@@ -1,6 +1,7 @@
 import datetime
 from unittest.mock import call, patch
 
+import pytest
 from requests.exceptions import ConnectionError
 
 from c2corg_api.models.association import Association
@@ -16,11 +17,11 @@ from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
     set_discourse_client,
 )
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import post_json_with_contributor
 
 
-class TestForumTopicRest(BaseTestRest):
-    def _add_test_data(self):
+class TestForumTopicRest:
+    def _add_test_data(self, session, user_ids):
         self.waypoint = Waypoint(waypoint_type='summit', elevation=2203)
         self.locale_en = WaypointLocale(
             lang='en', title='Mont Granier', description='...', access='yep'
@@ -29,7 +30,7 @@ class TestForumTopicRest(BaseTestRest):
         self.waypoint.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956 5723604)'
         )
-        self.session.add(self.waypoint)
+        session.add(self.waypoint)
 
         self.waypoint_with_topic = Waypoint(waypoint_type='summit', elevation=2203)
         document_topic = DocumentTopic(topic_id=1)
@@ -44,7 +45,7 @@ class TestForumTopicRest(BaseTestRest):
         self.waypoint_with_topic.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956 5723604)'
         )
-        self.session.add(self.waypoint_with_topic)
+        session.add(self.waypoint_with_topic)
 
         self.image = Image(
             filename='image.jpg',
@@ -55,7 +56,7 @@ class TestForumTopicRest(BaseTestRest):
         self.image_locale_en = DocumentLocale(lang='en', title='', description='')
         self.image.locales.append(self.image_locale_en)
         self.image.geometry = DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)')
-        self.session.add(self.image)
+        session.add(self.image)
 
         self.outing = Outing(
             activities=['skitouring'],
@@ -63,14 +64,14 @@ class TestForumTopicRest(BaseTestRest):
             date_end=datetime.date(2016, 1, 1),
             locales=[OutingLocale(lang='en', title='Mont Granier / skitouring')],
         )
-        self.session.add(self.outing)
-        self.session.flush()
+        session.add(self.outing)
+        session.flush()
 
         for user_id in (
-            self.global_userids['contributor'],
-            self.global_userids['contributor2'],
+            user_ids['contributor'],
+            user_ids['contributor2'],
         ):
-            self.session.add(
+            session.add(
                 Association(
                     parent_document_id=user_id,
                     parent_document_type=USERPROFILE_TYPE,
@@ -79,14 +80,15 @@ class TestForumTopicRest(BaseTestRest):
                 )
             )
 
-        self.session.flush()
+        session.flush()
 
-    def setUp(self):
-        BaseTestRest.setUp(self)
-        self._add_test_data()
+    @pytest.fixture(autouse=True)
+    def _setup_test_forum_topic_rest(self, client, session, user_ids):
+        self._add_test_data(session, user_ids)
 
-    def test_post_document_not_exists(self):
-        json = self.post_json_with_contributor(
+    def test_post_document_not_exists(self, client):
+        json = post_json_with_contributor(
+            client,
             '/forum/topics',
             {'document_id': self.waypoint.document_id, 'lang': 'fr'},
             status=400,
@@ -94,8 +96,9 @@ class TestForumTopicRest(BaseTestRest):
         errors = json.get('errors')
         assert 'Document not found' == errors[0].get('description')
 
-    def test_post_topic_exists(self):
-        json = self.post_json_with_contributor(
+    def test_post_topic_exists(self, client):
+        json = post_json_with_contributor(
+            client,
             '/forum/topics',
             {'document_id': self.waypoint_with_topic.document_id, 'lang': 'en'},
             status=400,
@@ -104,23 +107,25 @@ class TestForumTopicRest(BaseTestRest):
         assert 'Topic already exists' == errors[0].get('description')
         assert 1 == errors[0].get('topic_id')
 
-    def test_post_forum_disabled(self):
+    def test_post_forum_disabled(self, client, session):
         """Refuse to create a topic when the API runs without a forum."""
         set_discourse_client(DisabledDiscourseClient())
-        json = self.post_json_with_contributor(
+        json = post_json_with_contributor(
+            client,
             '/forum/topics',
             {'document_id': self.waypoint.document_id, 'lang': 'en'},
             status=503,
         )
         assert 'The forum is disabled' == json['errors'][0]['description']
-        self.session.expire(self.locale_en)
+        session.expire(self.locale_en)
         assert self.locale_en.topic_id is None
 
     @patch(
         'pydiscourse.client.DiscourseClient.create_post', side_effect=ConnectionError()
     )
-    def test_post_discourse_down(self, create_post_mock):
-        self.post_json_with_contributor(
+    def test_post_discourse_down(self, create_post_mock, client):
+        post_json_with_contributor(
+            client,
             '/forum/topics',
             {'document_id': self.waypoint.document_id, 'lang': 'en'},
             status=500,
@@ -129,31 +134,33 @@ class TestForumTopicRest(BaseTestRest):
     @patch(
         'pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10}
     )
-    def test_post_success(self, create_post_mock):
+    def test_post_success(self, create_post_mock, client, session):
         version = self.locale_en.version
-        json = self.post_json_with_contributor(
+        json = post_json_with_contributor(
+            client,
             '/forum/topics',
             {'document_id': self.waypoint.document_id, 'lang': 'en'},
             status=200,
         )
-        self.session.expire(self.locale_en)
+        session.expire(self.locale_en)
         assert 10 == self.locale_en.topic_id
         assert version == self.locale_en.version
         assert 10 == json.get('topic_id')
 
-        cache_version = self.session.get(CacheVersion, self.waypoint.document_id)
+        cache_version = session.get(CacheVersion, self.waypoint.document_id)
         assert cache_version.version == 2
 
     @patch(
         'pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10}
     )
-    def test_post_without_title(self, create_post_mock):
+    def test_post_without_title(self, create_post_mock, client):
         """Test topic link content for documents without title"""
         locale = self.image_locale_en
         referer = (
             f'https://www.camptocamp.org/images/{locale.document_id}/{locale.lang}'
         )
-        self.post_json_with_contributor(
+        post_json_with_contributor(
+            client,
             '/forum/topics',
             {'document_id': self.image.document_id, 'lang': 'en'},
             headers={'Referer': referer},
@@ -171,9 +178,10 @@ class TestForumTopicRest(BaseTestRest):
         'pydiscourse.client.DiscourseClient._post',
         side_effect=[{'topic_id': 10}, {}, {}],
     )
-    def test_post_invite_participants(self, _post_mock):
+    def test_post_invite_participants(self, _post_mock, client):
         """Test outing participants are invited in the topic"""
-        self.post_json_with_contributor(
+        post_json_with_contributor(
+            client,
             '/forum/topics',
             {'document_id': self.outing.document_id, 'lang': 'en'},
             status=200,

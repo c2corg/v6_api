@@ -26,9 +26,15 @@ from c2corg_api.models.route import (
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests import errors_of
+from c2corg_api.tests import (
+    assert_coordinates_equal,
+    assert_error,
+    auth_headers,
+    errors_of,
+    get_locale,
+)
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseTestRest, scenarios
+from c2corg_api.tests.views import scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 from c2corg_api.views.route import (
@@ -40,22 +46,22 @@ from c2corg_api.views.route import (
 ROUTES = DocType('/routes', ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale)
 
 
-class TestRouteRest(BaseTestRest):
-    def setUp(self):
-        BaseTestRest.setUp(self)
-        self._add_test_data()
+class TestRouteRest:
+    @pytest.fixture(autouse=True)
+    def _setup_test_route_rest(self, client, session, user_ids):
+        self._add_test_data(session, user_ids)
 
-    def test_get_collection(self):
-        body = scenarios.get_collection(self.app, self.session, ROUTES)
+    def test_get_collection(self, client, session):
+        body = scenarios.get_collection(client, session, ROUTES)
         doc = body['documents'][0]
         assert 'height_diff_access' not in doc
 
-    def test_get_collection_paginated(self):
-        self.app.get('/routes?offset=invalid', status=422)
+    def test_get_collection_paginated(self, client, session):
+        client.get('/routes?offset=invalid', status=422)
 
         scenarios.assert_results_equal(
             scenarios.get_collection(
-                self.app, self.session, ROUTES, {'offset': 0, 'limit': 0}
+                client, session, ROUTES, {'offset': 0, 'limit': 0}
             ),
             [],
             4,
@@ -63,33 +69,33 @@ class TestRouteRest(BaseTestRest):
 
         scenarios.assert_results_equal(
             scenarios.get_collection(
-                self.app, self.session, ROUTES, {'offset': 0, 'limit': 1}
+                client, session, ROUTES, {'offset': 0, 'limit': 1}
             ),
             [self.route4.document_id],
             4,
         )
         scenarios.assert_results_equal(
             scenarios.get_collection(
-                self.app, self.session, ROUTES, {'offset': 0, 'limit': 2}
+                client, session, ROUTES, {'offset': 0, 'limit': 2}
             ),
             [self.route4.document_id, self.route3.document_id],
             4,
         )
         scenarios.assert_results_equal(
             scenarios.get_collection(
-                self.app, self.session, ROUTES, {'offset': 1, 'limit': 2}
+                client, session, ROUTES, {'offset': 1, 'limit': 2}
             ),
             [self.route3.document_id, self.route2.document_id],
             4,
         )
 
-    def test_get_collection_lang(self):
-        scenarios.get_collection_lang(self.app, ROUTES)
+    def test_get_collection_lang(self, client):
+        scenarios.get_collection_lang(client, ROUTES)
 
-    def test_get_collection_for_waypoint(self):
-        reset_search_index(self.session)
+    def test_get_collection_for_waypoint(self, client, session):
+        reset_search_index(session)
 
-        response = self.app.get(
+        response = client.get(
             ROUTES.prefix + '?w=' + str(self.waypoint.document_id), status=200
         )
 
@@ -98,36 +104,36 @@ class TestRouteRest(BaseTestRest):
         assert response.json['total'] == 1
         assert documents[0]['document_id'] == self.route.document_id
 
-    def test_get_collection_has_geom(self):
-        body = scenarios.get_collection(self.app, self.session, ROUTES)
+    def test_get_collection_has_geom(self, client, session):
+        body = scenarios.get_collection(client, session, ROUTES)
         doc = body['documents'][3]
         assert doc['geometry']['has_geom_detail'] is True
 
-    def test_get_collection_search(self):
-        reset_search_index(self.session)
+    def test_get_collection_search(self, client, session):
+        reset_search_index(session)
 
-        body = scenarios.get_collection_search(self.app, ROUTES, {'act': 'skitouring'})
+        body = scenarios.get_collection_search(client, ROUTES, {'act': 'skitouring'})
         assert body.get('total') == 3
         assert len(body.get('documents')) == 3
 
         body = scenarios.get_collection_search(
-            self.app, ROUTES, {'act': 'skitouring', 'limit': 2}
+            client, ROUTES, {'act': 'skitouring', 'limit': 2}
         )
         assert body.get('total') == 3
         assert len(body.get('documents')) == 2
 
-        body = scenarios.get_collection_search(self.app, ROUTES, {'hdif': '700,900'})
+        body = scenarios.get_collection_search(client, ROUTES, {'hdif': '700,900'})
         assert body.get('total') == 2
 
-    def test_get(self):
-        body = scenarios.get(self.app, ROUTES, self.route, title=self.locale_en.title)
+    def test_get(self, client):
+        body = scenarios.get(client, ROUTES, self.route, title=self.locale_en.title)
         assert body.get('activities') == self.route.activities
         self._assert_geometry(body)
         assert 'climbing_outdoor_type' not in body
         assert 'elevation_min' in body
         assert body['glacier_gear'] == 'no'
 
-        locale_en = self.get_locale('en', body.get('locales'))
+        locale_en = get_locale(body.get('locales'), 'en')
         assert 'Main waypoint title' == locale_en.get('title_prefix')
         assert 1 == locale_en.get('topic_id')
 
@@ -209,9 +215,9 @@ class TestRouteRest(BaseTestRest):
         # no licence on the maps embedded in a document
         assert 'license' not in topo_map
 
-    def test_get_empty_geom_detail(self):
+    def test_get_empty_geom_detail(self, client, session):
         # an empty geometry is answered like a missing one (#2526)
-        self.session.execute(
+        session.execute(
             text(
                 'UPDATE guidebook.documents_geometries '
                 "SET geom_detail = ST_GeomFromText('MULTILINESTRING Z EMPTY', 3857) "
@@ -219,12 +225,12 @@ class TestRouteRest(BaseTestRest):
             ),
             {'id': self.route.document_id},
         )
-        self.session.flush()
-        body = scenarios.get(self.app, ROUTES, self.route, title=self.locale_en.title)
+        session.flush()
+        body = scenarios.get(client, ROUTES, self.route, title=self.locale_en.title)
         assert body['geometry']['geom_detail'] is None
 
-    def test_get_version(self):
-        body = scenarios.get_version(self.app, ROUTES, self.route, self.route_version)
+    def test_get_version(self, client):
+        body = scenarios.get_version(client, ROUTES, self.route, self.route_version)
         assert body['document']['license'] == {
             'id': 'CC-BY-SA-3.0',
             'url': 'https://creativecommons.org/licenses/by-sa/3.0/',
@@ -233,36 +239,36 @@ class TestRouteRest(BaseTestRest):
             ),
         }
 
-    def test_get_version_without_activity(self):
+    def test_get_version_without_activity(self, client, session):
         """Tests that old route versions without activity include the fields
         of all activities.
         """
         self.route_version.document_archive.activities = []
-        self.session.flush()
-        body = scenarios.get_version(self.app, ROUTES, self.route, self.route_version)
+        session.flush()
+        body = scenarios.get_version(client, ROUTES, self.route, self.route_version)
         locale = body['document']['locales'][0]
         assert 'title' in locale
 
-    def test_get_cooked(self):
-        scenarios.get_cooked(self.app, ROUTES, self.route)
+    def test_get_cooked(self, client):
+        scenarios.get_cooked(client, ROUTES, self.route)
 
-    def test_get_cooked_with_defaulting(self):
-        scenarios.get_cooked_with_defaulting(self.app, ROUTES, self.route)
+    def test_get_cooked_with_defaulting(self, client):
+        scenarios.get_cooked_with_defaulting(client, ROUTES, self.route)
 
-    def test_get_lang(self):
-        body = scenarios.get_lang(self.app, ROUTES, self.route)
+    def test_get_lang(self, client):
+        body = scenarios.get_lang(client, ROUTES, self.route)
 
         assert 'Mont Blanc from the air' == body.get('locales')[0].get('title')
         assert 'Main waypoint title' == body.get('locales')[0].get('title_prefix')
 
-    def test_get_new_lang(self):
-        scenarios.get_new_lang(self.app, ROUTES, self.route)
+    def test_get_new_lang(self, client):
+        scenarios.get_new_lang(client, ROUTES, self.route)
 
-    def test_get_404(self):
-        scenarios.get_404(self.app, ROUTES)
+    def test_get_404(self, client):
+        scenarios.get_404(client, ROUTES)
 
-    def test_get_edit(self):
-        response = self.app.get(
+    def test_get_edit(self, client):
+        response = client.get(
             ROUTES.prefix + '/' + str(self.route.document_id) + '?e=1', status=200
         )
         body = response.json
@@ -277,49 +283,47 @@ class TestRouteRest(BaseTestRest):
         assert 'images' not in associations
         assert 'users' not in associations
 
-    def test_get_caching(self):
-        scenarios.get_caching(self.app, ROUTES, self.route)
+    def test_get_caching(self, client):
+        scenarios.get_caching(client, ROUTES, self.route)
 
-    def test_get_info(self):
-        body, locale = scenarios.get_info(self.app, ROUTES, self.route, 'en')
+    def test_get_info(self, client):
+        body, locale = scenarios.get_info(client, ROUTES, self.route, 'en')
         assert locale.get('lang') == 'en'
         assert locale.get('title_prefix') == self.locale_en.title_prefix
 
-    def test_get_info_best_lang(self):
-        body, locale = scenarios.get_info(self.app, ROUTES, self.route, 'es')
+    def test_get_info_best_lang(self, client):
+        body, locale = scenarios.get_info(client, ROUTES, self.route, 'es')
         assert locale.get('lang') == 'fr'
 
-    def test_get_info_404(self):
-        scenarios.get_info_404(self.app, ROUTES)
+    def test_get_info_404(self, client):
+        scenarios.get_info_404(client, ROUTES)
 
-    def test_post_error(self):
+    def test_post_error(self, client):
         # an invalid body: its errors alone, the rules of the API need a
         # valid body
-        body = scenarios.post_error(self.app, ROUTES, {}, status=422)
+        body = scenarios.post_error(client, ROUTES, {}, status=422)
         errors = errors_of(body)
         assert len(errors) == 1
-        self.assertError(errors, 'activities', 'Field required')
+        assert_error(errors, 'activities', 'Field required')
 
-    def test_post_empty_activities_and_associations_error(self):
-        body = scenarios.post_error(self.app, ROUTES, {'activities': []}, status=422)
+    def test_post_empty_activities_and_associations_error(self, client):
+        body = scenarios.post_error(client, ROUTES, {'activities': []}, status=422)
         errors = errors_of(body)
         assert len(errors) == 1
-        self.assertError(errors, 'activities', 'Shorter than minimum length 1')
+        assert_error(errors, 'activities', 'Shorter than minimum length 1')
 
-    def test_post_without_waypoint(self):
+    def test_post_without_waypoint(self, client):
         # a valid body: the rules of the API, in its envelope (400)
         body = scenarios.post_error(
-            self.app,
+            client,
             ROUTES,
             {'activities': ['hiking'], 'locales': [{'lang': 'en', 'title': 'x'}]},
         )
         errors = errors_of(body)
         assert len(errors) == 1
-        self.assertError(
-            errors, 'associations.waypoints', 'at least one waypoint required'
-        )
+        assert_error(errors, 'associations.waypoints', 'at least one waypoint required')
 
-    def test_climing_indoor_waypoint_association(self):
+    def test_climing_indoor_waypoint_association(self, client):
         body_post = {
             'main_waypoint_id': self.waypoint_climbing_indoor.document_id,
             'activities': ['hiking', 'skitouring'],
@@ -341,7 +345,7 @@ class TestRouteRest(BaseTestRest):
                 ]
             },
         }
-        body = scenarios.post_error(self.app, ROUTES, body_post)
+        body = scenarios.post_error(client, ROUTES, body_post)
         errors = body.get('errors')
         assert len(errors) == 3
         assert (
@@ -350,7 +354,7 @@ class TestRouteRest(BaseTestRest):
         )
         assert errors[0].get('name') == 'associations.climbing_indoor_waypoint'
 
-    def test_post_invalid_activity(self):
+    def test_post_invalid_activity(self, client):
         body_post = {
             'activities': ['cooking'],
             'elevation_min': 700,
@@ -367,16 +371,16 @@ class TestRouteRest(BaseTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body = scenarios.post_error(self.app, ROUTES, body_post, status=422)
+        body = scenarios.post_error(client, ROUTES, body_post, status=422)
         # the schema rejects the body, so the association checks also miss
         # their data and add their own errors
-        self.assertError(
+        assert_error(
             errors_of(body),
             'activities.0',
             f'"cooking" is not one of {", ".join(activities)}',
         )
 
-    def test_post_missing_title(self):
+    def test_post_missing_title(self, client):
         body_post = {
             'activities': ['skitouring'],
             'elevation_min': 700,
@@ -392,9 +396,9 @@ class TestRouteRest(BaseTestRest):
             },
             'locales': [{'lang': 'en'}],
         }
-        scenarios.post_missing_title(self.app, ROUTES, body_post)
+        scenarios.post_missing_title(client, ROUTES, body_post)
 
-    def test_post_non_whitelisted_attribute(self):
+    def test_post_non_whitelisted_attribute(self, client, session):
         body = {
             'activities': ['hiking'],
             'protected': True,
@@ -412,12 +416,12 @@ class TestRouteRest(BaseTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        scenarios.post_non_whitelisted_attribute(self.app, self.session, ROUTES, body)
+        scenarios.post_non_whitelisted_attribute(client, session, ROUTES, body)
 
-    def test_post_missing_content_type(self):
-        scenarios.post_missing_content_type(self.app, ROUTES, {})
+    def test_post_missing_content_type(self, client):
+        scenarios.post_missing_content_type(client, ROUTES, {})
 
-    def test_post_success(self):
+    def test_post_success(self, client, session):
         body = {
             'main_waypoint_id': self.waypoint.document_id,
             'activities': ['hiking', 'skitouring'],
@@ -435,7 +439,7 @@ class TestRouteRest(BaseTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
+        body, doc = scenarios.post_success(client, session, ROUTES, body)
         self._assert_geometry(body)
         self._assert_default_geometry(body)
 
@@ -463,7 +467,7 @@ class TestRouteRest(BaseTestRest):
 
         # check that a link for intersecting areas is created
         links = (
-            self.session.query(AreaAssociation)
+            session.query(AreaAssociation)
             .filter(AreaAssociation.document_id == doc.document_id)
             .all()
         )
@@ -471,20 +475,20 @@ class TestRouteRest(BaseTestRest):
         assert links[0].area_id == self.area1.document_id
 
         # check that a link to the main waypoint is created
-        association_main_wp = self.session.get(
+        association_main_wp = session.get(
             Association, (self.waypoint.document_id, doc.document_id)
         )
         assert association_main_wp is not None
 
         association_main_wp_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == self.waypoint.document_id)
             .filter(AssociationLog.child_document_id == doc.document_id)
             .first()
         )
         assert association_main_wp_log is not None
 
-    def test_post_success_3d(self):
+    def test_post_success_3d(self, client, session):
         """Tests that routes with 3D tracks can be created and read."""
         body = {
             'main_waypoint_id': self.waypoint.document_id,
@@ -497,26 +501,26 @@ class TestRouteRest(BaseTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
 
-        _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
-        response = self.app.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
+        _, doc = scenarios.post_success(client, session, ROUTES, body)
+        response = client.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
         geometry = body['geometry']
         geom = json.loads(geometry['geom'])
         assert len(geom['coordinates']) == 2
-        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
+        assert_coordinates_equal(geom['coordinates'], [635961.0, 5723624.0])
 
         geom_detail = json.loads(geometry['geom_detail'])
         assert len(geom_detail['coordinates']) == 2
         assert len(geom_detail['coordinates'][0]) == 3
-        self.assertCoodinateEquals(
+        assert_coordinates_equal(
             geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0]
         )
-        self.assertCoodinateEquals(
+        assert_coordinates_equal(
             geom_detail['coordinates'][1], [635966.0, 5723644.0, 1210.0]
         )
 
-    def test_post_wrong_geom_type(self):
+    def test_post_wrong_geom_type(self, client):
         body = {
             'main_waypoint_id': self.waypoint.document_id,
             'activities': ['hiking', 'skitouring'],
@@ -541,13 +545,13 @@ class TestRouteRest(BaseTestRest):
             ],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = scenarios.post_wrong_geom_type(self.app, ROUTES, body, status=422)
+        errors = scenarios.post_wrong_geom_type(client, ROUTES, body, status=422)
         assert (
             errors[0]['description'] == 'Invalid geometry type. Expected: '
             "['LINESTRING', 'MULTILINESTRING']. Got: POINT."
         )
 
-    def test_post_corrupted_geojson_geom(self):
+    def test_post_corrupted_geojson_geom(self, client):
         body = {
             'main_waypoint_id': self.waypoint.document_id,
             'activities': ['hiking', 'skitouring'],
@@ -572,7 +576,7 @@ class TestRouteRest(BaseTestRest):
             ],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = scenarios.post_wrong_geom_type(self.app, ROUTES, body, status=422)
+        errors = scenarios.post_wrong_geom_type(client, ROUTES, body, status=422)
         assert (
             errors[0]['description'] == 'Invalid geometry: {"type": '
             '"LineString", "coordinates": '
@@ -590,13 +594,13 @@ class TestRouteRest(BaseTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        errors = scenarios.post_wrong_geom_type(self.app, ROUTES, body, status=422)
+        errors = scenarios.post_wrong_geom_type(client, ROUTES, body, status=422)
         assert (
             errors[0]['description']
             == 'Invalid geometry: {"type": "Point", "coordinates": [NaN, NaN]}'
         )
 
-    def test_post_success_3d_multiline(self):
+    def test_post_success_3d_multiline(self, client, session):
         """Tests that routes with 3D multiline tracks can be created and read."""
         body = {
             'main_waypoint_id': self.waypoint.document_id,
@@ -609,27 +613,27 @@ class TestRouteRest(BaseTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
 
-        _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
-        response = self.app.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
+        _, doc = scenarios.post_success(client, session, ROUTES, body)
+        response = client.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
         geometry = body['geometry']
         geom = json.loads(geometry['geom'])
         assert len(geom['coordinates']) == 2
-        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
+        assert_coordinates_equal(geom['coordinates'], [635961.0, 5723624.0])
 
         geom_detail = json.loads(geometry['geom_detail'])
         assert len(geom_detail['coordinates']) == 1
         assert len(geom_detail['coordinates'][0]) == 2
         assert len(geom_detail['coordinates'][0][0]) == 3
-        self.assertCoodinateEquals(
+        assert_coordinates_equal(
             geom_detail['coordinates'][0][0], [635956.0, 5723604.0, 1200.0]
         )
-        self.assertCoodinateEquals(
+        assert_coordinates_equal(
             geom_detail['coordinates'][0][1], [635966.0, 5723644.0, 1210.0]
         )
 
-    def test_post_success_4d(self):
+    def test_post_success_4d(self, client, session):
         """Tests that routes with 4D tracks can be created and read."""
         body = {
             'main_waypoint_id': self.waypoint.document_id,
@@ -643,26 +647,26 @@ class TestRouteRest(BaseTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
 
-        _, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
-        response = self.app.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
+        _, doc = scenarios.post_success(client, session, ROUTES, body)
+        response = client.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
         body = response.json
 
         geometry = body['geometry']
         geom = json.loads(geometry['geom'])
         assert len(geom['coordinates']) == 2
-        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
+        assert_coordinates_equal(geom['coordinates'], [635961.0, 5723624.0])
 
         geom_detail = json.loads(geometry['geom_detail'])
         assert len(geom_detail['coordinates']) == 2
         assert len(geom_detail['coordinates'][0]) == 4
-        self.assertCoodinateEquals(
+        assert_coordinates_equal(
             geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0, 12345]
         )
-        self.assertCoodinateEquals(
+        assert_coordinates_equal(
             geom_detail['coordinates'][1], [635966.0, 5723644.0, 1210.0, 12346]
         )
 
-    def test_post_default_geom_multi_line(self):
+    def test_post_default_geom_multi_line(self, client, session):
         body = {
             'main_waypoint_id': self.waypoint.document_id,
             'activities': ['hiking', 'skitouring'],
@@ -681,12 +685,12 @@ class TestRouteRest(BaseTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
+        body, doc = scenarios.post_success(client, session, ROUTES, body)
         assert doc.geometry.geom is not None
         assert doc.geometry.geom_detail is not None
         self._assert_default_geometry(body)
 
-    def test_post_default_geom_from_main_wp(self):
+    def test_post_default_geom_from_main_wp(self, client, session):
         body = {
             'main_waypoint_id': self.waypoint.document_id,
             'activities': ['hiking', 'skitouring'],
@@ -698,12 +702,12 @@ class TestRouteRest(BaseTestRest):
             'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
-        body, doc = scenarios.post_success(self.app, self.session, ROUTES, body)
+        body, doc = scenarios.post_success(client, session, ROUTES, body)
         assert doc.geometry.geom is not None
         assert doc.geometry.geom_detail is None
         self._assert_default_geometry(body, x=635956, y=5723604)
 
-    def test_post_default_geom_from_associated_wps(self):
+    def test_post_default_geom_from_associated_wps(self, client, session):
         body = {
             'activities': ['hiking', 'skitouring'],
             'elevation_min': 700,
@@ -715,13 +719,13 @@ class TestRouteRest(BaseTestRest):
             'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
         }
         body, doc = scenarios.post_success(
-            self.app, self.session, ROUTES, body, skip_validation=True
+            client, session, ROUTES, body, skip_validation=True
         )
         assert doc.geometry.geom is not None
         assert doc.geometry.geom_detail is None
         self._assert_default_geometry(body, x=635956, y=5723604)
 
-    def test_post_main_wp_without_association(self):
+    def test_post_main_wp_without_association(self, client):
         body_post = {
             'main_waypoint_id': self.waypoint.document_id,
             'activities': ['hiking', 'skitouring'],
@@ -736,14 +740,12 @@ class TestRouteRest(BaseTestRest):
                 'waypoints': [{'document_id': self.waypoint2.document_id}]
             },
         }
-        body = scenarios.post_error(self.app, ROUTES, body_post)
+        body = scenarios.post_error(client, ROUTES, body_post)
         errors = body.get('errors')
         assert len(errors) == 1
-        self.assertError(
-            errors, 'main_waypoint_id', 'no association to the main waypoint'
-        )
+        assert_error(errors, 'main_waypoint_id', 'no association to the main waypoint')
 
-    def test_put_wrong_document_id(self):
+    def test_put_wrong_document_id(self, client):
         body = {
             'document': {
                 'document_id': '9999999',
@@ -768,9 +770,9 @@ class TestRouteRest(BaseTestRest):
                 },
             }
         }
-        scenarios.put_wrong_document_id(self.app, ROUTES, body)
+        scenarios.put_wrong_document_id(client, ROUTES, body)
 
-    def test_put_wrong_document_version(self):
+    def test_put_wrong_document_version(self, client):
         body = {
             'document': {
                 'document_id': self.route.document_id,
@@ -795,9 +797,9 @@ class TestRouteRest(BaseTestRest):
                 },
             }
         }
-        scenarios.put_wrong_version(self.app, ROUTES, body, self.route.document_id)
+        scenarios.put_wrong_version(client, ROUTES, body, self.route.document_id)
 
-    def test_put_wrong_locale_version(self):
+    def test_put_wrong_locale_version(self, client):
         body = {
             'document': {
                 'document_id': self.route.document_id,
@@ -822,9 +824,9 @@ class TestRouteRest(BaseTestRest):
                 },
             }
         }
-        scenarios.put_wrong_version(self.app, ROUTES, body, self.route.document_id)
+        scenarios.put_wrong_version(client, ROUTES, body, self.route.document_id)
 
-    def test_put_wrong_ids(self):
+    def test_put_wrong_ids(self, client):
         body = {
             'document': {
                 'document_id': self.route.document_id,
@@ -849,12 +851,12 @@ class TestRouteRest(BaseTestRest):
                 },
             }
         }
-        scenarios.put_wrong_ids(self.app, ROUTES, body, self.route.document_id)
+        scenarios.put_wrong_ids(client, ROUTES, body, self.route.document_id)
 
-    def test_put_no_document(self):
-        scenarios.put_no_document(self.app, ROUTES, self.route.document_id)
+    def test_put_no_document(self, client):
+        scenarios.put_no_document(client, ROUTES, self.route.document_id)
 
-    def test_put_success_all(self):
+    def test_put_success_all(self, client, session):
         body = {
             'message': 'Update',
             'document': {
@@ -890,7 +892,7 @@ class TestRouteRest(BaseTestRest):
             },
         }
         (body, route) = scenarios.put_success_all(
-            self.app, self.session, ROUTES, body, self.route, locale_fr=self.locale_fr
+            client, session, ROUTES, body, self.route, locale_fr=self.locale_fr
         )
         self._assert_default_geometry(body, x=635961, y=5723624)
 
@@ -919,7 +921,7 @@ class TestRouteRest(BaseTestRest):
         assert archive_locale.title == 'Mont Blanc du ciel'
         assert archive_locale.gear == 'paraglider'
 
-    def test_put_success_figures_only(self):
+    def test_put_success_figures_only(self, client, session):
         body = {
             'message': 'Changing figures',
             'document': {
@@ -952,12 +954,12 @@ class TestRouteRest(BaseTestRest):
             },
         }
         (body, route) = scenarios.put_success_figures_only(
-            self.app, self.session, ROUTES, body, self.route
+            client, session, ROUTES, body, self.route
         )
 
         assert route.elevation_max == 1600
 
-    def test_put_success_new_track_with_default_geom(self):
+    def test_put_success_new_track_with_default_geom(self, client, session):
         """Test that a provided default geometry (`geom`) is used instead of
         obtaining the geom from a track (`geom_detail`).
         """
@@ -999,11 +1001,11 @@ class TestRouteRest(BaseTestRest):
             },
         }
         (body, route) = scenarios.put_success_figures_only(
-            self.app, self.session, ROUTES, body, self.route
+            client, session, ROUTES, body, self.route
         )
         self._assert_default_geometry(body, x=635000, y=5723000)
 
-    def test_put_success_main_wp_changed(self):
+    def test_put_success_main_wp_changed(self, client, session):
         body = {
             'message': 'Changing figures',
             'document': {
@@ -1036,7 +1038,7 @@ class TestRouteRest(BaseTestRest):
             },
         }
         (body, route) = scenarios.put_success_figures_only(
-            self.app, self.session, ROUTES, body, self.route, user='moderator'
+            client, session, ROUTES, body, self.route, user='moderator'
         )
         # tests that the default geometry has not changed (main wp has changed
         # but the route has a track)
@@ -1047,20 +1049,20 @@ class TestRouteRest(BaseTestRest):
         assert locale_en.title_prefix == self.waypoint2.get_locale('en').title
 
         # check that a link to the new main waypoint is created
-        association_main_wp = self.session.get(
+        association_main_wp = session.get(
             Association, (self.waypoint2.document_id, route.document_id)
         )
         assert association_main_wp is not None
 
         association_main_wp_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == self.waypoint2.document_id)
             .filter(AssociationLog.child_document_id == route.document_id)
             .first()
         )
         assert association_main_wp_log is not None
 
-    def test_put_success_lang_only(self):
+    def test_put_success_lang_only(self, client, session):
         body = {
             'message': 'Changing lang',
             'document': {
@@ -1092,12 +1094,12 @@ class TestRouteRest(BaseTestRest):
             },
         }
         (body, route) = scenarios.put_success_lang_only(
-            self.app, self.session, ROUTES, body, self.route
+            client, session, ROUTES, body, self.route
         )
 
         assert route.get_locale('en').gear == 'none'
 
-    def test_put_success_new_lang(self):
+    def test_put_success_new_lang(self, client, session):
         """Test updating a document by adding a new locale."""
         body = {
             'message': 'Adding lang',
@@ -1129,18 +1131,18 @@ class TestRouteRest(BaseTestRest):
             },
         }
         (body, route) = scenarios.put_success_new_lang(
-            self.app, self.session, ROUTES, body, self.route
+            client, session, ROUTES, body, self.route
         )
 
         assert route.get_locale('es').gear == 'si'
 
-    def test_history(self):
+    def test_history(self, client, user_ids):
         id = self.route.document_id
         langs = ['fr', 'en']
         for lang in langs:
-            body = self.app.get(f'/document/{id}/history/{lang}')
+            body = client.get(f'/document/{id}/history/{lang}')
             username = 'contributor'
-            user_id = self.global_userids[username]
+            user_id = user_ids[username]
 
             title = body.json['title']
             versions = body.json['versions']
@@ -1153,12 +1155,12 @@ class TestRouteRest(BaseTestRest):
                 assert 'written_at' in r
                 assert 'version_id' in r
 
-    def test_history_no_lang(self):
+    def test_history_no_lang(self, client):
         id = self.route.document_id
-        self.app.get(f'/document/{id}/history/es', status=404)
+        client.get(f'/document/{id}/history/es', status=404)
 
-    def test_history_no_doc(self):
-        self.app.get('/document/99999/history/es', status=404)
+    def test_history_no_doc(self, client):
+        client.get('/document/99999/history/es', status=404)
 
     def _assert_geometry(self, body):
         assert body.get('geometry') is not None
@@ -1186,7 +1188,7 @@ class TestRouteRest(BaseTestRest):
         assert point.x == pytest.approx(x, abs=5e-8)
         assert point.y == pytest.approx(y, abs=5e-8)
 
-    def test_update_prefix_title(self):
+    def test_update_prefix_title(self, session):
         self.route.locales.append(
             RouteLocale(
                 lang='es',
@@ -1196,12 +1198,12 @@ class TestRouteRest(BaseTestRest):
             )
         )
         self.route.main_waypoint_id = self.waypoint.document_id
-        self.session.flush()
-        self.session.refresh(self.route)
+        session.flush()
+        session.refresh(self.route)
         check_title_prefix(self.route, create=False)
-        self.session.expire_all()
+        session.expire_all()
 
-        route = self.session.get(Route, self.route.document_id)
+        route = session.get(Route, self.route.document_id)
         locale_en = route.get_locale('en')
         assert locale_en.version == 1
         assert locale_en.title_prefix == self.waypoint.get_locale('en').title
@@ -1212,10 +1214,10 @@ class TestRouteRest(BaseTestRest):
         assert locale_es.version == 1
         assert locale_es.title_prefix == self.waypoint.get_locale('fr').title
 
-    def test_get_associations_history(self):
-        scenarios.get_association_logs(self.app, self.route)
+    def test_get_associations_history(self, client):
+        scenarios.get_association_logs(client, self.route)
 
-    def _add_test_data(self):
+    def _add_test_data(self, session, user_ids):
         self.route = Route(
             activities=['skitouring'],
             elevation_max=1500,
@@ -1246,13 +1248,13 @@ class TestRouteRest(BaseTestRest):
             geom='SRID=3857;POINT(635961 5723624)',
         )
 
-        self.session.add(self.route)
-        self.session.flush()
+        session.add(self.route)
+        session.flush()
 
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
         create_new_version(self.route, user_id)
         self.route_version = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.route.document_id)
             .filter(DocumentVersion.lang == 'en')
             .first()
@@ -1261,10 +1263,10 @@ class TestRouteRest(BaseTestRest):
         self.article1 = Article(
             categories=['site_info'], activities=['hiking'], article_type='collab'
         )
-        self.session.add(self.article1)
-        self.session.flush()
+        session.add(self.article1)
+        session.flush()
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(
                 parent_document=self.route, child_document=self.article1
             ),
@@ -1272,10 +1274,10 @@ class TestRouteRest(BaseTestRest):
         )
 
         self.book1 = Book(activities=['hiking'], book_types=['biography'])
-        self.session.add(self.book1)
-        self.session.flush()
+        session.add(self.book1)
+        session.flush()
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(parent_document=self.book1, child_document=self.route),
             user_id,
         )
@@ -1302,8 +1304,8 @@ class TestRouteRest(BaseTestRest):
                 ),
             ],
         )
-        self.session.add(self.route2)
-        self.session.flush()
+        session.add(self.route2)
+        session.flush()
         create_new_version(self.route2, user_id)
 
         self.route3 = Route(
@@ -1330,8 +1332,8 @@ class TestRouteRest(BaseTestRest):
         )
 
         self.route3.geometry = DocumentGeometry(geom='SRID=3857;POINT(0 0)')
-        self.session.add(self.route3)
-        self.session.flush()
+        session.add(self.route3)
+        session.flush()
         create_new_version(self.route3, user_id)
 
         self.route4 = Route(
@@ -1359,7 +1361,7 @@ class TestRouteRest(BaseTestRest):
                 gear='paraglider',
             )
         )
-        self.session.add(self.route4)
+        session.add(self.route4)
 
         # waypoints
         self.waypoint = Waypoint(
@@ -1385,7 +1387,7 @@ class TestRouteRest(BaseTestRest):
                 access_period='yapa',
             )
         )
-        self.session.add(self.waypoint)
+        session.add(self.waypoint)
         self.waypoint2 = Waypoint(
             waypoint_type='summit',
             elevation=4,
@@ -1396,7 +1398,7 @@ class TestRouteRest(BaseTestRest):
                 lang='en', title='Mont Granier 2 (en)', description='...', access='yep'
             )
         )
-        self.session.add(self.waypoint2)
+        session.add(self.waypoint2)
         self.waypoint_tc = Waypoint(
             waypoint_type='access',
             elevation=1776,
@@ -1412,35 +1414,35 @@ class TestRouteRest(BaseTestRest):
                 access_period='hiver',
             )
         )
-        self.session.add(self.waypoint_tc)
+        session.add(self.waypoint_tc)
         self.waypoint_climbing_indoor = Waypoint(
             waypoint_type='climbing_indoor',
             elevation=1,
             geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
         )
-        self.session.add(self.waypoint_climbing_indoor)
-        self.session.flush()
+        session.add(self.waypoint_climbing_indoor)
+        session.flush()
 
         # associations
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(parent_document=self.route, child_document=self.route4),
             user_id,
         )
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(parent_document=self.route4, child_document=self.route),
             user_id,
         )
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(
                 parent_document=self.waypoint, child_document=self.route
             ),
             user_id,
         )
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(
                 parent_document=self.waypoint_tc, child_document=self.route
             ),
@@ -1457,9 +1459,9 @@ class TestRouteRest(BaseTestRest):
                 geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))'  # noqa: E501
             ),
         )
-        self.session.add(topo_map)
-        self.session.flush()
-        self.session.add(TopoMapAssociation(document=self.route, topo_map=topo_map))
+        session.add(topo_map)
+        session.flush()
+        session.add(TopoMapAssociation(document=self.route, topo_map=topo_map))
 
         self.outing1 = Outing(
             activities=['skitouring'],
@@ -1470,10 +1472,10 @@ class TestRouteRest(BaseTestRest):
                 OutingLocale(lang='en', title='...', description='...', weather='sunny')
             ],
         )
-        self.session.add(self.outing1)
-        self.session.flush()
+        session.add(self.outing1)
+        session.flush()
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(parent_document=self.route, child_document=self.outing1),
             user_id,
         )
@@ -1487,14 +1489,14 @@ class TestRouteRest(BaseTestRest):
                 OutingLocale(lang='en', title='...', description='...', weather='sunny')
             ],
         )
-        self.session.add(self.outing2)
-        self.session.flush()
+        session.add(self.outing2)
+        session.flush()
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(parent_document=self.route, child_document=self.outing2),
             user_id,
         )
-        self.session.flush()
+        session.flush()
 
         # add areas
         self.area1 = Area(
@@ -1507,8 +1509,8 @@ class TestRouteRest(BaseTestRest):
             area_type='range', locales=[DocumentLocale(lang='fr', title='France')]
         )
 
-        self.session.add_all([self.area1, self.area2])
-        self.session.flush()
+        session.add_all([self.area1, self.area2])
+        session.flush()
 
     def test_public_transportation_rating(self):
         # Test case 1: Starting and ending waypoints with different ratings
@@ -1731,25 +1733,25 @@ class TestRouteRest(BaseTestRest):
         assert start == []
         assert end == []
 
-    def test_update_all_routes(self):
+    def test_update_all_routes(self, client, session):
         # Test case 1: collaborators cannot update all routes:
-        headers = self.add_authorization_header(username='contributor')
+        headers = auth_headers(username='contributor')
         prefix = '/routes/update_public_transportation_rating'
-        self.app.post(prefix, headers=headers, status=403)
+        client.post(prefix, headers=headers, status=403)
 
         # Test case 2: Moderators can, with waypoints_extrapolation
-        headers = self.add_authorization_header(username='moderator')
-        self.app.post(prefix, headers=headers, status=200)
-        self.session.flush()
-        self.session.refresh(self.route)
+        headers = auth_headers(username='moderator')
+        client.post(prefix, headers=headers, status=200)
+        session.flush()
+        session.refresh(self.route)
         assert self.route.public_transportation_rating == 'poor service'
 
         # Test case 3: Moderators can, without waypoints_extrapolation
         self.route.route_types = ['traverse']
-        self.session.flush()
-        self.app.post(
+        session.flush()
+        client.post(
             prefix + '?waypoint_extrapolation=false', headers=headers, status=200
         )
-        self.session.flush()
-        self.session.refresh(self.route)
+        session.flush()
+        session.refresh(self.route)
         assert self.route.public_transportation_rating == 'unknown service'

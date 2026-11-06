@@ -21,8 +21,9 @@ from c2corg_api.scripts.es.sync import sync_es
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.tests import (
     assert_required,
+    auth_headers,
     errors_of,
-    global_tokens,
+    get_locale,
     send_json,
 )
 
@@ -38,23 +39,8 @@ class DocType:
     model_archive_locale: type | None = None
 
 
-def auth_headers(username=None, token=None, headers=None):
-    """Return the headers with the token of the given user (or token)."""
-    if not headers:
-        headers = {}
-    if not token:
-        token = global_tokens[username]
-    headers['Authorization'] = 'JWT token="' + token + '"'
-    return headers
-
-
 def _user_headers(user):
     return {} if not user else auth_headers(username=user)
-
-
-def get_locale(locales, lang):
-    """Return the locale of the given language in a JSON list of locales."""
-    return next(filter(lambda locale: locale['lang'] == lang, locales), None)
 
 
 def assert_results_equal(actual, expected, total):

@@ -1,5 +1,6 @@
 import datetime
 
+import pytest
 from dogpile.cache.api import NO_VALUE
 
 from c2corg_api.caching import cache_document_version
@@ -21,9 +22,16 @@ from c2corg_api.models.xreport import (
     Xreport,
     XreportLocale,
 )
-from c2corg_api.tests import assert_not_in_enum, assert_required, errors_of
+from c2corg_api.tests import (
+    assert_not_in_enum,
+    assert_required,
+    auth_headers,
+    errors_of,
+    get_locale,
+    send_json,
+)
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseTestRest, scenarios
+from c2corg_api.tests.views import scenarios
 from c2corg_api.tests.views.scenarios import DocType
 from c2corg_api.views.document import create_new_version
 
@@ -32,22 +40,22 @@ XREPORTS = DocType(
 )
 
 
-class TestXreportRest(BaseTestRest):
-    def setUp(self):
-        BaseTestRest.setUp(self)
-        self._add_test_data()
+class TestXreportRest:
+    @pytest.fixture(autouse=True)
+    def _setup_test_xreport_rest(self, client, session, user_ids):
+        self._add_test_data(session, user_ids)
 
-    def test_get_collection(self):
-        body = scenarios.get_collection(self.app, self.session, XREPORTS)
+    def test_get_collection(self, client, session):
+        body = scenarios.get_collection(client, session, XREPORTS)
         doc = body['documents'][0]
         assert 'geometry' in doc
 
-    def test_get_collection_paginated(self):
-        self.app.get('/xreports?offset=invalid', status=422)
+    def test_get_collection_paginated(self, client, session):
+        client.get('/xreports?offset=invalid', status=422)
 
         scenarios.assert_results_equal(
             scenarios.get_collection(
-                self.app, self.session, XREPORTS, {'offset': 0, 'limit': 0}
+                client, session, XREPORTS, {'offset': 0, 'limit': 0}
             ),
             [],
             4,
@@ -55,40 +63,40 @@ class TestXreportRest(BaseTestRest):
 
         scenarios.assert_results_equal(
             scenarios.get_collection(
-                self.app, self.session, XREPORTS, {'offset': 0, 'limit': 1}
+                client, session, XREPORTS, {'offset': 0, 'limit': 1}
             ),
             [self.xreport4.document_id],
             4,
         )
         scenarios.assert_results_equal(
             scenarios.get_collection(
-                self.app, self.session, XREPORTS, {'offset': 0, 'limit': 2}
+                client, session, XREPORTS, {'offset': 0, 'limit': 2}
             ),
             [self.xreport4.document_id, self.xreport3.document_id],
             4,
         )
         scenarios.assert_results_equal(
             scenarios.get_collection(
-                self.app, self.session, XREPORTS, {'offset': 1, 'limit': 2}
+                client, session, XREPORTS, {'offset': 1, 'limit': 2}
             ),
             [self.xreport3.document_id, self.xreport2.document_id],
             4,
         )
 
-    def test_get_collection_lang(self):
-        scenarios.get_collection_lang(self.app, XREPORTS)
+    def test_get_collection_lang(self, client):
+        scenarios.get_collection_lang(client, XREPORTS)
 
-    def test_get_collection_search(self):
-        reset_search_index(self.session)
+    def test_get_collection_search(self, client, session):
+        reset_search_index(session)
 
         scenarios.assert_results_equal(
-            scenarios.get_collection_search(self.app, XREPORTS, {'l': 'en'}),
+            scenarios.get_collection_search(client, XREPORTS, {'l': 'en'}),
             [self.xreport4.document_id, self.xreport1.document_id],
             2,
         )
 
         scenarios.assert_results_equal(
-            scenarios.get_collection_search(self.app, XREPORTS, {'act': 'skitouring'}),
+            scenarios.get_collection_search(client, XREPORTS, {'act': 'skitouring'}),
             [
                 self.xreport4.document_id,
                 self.xreport3.document_id,
@@ -98,9 +106,9 @@ class TestXreportRest(BaseTestRest):
             4,
         )
 
-    def test_get(self):
+    def test_get(self, client, user_ids):
         body = scenarios.get(
-            self.app,
+            client,
             XREPORTS,
             self.xreport1,
             user='moderator',
@@ -113,7 +121,7 @@ class TestXreportRest(BaseTestRest):
 
         assert 'author' in body
         author = body.get('author')
-        assert self.global_userids['contributor'] == author.get('user_id')
+        assert user_ids['contributor'] == author.get('user_id')
 
         associations = body['associations']
         assert 'images' in associations
@@ -139,14 +147,14 @@ class TestXreportRest(BaseTestRest):
         assert 'date' in body
         assert body.get('date') == '2020-01-01'
 
-        locale_en = self.get_locale('en', body.get('locales'))
+        locale_en = get_locale(body.get('locales'), 'en')
         assert locale_en.get('place') == 'some place descrip. in english'
-        locale_fr = self.get_locale('fr', body.get('locales'))
+        locale_fr = get_locale(body.get('locales'), 'fr')
         assert locale_fr.get('place') == 'some place descrip. in french'
 
-    def test_get_as_guest(self):
+    def test_get_as_guest(self, client):
         body = scenarios.get(
-            self.app, XREPORTS, self.xreport1, user=None, title=self.locale_en.title
+            client, XREPORTS, self.xreport1, user=None, title=self.locale_en.title
         )
 
         # common user should not see personal data in the xreport
@@ -157,9 +165,9 @@ class TestXreportRest(BaseTestRest):
         assert 'previous_injuries' not in body
         assert 'autonomy' not in body
 
-    def test_get_as_contributor_not_author(self):
+    def test_get_as_contributor_not_author(self, client):
         body = scenarios.get(
-            self.app,
+            client,
             XREPORTS,
             self.xreport1,
             user='contributor2',
@@ -174,9 +182,9 @@ class TestXreportRest(BaseTestRest):
         assert 'previous_injuries' not in body
         assert 'autonomy' not in body
 
-    def test_get_as_moderator(self):
+    def test_get_as_moderator(self, client):
         body = scenarios.get(
-            self.app,
+            client,
             XREPORTS,
             self.xreport1,
             user='moderator',
@@ -191,23 +199,23 @@ class TestXreportRest(BaseTestRest):
         assert 'previous_injuries' in body
         assert 'autonomy' in body
 
-    def test_get_cooked(self):
-        scenarios.get_cooked(self.app, XREPORTS, self.xreport1)
+    def test_get_cooked(self, client):
+        scenarios.get_cooked(client, XREPORTS, self.xreport1)
 
-    def test_get_cooked_with_defaulting(self):
-        scenarios.get_cooked_with_defaulting(self.app, XREPORTS, self.xreport1)
+    def test_get_cooked_with_defaulting(self, client):
+        scenarios.get_cooked_with_defaulting(client, XREPORTS, self.xreport1)
 
-    def test_get_lang(self):
-        scenarios.get_lang(self.app, XREPORTS, self.xreport1, user='contributor')
+    def test_get_lang(self, client):
+        scenarios.get_lang(client, XREPORTS, self.xreport1, user='contributor')
 
-    def test_get_new_lang(self):
-        scenarios.get_new_lang(self.app, XREPORTS, self.xreport1, user='moderator')
+    def test_get_new_lang(self, client):
+        scenarios.get_new_lang(client, XREPORTS, self.xreport1, user='moderator')
 
-    def test_get_404(self):
-        scenarios.get_404(self.app, XREPORTS, user='moderator')
+    def test_get_404(self, client):
+        scenarios.get_404(client, XREPORTS, user='moderator')
 
-    def test_get_cache_headers(self):
-        response = self.app.get(
+    def test_get_cache_headers(self, client):
+        response = client.get(
             XREPORTS.prefix + '/' + str(self.xreport1.document_id), status=200
         )
         headers = response.headers
@@ -216,18 +224,18 @@ class TestXreportRest(BaseTestRest):
 
         assert response.headers.get('Cache-Control') == 'private'
 
-    def test_get_version(self):
+    def test_get_version(self, client):
         scenarios.get_version(
-            self.app, XREPORTS, self.xreport1, self.xreport1_version, user='contributor'
+            client, XREPORTS, self.xreport1, self.xreport1_version, user='contributor'
         )
 
-    def test_get_version_etag(self):
-        auth_headers = self.add_authorization_header(username='contributor')
+    def test_get_version_etag(self, client):
+        request_headers = auth_headers(username='contributor')
         url = (
             f'{XREPORTS.prefix}/{self.xreport1.document_id!s}/en'
             f'/{self.xreport1_version.id!s}'
         )
-        response = self.app.get(url, headers=auth_headers, status=200)
+        response = client.get(url, headers=request_headers, status=200)
 
         # check that the ETag header is set
         headers = response.headers
@@ -239,12 +247,12 @@ class TestXreportRest(BaseTestRest):
         assert response.headers.get('Cache-Control') is None
 
         # then request the document again with the etag
-        auth_headers['If-None-Match'] = etag
-        response = self.app.get(url, status=304, headers=auth_headers)
+        request_headers['If-None-Match'] = etag
+        response = client.get(url, status=304, headers=request_headers)
         assert response.headers.get('Cache-Control') is None
 
-    def test_get_version_caching(self):
-        headers = self.add_authorization_header(username='contributor')
+    def test_get_version_caching(self, client):
+        headers = auth_headers(username='contributor')
         url = (
             f'{XREPORTS.prefix}/{self.xreport1.document_id!s}/en'
             f'/{self.xreport1_version.id!s}'
@@ -258,7 +266,7 @@ class TestXreportRest(BaseTestRest):
         assert cache_value == NO_VALUE
 
         # check that the response is cached
-        self.app.get(url, headers=headers, status=200)
+        client.get(url, headers=headers, status=200)
 
         cache_value = cache_document_version.get(cache_key)
         assert cache_value != NO_VALUE
@@ -267,42 +275,40 @@ class TestXreportRest(BaseTestRest):
         fake_cache_value = {'document': 'fake doc'}
         cache_document_version.set(cache_key, fake_cache_value)
 
-        response = self.app.get(url, headers=headers, status=200)
+        response = client.get(url, headers=headers, status=200)
         body = response.json
         assert body == fake_cache_value
 
-    def test_get_caching(self):
-        scenarios.get_caching(self.app, XREPORTS, self.xreport1)
+    def test_get_caching(self, client):
+        scenarios.get_caching(client, XREPORTS, self.xreport1)
 
-    def test_get_info(self):
-        _, locale = scenarios.get_info(self.app, XREPORTS, self.xreport1, 'en')
+    def test_get_info(self, client):
+        _, locale = scenarios.get_info(client, XREPORTS, self.xreport1, 'en')
         assert locale.get('lang') == 'en'
 
-    def test_get_info_best_lang(self):
-        _, locale = scenarios.get_info(self.app, XREPORTS, self.xreport1, 'es')
+    def test_get_info_best_lang(self, client):
+        _, locale = scenarios.get_info(client, XREPORTS, self.xreport1, 'es')
         assert locale.get('lang') == 'fr'
 
-    def test_get_info_404(self):
-        scenarios.get_info_404(self.app, XREPORTS)
+    def test_get_info_404(self, client):
+        scenarios.get_info_404(client, XREPORTS)
 
-    def test_post_error(self):
-        body = scenarios.post_error(
-            self.app, XREPORTS, {}, user='moderator', status=422
-        )
+    def test_post_error(self, client):
+        body = scenarios.post_error(client, XREPORTS, {}, user='moderator', status=422)
         errors = errors_of(body)
         assert len(errors) == 1
         assert_required(errors[0], 'event_activity')
 
-    def test_post_missing_title(self):
+    def test_post_missing_title(self, client):
         body_post = {
             'event_activity': 'skitouring',
             'event_type': 'stone_ice_fall',
             'nb_participants': 5,
             'locales': [{'lang': 'en'}],
         }
-        scenarios.post_missing_title(self.app, XREPORTS, body_post, user='moderator')
+        scenarios.post_missing_title(client, XREPORTS, body_post, user='moderator')
 
-    def test_post_non_whitelisted_attribute(self):
+    def test_post_non_whitelisted_attribute(self, client, session):
         body = {
             'event_activity': 'skitouring',
             'event_type': 'stone_ice_fall',
@@ -317,13 +323,13 @@ class TestXreportRest(BaseTestRest):
             ],
         }
         scenarios.post_non_whitelisted_attribute(
-            self.app, self.session, XREPORTS, body, user='moderator'
+            client, session, XREPORTS, body, user='moderator'
         )
 
-    def test_post_missing_content_type(self):
-        scenarios.post_missing_content_type(self.app, XREPORTS, {})
+    def test_post_missing_content_type(self, client):
+        scenarios.post_missing_content_type(client, XREPORTS, {})
 
-    def test_post_wrong_geom_type(self):
+    def test_post_wrong_geom_type(self, client):
         body = {
             'document_id': 123456,
             'version': 567890,
@@ -342,13 +348,13 @@ class TestXreportRest(BaseTestRest):
             },
             'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
         }
-        errors = scenarios.post_wrong_geom_type(self.app, XREPORTS, body, status=422)
+        errors = scenarios.post_wrong_geom_type(client, XREPORTS, body, status=422)
         assert (
             errors[0]['description']
             == "Invalid geometry type. Expected: ['POINT']. Got: LINESTRING."
         )
 
-    def test_post_outdated_attributes_error(self):
+    def test_post_outdated_attributes_error(self, client):
         outdated_attributes = [
             # api not checking additional parameters,
             # nb_outings raises no error
@@ -366,13 +372,13 @@ class TestXreportRest(BaseTestRest):
             }
             body[key] = value
             body = scenarios.post_error(
-                self.app, XREPORTS, body, user='moderator', status=422
+                client, XREPORTS, body, user='moderator', status=422
             )
             errors = errors_of(body)
             assert len(errors) == 1
             assert_not_in_enum(errors[0], key)
 
-    def test_post_success(self):
+    def test_post_success(self, client, session):
         body = {
             'document_id': 123456,
             'version': 567890,
@@ -396,8 +402,8 @@ class TestXreportRest(BaseTestRest):
             'locales': [{'title': "Lac d'Annecy", 'lang': 'en'}],
         }
         body, doc = scenarios.post_success(
-            self.app,
-            self.session,
+            client,
+            session,
             XREPORTS,
             body,
             user='moderator',
@@ -424,13 +430,13 @@ class TestXreportRest(BaseTestRest):
         assert doc.geometry is not None
 
         # check that a link to the associated waypoint is created
-        association_img = self.session.get(
+        association_img = session.get(
             Association, (doc.document_id, self.image2.document_id)
         )
         assert association_img is not None
 
         association_img_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == doc.document_id)
             .filter(AssociationLog.child_document_id == self.image2.document_id)
             .first()
@@ -438,20 +444,20 @@ class TestXreportRest(BaseTestRest):
         assert association_img_log is not None
 
         # check that a link to the associated xreport is created
-        association_art = self.session.get(
+        association_art = session.get(
             Association, (doc.document_id, self.article2.document_id)
         )
         assert association_art is not None
 
         association_art_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == doc.document_id)
             .filter(AssociationLog.child_document_id == self.article2.document_id)
             .first()
         )
         assert association_art_log is not None
 
-    def test_post_as_contributor_and_get_as_author(self):
+    def test_post_as_contributor_and_get_as_author(self, client, session, user_ids):
         body_post = {
             'document_id': 111,
             'version': 1,
@@ -467,18 +473,18 @@ class TestXreportRest(BaseTestRest):
 
         # create document (POST uses GET schema inside validation)
         body_post, doc = scenarios.post_success(
-            self.app, self.session, XREPORTS, body_post, user='contributor'
+            client, session, XREPORTS, body_post, user='contributor'
         )
 
         # the contributor is successfully set as author in DB
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
         version = doc.versions[0]
         meta_data = version.history_metadata
         assert meta_data.user_id == user_id
 
         # authorized contributor can see personal data in the xreport
         body = scenarios.get(
-            self.app,
+            client,
             XREPORTS,
             doc,
             user='contributor',
@@ -494,8 +500,8 @@ class TestXreportRest(BaseTestRest):
         assert 'previous_injuries' in body
         assert 'autonomy' in body
 
-    def test_post_anonymous(self):
-        self.app.registry.anonymous_user_id = self.global_userids['moderator']
+    def test_post_anonymous(self, client, session, user_ids):
+        client.registry.anonymous_user_id = user_ids['moderator']
         body_post = {
             'document_id': 111,
             'version': 1,
@@ -508,17 +514,17 @@ class TestXreportRest(BaseTestRest):
         }
 
         body_post, doc = scenarios.post_success(
-            self.app, self.session, XREPORTS, body_post, user='contributor'
+            client, session, XREPORTS, body_post, user='contributor'
         )
 
         # Check that the contributor is not set as author
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
         version = doc.versions[0]
         meta_data = version.history_metadata
         assert meta_data.user_id != user_id
-        assert meta_data.user_id == self.global_userids['moderator']
+        assert meta_data.user_id == user_ids['moderator']
 
-    def test_put_wrong_document_id(self):
+    def test_put_wrong_document_id(self, client):
         body = {
             'document': {
                 'document_id': '9999999',
@@ -535,9 +541,9 @@ class TestXreportRest(BaseTestRest):
                 ],
             }
         }
-        scenarios.put_wrong_document_id(self.app, XREPORTS, body, user='moderator')
+        scenarios.put_wrong_document_id(client, XREPORTS, body, user='moderator')
 
-    def test_put_wrong_document_version(self):
+    def test_put_wrong_document_version(self, client):
         body = {
             'document': {
                 'document_id': self.xreport1.document_id,
@@ -555,10 +561,10 @@ class TestXreportRest(BaseTestRest):
             }
         }
         scenarios.put_wrong_version(
-            self.app, XREPORTS, body, self.xreport1.document_id, user='moderator'
+            client, XREPORTS, body, self.xreport1.document_id, user='moderator'
         )
 
-    def test_put_wrong_locale_version(self):
+    def test_put_wrong_locale_version(self, client):
         body = {
             'document': {
                 'document_id': self.xreport1.document_id,
@@ -570,10 +576,10 @@ class TestXreportRest(BaseTestRest):
             }
         }
         scenarios.put_wrong_version(
-            self.app, XREPORTS, body, self.xreport1.document_id, user='moderator'
+            client, XREPORTS, body, self.xreport1.document_id, user='moderator'
         )
 
-    def test_put_wrong_ids(self):
+    def test_put_wrong_ids(self, client):
         body = {
             'document': {
                 'document_id': self.xreport1.document_id,
@@ -591,15 +597,15 @@ class TestXreportRest(BaseTestRest):
             }
         }
         scenarios.put_wrong_ids(
-            self.app, XREPORTS, body, self.xreport1.document_id, user='moderator'
+            client, XREPORTS, body, self.xreport1.document_id, user='moderator'
         )
 
-    def test_put_no_document(self):
+    def test_put_no_document(self, client):
         scenarios.put_no_document(
-            self.app, XREPORTS, self.xreport1.document_id, user='moderator'
+            client, XREPORTS, self.xreport1.document_id, user='moderator'
         )
 
-    def test_put_success_all(self):
+    def test_put_success_all(self, client, session):
         body = {
             'message': 'Update',
             'document': {
@@ -630,8 +636,8 @@ class TestXreportRest(BaseTestRest):
             },
         }
         (body, xreport1) = scenarios.put_success_all(
-            self.app,
-            self.session,
+            client,
+            session,
             XREPORTS,
             body,
             self.xreport1,
@@ -665,13 +671,13 @@ class TestXreportRest(BaseTestRest):
         # check if geometry is stored in database afterwards
         assert xreport1.geometry is not None
         # check that a link to the associated image is created
-        association_img = self.session.get(
+        association_img = session.get(
             Association, (xreport1.document_id, self.image2.document_id)
         )
         assert association_img is not None
 
         association_img_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == xreport1.document_id)
             .filter(AssociationLog.child_document_id == self.image2.document_id)
             .first()
@@ -679,20 +685,20 @@ class TestXreportRest(BaseTestRest):
         assert association_img_log is not None
 
         # check that a link to the associated article is created
-        association_main_art = self.session.get(
+        association_main_art = session.get(
             Association, (xreport1.document_id, self.article2.document_id)
         )
         assert association_main_art is not None
 
         association_art_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == xreport1.document_id)
             .filter(AssociationLog.child_document_id == self.article2.document_id)
             .first()
         )
         assert association_art_log is not None
 
-    def test_put_success_figures_only(self):
+    def test_put_success_figures_only(self, client, session):
         body = {
             'message': 'Changing figures',
             'document': {
@@ -716,12 +722,12 @@ class TestXreportRest(BaseTestRest):
             },
         }
         (body, xreport1) = scenarios.put_success_figures_only(
-            self.app, self.session, XREPORTS, body, self.xreport1, user='moderator'
+            client, session, XREPORTS, body, self.xreport1, user='moderator'
         )
 
         assert xreport1.event_activity == 'skitouring'
 
-    def test_put_success_lang_only(self):
+    def test_put_success_lang_only(self, client, session):
         body = {
             'message': 'Changing lang',
             'document': {
@@ -741,12 +747,12 @@ class TestXreportRest(BaseTestRest):
             },
         }
         (body, xreport1) = scenarios.put_success_lang_only(
-            self.app, self.session, XREPORTS, body, self.xreport1, user='moderator'
+            client, session, XREPORTS, body, self.xreport1, user='moderator'
         )
 
         assert xreport1.get_locale('en').title == 'New title'
 
-    def test_put_success_new_lang(self):
+    def test_put_success_new_lang(self, client, session):
         """Test updating a document by adding a new locale."""
         body = {
             'message': 'Adding lang',
@@ -761,12 +767,12 @@ class TestXreportRest(BaseTestRest):
             },
         }
         (body, xreport1) = scenarios.put_success_new_lang(
-            self.app, self.session, XREPORTS, body, self.xreport1, user='moderator'
+            client, session, XREPORTS, body, self.xreport1, user='moderator'
         )
 
         assert xreport1.get_locale('es').title == "Lac d'Annecy"
 
-    def test_put_as_author(self):
+    def test_put_as_author(self, client, session):
         body = {
             'message': 'Update',
             'document': {
@@ -787,8 +793,8 @@ class TestXreportRest(BaseTestRest):
         }
 
         (body, xreport1) = scenarios.put_success_all(
-            self.app,
-            self.session,
+            client,
+            session,
             XREPORTS,
             body,
             self.xreport1,
@@ -808,7 +814,7 @@ class TestXreportRest(BaseTestRest):
         assert archive_document_en.event_type == 'person_fall'
         assert archive_document_en.age == 90
 
-    def test_put_as_associated_user(self):
+    def test_put_as_associated_user(self, client, session):
         body = {
             'message': 'Update',
             'document': {
@@ -833,8 +839,8 @@ class TestXreportRest(BaseTestRest):
         }
 
         (body, xreport1) = scenarios.put_success_all(
-            self.app,
-            self.session,
+            client,
+            session,
             XREPORTS,
             body,
             self.xreport1,
@@ -854,7 +860,7 @@ class TestXreportRest(BaseTestRest):
         assert archive_document_en.event_type == 'crevasse_fall'
         assert archive_document_en.age == 25
 
-    def test_put_as_non_author(self):
+    def test_put_as_non_author(self, client):
         body = {
             'message': 'Update',
             'document': {
@@ -874,8 +880,10 @@ class TestXreportRest(BaseTestRest):
             },
         }
 
-        headers = self.add_authorization_header(username='contributor2')
-        response = self.app_put_json(
+        headers = auth_headers(username='contributor2')
+        response = send_json(
+            client,
+            'put',
             XREPORTS.prefix + '/' + str(self.xreport4.document_id),
             body,
             headers=headers,
@@ -887,10 +895,10 @@ class TestXreportRest(BaseTestRest):
         assert len(body['errors']) == 1
         assert body['errors'][0]['name'] == 'Forbidden'
 
-    def test_get_associations_history(self):
-        scenarios.get_association_logs(self.app, self.xreport1)
+    def test_get_associations_history(self, client):
+        scenarios.get_association_logs(client, self.xreport1)
 
-    def _add_test_data(self):
+    def _add_test_data(self, session, user_ids):
         self.xreport1 = Xreport(
             event_activity='skitouring',
             event_type='stone_ice_fall',
@@ -906,21 +914,21 @@ class TestXreportRest(BaseTestRest):
         self.xreport1.locales.append(self.locale_en)
         self.xreport1.locales.append(self.locale_fr)
 
-        self.session.add(self.xreport1)
-        self.session.flush()
+        session.add(self.xreport1)
+        session.flush()
 
-        user_id = self.global_userids['contributor']
+        user_id = user_ids['contributor']
         create_new_version(self.xreport1, user_id)
         self.xreport1_version = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == self.xreport1.document_id)
             .filter(DocumentVersion.lang == 'en')
             .first()
         )
 
-        user_id3 = self.global_userids['contributor3']
+        user_id3 = user_ids['contributor3']
         scenarios.add_association(
-            self.session,
+            session,
             Association(
                 parent_document_id=user_id3,
                 parent_document_type=USERPROFILE_TYPE,
@@ -936,14 +944,14 @@ class TestXreportRest(BaseTestRest):
             nb_participants=5,
             date=datetime.date(2021, 1, 1),
         )
-        self.session.add(self.xreport2)
+        session.add(self.xreport2)
         self.xreport3 = Xreport(
             event_activity='skitouring',
             event_type='avalanche',
             nb_participants=5,
             date=datetime.date(2018, 1, 1),
         )
-        self.session.add(self.xreport3)
+        session.add(self.xreport3)
         self.xreport4 = Xreport(
             event_activity='skitouring',
             event_type='avalanche',
@@ -953,37 +961,37 @@ class TestXreportRest(BaseTestRest):
         )
         self.xreport4.locales.append(DocumentLocale(lang='en', title="Lac d'Annecy"))
         self.xreport4.locales.append(DocumentLocale(lang='fr', title="Lac d'Annecy"))
-        self.session.add(self.xreport4)
+        session.add(self.xreport4)
 
         self.article2 = Article(
             categories=['site_info'], activities=['hiking'], article_type='collab'
         )
-        self.session.add(self.article2)
-        self.session.flush()
+        session.add(self.article2)
+        session.flush()
 
         self.image2 = Image(
             filename='image2.jpg', activities=['paragliding'], height=1500
         )
-        self.session.add(self.image2)
-        self.session.flush()
+        session.add(self.image2)
+        session.flush()
 
         self.waypoint1 = Waypoint(waypoint_type='summit', elevation=2203)
-        self.session.add(self.waypoint1)
+        session.add(self.waypoint1)
         self.waypoint2 = Waypoint(
             waypoint_type='climbing_outdoor',
             elevation=2,
             rock_types=[],
             geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
         )
-        self.session.add(self.waypoint2)
-        self.session.flush()
+        session.add(self.waypoint2)
+        session.flush()
 
         self.outing3 = Outing(
             activities=['skitouring'],
             date_start=datetime.date(2016, 2, 1),
             date_end=datetime.date(2016, 2, 2),
         )
-        self.session.add(self.outing3)
+        session.add(self.outing3)
         self.route3 = Route(
             activities=['skitouring'],
             elevation_max=1500,
@@ -992,21 +1000,21 @@ class TestXreportRest(BaseTestRest):
             height_diff_down=500,
             durations='1',
         )
-        self.session.add(self.route3)
-        self.session.flush()
+        session.add(self.route3)
+        session.flush()
 
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(
                 parent_document=self.outing3, child_document=self.xreport1
             ),
             user_id,
         )
         scenarios.add_association(
-            self.session,
+            session,
             Association.create(
                 parent_document=self.route3, child_document=self.xreport1
             ),
             user_id,
         )
-        self.session.flush()
+        session.flush()

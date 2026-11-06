@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import DocumentLocale
@@ -10,37 +12,50 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.models.xreport import Xreport, XreportLocale
-from c2corg_api.tests.views import BaseTestRest, scenarios
+from c2corg_api.tests import (
+    assert_error,
+    assert_not_notified_es,
+    assert_notified_es,
+    auth_headers,
+    get_feed_change,
+    send_json,
+)
+from c2corg_api.tests.views import scenarios
 from c2corg_api.views.document import create_new_version
 
 
-class TestAssociationRest(BaseTestRest):
+class TestAssociationRest:
     prefix = '/associations'
 
-    def setUp(self):
-        BaseTestRest.setUp(self)
-        self._add_test_data()
+    @pytest.fixture(autouse=True)
+    def _setup_test_association_rest(self, client, session, user_ids):
+        self._add_test_data(session, user_ids)
 
-    def test_add_association_unauthorized(self):
-        self.app_post_json(TestAssociationRest.prefix, {}, status=403)
+    def test_add_association_unauthorized(self, client):
+        send_json(client, 'post', TestAssociationRest.prefix, {}, status=403)
 
-    def test_add_association(self):
+    def test_add_association(self, client, session, queue_config):
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        headers = auth_headers(username='contributor')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
-        association = self.session.get(
+        association = session.get(
             Association, (self.waypoint1.document_id, self.waypoint2.document_id)
         )
         assert association is not None
 
         association_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == self.waypoint1.document_id)
             .filter(AssociationLog.child_document_id == self.waypoint2.document_id)
             .one()
@@ -48,28 +63,33 @@ class TestAssociationRest(BaseTestRest):
         assert association_log.is_creation is True
         assert association_log.user_id is not None
 
-        self.assertNotifiedEs()
+        assert_notified_es(queue_config)
 
-        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
-        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 2)
+        scenarios.check_cache_version(session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(session, self.waypoint2.document_id, 2)
 
-    def test_add_association_wa(self):
+    def test_add_association_wa(self, client, session):
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.article1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        headers = auth_headers(username='contributor')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
-        association = self.session.get(
+        association = session.get(
             Association, (self.waypoint1.document_id, self.article1.document_id)
         )
         assert association is not None
 
         association_log = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == self.waypoint1.document_id)
             .filter(AssociationLog.child_document_id == self.article1.document_id)
             .one()
@@ -77,70 +97,78 @@ class TestAssociationRest(BaseTestRest):
         assert association_log.is_creation is True
         assert association_log.user_id is not None
 
-        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 2)
-        scenarios.check_cache_version(self.session, self.article1.document_id, 2)
+        scenarios.check_cache_version(session, self.waypoint1.document_id, 2)
+        scenarios.check_cache_version(session, self.article1.document_id, 2)
 
-    def test_add_association_uo(self):
-        contributor2 = self.global_userids['contributor2']
+    def test_add_association_uo(self, client, session, user_ids):
+        contributor2 = user_ids['contributor2']
         request_body = {
             'parent_document_id': contributor2,
             'child_document_id': self.outing.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        headers = auth_headers(username='contributor')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
-        association = self.session.get(
-            Association, (contributor2, self.outing.document_id)
-        )
+        association = session.get(Association, (contributor2, self.outing.document_id))
         assert association is not None
 
         # check that the feed change is updated
-        feed_change = self.get_feed_change(
-            self.outing.document_id, change_type='updated'
+        feed_change = get_feed_change(
+            session, self.outing.document_id, change_type='updated'
         )
         assert feed_change is not None
         assert feed_change.change_type == 'updated'
         assert set(feed_change.user_ids) == set(
-            [self.global_userids['contributor'], self.global_userids['contributor2']]
+            [user_ids['contributor'], user_ids['contributor2']]
         )
 
         # check that the participants of the 2nd feed change are also updated
-        feed_change = self.get_feed_change(
-            self.outing.document_id, change_type='added_photos'
+        feed_change = get_feed_change(
+            session, self.outing.document_id, change_type='added_photos'
         )
         assert feed_change is not None
         assert set(feed_change.user_ids) == set(
             [
-                self.global_userids['contributor'],
-                self.global_userids['contributor2'],
-                self.global_userids['moderator'],
+                user_ids['contributor'],
+                user_ids['contributor2'],
+                user_ids['moderator'],
             ]
         )
 
-    def test_add_association_uo_no_rights(self):
+    def test_add_association_uo_no_rights(self, client, user_ids):
         """Check that associations with outings can only be changed by users
         associated to the outing or moderators.
         """
-        contributor2 = self.global_userids['contributor2']
+        contributor2 = user_ids['contributor2']
         request_body = {
             'parent_document_id': contributor2,
             'child_document_id': self.outing.document_id,
         }
-        headers = self.add_authorization_header(username='contributor2')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor2')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
         body = response.json
 
-        self.assertError(
+        assert_error(
             body['errors'],
             'associations.outings',
             f'no rights to modify associations with outing {self.outing.document_id}',
         )
 
-    def test_add_association_wc_article_collab(self):
+    def test_add_association_wc_article_collab(self, client):
         """Check that associations with articles can only be changed by
         everyone.
         """
@@ -148,52 +176,67 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.article1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor2')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        headers = auth_headers(username='contributor2')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
-    def test_add_association_wc_article_personal_unauthorized(self):
+    def test_add_association_wc_article_personal_unauthorized(self, client, session):
         """Check that associations with personal articles can only be changed
         by the creator and moderators.
         """
         self.article1.article_type = 'personal'
-        self.session.flush()
+        session.flush()
 
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.article1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor2')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor2')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
         body = response.json
 
-        self.assertError(
+        assert_error(
             body['errors'],
             'associations.articles',
             'no rights to modify associations with article '
             f'{self.article1.document_id}',
         )
 
-    def test_add_association_wc_article_personal_authorized(self):
+    def test_add_association_wc_article_personal_authorized(self, client, session):
         """Check that associations with personal articles can only be changed
         by the creator and moderators.
         """
         self.article1.article_type = 'personal'
-        self.session.flush()
+        session.flush()
 
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.article1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        headers = auth_headers(username='contributor')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
-    def test_add_association_cc_article_personal_unauthorized(self):
+    def test_add_association_cc_article_personal_unauthorized(self, client):
         """Check that associations with personal articles can only be changed
         by the creator and moderators.
         """
@@ -201,59 +244,74 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.article2.document_id,
             'child_document_id': self.article1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor2')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor2')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
         body = response.json
 
-        self.assertError(
+        assert_error(
             body['errors'],
             'associations.articles',
             'no rights to modify associations with article '
             f'{self.article2.document_id}',
         )
 
-    def test_add_association_wi_image_personal_unauthorized(self):
+    def test_add_association_wi_image_personal_unauthorized(self, client, session):
         """Check that associations with personal images can only be changed
         by the creator and moderators.
         """
         self.image1.image_type = 'personal'
-        self.session.flush()
+        session.flush()
 
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.image1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor2')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor2')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
         body = response.json
 
-        self.assertError(
+        assert_error(
             body['errors'],
             'associations.images',
             f'no rights to modify associations with image {self.image1.document_id}',
         )
 
-    def test_add_association_wi_image_personal_authorized(self):
+    def test_add_association_wi_image_personal_authorized(self, client, session):
         """Check that associations with personal images can only be changed
         by the creator and moderators.
         """
         self.article1.article_type = 'personal'
-        self.session.flush()
+        session.flush()
 
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.image1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        headers = auth_headers(username='contributor')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
-    def test_add_association_wx_xreport_unauthorized(self):
+    def test_add_association_wx_xreport_unauthorized(self, client):
         """Check that associations with x-reports can only be changed
         by the creator and moderators.
         """
@@ -261,19 +319,24 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.report1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor2')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor2')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
         body = response.json
 
-        self.assertError(
+        assert_error(
             body['errors'],
             'associations.xreports',
             f'no rights to modify associations with xreport {self.report1.document_id}',
         )
 
-    def test_add_association_wx_xreport_authorized(self):
+    def test_add_association_wx_xreport_authorized(self, client):
         """Check that associations with x-reports can only be changed
         by the creator and moderators.
         """
@@ -281,56 +344,76 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.report1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        headers = auth_headers(username='contributor')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
-    def test_add_association_wc_xreport_article_unauthorized(self):
+    def test_add_association_wc_xreport_article_unauthorized(self, client, session):
         """Check an association between a xreport and article that both
         do not accept associations from contributor2.
         """
         self.article1.article_type = 'personal'
-        self.session.flush()
+        session.flush()
 
         request_body = {
             'parent_document_id': self.report1.document_id,
             'child_document_id': self.article1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor2')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor2')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
         body = response.json
 
-        self.assertError(
+        assert_error(
             body['errors'],
             'associations.xreports',
             f'no rights to modify associations with xreport {self.report1.document_id}',
         )
-        self.assertError(
+        assert_error(
             body['errors'],
             'associations.articles',
             'no rights to modify associations with article '
             f'{self.article1.document_id}',
         )
 
-    def test_add_association_duplicate(self):
+    def test_add_association_duplicate(self, client):
         """Test that there is only one association between two documents."""
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers = auth_headers(username='contributor')
 
         # first association, ok
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
         # 2nd association, fail
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
 
         # back-link association also fails
@@ -338,18 +421,28 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint2.document_id,
             'child_document_id': self.waypoint1.document_id,
         }
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
 
-    def test_add_association_invalid(self):
+    def test_add_association_invalid(self, client):
         request_body = {
             'parent_document_id': self.route1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
 
         body = response.json
@@ -360,14 +453,19 @@ class TestAssociationRest(BaseTestRest):
         assert errors[0].get('name') == 'association'
         assert errors[0].get('description') == 'invalid association type'
 
-    def test_add_association_redirected_document(self):
+    def test_add_association_redirected_document(self, client):
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint3.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
 
         body = response.json
@@ -381,14 +479,19 @@ class TestAssociationRest(BaseTestRest):
             == 'child document does not exist or is redirected'
         )
 
-    def test_add_association_invalid_ids(self):
+    def test_add_association_invalid_ids(self, client):
         request_body = {
             'parent_document_id': -99,
             'child_document_id': -999,
         }
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=400
+        headers = auth_headers(username='contributor')
+        response = send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=400,
         )
 
         body = response.json
@@ -408,7 +511,7 @@ class TestAssociationRest(BaseTestRest):
             == 'child document does not exist or is redirected'
         )
 
-    def test_add_association_no_es_update(self):
+    def test_add_association_no_es_update(self, client, queue_config):
         """Tests that the search index is only updated for specific association
         types.
         """
@@ -416,51 +519,61 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.image1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        headers = auth_headers(username='contributor')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
-        self.assertNotNotifiedEs()
+        assert_not_notified_es(queue_config)
 
-    def test_delete_association_unauthorized(self):
-        self.app.delete_json(TestAssociationRest.prefix, {}, status=403)
+    def test_delete_association_unauthorized(self, client):
+        client.delete_json(TestAssociationRest.prefix, {}, status=403)
 
-    def test_delete_association_not_existing(self):
+    def test_delete_association_not_existing(self, client):
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers = auth_headers(username='contributor')
 
-        self.app.delete_json(
+        client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers, status=400
         )
 
-    def test_delete_association(self):
+    def test_delete_association(self, client, session, queue_config):
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='moderator')
+        headers = auth_headers(username='moderator')
 
         # add association
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
         # then delete it again
-        self.app.delete_json(
+        client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers, status=200
         )
 
-        association = self.session.get(
+        association = session.get(
             Association, (self.waypoint1.document_id, self.waypoint2.document_id)
         )
         assert association is None
 
         logs = (
-            self.session.query(AssociationLog)
+            session.query(AssociationLog)
             .filter(AssociationLog.parent_document_id == self.waypoint1.document_id)
             .filter(AssociationLog.child_document_id == self.waypoint2.document_id)
             # written_at is the start of the transaction (now()): the same for
@@ -471,12 +584,12 @@ class TestAssociationRest(BaseTestRest):
         assert logs[0].is_creation is True
         assert logs[1].is_creation is False
 
-        self.assertNotifiedEs()
+        assert_notified_es(queue_config)
 
-        scenarios.check_cache_version(self.session, self.waypoint1.document_id, 3)
-        scenarios.check_cache_version(self.session, self.waypoint2.document_id, 3)
+        scenarios.check_cache_version(session, self.waypoint1.document_id, 3)
+        scenarios.check_cache_version(session, self.waypoint2.document_id, 3)
 
-    def test_delete_association_non_moderator(self):
+    def test_delete_association_non_moderator(self, client):
         """For non-personal documents, a normal user can create associations
         but not delete them.
         """
@@ -484,27 +597,32 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers = auth_headers(username='contributor')
 
         # add association
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
         # then try to delete it again
-        response = self.app.delete_json(
+        response = client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers, status=400
         )
         body = response.json
 
-        self.assertError(
+        assert_error(
             body['errors'],
             'Bad Request',
             'no rights to modify associations between document '
             f'w ({self.waypoint1.document_id}) and w ({self.waypoint2.document_id})',
         )
 
-    def test_delete_association_fuzzy(self):
+    def test_delete_association_fuzzy(self, client, session):
         """Test that an association {parent: x, child: y} can be
         deleted with {parent: y, child: x}.
         """
@@ -512,11 +630,16 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.waypoint2.document_id,
         }
-        headers = self.add_authorization_header(username='moderator')
+        headers = auth_headers(username='moderator')
 
         # add association
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
         # then delete it again, but by switching parent/child id
@@ -524,33 +647,38 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint2.document_id,
             'child_document_id': self.waypoint1.document_id,
         }
-        self.app.delete_json(
+        client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers, status=200
         )
 
-        association = self.session.get(
+        association = session.get(
             Association, (self.waypoint1.document_id, self.waypoint2.document_id)
         )
         assert association is None
 
-    def test_delete_association_main_waypoint(self):
+    def test_delete_association_main_waypoint(self, client, session):
         request_body = {
             'parent_document_id': self.waypoint2.document_id,
             'child_document_id': self.route1.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers = auth_headers(username='contributor')
 
         # add association
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
         # make the wp the main waypoint of the route
         self.route1.main_waypoint_id = self.waypoint2.document_id
-        self.session.flush()
+        session.flush()
 
         # then try to delete the association
-        response = self.app.delete_json(
+        response = client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers, status=400
         )
 
@@ -565,63 +693,73 @@ class TestAssociationRest(BaseTestRest):
             'this waypoint can not be disassociated'
         )
 
-    def test_delete_association_uo(self):
-        contributor2 = self.global_userids['contributor2']
+    def test_delete_association_uo(self, client, user_ids):
+        contributor2 = user_ids['contributor2']
         request_body = {
             'parent_document_id': contributor2,
             'child_document_id': self.outing.document_id,
         }
-        headers = self.add_authorization_header(username='contributor')
+        headers = auth_headers(username='contributor')
 
         # add association
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers,
+            status=200,
         )
 
         # then delete it again
-        self.app.delete_json(
+        client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers, status=200
         )
 
-    def test_delete_association_uo_no_rights(self):
+    def test_delete_association_uo_no_rights(self, client, user_ids):
         """Try to delete an association to an outing with a user that has
         no permission to change this outing.
         """
         request_body = {
-            'parent_document_id': self.global_userids['contributor'],
+            'parent_document_id': user_ids['contributor'],
             'child_document_id': self.outing.document_id,
         }
 
-        headers = self.add_authorization_header(username='contributor2')
-        self.app.delete_json(
+        headers = auth_headers(username='contributor2')
+        client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers, status=400
         )
 
-    def test_delete_association_wc_article_personal(self):
+    def test_delete_association_wc_article_personal(self, client, session):
         """Test that associations with personal articles require special
         rights.
         """
         self.article1.article_type = 'personal'
-        self.session.flush()
+        session.flush()
 
         # first create an association with the article
         request_body = {
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.article1.document_id,
         }
-        headers1 = self.add_authorization_header(username='contributor')
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body, headers=headers1, status=200
+        headers1 = auth_headers(username='contributor')
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body,
+            headers=headers1,
+            status=200,
         )
 
         # then try to delete the association again with a different user
-        headers2 = self.add_authorization_header(username='contributor2')
-        response = self.app.delete_json(
+        headers2 = auth_headers(username='contributor2')
+        response = client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers2, status=400
         )
         body = response.json
 
-        self.assertError(
+        assert_error(
             body['errors'],
             'Bad Request',
             'no rights to modify associations between document '
@@ -629,31 +767,36 @@ class TestAssociationRest(BaseTestRest):
         )
 
         # but the original user can delete it
-        self.app.delete_json(
+        client.delete_json(
             TestAssociationRest.prefix, request_body, headers=headers1, status=200
         )
 
-    def test_delete_association_wp_r_last_waypoint(self):
+    def test_delete_association_wp_r_last_waypoint(self, client):
         request_body1 = {
             'parent_document_id': self.waypoint2.document_id,
             'child_document_id': self.route1.document_id,
         }
-        headers = self.add_authorization_header(username='moderator')
+        headers = auth_headers(username='moderator')
 
         # add association
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body1, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body1,
+            headers=headers,
+            status=200,
         )
 
         # try to delete the association
-        response = self.app.delete_json(
+        response = client.delete_json(
             TestAssociationRest.prefix, request_body1, headers=headers, status=400
         )
 
         body = response.json
         errors = body.get('errors')
         assert len(errors) == 1
-        self.assertError(
+        assert_error(
             errors,
             'Bad Request',
             'as the last waypoint of the route, this waypoint can not be disassociated',
@@ -664,34 +807,44 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.waypoint1.document_id,
             'child_document_id': self.route1.document_id,
         }
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body2, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body2,
+            headers=headers,
+            status=200,
         )
 
         # now, the first waypoint can be unlinked
-        self.app.delete_json(TestAssociationRest.prefix, request_body1, headers=headers)
+        client.delete_json(TestAssociationRest.prefix, request_body1, headers=headers)
 
-    def test_delete_association_ro_last_route(self):
+    def test_delete_association_ro_last_route(self, client):
         request_body1 = {
             'parent_document_id': self.route1.document_id,
             'child_document_id': self.outing.document_id,
         }
-        headers = self.add_authorization_header(username='moderator')
+        headers = auth_headers(username='moderator')
 
         # add association
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body1, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body1,
+            headers=headers,
+            status=200,
         )
 
         # try to delete the association
-        response = self.app.delete_json(
+        response = client.delete_json(
             TestAssociationRest.prefix, request_body1, headers=headers, status=400
         )
 
         body = response.json
         errors = body.get('errors')
         assert len(errors) == 1
-        self.assertError(
+        assert_error(
             errors,
             'Bad Request',
             'as the last route of the outing, this route can not be disassociated',
@@ -702,43 +855,48 @@ class TestAssociationRest(BaseTestRest):
             'parent_document_id': self.route2.document_id,
             'child_document_id': self.outing.document_id,
         }
-        self.app_post_json(
-            TestAssociationRest.prefix, request_body2, headers=headers, status=200
+        send_json(
+            client,
+            'post',
+            TestAssociationRest.prefix,
+            request_body2,
+            headers=headers,
+            status=200,
         )
 
         # now, the first route can be unlinked
-        self.app.delete_json(TestAssociationRest.prefix, request_body1, headers=headers)
+        client.delete_json(TestAssociationRest.prefix, request_body1, headers=headers)
 
-    def _add_test_data(self):
-        user_id = self.global_userids['contributor']
+    def _add_test_data(self, session, user_ids):
+        user_id = user_ids['contributor']
 
         self.waypoint1 = Waypoint(waypoint_type='summit', elevation=2203)
-        self.session.add(self.waypoint1)
+        session.add(self.waypoint1)
 
         self.waypoint2 = Waypoint(waypoint_type='summit', elevation=200)
-        self.session.add(self.waypoint2)
-        self.session.flush()
+        session.add(self.waypoint2)
+        session.flush()
 
         self.waypoint3 = Waypoint(
             waypoint_type='summit',
             elevation=200,
             redirects_to=self.waypoint1.document_id,
         )
-        self.session.add(self.waypoint3)
+        session.add(self.waypoint3)
 
         self.route1 = Route(activities=['skitouring'])
-        self.session.add(self.route1)
-        self.session.add(self.waypoint2)
+        session.add(self.route1)
+        session.add(self.waypoint2)
 
         self.route2 = Route(activities=['skitouring'])
-        self.session.add(self.route2)
+        session.add(self.route2)
 
         self.image1 = Image(
             filename='image.jpg',
             locales=[DocumentLocale(lang='en', title='Mont Blanc from the air')],
         )
-        self.session.add(self.image1)
-        self.session.flush()
+        session.add(self.image1)
+        session.flush()
         create_new_version(self.image1, user_id)
 
         self.article1 = Article(
@@ -747,8 +905,8 @@ class TestAssociationRest(BaseTestRest):
             article_type='collab',
             locales=[DocumentLocale(lang='en', title="Lac d'Annecy")],
         )
-        self.session.add(self.article1)
-        self.session.flush()
+        session.add(self.article1)
+        session.flush()
         create_new_version(self.article1, user_id)
 
         self.article2 = Article(
@@ -757,16 +915,16 @@ class TestAssociationRest(BaseTestRest):
             article_type='personal',
             locales=[DocumentLocale(lang='en', title="Lac d'Annecy")],
         )
-        self.session.add(self.article2)
-        self.session.flush()
+        session.add(self.article2)
+        session.flush()
         create_new_version(self.article2, user_id)
 
         self.report1 = Xreport(
             event_activity='alpine_climbing',
             locales=[XreportLocale(lang='en', title="Lac d'Annecy")],
         )
-        self.session.add(self.report1)
-        self.session.flush()
+        session.add(self.report1)
+        session.flush()
         create_new_version(self.report1, user_id)
 
         self.outing = Outing(
@@ -774,10 +932,10 @@ class TestAssociationRest(BaseTestRest):
             date_start=datetime.date(2016, 1, 1),
             date_end=datetime.date(2016, 1, 1),
         )
-        self.session.add(self.outing)
-        self.session.flush()
+        session.add(self.outing)
+        session.flush()
 
-        self.session.add(
+        session.add(
             Association(
                 parent_document_id=user_id,
                 parent_document_type=USERPROFILE_TYPE,
@@ -787,14 +945,14 @@ class TestAssociationRest(BaseTestRest):
         )
 
         update_feed_document_create(self.outing, user_id)
-        self.session.flush()
+        session.flush()
 
         # create a 2nd feed entry for the outing
-        feed_change = self.get_feed_change(self.outing.document_id)
-        user_id = self.global_userids['moderator']
+        feed_change = get_feed_change(session, self.outing.document_id)
+        user_id = user_ids['moderator']
         feed_change2 = feed_change.copy()
         feed_change2.change_type = 'added_photos'
         feed_change2.user_id = user_id
         feed_change2.user_ids = list(set(feed_change.user_ids).union([user_id]))
-        self.session.add(feed_change2)
-        self.session.flush()
+        session.add(feed_change2)
+        session.flush()
