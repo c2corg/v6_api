@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import auth_headers
 
 SNAPSHOT_DIR = os.path.join(os.path.dirname(__file__), 'snapshots')
 
@@ -125,29 +125,38 @@ def check_snapshot(name, response, extra_headers=()):
     assert actual == expected
 
 
-class ContractTest(BaseTestRest):
+@pytest.mark.usefixtures('client')
+class ContractTest:
     """Base class of the contract tests: requests as a browser client sends them."""
 
-    def request(self, method, url, body=None, user=None, status=200, **kwargs):
+    def request(
+        self, client, settings, method, url, body=None, user=None, status=200, **kwargs
+    ):
         """Send a request from an allowed CORS origin, as `user` if given."""
         headers = kwargs.pop('headers', {})
         # an allowed origin, unless the test gives one (None: no Origin)
-        headers.setdefault('Origin', self.settings['cors.allowed_origins'].split()[0])
+        headers.setdefault('Origin', settings['cors.allowed_origins'].split()[0])
         if headers['Origin'] is None:
             del headers['Origin']
         if user:
-            self.add_authorization_header(username=user, headers=headers)
+            auth_headers(username=user, headers=headers)
         if body is None:
-            call = getattr(self.app, method.lower())
+            call = getattr(client, method.lower())
             return call(url, headers=headers, status=status, **kwargs)
-        call = getattr(self.app, method.lower() + '_json')
+        call = getattr(client, method.lower() + '_json')
         return call(url, body, headers=headers, status=status, **kwargs)
 
-    def get(self, url, user=None, status=200, **kwargs):
-        return self.request('GET', url, user=user, status=status, **kwargs)
+    def get(self, client, settings, url, user=None, status=200, **kwargs):
+        return self.request(
+            client, settings, 'GET', url, user=user, status=status, **kwargs
+        )
 
-    def post(self, url, body, user=None, status=200, **kwargs):
-        return self.request('POST', url, body, user=user, status=status, **kwargs)
+    def post(self, client, settings, url, body, user=None, status=200, **kwargs):
+        return self.request(
+            client, settings, 'POST', url, body, user=user, status=status, **kwargs
+        )
 
-    def put(self, url, body, user=None, status=200, **kwargs):
-        return self.request('PUT', url, body, user=user, status=status, **kwargs)
+    def put(self, client, settings, url, body, user=None, status=200, **kwargs):
+        return self.request(
+            client, settings, 'PUT', url, body, user=user, status=status, **kwargs
+        )

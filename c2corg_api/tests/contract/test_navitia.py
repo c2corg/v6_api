@@ -2,6 +2,8 @@ import json
 import os
 from unittest.mock import Mock, patch
 
+import pytest
+
 from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_misc import POLYGON_4326
@@ -56,20 +58,18 @@ def navitia_answer(status, body):
 class NavitiaContractTest(StopareaContractTest):
     """The Navitia API is faked: its key is set, its answers are given."""
 
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_navitia_contract_test(self, client, _setup_stoparea_contract_test):
         self.cleanups = []
         key = patch.dict(os.environ, {'NAVITIA_API_KEY': 'contract-test-key'})
         key.start()
         self.addCleanup(key.stop)
+        yield
+        for function, args in reversed(self.cleanups):
+            function(*args)
 
     def addCleanup(self, function, *args):  # noqa: N802 (as unittest)
         self.cleanups.append((function, args))
-
-    def tearDown(self):
-        for function, args in reversed(self.cleanups):
-            function(*args)
-        super().tearDown()
 
     def navitia(self, status, body):
         return patch(
@@ -80,17 +80,23 @@ class NavitiaContractTest(StopareaContractTest):
 
 class TestJourneys(NavitiaContractTest):
     @contract(JOURNEYS)
-    def test_journeys(self):
+    def test_journeys(self, client, settings):
         with self.navitia(200, {'journeys': [{'duration': 3600}]}) as get:
-            response = self.get('/navitia/journeys', params=JOURNEY_PARAMS)
+            response = self.get(
+                client, settings, '/navitia/journeys', params=JOURNEY_PARAMS
+            )
         check_snapshot('navitia_journeys', response)
         assert response.json == {'journeys': [{'duration': 3600}]}
         assert get.call_args.kwargs['headers'] == {'Authorization': 'contract-test-key'}
 
     @contract(JOURNEYS)
-    def test_missing_parameters(self):
+    def test_missing_parameters(self, client, settings):
         response = self.get(
-            '/navitia/journeys', params={'from': '5.73;45.18'}, status=422
+            client,
+            settings,
+            '/navitia/journeys',
+            params={'from': '5.73;45.18'},
+            status=422,
         )
         check_snapshot('navitia_journeys_missing', response)
         assert [name for _, name, _ in invalid_parameters(response)] == [
@@ -100,16 +106,20 @@ class TestJourneys(NavitiaContractTest):
         ]
 
     @contract(JOURNEYS)
-    def test_no_solution(self):
+    def test_no_solution(self, client, settings):
         with self.navitia(404, {'error': {'id': 'no_solution'}}):
-            response = self.get('/navitia/journeys', params=JOURNEY_PARAMS, status=404)
+            response = self.get(
+                client, settings, '/navitia/journeys', params=JOURNEY_PARAMS, status=404
+            )
         check_snapshot('navitia_journeys_no_solution', response)
         assert response.json['errors'][0]['description'] == 'no_solution'
 
     @contract(JOURNEYS)
-    def test_missing_key(self):
+    def test_missing_key(self, client, settings):
         with patch.dict(os.environ, {'NAVITIA_API_KEY': ''}):
-            response = self.get('/navitia/journeys', params=JOURNEY_PARAMS, status=500)
+            response = self.get(
+                client, settings, '/navitia/journeys', params=JOURNEY_PARAMS, status=500
+            )
         check_snapshot('navitia_journeys_no_key', response)
         assert response.json['errors'][0]['description'] == (
             'Navitia API config is missing'
@@ -117,11 +127,13 @@ class TestJourneys(NavitiaContractTest):
 
 
 class TestIsochrones(NavitiaContractTest):
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_isochrones(self, client, settings, _setup_navitia_contract_test):
         # the isochrone needs the coverage of its source: in production the
         # polygons of the coverages are in longitude and latitude
         self.create(
+            client,
+            settings,
             'coverages',
             {
                 'coverage_type': 'fr-se',
@@ -131,7 +143,7 @@ class TestIsochrones(NavitiaContractTest):
         )
 
     @contract(ISOCHRONE_ROUTES, ISOCHRONE_WAYPOINTS)
-    def test_isochrone(self):
+    def test_isochrone(self, client, settings):
         # an isochrone far from the stop area: no document inside it
         geojson = {
             'type': 'MultiPolygon',
@@ -140,7 +152,10 @@ class TestIsochrones(NavitiaContractTest):
         for kind in ('routes', 'waypoints'):
             with self.navitia(200, {'isochrones': [{'geojson': geojson}]}):
                 response = self.get(
-                    f'/navitia/isochronesreachable{kind}', params=ISOCHRONE_PARAMS
+                    client,
+                    settings,
+                    f'/navitia/isochronesreachable{kind}',
+                    params=ISOCHRONE_PARAMS,
                 )
             check_snapshot(f'navitia_isochrone_{kind}', response)
             assert response.json == {
@@ -150,20 +165,24 @@ class TestIsochrones(NavitiaContractTest):
             }
 
     @contract(ISOCHRONE_ROUTES, ISOCHRONE_WAYPOINTS)
-    def test_errors(self):
+    def test_errors(self, client, settings):
         for kind in ('routes', 'waypoints'):
             url = f'/navitia/isochronesreachable{kind}'
-            response = self.get(url, params={'from': '5.73;45.18'}, status=422)
+            response = self.get(
+                client, settings, url, params={'from': '5.73;45.18'}, status=422
+            )
             check_snapshot('navitia_isochrone_missing', response)
             with self.navitia(404, {'error': {'id': 'no_solution'}}):
-                response = self.get(url, params=ISOCHRONE_PARAMS, status=404)
+                response = self.get(
+                    client, settings, url, params=ISOCHRONE_PARAMS, status=404
+                )
             check_snapshot('navitia_isochrone_no_solution', response)
             assert response.json['errors'][0]['description'] == 'no_solution'
 
 
 class TestJobs(NavitiaContractTest):
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_jobs(self, client, _setup_navitia_contract_test):
         self.redis = redis_client()
 
     def store_job(self, job_id, **values):
@@ -172,12 +191,15 @@ class TestJobs(NavitiaContractTest):
         self.addCleanup(self.redis.delete, *(f'job:{job_id}:{name}' for name in values))
 
     @contract(*START)
-    def test_start(self):
+    def test_start(self, client, settings):
         for kind in ('routes', 'waypoints'):
             # the job itself runs in a thread: not here
             with patch(f'c2corg_api.views.navitia.compute_journey_reachable_{kind}'):
                 response = self.get(
-                    f'/navitia/journeyreachable{kind}/start', params=JOB_PARAMS
+                    client,
+                    settings,
+                    f'/navitia/journeyreachable{kind}/start',
+                    params=JOB_PARAMS,
                 )
             check_snapshot('navitia_job_start', response)
             job_id = response.json['job_id']
@@ -187,9 +209,11 @@ class TestJobs(NavitiaContractTest):
             assert self.redis.get(f'job:{job_id}:status') == b'running'
 
     @contract(*START)
-    def test_start_missing_parameters(self):
+    def test_start_missing_parameters(self, client, settings):
         for kind in ('routes', 'waypoints'):
             response = self.get(
+                client,
+                settings,
                 f'/navitia/journeyreachable{kind}/start',
                 params={'from': '5.73;45.18'},
                 status=422,
@@ -198,7 +222,7 @@ class TestJobs(NavitiaContractTest):
             assert len(response.json['detail']) == 4
 
     @contract(*RESULT)
-    def test_result(self):
+    def test_result(self, client, settings):
         result = {'documents': [], 'total': 0}
         self.store_job('done-job', status='done', result=json.dumps(result))
         self.store_job(
@@ -208,30 +232,30 @@ class TestJobs(NavitiaContractTest):
         )
         for kind in ('routes', 'waypoints'):
             url = f'/navitia/journeyreachable{kind}/result/'
-            done = self.get(url + 'done-job')
+            done = self.get(client, settings, url + 'done-job')
             check_snapshot('navitia_job_result_done', done)
             assert done.json == {'status': 'done', 'result': result}
-            failed = self.get(url + 'failed-job')
+            failed = self.get(client, settings, url + 'failed-job')
             check_snapshot('navitia_job_result_error', failed)
             assert failed.json == {'status': 'error', 'message': 'no_solution'}
-            unknown = self.get(url + 'no-such-job')
+            unknown = self.get(client, settings, url + 'no-such-job')
             check_snapshot('navitia_job_result_unknown', unknown)
             assert unknown.json == {'error': 'unknown_job_id'}
 
     @contract(*PROGRESS)
-    def test_progress(self):
+    def test_progress(self, client, settings):
         self.store_job(
             'done-job', status='done', progress='3', found='2', not_found='1', total='3'
         )
         for kind in ('routes', 'waypoints'):
             url = f'/navitia/journeyreachable{kind}/progress/'
-            done = self.get(url + 'done-job')
+            done = self.get(client, settings, url + 'done-job')
             check_snapshot('navitia_job_progress_done', done)
             assert done.text == (
                 'data: {"progress": 3, "total": 3, "found": 2, "not_found": 1}\n\n'
                 'event: done\ndata: done\n\n'
             )
-            unknown = self.get(url + 'no-such-job')
+            unknown = self.get(client, settings, url + 'no-such-job')
             check_snapshot('navitia_job_progress_unknown', unknown)
             assert unknown.text == (
                 'event: error\n'

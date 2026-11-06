@@ -40,9 +40,12 @@ def _routes(method, path, types):
 class DocumentContractTest(ContractTest):
     """One document of each type, created through the API."""
 
-    def setUp(self):
-        self.ids = {'profiles': self.global_userids['contributor']}
+    @pytest.fixture(autouse=True)
+    def _setup_document_contract_test(self, client, settings, user_ids):
+        self.ids = {'profiles': user_ids['contributor']}
         self.ids['waypoints'] = self.create(
+            client,
+            settings,
             'waypoints',
             {
                 'waypoint_type': 'summit',
@@ -53,6 +56,8 @@ class DocumentContractTest(ContractTest):
         )
         waypoint = [{'document_id': self.ids['waypoints']}]
         self.ids['routes'] = self.create(
+            client,
+            settings,
             'routes',
             {
                 'main_waypoint_id': self.ids['waypoints'],
@@ -68,6 +73,8 @@ class DocumentContractTest(ContractTest):
             },
         )
         self.ids['outings'] = self.create(
+            client,
+            settings,
             'outings',
             {
                 'activities': ['hiking'],
@@ -77,12 +84,14 @@ class DocumentContractTest(ContractTest):
                 'geometry': {'geom_detail': LINE},
                 'locales': [{'lang': 'en', 'title': 'A nice day', 'weather': 'sunny'}],
                 'associations': {
-                    'users': [{'document_id': self.global_userids['contributor']}],
+                    'users': [{'document_id': user_ids['contributor']}],
                     'routes': [{'document_id': self.ids['routes']}],
                 },
             },
         )
         self.ids['articles'] = self.create(
+            client,
+            settings,
             'articles',
             {
                 'categories': ['site_info'],
@@ -93,6 +102,8 @@ class DocumentContractTest(ContractTest):
             },
         )
         self.ids['books'] = self.create(
+            client,
+            settings,
             'books',
             {
                 'activities': ['hiking'],
@@ -106,6 +117,8 @@ class DocumentContractTest(ContractTest):
             'c2corg_api.views.image.requests.post', return_value=Mock(status_code=200)
         ):
             self.ids['images'] = self.create(
+                client,
+                settings,
                 'images',
                 {
                     'filename': 'image.jpg',
@@ -118,6 +131,8 @@ class DocumentContractTest(ContractTest):
                 },
             )
         self.ids['xreports'] = self.create(
+            client,
+            settings,
             'xreports',
             {
                 'event_activity': 'skitouring',
@@ -128,6 +143,8 @@ class DocumentContractTest(ContractTest):
             },
         )
         self.ids['areas'] = self.create(
+            client,
+            settings,
             'areas',
             {
                 'area_type': 'range',
@@ -137,6 +154,8 @@ class DocumentContractTest(ContractTest):
             user='moderator',
         )
         self.ids['maps'] = self.create(
+            client,
+            settings,
             'maps',
             {
                 'editor': 'IGN',
@@ -148,6 +167,8 @@ class DocumentContractTest(ContractTest):
             user='moderator',
         )
         self.ids['coverages'] = self.create(
+            client,
+            settings,
             'coverages',
             {
                 'coverage_type': 'fr-se',
@@ -156,174 +177,233 @@ class DocumentContractTest(ContractTest):
             },
         )
 
-    def create(self, prefix, body, user='contributor'):
+    def create(self, client, settings, prefix, body, user='contributor'):
         """Create a document through the API and return its id."""
-        return self.post(f'/{prefix}', body, user=user).json['document_id']
+        return self.post(client, settings, f'/{prefix}', body, user=user).json[
+            'document_id'
+        ]
 
-    def url(self, prefix, path=''):
+    def url(self, user_ids, prefix, path=''):
         return f'/{prefix}/{self.ids[prefix]}{path}'
 
 
 class TestDocumentGet(DocumentContractTest):
     @contract(*_routes('GET', '/{prefix}/{{id}}', DOCUMENT_TYPES))
     @pytest.mark.parametrize('prefix', DOCUMENT_TYPES)
-    def test_get(self, prefix):
-        check_snapshot(f'{prefix}_get', self.get(self.url(prefix)))
+    def test_get(self, prefix, client, settings, user_ids):
+        check_snapshot(
+            f'{prefix}_get', self.get(client, settings, self.url(user_ids, prefix))
+        )
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', DOCUMENT_TYPES))
     @pytest.mark.parametrize('prefix', DOCUMENT_TYPES)
-    def test_get_lang(self, prefix):
+    def test_get_lang(self, prefix, client, settings, user_ids):
         check_snapshot(
-            f'{prefix}_get_lang', self.get(self.url(prefix), params={'l': 'en'})
+            f'{prefix}_get_lang',
+            self.get(client, settings, self.url(user_ids, prefix), params={'l': 'en'}),
         )
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['routes', 'waypoints']))
     @pytest.mark.parametrize('prefix', ['routes', 'waypoints'])
-    def test_get_cooked(self, prefix):
+    def test_get_cooked(self, prefix, client, settings, user_ids):
         check_snapshot(
-            f'{prefix}_get_cooked', self.get(self.url(prefix), params={'cook': 'en'})
+            f'{prefix}_get_cooked',
+            self.get(
+                client, settings, self.url(user_ids, prefix), params={'cook': 'en'}
+            ),
         )
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['waypoints']))
-    def test_get_for_editing(self):
+    def test_get_for_editing(self, client, settings, user_ids):
         # the editing view: no ETag (not cached), no custom associations
-        response = self.get(self.url('waypoints'), params={'e': '1', 'l': 'en'})
+        response = self.get(
+            client,
+            settings,
+            self.url(user_ids, 'waypoints'),
+            params={'e': '1', 'l': 'en'},
+        )
         check_snapshot('waypoints_get_editing', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['waypoints']))
     @pytest.mark.parametrize(
         'params', [{'cook': 'en', 'e': '1'}, {'cook': 'en', 'l': 'en'}]
     )
-    def test_get_cooked_with_other_params(self, params):
-        response = self.get(self.url('waypoints'), params=params, status=400)
+    def test_get_cooked_with_other_params(self, params, client, settings, user_ids):
+        response = self.get(
+            client, settings, self.url(user_ids, 'waypoints'), params=params, status=400
+        )
         check_snapshot('waypoints_get_cooked_invalid', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['waypoints']))
-    def test_get_not_modified(self):
-        etag = self.get(self.url('waypoints')).headers['ETag']
+    def test_get_not_modified(self, client, settings, user_ids):
+        etag = self.get(client, settings, self.url(user_ids, 'waypoints')).headers[
+            'ETag'
+        ]
         response = self.get(
-            self.url('waypoints'), headers={'If-None-Match': etag}, status=304
+            client,
+            settings,
+            self.url(user_ids, 'waypoints'),
+            headers={'If-None-Match': etag},
+            status=304,
         )
         check_snapshot('waypoints_get_not_modified', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
-    def test_get_not_modified_book(self):
-        etag = self.get(self.url('books')).headers['ETag']
+    def test_get_not_modified_book(self, client, settings, user_ids):
+        etag = self.get(client, settings, self.url(user_ids, 'books')).headers['ETag']
         response = self.get(
-            self.url('books'), headers={'If-None-Match': etag}, status=304
+            client,
+            settings,
+            self.url(user_ids, 'books'),
+            headers={'If-None-Match': etag},
+            status=304,
         )
         check_snapshot('books_get_not_modified', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
-    def test_get_unknown_book(self):
-        check_snapshot('books_get_not_found', self.get('/books/9999999', status=404))
+    def test_get_unknown_book(self, client, settings):
+        check_snapshot(
+            'books_get_not_found',
+            self.get(client, settings, '/books/9999999', status=404),
+        )
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['books']))
     @pytest.mark.parametrize('book_id', ['abc', '-1'])
-    def test_get_invalid_id(self, book_id):
-        response = self.get(f'/books/{book_id}', status=404)
+    def test_get_invalid_id(self, book_id, client, settings):
+        response = self.get(client, settings, f'/books/{book_id}', status=404)
         check_snapshot('books_get_invalid_id', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/{{version_id}}', ['books']))
-    def test_get_invalid_version_id(self):
-        response = self.get(self.url('books', '/en/abc'), status=404)
+    def test_get_invalid_version_id(self, client, settings, user_ids):
+        response = self.get(
+            client, settings, self.url(user_ids, 'books', '/en/abc'), status=404
+        )
         check_snapshot('books_version_invalid_id', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['xreports']))
     @pytest.mark.parametrize('user', ['contributor', 'moderator', 'contributor2'])
-    def test_get_xreport_as(self, user):
+    def test_get_xreport_as(self, user, client, settings, user_ids):
         # the personal fields are for its author and the moderators only
-        response = self.get(self.url('xreports'), user=user)
+        response = self.get(client, settings, self.url(user_ids, 'xreports'), user=user)
         check_snapshot(f'xreports_get_as_{user}', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
-    def test_get_private_profile_as_user(self):
+    def test_get_private_profile_as_user(self, client, settings, user_ids):
         # a private profile is shown to the authenticated users only
-        response = self.get(self.url('profiles'), user='contributor2')
+        response = self.get(
+            client, settings, self.url(user_ids, 'profiles'), user='contributor2'
+        )
         check_snapshot('profiles_get_as_user', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
-    def test_get_public_profile(self):
-        user = self.session.get(User, self.global_userids['contributor'])
+    def test_get_public_profile(self, client, session, settings, user_ids):
+        user = session.get(User, user_ids['contributor'])
         user.is_profile_public = True
-        self.session.flush()
-        check_snapshot('profiles_get_public', self.get(self.url('profiles')))
+        session.flush()
+        check_snapshot(
+            'profiles_get_public',
+            self.get(client, settings, self.url(user_ids, 'profiles')),
+        )
 
     @contract(*_routes('GET', '/{prefix}/{{id}}', ['profiles']))
-    def test_get_unknown_profile(self):
-        response = self.get('/profiles/9999999', status=404)
+    def test_get_unknown_profile(self, client, settings):
+        response = self.get(client, settings, '/profiles/9999999', status=404)
         check_snapshot('profiles_get_unknown', response)
 
     @contract(*_routes('GET', '/{prefix}/{{id}}/{{lang}}/info', WITH_INFO))
     @pytest.mark.parametrize('prefix', WITH_INFO)
-    def test_info(self, prefix):
-        check_snapshot(f'{prefix}_info', self.get(self.url(prefix, '/en/info')))
+    def test_info(self, prefix, client, settings, user_ids):
+        check_snapshot(
+            f'{prefix}_info',
+            self.get(client, settings, self.url(user_ids, prefix, '/en/info')),
+        )
 
     @contract(
         *_routes('GET', '/{prefix}/{{id}}/{{lang}}/{{version_id}}', WITH_VERSION),
         ('GET', '/document/{id}/history/{lang}'),
     )
     @pytest.mark.parametrize('prefix', WITH_VERSION)
-    def test_version(self, prefix):
-        history = self.get(f'/document/{self.ids[prefix]}/history/en')
+    def test_version(self, prefix, client, settings, user_ids):
+        history = self.get(client, settings, f'/document/{self.ids[prefix]}/history/en')
         check_snapshot(f'{prefix}_history', history)
         version_id = history.json['versions'][0]['version_id']
-        response = self.get(self.url(prefix, f'/en/{version_id}'))
+        response = self.get(
+            client, settings, self.url(user_ids, prefix, f'/en/{version_id}')
+        )
         check_snapshot(f'{prefix}_version', response)
 
 
 class TestDocumentListing(DocumentContractTest):
     @contract(*_routes('GET', '/{prefix}', DOCUMENT_TYPES))
     @pytest.mark.parametrize('prefix', DOCUMENT_TYPES)
-    def test_listing(self, prefix):
+    def test_listing(self, prefix, client, settings):
         # /profiles is the only listing that needs a user
         user = 'contributor' if prefix == 'profiles' else None
-        response = self.get(f'/{prefix}', user=user, params={'limit': 2})
+        response = self.get(
+            client, settings, f'/{prefix}', user=user, params={'limit': 2}
+        )
         check_snapshot(f'{prefix}_listing', response)
         assert len(response.json['documents']) <= 2
         assert response.json['total'] >= len(response.json['documents'])
 
     @contract(*_routes('GET', '/{prefix}', ['waypoints']))
-    def test_listing_lang_and_pagination(self):
-        response = self.get('/waypoints', params={'pl': 'fr', 'offset': 1, 'limit': 1})
+    def test_listing_lang_and_pagination(self, client, settings):
+        response = self.get(
+            client, settings, '/waypoints', params={'pl': 'fr', 'offset': 1, 'limit': 1}
+        )
         check_snapshot('waypoints_listing_pl', response)
 
     @contract(*_routes('GET', '/{prefix}', ['outings']))
-    def test_listing_with_filters(self):
+    def test_listing_with_filters(self, client, session, settings):
         # filters make the listing search with ElasticSearch; rebuilding the
         # index is slow, so one test for the filtered listings
-        reset_search_index(self.session)
+        reset_search_index(session)
         response = self.get(
-            '/outings', params={'act': 'hiking,skitouring', 'pl': 'en', 'limit': 5}
+            client,
+            settings,
+            '/outings',
+            params={'act': 'hiking,skitouring', 'pl': 'en', 'limit': 5},
         )
         check_snapshot('outings_listing_filtered', response)
         ids = [d['document_id'] for d in response.json['documents']]
         assert self.ids['outings'] in ids
 
     @contract(*_routes('GET', '/{prefix}', ['outings']))
-    def test_listing_beyond_the_search_window(self):
+    def test_listing_beyond_the_search_window(self, client, settings):
         response = self.get(
-            '/outings', params={'offset': 9990, 'limit': 20}, status=400
+            client,
+            settings,
+            '/outings',
+            params={'offset': 9990, 'limit': 20},
+            status=400,
         )
         check_snapshot('outings_listing_beyond_window', response)
 
     @contract(('GET', '/profiles'))
-    def test_profiles_listing_needs_a_user(self):
-        check_snapshot('profiles_listing_anonymous', self.get('/profiles', status=403))
+    def test_profiles_listing_needs_a_user(self, client, settings):
+        check_snapshot(
+            'profiles_listing_anonymous',
+            self.get(client, settings, '/profiles', status=403),
+        )
 
 
+@pytest.mark.usefixtures('client')
 class TestPathsLikeADocument(ContractTest):
     """Paths that look like a document page, with another route."""
 
     @contract(('POST', '/images/list'))
-    def test_get_image_list(self):
+    def test_get_image_list(self, client, settings):
         # a POST-only route: GET is not allowed (it is not image "list")
-        response = self.get('/images/list', status=405)
+        response = self.get(client, settings, '/images/list', status=405)
         check_snapshot('images_list_get', response)
 
     @contract(('POST', '/routes/update_public_transportation_rating'))
-    def test_update_public_transportation_rating_needs_a_moderator(self):
+    def test_update_public_transportation_rating_needs_a_moderator(
+        self, client, settings
+    ):
         response = self.post(
+            client,
+            settings,
             '/routes/update_public_transportation_rating',
             None,
             user='contributor',
@@ -332,13 +412,17 @@ class TestPathsLikeADocument(ContractTest):
         check_snapshot('routes_update_public_transportation_rating_forbidden', response)
 
     @contract(('POST', '/routes/update_public_transportation_rating'))
-    def test_update_public_transportation_rating(self):
+    def test_update_public_transportation_rating(self, client, settings):
         # the ratings of the routes are updated
         with patch(
             'c2corg_api.views.route.update_all_pt_rating'
         ) as update_all_pt_rating:
             response = self.post(
-                '/routes/update_public_transportation_rating', None, user='moderator'
+                client,
+                settings,
+                '/routes/update_public_transportation_rating',
+                None,
+                user='moderator',
             )
         check_snapshot('routes_update_public_transportation_rating', response)
         update_all_pt_rating.assert_called_once_with(True)

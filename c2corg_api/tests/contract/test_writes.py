@@ -46,19 +46,27 @@ def image_backend():
 
 
 class WriteContractTest(DocumentContractTest):
-    def update(self, prefix, change, user='contributor', status=200):
+    def update(
+        self, client, settings, user_ids, prefix, change, user='contributor', status=200
+    ):
         """Change a document through the API and return the response."""
-        document = writable(self.get(self.url(prefix), user=user).json)
+        document = writable(
+            self.get(client, settings, self.url(user_ids, prefix), user=user).json
+        )
         change(document)
         body = {'message': 'contract test', 'document': document}
-        return self.put(self.url(prefix), body, user=user, status=status)
+        return self.put(
+            client, settings, self.url(user_ids, prefix), body, user=user, status=status
+        )
 
-    def history(self, prefix, lang='en'):
+    def history(self, client, settings, prefix, lang='en'):
         """Return the version ids of a document, oldest first."""
-        versions = self.get(f'/document/{self.ids[prefix]}/history/{lang}').json
+        versions = self.get(
+            client, settings, f'/document/{self.ids[prefix]}/history/{lang}'
+        ).json
         return sorted(v['version_id'] for v in versions['versions'])
 
-    def retitle(self, prefix):
+    def retitle(self, client, settings, user_ids, prefix):
         def change(document):
             # profiles have no title
             field = 'description' if prefix == 'profiles' else 'title'
@@ -66,25 +74,27 @@ class WriteContractTest(DocumentContractTest):
             locale[field] = (locale.get(field) or '') + ' (2)'
 
         user = 'moderator' if prefix in MODERATED_TYPES else 'contributor'
-        return self.update(prefix, change, user=user)
+        return self.update(client, settings, user_ids, prefix, change, user=user)
 
 
 class TestDocumentCreate(WriteContractTest):
     @contract(*_routes('POST', '/{prefix}', CREATED_TYPES))
     @pytest.mark.parametrize('prefix', CREATED_TYPES)
-    def test_create(self, prefix):
+    def test_create(self, prefix, client, settings, user_ids):
         # setUp created the documents: create a second one the same way
-        document = writable(self.get(self.url(prefix)).json, keep_ids=False)
+        document = writable(
+            self.get(client, settings, self.url(user_ids, prefix)).json, keep_ids=False
+        )
         for locale in document['locales']:
             locale.pop('version', None)
         if prefix == 'images':
             document['filename'] = 'image2.jpg'
         user = 'moderator' if prefix in MODERATED_TYPES else 'contributor'
-        response = self.post(f'/{prefix}', document, user=user)
+        response = self.post(client, settings, f'/{prefix}', document, user=user)
         check_snapshot(f'{prefix}_create', response)
 
     @contract(('POST', '/waypoints'))
-    def test_create_anonymous(self):
+    def test_create_anonymous(self, client, settings):
         body = {
             'waypoint_type': 'summit',
             'elevation': 3779,
@@ -92,70 +102,95 @@ class TestDocumentCreate(WriteContractTest):
             'locales': [{'lang': 'en', 'title': 'Anonymous'}],
         }
         check_snapshot(
-            'waypoints_create_anonymous', self.post('/waypoints', body, status=403)
+            'waypoints_create_anonymous',
+            self.post(client, settings, '/waypoints', body, status=403),
         )
 
 
 class TestDocumentUpdate(WriteContractTest):
     @contract(*_routes('PUT', '/{prefix}/{{id}}', DOCUMENT_TYPES))
     @pytest.mark.parametrize('prefix', DOCUMENT_TYPES)
-    def test_update(self, prefix):
-        response = self.retitle(prefix)
+    def test_update(self, prefix, client, settings, user_ids):
+        response = self.retitle(client, settings, user_ids, prefix)
         check_snapshot(f'{prefix}_update', response)
 
     @contract(('PUT', '/waypoints/{id}'))
-    def test_update_with_an_old_version(self):
-        self.retitle('waypoints')
+    def test_update_with_an_old_version(self, client, settings, user_ids):
+        self.retitle(client, settings, user_ids, 'waypoints')
 
         def change(document):
             document['version'] -= 1
 
-        response = self.update('waypoints', change, status=409)
+        response = self.update(
+            client, settings, user_ids, 'waypoints', change, status=409
+        )
         check_snapshot('waypoints_update_conflict', response)
 
 
 class TestDocumentModeration(WriteContractTest):
     @contract(('POST', '/documents/protect'), ('POST', '/documents/unprotect'))
-    def test_protect_and_unprotect(self):
+    def test_protect_and_unprotect(self, client, settings, user_ids):
         body = {'document_id': self.ids['waypoints']}
-        protect = self.post('/documents/protect', body, user='moderator')
+        protect = self.post(
+            client, settings, '/documents/protect', body, user='moderator'
+        )
         check_snapshot('documents_protect', protect)
-        assert self.get(self.url('waypoints')).json['protected'] is True
-        unprotect = self.post('/documents/unprotect', body, user='moderator')
+        assert (
+            self.get(client, settings, self.url(user_ids, 'waypoints')).json[
+                'protected'
+            ]
+            is True
+        )
+        unprotect = self.post(
+            client, settings, '/documents/unprotect', body, user='moderator'
+        )
         check_snapshot('documents_unprotect', unprotect)
-        assert self.get(self.url('waypoints')).json['protected'] is False
+        assert (
+            self.get(client, settings, self.url(user_ids, 'waypoints')).json[
+                'protected'
+            ]
+            is False
+        )
 
     @contract(('POST', '/documents/revert'))
-    def test_revert(self):
-        self.retitle('waypoints')
-        first = self.history('waypoints')[0]
+    def test_revert(self, client, settings, user_ids):
+        self.retitle(client, settings, user_ids, 'waypoints')
+        first = self.history(client, settings, 'waypoints')[0]
         body = {'document_id': self.ids['waypoints'], 'lang': 'en', 'version_id': first}
         check_snapshot(
-            'documents_revert', self.post('/documents/revert', body, user='moderator')
+            'documents_revert',
+            self.post(client, settings, '/documents/revert', body, user='moderator'),
         )
         assert (
-            self.get(self.url('waypoints')).json['locales'][0]['title'] == 'Mont Pourri'
+            self.get(client, settings, self.url(user_ids, 'waypoints')).json['locales'][
+                0
+            ]['title']
+            == 'Mont Pourri'
         )
 
     @contract(('POST', '/versions/mask'), ('POST', '/versions/unmask'))
-    def test_mask_and_unmask(self):
-        self.retitle('waypoints')
-        first = self.history('waypoints')[0]
+    def test_mask_and_unmask(self, client, settings, user_ids):
+        self.retitle(client, settings, user_ids, 'waypoints')
+        first = self.history(client, settings, 'waypoints')[0]
         body = {'document_id': self.ids['waypoints'], 'lang': 'en', 'version_id': first}
         check_snapshot(
-            'versions_mask', self.post('/versions/mask', body, user='moderator')
+            'versions_mask',
+            self.post(client, settings, '/versions/mask', body, user='moderator'),
         )
         check_snapshot(
             'waypoints_version_masked',
-            self.get(self.url('waypoints', f'/en/{first}')),
+            self.get(client, settings, self.url(user_ids, 'waypoints', f'/en/{first}')),
         )
         check_snapshot(
-            'versions_unmask', self.post('/versions/unmask', body, user='moderator')
+            'versions_unmask',
+            self.post(client, settings, '/versions/unmask', body, user='moderator'),
         )
 
     @contract(('POST', '/documents/merge'))
-    def test_merge(self):
+    def test_merge(self, client, settings):
         source = self.create(
+            client,
+            settings,
             'articles',
             {
                 'categories': ['site_info'],
@@ -169,25 +204,32 @@ class TestDocumentModeration(WriteContractTest):
             'target_document_id': self.ids['articles'],
         }
         check_snapshot(
-            'documents_merge', self.post('/documents/merge', body, user='moderator')
+            'documents_merge',
+            self.post(client, settings, '/documents/merge', body, user='moderator'),
         )
         # the source now redirects to the target
-        redirect = self.get(f'/articles/{source}').json
+        redirect = self.get(client, settings, f'/articles/{source}').json
         assert redirect['redirects_to'] == self.ids['articles']
 
 
 class TestDocumentDelete(WriteContractTest):
     @contract(('DELETE', '/documents/delete/{id}'))
-    def test_delete_own_outing(self):
+    def test_delete_own_outing(self, client, settings, user_ids):
         response = self.request(
-            'DELETE', f'/documents/delete/{self.ids["outings"]}', user='contributor'
+            client,
+            settings,
+            'DELETE',
+            f'/documents/delete/{self.ids["outings"]}',
+            user='contributor',
         )
         check_snapshot('documents_delete', response)
-        self.get(self.url('outings'), status=404)
+        self.get(client, settings, self.url(user_ids, 'outings'), status=404)
 
     @contract(('DELETE', '/documents/delete/{id}'))
-    def test_delete_refused(self):
+    def test_delete_refused(self, client, settings):
         response = self.request(
+            client,
+            settings,
             'DELETE',
             f'/documents/delete/{self.ids["waypoints"]}',
             user='contributor',
@@ -196,24 +238,32 @@ class TestDocumentDelete(WriteContractTest):
         check_snapshot('documents_delete_refused', response)
 
     @contract(('DELETE', '/documents/delete/{id}/{lang}'))
-    def test_delete_locale(self):
+    def test_delete_locale(self, client, settings, user_ids):
         # a translation added in its own version (#2406)
         def add_french(document):
             document['locales'].append({'lang': 'fr', 'title': 'Rapport'})
 
-        self.update('xreports', add_french)
+        self.update(client, settings, user_ids, 'xreports', add_french)
         response = self.request(
-            'DELETE', f'/documents/delete/{self.ids["xreports"]}/fr', user='moderator'
+            client,
+            settings,
+            'DELETE',
+            f'/documents/delete/{self.ids["xreports"]}/fr',
+            user='moderator',
         )
         check_snapshot('documents_delete_locale', response)
-        langs = self.get(self.url('xreports'), user='moderator').json['available_langs']
+        langs = self.get(
+            client, settings, self.url(user_ids, 'xreports'), user='moderator'
+        ).json['available_langs']
         assert langs == ['en']
 
 
 class TestAssociations(WriteContractTest):
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_associations(self, client, settings, _setup_document_contract_test):
         self.child = self.create(
+            client,
+            settings,
             'waypoints',
             {
                 'waypoint_type': 'access',
@@ -229,23 +279,34 @@ class TestAssociations(WriteContractTest):
         }
 
     @contract(('POST', '/associations'), ('DELETE', '/associations'))
-    def test_add_and_remove(self):
-        added = self.post('/associations', self.association, user='contributor')
+    def test_add_and_remove(self, client, settings):
+        added = self.post(
+            client, settings, '/associations', self.association, user='contributor'
+        )
         check_snapshot('associations_add', added)
         # a contributor may only remove links to their own personal documents
         removed = self.request(
-            'DELETE', '/associations', self.association, user='moderator'
+            client,
+            settings,
+            'DELETE',
+            '/associations',
+            self.association,
+            user='moderator',
         )
         check_snapshot('associations_remove', removed)
 
     @contract(('GET', '/associations-history'))
-    def test_history(self):
-        self.post('/associations', self.association, user='contributor')
-        response = self.get('/associations-history', params={'d': self.child})
+    def test_history(self, client, settings):
+        self.post(
+            client, settings, '/associations', self.association, user='contributor'
+        )
+        response = self.get(
+            client, settings, '/associations-history', params={'d': self.child}
+        )
         check_snapshot('associations_history', response)
         assert response.json['count'] >= 1
 
     @contract(('GET', '/documents/changes'))
-    def test_changes(self):
-        response = self.get('/documents/changes', params={'limit': 5})
+    def test_changes(self, client, settings):
+        response = self.get(client, settings, '/documents/changes', params={'limit': 5})
         check_snapshot('documents_changes', response)

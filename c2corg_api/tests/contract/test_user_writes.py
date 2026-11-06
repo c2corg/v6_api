@@ -14,11 +14,13 @@ WRONG_SSO_SECRET = 'wrong'  # nosec B105
 
 class TestLoginWrites(UserContractTest):
     @contract(('POST', '/users/login'))
-    def test_anonymous_rate_limit(self):
+    def test_anonymous_rate_limit(self, client, settings):
         # the login is rate limited by the client address the server got,
         # not by an X-Forwarded-For the client sent
         with patch(ANONYMOUS_LIMIT, return_value=True) as limited:
             response = self.post(
+                client,
+                settings,
                 '/users/login',
                 {'username': 'contributor', 'password': WRONG_PASSWORD},
                 headers={'X-Forwarded-For': '203.0.113.7, 10.0.0.1'},
@@ -36,7 +38,7 @@ class TestLoginWrites(UserContractTest):
         ('POST', '/users/update_preferred_language'),
         ('POST', '/users/account'),
     )
-    def test_reserved_to_the_users(self):
+    def test_reserved_to_the_users(self, client, settings):
         for path in (
             '/users/renew',
             '/users/logout',
@@ -44,20 +46,24 @@ class TestLoginWrites(UserContractTest):
             '/users/update_preferred_language',
             '/users/account',
         ):
-            response = self.post(path, {}, status=403)
+            response = self.post(client, settings, path, {}, status=403)
             check_snapshot('users_write_anonymous', response)
 
 
 class TestAccountWrites(UserContractTest):
     @contract(('POST', '/users/account'))
-    def test_wrong_current_password(self):
+    def test_wrong_current_password(self, client, settings):
         body = {'currentpassword': WRONG_PASSWORD, 'name': 'Other name'}
-        response = self.post('/users/account', body, user='contributor', status=400)
+        response = self.post(
+            client, settings, '/users/account', body, user='contributor', status=400
+        )
         check_snapshot('users_account_wrong_password', response)
 
     @contract(('POST', '/users/update_preferred_language'))
-    def test_invalid_language(self):
+    def test_invalid_language(self, client, settings):
         response = self.post(
+            client,
+            settings,
             '/users/update_preferred_language',
             {'lang': 'xx'},
             user='contributor',
@@ -68,13 +74,17 @@ class TestAccountWrites(UserContractTest):
 
 class TestRegistrationWrites(UserContractTest):
     @contract(('POST', '/users/register'))
-    def test_invalid_registration(self):
-        response = self.post('/users/register', {'username': 'x'}, status=422)
+    def test_invalid_registration(self, client, settings):
+        response = self.post(
+            client, settings, '/users/register', {'username': 'x'}, status=422
+        )
         check_snapshot('users_register_invalid', response)
 
     @contract(('POST', '/users/request_password_change'))
-    def test_password_change_of_an_unknown_email(self):
+    def test_password_change_of_an_unknown_email(self, client, settings):
         response = self.post(
+            client,
+            settings,
             '/users/request_password_change',
             {'email': 'nobody@example.org'},
             status=400,
@@ -82,12 +92,18 @@ class TestRegistrationWrites(UserContractTest):
         check_snapshot('users_request_password_change_unknown', response)
 
     @contract(('POST', '/users/request_password_change'))
-    def test_password_change_of_an_account_not_validated(self):
-        user = self.session.get(User, self.global_userids['contributor2'])
+    def test_password_change_of_an_account_not_validated(
+        self, client, session, settings, user_ids
+    ):
+        user = session.get(User, user_ids['contributor2'])
         user.email_validated = False
-        self.session.flush()
+        session.flush()
         response = self.post(
-            '/users/request_password_change', {'email': user.email}, status=400
+            client,
+            settings,
+            '/users/request_password_change',
+            {'email': user.email},
+            status=400,
         )
         check_snapshot('users_request_password_change_not_validated', response)
         assert response.json['errors'] == [
@@ -103,23 +119,29 @@ class TestRegistrationWrites(UserContractTest):
         ('POST', '/users/validate_new_password/{nonce}'),
         ('POST', '/users/validate_change_email/{nonce}'),
     )
-    def test_invalid_nonce(self):
+    def test_invalid_nonce(self, client, settings):
         for path in (
             '/users/validate_register_email/not-a-nonce',
             '/users/validate_new_password/not-a-nonce',
             '/users/validate_change_email/not-a-nonce',
         ):
             body = {'password': NEW_PASSWORD} if 'password' in path else {}
-            response = self.post(path, body, status=400)
+            response = self.post(client, settings, path, body, status=400)
             check_snapshot('users_invalid_nonce', response)
 
 
 class TestSsoWrites(UserContractTest):
     @contract(('POST', '/sso_sync'), ('POST', '/sso_login'))
-    def test_refused(self):
+    def test_refused(self, client, settings):
         response = self.post(
-            '/sso_sync', {'sso_key': WRONG_SSO_SECRET, 'external_id': '1'}, status=403
+            client,
+            settings,
+            '/sso_sync',
+            {'sso_key': WRONG_SSO_SECRET, 'external_id': '1'},
+            status=403,
         )
         check_snapshot('sso_sync_wrong_key', response)
-        response = self.post('/sso_login', {'token': WRONG_SSO_SECRET}, status=403)
+        response = self.post(
+            client, settings, '/sso_login', {'token': WRONG_SSO_SECRET}, status=403
+        )
         check_snapshot('sso_login_wrong_token', response)
