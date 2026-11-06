@@ -1,7 +1,15 @@
+import pytest
+
 from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.models.user import User
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import (
+    assert_not_notified_es,
+    assert_notified_es,
+    auth_headers,
+    post_json_with_contributor,
+    send_json,
+)
 from c2corg_api.views.document_tag import get_tag_relation
 
 
@@ -9,56 +17,56 @@ def has_tagged(user_id, document_id):
     return get_tag_relation(user_id, document_id) is not None
 
 
-class BaseDocumentTagTest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
+class BaseDocumentTagTest:
+    @pytest.fixture(autouse=True)
+    def _setup_base_document_tag_test(self, client, session, user_ids):
 
-        self.contributor = self.session.get(User, self.global_userids['contributor'])
-        self.contributor2 = self.session.get(User, self.global_userids['contributor2'])
+        self.contributor = session.get(User, user_ids['contributor'])
+        self.contributor2 = session.get(User, user_ids['contributor2'])
 
         self.route1 = Route(
             activities=['skitouring'], locales=[RouteLocale(lang='en', title='Route1')]
         )
-        self.session.add(self.route1)
+        session.add(self.route1)
         self.route2 = Route(
             activities=['skitouring'], locales=[RouteLocale(lang='en', title='Route2')]
         )
-        self.session.add(self.route2)
+        session.add(self.route2)
         self.route3 = Route(
             activities=['hiking'], locales=[RouteLocale(lang='en', title='Route3')]
         )
-        self.session.add(self.route3)
-        self.session.flush()
+        session.add(self.route3)
+        session.flush()
 
-        self.session.add(
+        session.add(
             DocumentTag(
                 user_id=self.contributor2.id,
                 document_id=self.route2.document_id,
                 document_type=ROUTE_TYPE,
             )
         )
-        self.session.flush()
+        session.flush()
 
 
 class TestDocumentTagRest(BaseDocumentTagTest):
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_document_tag_rest(self, client, _setup_base_document_tag_test):
         self._prefix = '/tags/add'
 
-    def test_tag_unauthenticated(self):
-        self.app_post_json(self._prefix, {}, status=403)
+    def test_tag_unauthenticated(self, client):
+        send_json(client, 'post', self._prefix, {}, status=403)
 
-    def test_tag(self):
+    def test_tag(self, client, session, queue_config):
         request_body = {'document_id': self.route1.document_id}
 
-        self.post_json_with_contributor(
-            self._prefix, request_body, status=200, username='contributor'
+        post_json_with_contributor(
+            client, self._prefix, request_body, status=200, username='contributor'
         )
 
         assert has_tagged(self.contributor.id, self.route1.document_id)
 
         log = (
-            self.session.query(DocumentTagLog)
+            session.query(DocumentTagLog)
             .filter(DocumentTagLog.document_id == self.route1.document_id)
             .filter(DocumentTagLog.user_id == self.contributor.id)
             .filter(DocumentTagLog.document_type == ROUTE_TYPE)
@@ -66,38 +74,38 @@ class TestDocumentTagRest(BaseDocumentTagTest):
         )
         assert log.is_creation
 
-        self.post_json_with_contributor(
-            self._prefix, request_body, status=400, username='contributor'
+        post_json_with_contributor(
+            client, self._prefix, request_body, status=400, username='contributor'
         )
 
-        self.assertNotifiedEs()
+        assert_notified_es(queue_config)
 
 
 class TestDocumentUntagRest(BaseDocumentTagTest):
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_document_untag_rest(self, client, _setup_base_document_tag_test):
         self._prefix = '/tags/remove'
 
-    def test_untag_unauthenticated(self):
-        self.app_post_json(self._prefix, {}, status=403)
+    def test_untag_unauthenticated(self, client):
+        send_json(client, 'post', self._prefix, {}, status=403)
 
-    def test_untag(self):
+    def test_untag(self, client, session, queue_config):
         request_body = {'document_id': self.route2.document_id}
 
         assert has_tagged(self.contributor2.id, self.route2.document_id)
 
-        self.post_json_with_contributor(
-            self._prefix, request_body, status=200, username='contributor2'
+        post_json_with_contributor(
+            client, self._prefix, request_body, status=200, username='contributor2'
         )
 
         assert not has_tagged(self.contributor2.id, self.route2.document_id)
 
-        self.post_json_with_contributor(
-            self._prefix, request_body, status=400, username='contributor2'
+        post_json_with_contributor(
+            client, self._prefix, request_body, status=400, username='contributor2'
         )
 
         log = (
-            self.session.query(DocumentTagLog)
+            session.query(DocumentTagLog)
             .filter(DocumentTagLog.document_id == self.route2.document_id)
             .filter(DocumentTagLog.user_id == self.contributor2.id)
             .filter(DocumentTagLog.document_type == ROUTE_TYPE)
@@ -105,33 +113,33 @@ class TestDocumentUntagRest(BaseDocumentTagTest):
         )
         assert not log.is_creation
 
-        self.assertNotifiedEs()
+        assert_notified_es(queue_config)
 
-    def test_untag_not_tagged(self):
+    def test_untag_not_tagged(self, client, queue_config):
         request_body = {'document_id': self.route1.document_id}
 
         assert not has_tagged(self.contributor.id, self.route1.document_id)
 
-        self.post_json_with_contributor(
-            self._prefix, request_body, status=400, username='contributor'
+        post_json_with_contributor(
+            client, self._prefix, request_body, status=400, username='contributor'
         )
 
         assert not has_tagged(self.contributor.id, self.route1.document_id)
 
-        self.assertNotNotifiedEs()
+        assert_not_notified_es(queue_config)
 
 
 class TestDocumentTaggedRest(BaseDocumentTagTest):
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_document_tagged_rest(self, client, _setup_base_document_tag_test):
         self._prefix = '/tags/has'
 
-    def test_has_tagged_unauthenticated(self):
-        self.app.get(self._prefix + '/123', status=403)
+    def test_has_tagged_unauthenticated(self, client):
+        client.get(self._prefix + '/123', status=403)
 
-    def test_has_tagged(self):
-        headers = self.add_authorization_header(username='contributor2')
-        response = self.app.get(
+    def test_has_tagged(self, client):
+        headers = auth_headers(username='contributor2')
+        response = client.get(
             f'{self._prefix}/{self.route2.document_id}',
             status=200,
             headers=headers,
@@ -140,9 +148,9 @@ class TestDocumentTaggedRest(BaseDocumentTagTest):
 
         assert body['todo']
 
-    def test_has_tagged_not(self):
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app.get(
+    def test_has_tagged_not(self, client):
+        headers = auth_headers(username='contributor')
+        response = client.get(
             f'{self._prefix}/{self.route1.document_id}',
             status=200,
             headers=headers,

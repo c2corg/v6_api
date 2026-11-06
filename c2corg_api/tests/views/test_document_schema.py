@@ -1,11 +1,13 @@
-from c2corg_api.tests.views import BaseTestRest
+import pytest
+
 from c2corg_api.views.document_schemas import (
     route_documents_config,
     topo_map_documents_config,
 )
 
 
-class TestGetDocumentsConfig(BaseTestRest):
+@pytest.mark.usefixtures('client')
+class TestGetDocumentsConfig:
     def test_get_load_only_fields_routes(self):
         fields = route_documents_config.get_load_only_fields()
         assert 'elevation_max' in fields

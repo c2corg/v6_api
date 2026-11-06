@@ -3,7 +3,7 @@ import re
 
 import pytest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import auth_headers
 
 ROUTES_FILE = os.path.join(os.path.dirname(__file__), '..', 'contract', 'routes.txt')
 
@@ -32,14 +32,15 @@ WITHOUT_BODY = {
 }
 
 
-class TestInvalidJson(BaseTestRest):
+@pytest.mark.usefixtures('client')
+class TestInvalidJson:
     @pytest.mark.parametrize(('method', 'path'), _write_routes())
-    def test_invalid_json_body(self, method, path):
+    def test_invalid_json_body(self, method, path, client):
         # a body that is not JSON is an error of the client, answered as
         # FastAPI does: a 422, not an unexpected error
-        headers = self.add_authorization_header(username='moderator')
+        headers = auth_headers(username='moderator')
         headers['Content-Type'] = 'application/json'
-        response = self.app.request(
+        response = client.request(
             path, method=method, body=b'{not json', headers=headers, expect_errors=True
         )
         assert response.status_int != 500, response.body

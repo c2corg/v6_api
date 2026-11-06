@@ -1,34 +1,38 @@
 from json import loads
 
+import pytest
+
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry, UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import assert_errors_contain, auth_headers, send_json
 from c2corg_api.views.document import create_new_version, update_version
 
 
-class TestDocumentRevertRest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
+class TestDocumentRevertRest:
+    @pytest.fixture(autouse=True)
+    def _setup_test_document_revert_rest(self, client, session, user_ids):
         self._prefix = '/documents/revert'
-        self._add_test_data()
+        self._add_test_data(session, user_ids)
 
-    def test_revert_unauthorized(self):
-        self.app_post_json(self._prefix, {}, status=403)
+    def test_revert_unauthorized(self, client):
+        send_json(client, 'post', self._prefix, {}, status=403)
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(self._prefix, {}, headers=headers, status=403)
+        headers = auth_headers(username='contributor')
+        send_json(client, 'post', self._prefix, {}, headers=headers, status=403)
 
-    def test_revert_invalid_document_id(self):
+    def test_revert_invalid_document_id(self, client):
         request_body = {'document_id': -1, 'lang': 'en', 'version_id': 123456}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=400, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=400, headers=headers
+        )
 
-    def test_revert_invalid_version_id(self):
+    def test_revert_invalid_version_id(self, client):
         document_id = self.waypoint2.document_id
         lang = 'en'
         version_id = 123456
@@ -38,22 +42,22 @@ class TestDocumentRevertRest(BaseTestRest):
             'version_id': version_id,
         }
 
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers
+        headers = auth_headers(username='moderator')
+        response = send_json(
+            client, 'post', self._prefix, request_body, status=400, headers=headers
         )
-        self.assertErrorsContain(
+        assert_errors_contain(
             response.json,
             'Bad Request',
             f'Unknown version {document_id}/{lang}/{version_id}',
         )
 
-    def test_revert_latest_version_id(self):
+    def test_revert_latest_version_id(self, client, session):
         document_id = self.waypoint2.document_id
         lang = 'en'
         # Get version id of the latest version of the document:
         (version_id,) = (
-            self.session.query(DocumentVersion.id)
+            session.query(DocumentVersion.id)
             .filter(DocumentVersion.document_id == document_id)
             .filter(DocumentVersion.lang == lang)
             .order_by(DocumentVersion.id.desc())
@@ -65,22 +69,22 @@ class TestDocumentRevertRest(BaseTestRest):
             'version_id': version_id,
         }
 
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers
+        headers = auth_headers(username='moderator')
+        response = send_json(
+            client, 'post', self._prefix, request_body, status=400, headers=headers
         )
-        self.assertErrorsContain(
+        assert_errors_contain(
             response.json,
             'Bad Request',
             f'Version {document_id}/{lang}/{version_id} is already the latest one',
         )
 
-    def test_revert_waypoint(self):
+    def test_revert_waypoint(self, client, session):
         document_id = self.waypoint2.document_id
         lang = 'en'
         # Get version id of the first version of the document:
         (version_id,) = (
-            self.session.query(DocumentVersion.id)
+            session.query(DocumentVersion.id)
             .filter(DocumentVersion.document_id == document_id)
             .filter(DocumentVersion.lang == lang)
             .order_by(DocumentVersion.id.asc())
@@ -88,7 +92,7 @@ class TestDocumentRevertRest(BaseTestRest):
         )
 
         initial_count = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == document_id)
             .filter(DocumentVersion.lang == lang)
             .count()
@@ -100,10 +104,12 @@ class TestDocumentRevertRest(BaseTestRest):
             'version_id': version_id,
         }
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=200, headers=headers
+        )
 
-        response = self.app.get('/waypoints/' + str(document_id), status=200)
+        response = client.get('/waypoints/' + str(document_id), status=200)
         body = response.json
         assert body['elevation'] == 4810
         geom = loads(body['geometry']['geom'])
@@ -115,19 +121,19 @@ class TestDocumentRevertRest(BaseTestRest):
 
         # check a new version has been created
         count = (
-            self.session.query(DocumentVersion)
+            session.query(DocumentVersion)
             .filter(DocumentVersion.document_id == document_id)
             .filter(DocumentVersion.lang == lang)
             .count()
         )
         assert count == initial_count + 1
 
-    def test_revert_route(self):
+    def test_revert_route(self, client, session):
         route_id = self.route1.document_id
         route_lang = 'fr'
         # Get version id of the first version of the document:
         (route_version_id,) = (
-            self.session.query(DocumentVersion.id)
+            session.query(DocumentVersion.id)
             .filter(DocumentVersion.document_id == route_id)
             .filter(DocumentVersion.lang == route_lang)
             .order_by(DocumentVersion.id.asc())
@@ -140,10 +146,12 @@ class TestDocumentRevertRest(BaseTestRest):
             'version_id': route_version_id,
         }
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=200, headers=headers
+        )
 
-        response = self.app.get('/routes/' + str(route_id), status=200)
+        response = client.get('/routes/' + str(route_id), status=200)
         body = response.json
         assert body['elevation_max'] == 1500
         assert body['activities'] == ['skitouring']
@@ -158,7 +166,7 @@ class TestDocumentRevertRest(BaseTestRest):
         waypoint_lang = 'en'
         # Get version id of the first version of the document:
         (waypoint_version_id,) = (
-            self.session.query(DocumentVersion.id)
+            session.query(DocumentVersion.id)
             .filter(DocumentVersion.document_id == waypoint_id)
             .filter(DocumentVersion.lang == waypoint_lang)
             .order_by(DocumentVersion.id.asc())
@@ -171,18 +179,20 @@ class TestDocumentRevertRest(BaseTestRest):
             'version_id': waypoint_version_id,
         }
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=200, headers=headers
+        )
 
-        response = self.app.get('/routes/' + str(route_id), status=200)
+        response = client.get('/routes/' + str(route_id), status=200)
         body = response.json
         for locale in body['locales']:
             if locale['lang'] == route_lang:
                 assert locale['title'] == 'Mont Blanc du ciel'
                 assert locale['title_prefix'] == 'Mont Blanc'
 
-    def _add_test_data(self):
-        contributor_id = self.global_userids['contributor']
+    def _add_test_data(self, session, user_ids):
+        contributor_id = user_ids['contributor']
 
         self.waypoint1 = Waypoint(
             waypoint_type='summit',
@@ -197,7 +207,7 @@ class TestDocumentRevertRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.waypoint1)
+        session.add(self.waypoint1)
         self.waypoint2 = Waypoint(
             waypoint_type='summit',
             elevation=4810,
@@ -211,7 +221,7 @@ class TestDocumentRevertRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.waypoint2)
+        session.add(self.waypoint2)
         self.waypoint3 = Waypoint(
             waypoint_type='summit',
             elevation=2432,
@@ -225,8 +235,8 @@ class TestDocumentRevertRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.waypoint3)
-        self.session.flush()
+        session.add(self.waypoint3)
+        session.flush()
 
         self.initial_route1_geometry = DocumentGeometry(
             geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
@@ -248,8 +258,8 @@ class TestDocumentRevertRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.route1)
-        self.session.flush()
+        session.add(self.route1)
+        session.flush()
 
         create_new_version(self.waypoint1, contributor_id)
         create_new_version(self.waypoint2, contributor_id)
@@ -257,19 +267,19 @@ class TestDocumentRevertRest(BaseTestRest):
         update_feed_document_create(self.waypoint1, contributor_id)
         update_feed_document_create(self.waypoint2, contributor_id)
         update_feed_document_create(self.route1, contributor_id)
-        self.session.flush()
+        session.flush()
 
         association = Association.create(
             parent_document=self.waypoint1, child_document=self.route1
         )
-        self.session.add(association)
-        self.session.add(association.get_log(contributor_id))
+        session.add(association)
+        session.add(association.get_log(contributor_id))
         association = Association.create(
             parent_document=self.waypoint2, child_document=self.route1
         )
-        self.session.add(association)
-        self.session.add(association.get_log(contributor_id))
-        self.session.flush()
+        session.add(association)
+        session.add(association.get_log(contributor_id))
+        session.flush()
 
         self.waypoint2.elevation = 8848
         for locale in self.waypoint2.locales:
@@ -285,7 +295,7 @@ class TestDocumentRevertRest(BaseTestRest):
             if locale.lang == 'fr':
                 locale.title = 'Some new route name'
         self.route1.geometry.geom = 'SRID=3857;POINT(0 0)'
-        self.session.flush()
+        session.flush()
 
         update_version(
             self.waypoint2,
@@ -301,13 +311,13 @@ class TestDocumentRevertRest(BaseTestRest):
             [UpdateType.FIGURES, UpdateType.GEOM, UpdateType.LANG],
             ['fr'],
         )
-        self.session.flush()
+        session.flush()
 
         association = Association.create(
             parent_document=self.waypoint3, child_document=self.route1
         )
-        self.session.add(association)
-        self.session.add(association.get_log(contributor_id))
-        self.session.flush()
+        session.add(association)
+        session.add(association.get_log(contributor_id))
+        session.flush()
 
         # TODO what if former main waypoint is deassociated?

@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.outing import Outing
@@ -7,17 +9,16 @@ from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests import invalid_parameters
-from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.tests.views.test_feed import get_document_ids
 from c2corg_api.views.document import create_new_version
 
 
-class TestChangesDocumentRest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
+class TestChangesDocumentRest:
+    @pytest.fixture(autouse=True)
+    def _setup_test_changes_document_rest(self, client, session, user_ids):
         self._prefix = '/documents/changes'
 
-        contributor_id = self.global_userids['contributor']
+        contributor_id = user_ids['contributor']
 
         self.waypoint1 = Waypoint(
             waypoint_type='summit',
@@ -32,10 +33,10 @@ class TestChangesDocumentRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.waypoint1)
-        self.session.flush()
+        session.add(self.waypoint1)
+        session.flush()
         create_new_version(self.waypoint1, contributor_id)
-        self.session.flush()
+        session.flush()
 
         self.waypoint2 = Waypoint(
             waypoint_type='summit',
@@ -50,10 +51,10 @@ class TestChangesDocumentRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.waypoint2)
-        self.session.flush()
+        session.add(self.waypoint2)
+        session.flush()
         create_new_version(self.waypoint2, contributor_id)
-        self.session.flush()
+        session.flush()
 
         self.waypoint3 = Waypoint(
             waypoint_type='summit',
@@ -68,10 +69,10 @@ class TestChangesDocumentRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.waypoint3)
-        self.session.flush()
+        session.add(self.waypoint3)
+        session.flush()
         create_new_version(self.waypoint3, contributor_id)
-        self.session.flush()
+        session.flush()
 
         self.route1 = Route(
             activities=['skitouring'],
@@ -87,10 +88,10 @@ class TestChangesDocumentRest(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.route1)
-        self.session.flush()
+        session.add(self.route1)
+        session.flush()
         create_new_version(self.route1, contributor_id)
-        self.session.flush()
+        session.flush()
 
         self.outing = Outing(
             activities=['skitouring'],
@@ -101,27 +102,27 @@ class TestChangesDocumentRest(BaseTestRest):
             height_diff_up=800,
             height_diff_down=800,
         )
-        self.session.add(self.outing)
-        self.session.flush()
+        session.add(self.outing)
+        session.flush()
         create_new_version(self.outing, contributor_id)
-        self.session.flush()
+        session.flush()
 
         self.profile2 = UserProfile(categories=['amateur'])
-        self.session.add(self.profile2)
-        self.session.flush()
+        session.add(self.profile2)
+        session.flush()
 
-    def test_counts(self):
+    def test_counts(self, session):
         # besides these documents, the profiles of the global test users have
         # a version per locale (7, the contributor has two) and a history
         # entry each (6)
-        version_count = self.session.query(DocumentVersion).count()
+        version_count = session.query(DocumentVersion).count()
         assert 4 + 7 == version_count
 
-        hist_meta_count = self.session.query(HistoryMetaData).count()
+        hist_meta_count = session.query(HistoryMetaData).count()
         assert 5 + 6 == hist_meta_count
 
-    def test_get_changes(self):
-        response = self.app.get(self._prefix, status=200)
+    def test_get_changes(self, client):
+        response = client.get(self._prefix, status=200)
         body = response.json
 
         assert 'total' not in body
@@ -140,8 +141,8 @@ class TestChangesDocumentRest(BaseTestRest):
 
         assert self.route1.document_id == latest_change['document']['document_id']
 
-    def test_get_changes_empty(self):
-        response = self.app.get(self._prefix + '?token=0', status=200)
+    def test_get_changes_empty(self, client):
+        response = client.get(self._prefix + '?token=0', status=200)
         body = response.json
 
         assert 'pagination_token' not in body
@@ -150,8 +151,8 @@ class TestChangesDocumentRest(BaseTestRest):
         feed = body['feed']
         assert 0 == len(feed)
 
-    def test_get_changes_paginated(self):
-        response = self.app.get(self._prefix + '?limit=2', status=200)
+    def test_get_changes_paginated(self, client):
+        response = client.get(self._prefix + '?limit=2', status=200)
         body = response.json
 
         document_ids = get_document_ids(body)
@@ -160,7 +161,7 @@ class TestChangesDocumentRest(BaseTestRest):
         pagination_token = body['pagination_token']
 
         # last 2 changes
-        response = self.app.get(
+        response = client.get(
             self._prefix + '?limit=2&token=' + pagination_token, status=200
         )
         body = response.json
@@ -171,7 +172,7 @@ class TestChangesDocumentRest(BaseTestRest):
         pagination_token = body['pagination_token']
 
         # empty response
-        response = self.app.get(
+        response = client.get(
             self._prefix + '?limit=2&token=' + pagination_token, status=200
         )
         body = response.json
@@ -179,10 +180,10 @@ class TestChangesDocumentRest(BaseTestRest):
         feed = body['feed']
         assert 0 == len(feed)
 
-    def test_get_changes_pagination_invalid_format(self):
-        response = self.app.get(self._prefix + '?token=invalid-token', status=422)
+    def test_get_changes_pagination_invalid_format(self, client):
+        response = client.get(self._prefix + '?token=invalid-token', status=422)
         assert ('query', 'token', 'invalid format') in invalid_parameters(response)
 
-    def test_get_changes_userid_invalid_format(self):
-        response = self.app.get(self._prefix + '?u=invalid-user_id', status=422)
+    def test_get_changes_userid_invalid_format(self, client):
+        response = client.get(self._prefix + '?u=invalid-user_id', status=422)
         assert ('query', 'u', 'invalid u') in invalid_parameters(response)

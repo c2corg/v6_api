@@ -1,13 +1,15 @@
+import pytest
+
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import auth_headers, send_json
 from c2corg_api.views.document import create_new_version
 
 
-class BaseProtectTest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
-        contributor_id = self.global_userids['contributor']
+class BaseProtectTest:
+    @pytest.fixture(autouse=True)
+    def _setup_base_protect_test(self, client, session, user_ids):
+        contributor_id = user_ids['contributor']
 
         self.waypoint = Waypoint(waypoint_type='summit', elevation=2203)
 
@@ -17,8 +19,8 @@ class BaseProtectTest(BaseTestRest):
         self.waypoint.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956 5723604)'
         )
-        self.session.add(self.waypoint)
-        self.session.flush()
+        session.add(self.waypoint)
+        session.flush()
 
         create_new_version(self.waypoint, contributor_id)
 
@@ -34,88 +36,100 @@ class BaseProtectTest(BaseTestRest):
         self.waypoint2.geometry = DocumentGeometry(
             geom='SRID=3857;POINT(635956 5723604)'
         )
-        self.session.add(self.waypoint2)
-        self.session.flush()
+        session.add(self.waypoint2)
+        session.flush()
 
         create_new_version(self.waypoint2, contributor_id)
 
-        self.session.flush()
+        session.flush()
 
-    def is_protected(self, document_id):
-        document = self.session.get(Document, document_id)
-        self.session.refresh(document)
+    def is_protected(self, session, document_id):
+        document = session.get(Document, document_id)
+        session.refresh(document)
         return document.protected
 
 
 class TestDocumentProtectRest(BaseProtectTest):
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_document_protect_rest(self, client, _setup_base_protect_test):
         self._prefix = '/documents/protect'
 
-    def test_protect_unauthorized(self):
-        self.app_post_json(self._prefix, {}, status=403)
+    def test_protect_unauthorized(self, client):
+        send_json(client, 'post', self._prefix, {}, status=403)
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(self._prefix, {}, headers=headers, status=403)
+        headers = auth_headers(username='contributor')
+        send_json(client, 'post', self._prefix, {}, headers=headers, status=403)
 
-    def test_protect(self):
+    def test_protect(self, client, session):
         request_body = {'document_id': self.waypoint.document_id}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=200, headers=headers
+        )
 
-        assert self.is_protected(self.waypoint.document_id)
+        assert self.is_protected(session, self.waypoint.document_id)
 
-    def test_protect_already_protected_user(self):
+    def test_protect_already_protected_user(self, client, session):
         """Test that protecting an already protected document
         does not raise an error.
         """
         request_body = {'document_id': self.waypoint2.document_id}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=200, headers=headers
+        )
 
-        assert self.is_protected(self.waypoint2.document_id)
+        assert self.is_protected(session, self.waypoint2.document_id)
 
-    def test_protected_invalid_document_id(self):
+    def test_protected_invalid_document_id(self, client):
         request_body = {'document_id': -1}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=400, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=400, headers=headers
+        )
 
 
 class TestDocumentUnprotectRest(BaseProtectTest):
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def _setup_test_document_unprotect_rest(self, client, _setup_base_protect_test):
         self._prefix = '/documents/unprotect'
 
-    def test_unprotect_unauthorized(self):
-        self.app_post_json(self._prefix, {}, status=403)
+    def test_unprotect_unauthorized(self, client):
+        send_json(client, 'post', self._prefix, {}, status=403)
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(self._prefix, {}, headers=headers, status=403)
+        headers = auth_headers(username='contributor')
+        send_json(client, 'post', self._prefix, {}, headers=headers, status=403)
 
-    def test_unprotect(self):
+    def test_unprotect(self, client, session):
         request_body = {'document_id': self.waypoint2.document_id}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=200, headers=headers
+        )
 
-        assert not self.is_protected(self.waypoint2.document_id)
+        assert not self.is_protected(session, self.waypoint2.document_id)
 
-    def test_unprotect_already_unprotected_user(self):
+    def test_unprotect_already_unprotected_user(self, client, session):
         """Test that unprotecting an already unprotected document
         does not raise an error.
         """
         request_body = {'document_id': self.waypoint.document_id}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=200, headers=headers
+        )
 
-        assert not self.is_protected(self.waypoint.document_id)
+        assert not self.is_protected(session, self.waypoint.document_id)
 
-    def test_protected_invalid_document_id(self):
+    def test_protected_invalid_document_id(self, client):
         request_body = {'document_id': -1}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=400, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self._prefix, request_body, status=400, headers=headers
+        )

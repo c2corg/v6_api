@@ -1,11 +1,12 @@
+import pytest
+
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests.views import BaseTestRest
 
 
-class TestSitemapXml(BaseTestRest):
-    def setUp(self):
-        super().setUp()
+class TestSitemapXml:
+    @pytest.fixture(autouse=True)
+    def _setup_test_sitemap_xml(self, client, session):
         self._prefix = '/sitemaps.xml'
         self.ui_url = 'https://www.camptocamp.org'
         self.schema_url = '{http://www.sitemaps.org/schemas/sitemap/0.9}'
@@ -15,7 +16,7 @@ class TestSitemapXml(BaseTestRest):
             elevation=2000,
             locales=[WaypointLocale(lang='fr', title='Dent de Crolles')],
         )
-        self.session.add(self.waypoint1)
+        session.add(self.waypoint1)
         self.waypoint2 = Waypoint(
             waypoint_type='summit',
             elevation=4985,
@@ -24,7 +25,7 @@ class TestSitemapXml(BaseTestRest):
                 WaypointLocale(lang='fr', title='Mont Blanc'),
             ],
         )
-        self.session.add(self.waypoint2)
+        session.add(self.waypoint2)
         self.route = Route(
             activities=['skitouring'],
             elevation_max=1500,
@@ -35,11 +36,11 @@ class TestSitemapXml(BaseTestRest):
                 )
             ],
         )
-        self.session.add(self.route)
-        self.session.flush()
+        session.add(self.route)
+        session.flush()
 
-    def test_get(self):
-        response = self.app.get(self._prefix, status=200)
+    def test_get(self, client):
+        response = client.get(self._prefix, status=200)
         sitemaps = response.xml
 
         base_url = 'https://api.camptocamp.org/sitemaps.xml'
@@ -53,8 +54,8 @@ class TestSitemapXml(BaseTestRest):
         assert next(filter(waypoint_filter, sitemaps), None) is not None
         assert next(filter(route_filter, sitemaps), None) is not None
 
-    def test_get_sitemap_invalid_doc_type(self):
-        response = self.app.get(
+    def test_get_sitemap_invalid_doc_type(self, client):
+        response = client.get(
             self._prefix + '/z/0.xml', headers={'Cookie': 'a=b'}, status=422
         )
         # the errors only, as for the JSON routes: not the request headers
@@ -69,12 +70,12 @@ class TestSitemapXml(BaseTestRest):
             ]
         }
 
-    def test_get_sitemap_invalid_page(self):
+    def test_get_sitemap_invalid_page(self, client):
         # a page that is not a number: not found
-        self.app.get(self._prefix + '/a/-123.xml', status=404)
+        client.get(self._prefix + '/a/-123.xml', status=404)
 
-    def test_get_waypoint_sitemap(self):
-        response = self.app.get(self._prefix + '/w/0.xml', status=200)
+    def test_get_waypoint_sitemap(self, client):
+        response = client.get(self._prefix + '/w/0.xml', status=200)
         urlset = response.xml
 
         assert len(urlset) == 3
@@ -87,11 +88,11 @@ class TestSitemapXml(BaseTestRest):
             '/fr/dent-de-crolles'
         )
 
-    def test_get_waypoint_sitemap_no_pages(self):
-        self.app.get(self._prefix + '/w/1.xml', status=404)
+    def test_get_waypoint_sitemap_no_pages(self, client):
+        client.get(self._prefix + '/w/1.xml', status=404)
 
-    def test_get_route_sitemap(self):
-        response = self.app.get(self._prefix + '/r/0.xml', status=200)
+    def test_get_route_sitemap(self, client):
+        response = client.get(self._prefix + '/r/0.xml', status=200)
         urlset = response.xml
 
         assert len(urlset) == 1
