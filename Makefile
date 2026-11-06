@@ -96,7 +96,7 @@ audit:
 			$(foreach id,$(AUDIT_IGNORE),--ignore $(id))
 
 test:
-		$(UV_RUN) pytest
+		$(UV_RUN) pytest -n 4
 
 init-database:
 		$(DB_EXEC) /v6_api/scripts/database/create_schema.sh

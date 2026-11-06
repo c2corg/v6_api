@@ -216,6 +216,14 @@ Get-Content test.ini.in | cmd /c "python .\scripts\env_replace config/env.defaul
 pytest
 ```
 
+- Or in parallel, with [pytest-xdist](https://pytest-xdist.readthedocs.io/) (`make test` uses 4 workers):
+
+```shell
+pytest -n 4
+```
+
+  Each worker uses its own database (`<test database>_gw0`, `_gw1`...), Elasticsearch index and Redis names, created on the first run. The test database user needs the right to create databases.
+
 - Or directly in your favorite development IDE (pycharm, vscode...)
 
 ### API contract tests
