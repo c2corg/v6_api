@@ -1,5 +1,6 @@
+import pytest
+
 from c2corg_api.tests.contract import check_snapshot, contract
-from c2corg_api.tests.contract.test_writes import WriteContractTest
 
 MODERATOR_ACTIONS = [
     ('/documents/merge', 'documents_merge'),
@@ -11,58 +12,51 @@ MODERATOR_ACTIONS = [
 ]
 
 
-class TestDocumentActionWrites(WriteContractTest):
-    def body(self, client, settings, path):
-        waypoint = self.ids['waypoints']
+@pytest.mark.usefixtures('documents')
+class TestDocumentActionWrites:
+    def body(self, documents, path):
+        waypoint = documents.ids['waypoints']
         if path == '/documents/merge':
             return {'source_document_id': waypoint, 'target_document_id': waypoint}
         if path in ('/documents/protect', '/documents/unprotect'):
             return {'document_id': waypoint}
-        version = self.history(client, settings, 'waypoints')[0]
+        version = documents.history('waypoints')[0]
         return {'document_id': waypoint, 'lang': 'en', 'version_id': version}
 
     @contract(*[('POST', path) for path, _ in MODERATOR_ACTIONS])
-    def test_reserved_to_the_moderators(self, client, settings):
+    def test_reserved_to_the_moderators(self, browser, documents):
         for path, _ in MODERATOR_ACTIONS:
-            response = self.post(
-                client,
-                settings,
+            response = browser.post(
                 path,
-                self.body(client, settings, path),
+                self.body(documents, path),
                 user='contributor',
                 status=403,
             )
             check_snapshot('document_action_not_moderator', response)
 
     @contract(*[('POST', path) for path, _ in MODERATOR_ACTIONS])
-    def test_unknown_document(self, client, settings):
+    def test_unknown_document(self, browser, documents):
         for path, name in MODERATOR_ACTIONS:
-            body = self.body(client, settings, path)
+            body = self.body(documents, path)
             for key in ('document_id', 'source_document_id'):
                 if key in body:
                     body[key] = 9999999
-            response = self.post(
-                client, settings, path, body, user='moderator', status=400
-            )
+            response = browser.post(path, body, user='moderator', status=400)
             check_snapshot(f'{name}_unknown', response)
 
     @contract(('POST', '/documents/merge'))
-    def test_merge_into_itself(self, client, settings):
-        response = self.post(
-            client,
-            settings,
+    def test_merge_into_itself(self, browser, documents):
+        response = browser.post(
             '/documents/merge',
-            self.body(client, settings, '/documents/merge'),
+            self.body(documents, '/documents/merge'),
             user='moderator',
             status=400,
         )
         check_snapshot('documents_merge_itself', response)
 
     @contract(('DELETE', '/documents/delete/{id}'))
-    def test_delete_unknown_document(self, client, settings):
-        response = self.request(
-            client,
-            settings,
+    def test_delete_unknown_document(self, browser):
+        response = browser.request(
             'DELETE',
             '/documents/delete/9999999',
             {},
@@ -72,12 +66,10 @@ class TestDocumentActionWrites(WriteContractTest):
         check_snapshot('documents_delete_unknown', response)
 
     @contract(('DELETE', '/documents/delete/{id}/{lang}'))
-    def test_delete_locale_reserved_to_the_moderators(self, client, settings):
-        response = self.request(
-            client,
-            settings,
+    def test_delete_locale_reserved_to_the_moderators(self, browser, documents):
+        response = browser.request(
             'DELETE',
-            f'/documents/delete/{self.ids["waypoints"]}/en',
+            f'/documents/delete/{documents.ids["waypoints"]}/en',
             {},
             user='contributor',
             status=403,
