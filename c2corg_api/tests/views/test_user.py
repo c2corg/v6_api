@@ -531,8 +531,6 @@ def test_forgot_password_blocked_account(client, session, user_ids):
 
 @patch('c2corg_api.emails.email_service.EmailService._send_email')
 def test_purge_accounts(_send_email, client, session):
-    from datetime import datetime
-
     from c2corg_api.jobs.purge_non_activated_accounts import purge_account
 
     request_body = {
@@ -543,7 +541,7 @@ def test_purge_accounts(_send_email, client, session):
         'email': 'some_user@camptocamp.org',
     }
 
-    now = datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     query = session.query(User).filter(User.username == 'test')
 
     # First succeed in creating a new user
@@ -566,8 +564,6 @@ def test_purge_accounts(_send_email, client, session):
 
 
 def test_purge_tokens(client, session, settings, passwords):
-    from datetime import datetime
-
     from c2corg_api.jobs.purge_expired_tokens import purge_token
 
     body = login(client, settings, passwords, 'moderator', status=200).json
@@ -575,7 +571,7 @@ def test_purge_tokens(client, session, settings, passwords):
 
     query = session.query(Token).filter(Token.value == hash_token(token_value))
 
-    now = datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
 
     # Token should still exist
     purge_token()

@@ -53,7 +53,7 @@ dev = [
     "ruff==0.17.3",
     "pre-commit==4.7.0",
     # the client of FastAPI's TestClient, for the tests
-    "httpx==0.28.1",
+    "httpx2==2.16.0",
     "ipdb==0.13.13",
     "httmock==1.4.0",
     "pytest==9.2.0",
@@ -141,4 +141,14 @@ exclude_also = [
 
 [tool.pytest.ini_options]
 addopts = "--cov=c2corg_api"
-filterwarnings = ["ignore::DeprecationWarning"]
+# a new warning fails the tests: fix it rather than hide it
+filterwarnings = [
+    "error",
+    # shown, not raised: they come from the Elasticsearch 2 client (invalid
+    # escapes in its code, seen when it is compiled) and the urllib3 1.26 it
+    # holds (its vendored six changes http.client's __spec__); they go with
+    # the move to Elasticsearch 8 (#2550)
+    "default::SyntaxWarning:elasticsearch",
+    "default::DeprecationWarning:elasticsearch",
+    "default:Module globals:DeprecationWarning",
+]
