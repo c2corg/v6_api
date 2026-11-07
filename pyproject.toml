@@ -15,7 +15,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP",
 ]
 dependencies = [
-    "alembic==1.20.0",
+    "alembic==1.20.1",
     "apscheduler==3.11.3",
     "bcrypt==5.0.0",
     "nh3==0.3.7",
