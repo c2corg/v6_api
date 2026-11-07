@@ -144,9 +144,11 @@ addopts = "--cov=c2corg_api"
 # a new warning fails the tests: fix it rather than hide it
 filterwarnings = [
     "error",
-    # shown, not raised: both come from the Elasticsearch 2 client, which holds
-    # urllib3 at 1.26 (its vendored six changes http.client's __spec__); they
-    # go with the move to Elasticsearch 8 (#2550)
+    # shown, not raised: they come from the Elasticsearch 2 client (invalid
+    # escapes in its code, seen when it is compiled) and the urllib3 1.26 it
+    # holds (its vendored six changes http.client's __spec__); they go with
+    # the move to Elasticsearch 8 (#2550)
+    "default::SyntaxWarning:elasticsearch",
     "default::DeprecationWarning:elasticsearch",
     "default:Module globals:DeprecationWarning",
 ]
