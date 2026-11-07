@@ -141,4 +141,12 @@ exclude_also = [
 
 [tool.pytest.ini_options]
 addopts = "--cov=c2corg_api"
-filterwarnings = ["ignore::DeprecationWarning"]
+# a new warning fails the tests: fix it rather than hide it
+filterwarnings = [
+    "error",
+    # shown, not raised: both come from the Elasticsearch 2 client, which holds
+    # urllib3 at 1.26 (its vendored six changes http.client's __spec__); they
+    # go with the move to Elasticsearch 8 (#2550)
+    "default::DeprecationWarning:elasticsearch",
+    "default:Module globals:DeprecationWarning",
+]
