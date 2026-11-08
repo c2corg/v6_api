@@ -18,14 +18,23 @@ TRACKS_LIMIT_MAX = 100
 # tracks endpoints (the bbox is then applied again on the actual tracks)
 TRACKS_CANDIDATES_MAX = 1000
 
-# `geohash_grid` aggregations allow at most 10000 buckets (the most populated
-# ones are kept)
-HEATMAP_BUCKETS_MAX = 10000
+# the most populated cells of the grid that are kept (the answer would be too
+# big otherwise)
+HEATMAP_BUCKETS_MAX = 5000
 
 # geohash length (cell size) used for the heatmap, indexed by the lowest map
-# zoom level it applies to: ~1250km, 156km, 39km, 4.9km, 1.2km and 150m
-# cells. Meant to give roughly 100 cells across a viewport.
-HEATMAP_PRECISION_BY_MIN_ZOOM = ((0, 2), (3, 3), (5, 4), (8, 5), (11, 6), (14, 7))
+# zoom level it applies to: ~1250km, 156km, 39km, 4.9km, 1.2km, 150m and 38m
+# cells. Meant to give cells of a few pixels on the screen (the heatmap blurs
+# them): a coarser grid makes blobs.
+HEATMAP_PRECISION_BY_MIN_ZOOM = (
+    (0, 2),
+    (3, 3),
+    (4, 4),
+    (6, 5),
+    (9, 6),
+    (11, 7),
+    (14, 8),
+)
 
 # radius of the sphere used by EPSG:3857 (meters)
 WEB_MERCATOR_RADIUS = 6378137
@@ -128,7 +137,8 @@ def get_heatmap(doc_type, params, bbox, zoom):
     buckets = []
     for bucket in response.aggregations.density.buckets:
         x, y = _lon_lat_to_3857(*_geohash_center(bucket.key))
-        buckets.append({'x': x, 'y': y, 'count': bucket.doc_count})
+        # meters are enough: the cells are tens of meters wide at least
+        buckets.append({'x': round(x), 'y': round(y), 'count': bucket.doc_count})
 
     return {'buckets': buckets}
 

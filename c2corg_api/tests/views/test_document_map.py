@@ -62,7 +62,21 @@ def test_lon_lat_to_3857():
 
 
 @pytest.mark.parametrize(
-    ('zoom', 'precision'), [(0, 2), (3, 3), (8, 5), (12, 6), (30, 7)]
+    ('zoom', 'precision'),
+    [
+        (0, 2),
+        (3, 3),
+        (4, 4),
+        (5, 4),
+        (6, 5),
+        (8, 5),
+        (9, 6),
+        (10, 6),
+        (11, 7),
+        (13, 7),
+        (14, 8),
+        (30, 8),
+    ],
 )
 def test_heatmap_precision(zoom, precision):
     assert _heatmap_precision(zoom) == precision
@@ -108,6 +122,14 @@ def test_outings_heatmap(client, outings):
 
     # only the 3 outings within the bbox are counted, not the one at (0, 0)
     assert _count(response) == 3
+
+
+def test_outings_heatmap_zoomed_in(client, outings):
+    response = client.get(f'/outings/map/heatmap?bbox={BBOX}&zoom=16', status=200)
+
+    assert _count(response) == 3
+    # whole meters
+    assert all(isinstance(bucket['x'], int) for bucket in response.json['buckets'])
 
 
 def test_outings_heatmap_filtered_by_activity(client, outings):
