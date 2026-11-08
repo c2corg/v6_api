@@ -1,20 +1,12 @@
 import logging
 import math
 
-from cornice.resource import resource, view
-
-from c2corg_api.ext.colander_ext import geojson_from_wkbelement
+from c2corg_api.ext.wkb import geojson_from_wkbelement
 from c2corg_api.models.document_map_queries import get_locales_for_documents, get_tracks
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.search.search_filters import build_query
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, get_best_locale
-from c2corg_api.views.validation import (
-    validate_bbox,
-    validate_preferred_lang_param,
-    validate_zoom,
-)
+from c2corg_api.views import get_best_locale
 
 log = logging.getLogger(__name__)
 
@@ -216,7 +208,8 @@ def get_heatmap_response(doc_type, request):
     )
 
 
-# The heatmap resources return a grid of density buckets for the given bbox,
+# The heatmap routes (web/document_map.py) return a grid of density buckets for
+# the given bbox,
 # meant to feed a heatmap layer at low/medium map zoom levels.
 #
 #   `GET` `/{outings,routes}/map/heatmap?bbox=...&zoom=...[&<filters>]`
@@ -233,7 +226,7 @@ def get_heatmap_response(doc_type, request):
 #   Response: `{"buckets": [{"x":.., "y":.., "count":..}]}`
 #   Coordinates are in EPSG:3857, matching the map's projection.
 #
-# The tracks resources return individual tracks for the given bbox, meant to
+# The tracks routes return individual tracks for the given bbox, meant to
 # feed a vector layer at high map zoom levels (once the number of documents
 # in the viewport is bounded).
 #
@@ -248,29 +241,17 @@ def get_heatmap_response(doc_type, request):
 #   incomplete list, so that the frontend can prompt the user to zoom in.
 
 
-@resource(path='/outings/map/heatmap', cors_policy=cors_policy)
-class OutingsHeatmapRest(ACLDefault):
-    @view(validators=[validate_bbox, validate_zoom])
-    def get(self):
-        return get_heatmap_response(OUTING_TYPE, self.request)
+def read_outings_heatmap(request):
+    return get_heatmap_response(OUTING_TYPE, request)
 
 
-@resource(path='/outings/map/tracks', cors_policy=cors_policy)
-class OutingsTracksRest(ACLDefault):
-    @view(validators=[validate_bbox, validate_preferred_lang_param])
-    def get(self):
-        return get_tracks_response(OUTING_TYPE, Outing, OutingLocale, self.request)
+def read_outings_tracks(request):
+    return get_tracks_response(OUTING_TYPE, Outing, OutingLocale, request)
 
 
-@resource(path='/routes/map/heatmap', cors_policy=cors_policy)
-class RoutesHeatmapRest(ACLDefault):
-    @view(validators=[validate_bbox, validate_zoom])
-    def get(self):
-        return get_heatmap_response(ROUTE_TYPE, self.request)
+def read_routes_heatmap(request):
+    return get_heatmap_response(ROUTE_TYPE, request)
 
 
-@resource(path='/routes/map/tracks', cors_policy=cors_policy)
-class RoutesTracksRest(ACLDefault):
-    @view(validators=[validate_bbox, validate_preferred_lang_param])
-    def get(self):
-        return get_tracks_response(ROUTE_TYPE, Route, RouteLocale, self.request)
+def read_routes_tracks(request):
+    return get_tracks_response(ROUTE_TYPE, Route, RouteLocale, request)

@@ -1,12 +1,13 @@
 from datetime import date
 from unittest.mock import patch
 
+import pytest
+
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseTestRest
 from c2corg_api.views.document_map import (
     _geohash_center,
     _heatmap_precision,
@@ -39,249 +40,256 @@ def _route(title, activities, geom, geom_detail=None, title_prefix=None):
     )
 
 
-class TestHelpers(BaseTestRest):
-    def test_geohash_center(self):
-        lon, lat = _geohash_center('u09tun')
-        self.assertAlmostEqual(lon, 2.29, places=1)
-        self.assertAlmostEqual(lat, 48.86, places=1)
-
-    def test_lon_lat_to_3857(self):
-        x, y = _lon_lat_to_3857(0, 0)
-        self.assertAlmostEqual(x, 0)
-        self.assertAlmostEqual(y, 0)
-        x, _ = _lon_lat_to_3857(180, 0)
-        self.assertAlmostEqual(x, 20037508.34, places=1)
-
-    def test_heatmap_precision(self):
-        self.assertEqual(_heatmap_precision(0), 2)
-        self.assertEqual(_heatmap_precision(8), 5)
-        self.assertEqual(_heatmap_precision(12), 6)
-        self.assertEqual(_heatmap_precision(30), 7)
+def _error_names(response):
+    return [error['name'] for error in response.json['errors']]
 
 
-class TestOutingsHeatmapRest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/outings/map/heatmap'
+def test_geohash_center():
+    lon, lat = _geohash_center('u09tun')
 
-        self.session.add(
-            _outing('Hike 1', ['hiking'], 1, 'SRID=3857;POINT(635956 5723604)')
-        )
-        self.session.add(
-            _outing('Hike 2', ['hiking'], 2, 'SRID=3857;POINT(635960 5723610)')
-        )
-        self.session.add(
-            _outing('Ski tour', ['skitouring'], 3, 'SRID=3857;POINT(635960 5723620)')
-        )
-        # far away, should never be returned by the bbox used in tests
-        self.session.add(
-            _outing('Far away hike', ['hiking'], 4, 'SRID=3857;POINT(0 0)')
-        )
-        self.session.flush()
-        reset_search_index(self.session)
-
-    def test_missing_bbox(self):
-        body = self.app.get(self._prefix + '?zoom=8', status=400).json
-        self.assertErrorsContain(body, 'bbox')
-
-    def test_missing_zoom(self):
-        body = self.app.get(self._prefix + '?bbox=' + BBOX, status=400).json
-        self.assertErrorsContain(body, 'zoom')
-
-    def test_invalid_bbox(self):
-        body = self.app.get(self._prefix + '?bbox=1,2,3&zoom=8', status=400).json
-        self.assertErrorsContain(body, 'bbox')
-
-    def test_heatmap(self):
-        body = self.app.get(self._prefix + '?bbox=' + BBOX + '&zoom=8', status=200).json
-        self.assertIn('buckets', body)
-        total = sum(bucket['count'] for bucket in body['buckets'])
-        # only the 3 outings within the bbox are counted, not the one
-        # at (0, 0)
-        self.assertEqual(total, 3)
-
-    def test_heatmap_filtered_by_activity(self):
-        body = self.app.get(
-            self._prefix + '?bbox=' + BBOX + '&zoom=8&act=skitouring', status=200
-        ).json
-        total = sum(bucket['count'] for bucket in body['buckets'])
-        self.assertEqual(total, 1)
-
-    def test_heatmap_filtered_by_date(self):
-        body = self.app.get(
-            self._prefix + '?bbox=' + BBOX + '&zoom=8&date=2016-01-01,2016-01-02',
-            status=200,
-        ).json
-        total = sum(bucket['count'] for bucket in body['buckets'])
-        self.assertEqual(total, 2)
+    assert lon == pytest.approx(2.29, abs=0.1)
+    assert lat == pytest.approx(48.86, abs=0.1)
 
 
-class TestOutingsTracksRest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/outings/map/tracks'
+def test_lon_lat_to_3857():
+    x, y = _lon_lat_to_3857(0, 0)
 
-        self.outing1 = _outing(
-            'Hike 1',
-            ['hiking'],
-            1,
-            'SRID=3857;POINT(635956 5723604)',
-            'SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
-        )
-        self.session.add(self.outing1)
-        self.outing2 = _outing(
+    assert x == pytest.approx(0, abs=1e-6)
+    assert y == pytest.approx(0, abs=1e-6)
+    assert _lon_lat_to_3857(180, 0)[0] == pytest.approx(20037508.34, abs=0.1)
+
+
+@pytest.mark.parametrize(
+    ('zoom', 'precision'), [(0, 2), (3, 3), (8, 5), (12, 6), (30, 7)]
+)
+def test_heatmap_precision(zoom, precision):
+    assert _heatmap_precision(zoom) == precision
+
+
+@pytest.fixture
+def outings(session):
+    """Add three outings in the box and one far away (without a track)."""
+    session.add(_outing('Hike 1', ['hiking'], 1, 'SRID=3857;POINT(635956 5723604)'))
+    session.add(_outing('Hike 2', ['hiking'], 2, 'SRID=3857;POINT(635960 5723610)'))
+    session.add(
+        _outing('Ski tour', ['skitouring'], 3, 'SRID=3857;POINT(635960 5723620)')
+    )
+    session.add(_outing('Far away hike', ['hiking'], 4, 'SRID=3857;POINT(0 0)'))
+    session.flush()
+    reset_search_index(session)
+
+
+def _count(response):
+    return sum(bucket['count'] for bucket in response.json['buckets'])
+
+
+def test_outings_heatmap_missing_bbox(client):
+    response = client.get('/outings/map/heatmap?zoom=8', status=400)
+
+    assert 'bbox' in _error_names(response)
+
+
+def test_outings_heatmap_missing_zoom(client):
+    response = client.get(f'/outings/map/heatmap?bbox={BBOX}', status=400)
+
+    assert 'zoom' in _error_names(response)
+
+
+def test_outings_heatmap_invalid_bbox(client):
+    response = client.get('/outings/map/heatmap?bbox=1,2,3&zoom=8', status=400)
+
+    assert 'bbox' in _error_names(response)
+
+
+def test_outings_heatmap(client, outings):
+    response = client.get(f'/outings/map/heatmap?bbox={BBOX}&zoom=8', status=200)
+
+    # only the 3 outings within the bbox are counted, not the one at (0, 0)
+    assert _count(response) == 3
+
+
+def test_outings_heatmap_filtered_by_activity(client, outings):
+    url = f'/outings/map/heatmap?bbox={BBOX}&zoom=8&act=skitouring'
+
+    assert _count(client.get(url, status=200)) == 1
+
+
+def test_outings_heatmap_filtered_by_date(client, outings):
+    url = f'/outings/map/heatmap?bbox={BBOX}&zoom=8&date=2016-01-01,2016-01-02'
+
+    assert _count(client.get(url, status=200)) == 2
+
+
+@pytest.fixture
+def tracks(session, user_ids):
+    """Add outings with and without track, and the route of the first one."""
+    outing1 = _outing(
+        'Hike 1',
+        ['hiking'],
+        1,
+        'SRID=3857;POINT(635956 5723604)',
+        'SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+    )
+    session.add(outing1)
+    session.add(
+        _outing(
             'Ski tour',
             ['skitouring'],
             2,
             'SRID=3857;POINT(635960 5723610)',
             'SRID=3857;LINESTRING(635960 5723610, 635970 5723650)',
         )
-        self.session.add(self.outing2)
-        # no geom_detail: must never be returned by the tracks endpoint
-        self.session.add(
-            _outing('No track', ['hiking'], 3, 'SRID=3857;POINT(635958 5723606)')
-        )
-        # the representative point is out of the bbox, but the track crosses
-        # it: must be returned
-        self.outing3 = _outing(
+    )
+    # no geom_detail: must never be returned by the tracks endpoint
+    session.add(_outing('No track', ['hiking'], 3, 'SRID=3857;POINT(635958 5723606)'))
+    # the representative point is out of the bbox, but the track crosses it
+    session.add(
+        _outing(
             'Long hike',
             ['hiking'],
             4,
             'SRID=3857;POINT(634800 5723500)',
             'SRID=3857;LINESTRING(634800 5723500, 635500 5723500)',
         )
-        self.session.add(self.outing3)
-        self.session.flush()
+    )
+    route = _route('Route', ['hiking'], 'SRID=3857;POINT(635956 5723604)')
+    session.add(route)
+    session.flush()
 
-        self.route = _route('Route', ['hiking'], 'SRID=3857;POINT(635956 5723604)')
-        self.session.add(self.route)
-        self.session.flush()
-        association = Association.create(
-            parent_document=self.route, child_document=self.outing1
+    association = Association.create(parent_document=route, child_document=outing1)
+    session.add(association)
+    session.add(association.get_log(user_ids['contributor'], is_creation=True))
+    session.flush()
+    reset_search_index(session)
+    return outing1, route
+
+
+def test_outings_tracks_missing_bbox(client):
+    response = client.get('/outings/map/tracks', status=400)
+
+    assert 'bbox' in _error_names(response)
+
+
+def test_outings_tracks(client, tracks):
+    body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+
+    assert not body['truncated']
+    assert {o['title'] for o in body['documents']} == {
+        'Hike 1',
+        'Ski tour',
+        'Long hike',
+    }
+    for outing in body['documents']:
+        assert outing['type'] == 'o'
+        assert 'geom_detail' in outing['geometry']
+
+
+def test_outings_tracks_filtered_by_activity(client, tracks):
+    body = client.get(
+        f'/outings/map/tracks?bbox={BBOX}&act=skitouring', status=200
+    ).json
+
+    assert [o['title'] for o in body['documents']] == ['Ski tour']
+
+
+def test_outings_tracks_filtered_by_route(client, tracks):
+    outing, route = tracks
+    url = f'/outings/map/tracks?bbox={BBOX}&r={route.document_id}'
+    body = client.get(url, status=200).json
+
+    assert [o['document_id'] for o in body['documents']] == [outing.document_id]
+
+
+def test_outings_tracks_truncated(client, tracks):
+    with patch('c2corg_api.views.document_map.TRACKS_LIMIT_MAX', 1):
+        body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+
+    assert body['truncated']
+    assert body['documents'] == []
+
+
+def test_outings_tracks_truncated_by_candidates(client, tracks):
+    with patch('c2corg_api.views.document_map.TRACKS_CANDIDATES_MAX', 1):
+        body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+
+    assert body['truncated']
+    assert body['documents'] == []
+
+
+@pytest.fixture
+def routes(session):
+    """Add two routes with a track in the box and one far away."""
+    session.add(
+        _route(
+            'Hike route',
+            ['hiking'],
+            'SRID=3857;POINT(635956 5723604)',
+            'SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+            title_prefix='Mont Blanc',
         )
-        self.session.add(association)
-        self.session.add(
-            association.get_log(self.global_userids['contributor'], is_creation=True)
+    )
+    session.add(
+        _route(
+            'Ski route',
+            ['skitouring'],
+            'SRID=3857;POINT(635960 5723610)',
+            'SRID=3857;LINESTRING(635960 5723610, 635970 5723650)',
         )
-        self.session.flush()
-        reset_search_index(self.session)
-
-    def test_missing_bbox(self):
-        body = self.app.get(self._prefix, status=400).json
-        self.assertErrorsContain(body, 'bbox')
-
-    def test_tracks(self):
-        body = self.app.get(self._prefix + '?bbox=' + BBOX, status=200).json
-        self.assertFalse(body['truncated'])
-        titles = {o['title'] for o in body['documents']}
-        self.assertEqual(titles, {'Hike 1', 'Ski tour', 'Long hike'})
-        for outing in body['documents']:
-            self.assertEqual(outing['type'], 'o')
-            self.assertIn('geom_detail', outing['geometry'])
-
-    def test_tracks_filtered_by_activity(self):
-        body = self.app.get(
-            self._prefix + '?bbox=' + BBOX + '&act=skitouring', status=200
-        ).json
-        self.assertEqual(len(body['documents']), 1)
-        self.assertEqual(body['documents'][0]['title'], 'Ski tour')
-
-    def test_tracks_filtered_by_route(self):
-        body = self.app.get(
-            self._prefix + '?bbox=' + BBOX + '&r=' + str(self.route.document_id),
-            status=200,
-        ).json
-        self.assertEqual(len(body['documents']), 1)
-        self.assertEqual(body['documents'][0]['document_id'], self.outing1.document_id)
-
-    def test_tracks_truncated(self):
-        with patch('c2corg_api.views.document_map.TRACKS_LIMIT_MAX', 1):
-            body = self.app.get(self._prefix + '?bbox=' + BBOX, status=200).json
-        self.assertTrue(body['truncated'])
-        self.assertEqual(body['documents'], [])
-
-    def test_tracks_truncated_by_candidates(self):
-        with patch('c2corg_api.views.document_map.TRACKS_CANDIDATES_MAX', 1):
-            body = self.app.get(self._prefix + '?bbox=' + BBOX, status=200).json
-        self.assertTrue(body['truncated'])
-        self.assertEqual(body['documents'], [])
-
-
-class TestRoutesMapRest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
-
-        self.session.add(
-            _route(
-                'Hike route',
-                ['hiking'],
-                'SRID=3857;POINT(635956 5723604)',
-                'SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
-                title_prefix='Mont Blanc',
-            )
+    )
+    session.add(
+        _route(
+            'Far away route',
+            ['hiking'],
+            'SRID=3857;POINT(0 0)',
+            'SRID=3857;LINESTRING(0 0, 10 10)',
         )
-        self.session.add(
-            _route(
-                'Ski route',
-                ['skitouring'],
-                'SRID=3857;POINT(635960 5723610)',
-                'SRID=3857;LINESTRING(635960 5723610, 635970 5723650)',
-            )
-        )
-        self.session.add(
-            _route(
-                'Far away route',
-                ['hiking'],
-                'SRID=3857;POINT(0 0)',
-                'SRID=3857;LINESTRING(0 0, 10 10)',
-            )
-        )
-        self.session.flush()
-        reset_search_index(self.session)
+    )
+    session.flush()
+    reset_search_index(session)
 
-    def test_heatmap(self):
-        body = self.app.get(
-            '/routes/map/heatmap?bbox=' + BBOX + '&zoom=8', status=200
-        ).json
-        self.assertEqual(sum(b['count'] for b in body['buckets']), 2)
 
-    def test_heatmap_filtered_by_activity(self):
-        body = self.app.get(
-            '/routes/map/heatmap?bbox=' + BBOX + '&zoom=8&act=skitouring', status=200
-        ).json
-        self.assertEqual(sum(b['count'] for b in body['buckets']), 1)
+def test_routes_heatmap(client, routes):
+    response = client.get(f'/routes/map/heatmap?bbox={BBOX}&zoom=8', status=200)
 
-    def test_tracks(self):
-        body = self.app.get('/routes/map/tracks?bbox=' + BBOX, status=200).json
-        self.assertFalse(body['truncated'])
-        titles = {r['title'] for r in body['documents']}
-        self.assertEqual(titles, {'Mont Blanc : Hike route', 'Ski route'})
-        for route in body['documents']:
-            self.assertEqual(route['type'], 'r')
+    assert _count(response) == 2
 
-    def test_tracks_filtered_by_activity(self):
-        body = self.app.get(
-            '/routes/map/tracks?bbox=' + BBOX + '&act=hiking', status=200
-        ).json
-        self.assertEqual(len(body['documents']), 1)
-        self.assertEqual(body['documents'][0]['title'], 'Mont Blanc : Hike route')
 
-    def test_tracks_filtered_by_ids(self):
-        route = (
-            self.session.query(Route)
-            .filter(Route.locales.any(RouteLocale.title == 'Ski route'))
-            .one()
-        )
-        body = self.app.get(
-            '/routes/map/tracks?bbox=' + BBOX + '&ids=' + str(route.document_id),
-            status=200,
-        ).json
-        self.assertEqual(
-            [r['document_id'] for r in body['documents']], [route.document_id]
-        )
+def test_routes_heatmap_filtered_by_activity(client, routes):
+    url = f'/routes/map/heatmap?bbox={BBOX}&zoom=8&act=skitouring'
 
-    def test_tracks_filtered_by_empty_ids(self):
-        body = self.app.get(
-            '/routes/map/tracks?bbox=' + BBOX + '&ids=', status=200
-        ).json
-        self.assertEqual(body['documents'], [])
+    assert _count(client.get(url, status=200)) == 1
+
+
+def test_routes_tracks(client, routes):
+    body = client.get(f'/routes/map/tracks?bbox={BBOX}', status=200).json
+
+    assert not body['truncated']
+    assert {r['title'] for r in body['documents']} == {
+        'Mont Blanc : Hike route',
+        'Ski route',
+    }
+    assert {r['type'] for r in body['documents']} == {'r'}
+
+
+def test_routes_tracks_filtered_by_activity(client, routes):
+    body = client.get(f'/routes/map/tracks?bbox={BBOX}&act=hiking', status=200).json
+
+    assert [r['title'] for r in body['documents']] == ['Mont Blanc : Hike route']
+
+
+def test_routes_tracks_filtered_by_ids(client, session, routes):
+    route = (
+        session.query(Route)
+        .filter(Route.locales.any(RouteLocale.title == 'Ski route'))
+        .one()
+    )
+    url = f'/routes/map/tracks?bbox={BBOX}&ids={route.document_id}'
+    body = client.get(url, status=200).json
+
+    assert [r['document_id'] for r in body['documents']] == [route.document_id]
+
+
+def test_routes_tracks_filtered_by_empty_ids(client, routes):
+    body = client.get(f'/routes/map/tracks?bbox={BBOX}&ids=', status=200).json
+
+    assert body['documents'] == []
