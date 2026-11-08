@@ -17,17 +17,18 @@ from c2corg_api.views.document_map import (
 BBOX = '635000,5723000,637000,5724000'
 
 
-def _outing(title, activities, day, geom, geom_detail=None):
+def _outing(title, activities, day, geom, geom_detail=None, **fields):
     return Outing(
         activities=activities,
         date_start=date(2016, 1, day),
         date_end=date(2016, 1, day),
         locales=[OutingLocale(lang='en', title=title)],
         geometry=DocumentGeometry(geom=geom, geom_detail=geom_detail),
+        **fields,
     )
 
 
-def _route(title, activities, geom, geom_detail=None, title_prefix=None):
+def _route(title, activities, geom, geom_detail=None, title_prefix=None, **fields):
     return Route(
         activities=activities,
         elevation_max=1500,
@@ -37,6 +38,7 @@ def _route(title, activities, geom, geom_detail=None, title_prefix=None):
         durations='1',
         locales=[RouteLocale(lang='en', title=title, title_prefix=title_prefix)],
         geometry=DocumentGeometry(geom=geom, geom_detail=geom_detail),
+        **fields,
     )
 
 
@@ -129,6 +131,8 @@ def tracks(session, user_ids):
         1,
         'SRID=3857;POINT(635956 5723604)',
         'SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+        global_rating='AD',
+        ski_rating='3.2',
     )
     session.add(outing1)
     session.add(
@@ -184,6 +188,35 @@ def test_outings_tracks(client, tracks):
         assert 'geom_detail' in outing['geometry']
 
 
+def test_outings_tracks_most_recent_first(client, tracks):
+    body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+
+    assert [o['title'] for o in body['documents']] == [
+        'Long hike',
+        'Ski tour',
+        'Hike 1',
+    ]
+    assert [o['date_end'] for o in body['documents']] == [
+        '2016-01-04',
+        '2016-01-02',
+        '2016-01-01',
+    ]
+
+
+def test_outings_tracks_tell_them_apart(client, tracks):
+    body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+    by_title = {o['title']: o for o in body['documents']}
+
+    hike = by_title['Hike 1']
+    assert hike['activities'] == ['hiking']
+    assert hike['date_start'] == '2016-01-01'
+    assert hike['global_rating'] == 'AD'
+    assert hike['ski_rating'] == '3.2'
+    # what is not set is not sent
+    assert 'ice_rating' not in hike
+    assert 'aid_rating' not in hike
+
+
 def test_outings_tracks_filtered_by_activity(client, tracks):
     body = client.get(
         f'/outings/map/tracks?bbox={BBOX}&act=skitouring', status=200
@@ -226,6 +259,8 @@ def routes(session):
             'SRID=3857;POINT(635956 5723604)',
             'SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
             title_prefix='Mont Blanc',
+            global_rating='D',
+            hiking_rating='T3',
         )
     )
     session.add(
@@ -269,6 +304,16 @@ def test_routes_tracks(client, routes):
         'Ski route',
     }
     assert {r['type'] for r in body['documents']} == {'r'}
+
+
+def test_routes_tracks_tell_them_apart(client, routes):
+    body = client.get(f'/routes/map/tracks?bbox={BBOX}', status=200).json
+    route = next(r for r in body['documents'] if r['title'].endswith('Hike route'))
+
+    assert route['activities'] == ['hiking']
+    assert route['global_rating'] == 'D'
+    assert route['hiking_rating'] == 'T3'
+    assert 'date_end' not in route
 
 
 def test_routes_tracks_filtered_by_activity(client, routes):

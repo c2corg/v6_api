@@ -4,13 +4,14 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 
 
-def get_tracks(model, document_ids, bbox_3857, limit):
-    """Return up to `limit + 1` `(document_id, geom_detail)` rows.
+def get_tracks(model, document_ids, bbox_3857, limit, fields=()):
+    """Return up to `limit + 1` `(document_id, geom_detail, *fields)` rows.
 
     The rows are those of the documents of type `model` among `document_ids`
-    whose track (`geometry.geom_detail`) intersects the given bbox. Callers
-    should treat a result of length `limit + 1` as "too many results for this
-    bbox" rather than displaying a silently-truncated set.
+    whose track (`geometry.geom_detail`) intersects the given bbox, the most
+    recent outings first. `fields` are the names of other columns of `model`
+    to read. Callers should treat a result of length `limit + 1` as "too many
+    results for this bbox" rather than displaying a silently-truncated set.
     """
     if not document_ids:
         return []
@@ -18,14 +19,23 @@ def get_tracks(model, document_ids, bbox_3857, limit):
     xmin, ymin, xmax, ymax = bbox_3857
     envelope = func.ST_MakeEnvelope(xmin, ymin, xmax, ymax, 3857)
 
+    # the most recent first: the outings by date, the other documents by id
+    order = [model.document_id.desc()]
+    if hasattr(model, 'date_end'):
+        order.insert(0, model.date_end.desc())
+
     return (
-        DBSession.query(model.document_id, DocumentGeometry.geom_detail)
+        DBSession.query(
+            model.document_id,
+            DocumentGeometry.geom_detail,
+            *(getattr(model, field) for field in fields),
+        )
         .join(DocumentGeometry, DocumentGeometry.document_id == model.document_id)
         .filter(model.document_id.in_(document_ids))
         .filter(model.redirects_to.is_(None))
         .filter(DocumentGeometry.geom_detail.isnot(None))
         .filter(DocumentGeometry.geom_detail.ST_Intersects(envelope))
-        .order_by(model.document_id)
+        .order_by(*order)
         .limit(limit + 1)
         .all()
     )

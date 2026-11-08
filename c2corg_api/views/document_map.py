@@ -168,6 +168,47 @@ def _titles_by_document_id(locale_model, document_ids, lang):
     return titles
 
 
+# what is read of a document next to its track, to tell the tracks apart: the
+# activities, the dates of an outing and the ratings (the ones the listings
+# show), for the documents that have them
+TRACK_FIELDS = (
+    'activities',
+    'date_start',
+    'date_end',
+    'global_rating',
+    'via_ferrata_rating',
+    'rock_free_rating',
+    'rock_required_rating',
+    'aid_rating',
+    'engagement_rating',
+    'risk_rating',
+    'equipment_rating',
+    'exposition_rock_rating',
+    'ice_rating',
+    'mixed_rating',
+    'ski_rating',
+    'ski_exposition',
+    'labande_global_rating',
+    'labande_ski_rating',
+    'snowshoe_rating',
+    'hiking_rating',
+    'mtb_up_rating',
+    'mtb_down_rating',
+    'hiking_mtb_exposition',
+)
+
+
+def _track_fields(row, fields):
+    """Return the fields of a row that are set, as JSON values."""
+    values = {}
+    for field in fields:
+        value = getattr(row, field)
+        if value is None or value == []:
+            continue
+        values[field] = value.isoformat() if hasattr(value, 'isoformat') else value
+    return values
+
+
 def get_tracks_response(doc_type, model, locale_model, request):
     params = _search_params(request)
     bbox = request.validated['bbox']
@@ -177,7 +218,8 @@ def get_tracks_response(doc_type, model, locale_model, request):
     if truncated:
         return {'documents': [], 'truncated': True}
 
-    rows = get_tracks(model, document_ids, bbox, TRACKS_LIMIT_MAX)
+    fields = tuple(field for field in TRACK_FIELDS if hasattr(model, field))
+    rows = get_tracks(model, document_ids, bbox, TRACKS_LIMIT_MAX, fields)
     if len(rows) > TRACKS_LIMIT_MAX:
         return {'documents': [], 'truncated': True}
 
@@ -192,6 +234,7 @@ def get_tracks_response(doc_type, model, locale_model, request):
                 'type': doc_type,
                 'title': titles.get(row.document_id),
                 'geometry': {'geom_detail': geojson_from_wkbelement(row.geom_detail)},
+                **_track_fields(row, fields),
             }
             for row in rows
         ],
