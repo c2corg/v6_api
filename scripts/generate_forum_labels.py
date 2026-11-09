@@ -72,6 +72,11 @@ def write_labels(catalogs):
             f'        {t!r}: {label(catalogs, lang, t)!r},' for t in DOCUMENT_TYPES
         ]
         lines.append('    },')
+    lines += ['}', '', 'COMMENTS_LABELS = {']
+    lines += [
+        f'    {lang!r}: {label(catalogs, lang, "Comments")!r},'
+        for lang in default_langs
+    ]
     lines += ['}', '', 'WAYPOINT_TYPE_LABELS = {']
     for lang in default_langs:
         lines.append(f'    {lang!r}: {{')

@@ -106,6 +106,18 @@ DOCUMENT_TYPE_LABELS = {
     },
 }
 
+COMMENTS_LABELS = {
+    'fr': 'Commentaires',
+    'it': 'Commenti',
+    'de': 'Kommentare',
+    'en': 'Comments',
+    'es': 'Comentarios',
+    'ca': 'Comentaris',
+    'eu': 'Iruzkinak',
+    'sl': 'Komentarji',
+    'zh': '评论',
+}
+
 WAYPOINT_TYPE_LABELS = {
     'fr': {
         'summit': 'Sommet',

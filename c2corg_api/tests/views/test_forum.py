@@ -1,6 +1,6 @@
 import datetime
 from dataclasses import dataclass
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from pydiscourse.exceptions import DiscourseClientError
@@ -25,7 +25,7 @@ from c2corg_api.security.discourse_client import (
 )
 from c2corg_api.tests import auth_headers, post_json_with_contributor, send_json
 from c2corg_api.views.document import create_new_version
-from c2corg_api.views.forum import TITLE_MAX_LENGTH, topic_title
+from c2corg_api.views.forum import TITLE_MAX_LENGTH, first_post_content, topic_title
 
 
 @dataclass
@@ -191,7 +191,7 @@ def test_post_without_title(create_post_mock, client, docs):
         status=200,
     )
     create_post_mock.assert_called_with(
-        '<a href="{}">{}</a>'.format(
+        'Comments: Image · <a href="{}">{}</a>'.format(
             referer, f'/images/{locale.document_id}/{locale.lang}'
         ),
         title=f'{locale.document_id}_{locale.lang} · Image',
@@ -330,17 +330,30 @@ def _put_as_moderator(client, url, document):
     return send_json(client, 'put', url, body, headers=headers, status=200)
 
 
+@dataclass
+class ForumMock:
+    """The mocked calls that update a topic in Discourse."""
+
+    update_topic: MagicMock
+    update_post: MagicMock
+
+
 @pytest.fixture
-def update_topic():
-    """Mock the renaming of the topics in Discourse, run as soon as committed."""
+def forum():
+    """Mock the updates of the topics in Discourse, run as soon as committed."""
+    first_post = {'post_stream': {'posts': [{'id': 50, 'post_number': 1}]}}
     with (
         patch('c2corg_api.views.forum.in_background', side_effect=lambda op: op()),
         patch('pydiscourse.client.DiscourseClient.update_topic') as update_topic,
+        patch('pydiscourse.client.DiscourseClient.update_post') as update_post,
+        patch(
+            'pydiscourse.client.DiscourseClient.topic_posts', return_value=first_post
+        ),
     ):
-        yield update_topic
+        yield ForumMock(update_topic=update_topic, update_post=update_post)
 
 
-def test_put_renames_topic(client, docs, update_topic):
+def test_put_renames_topic(client, docs, forum):
     """The topic follows the title and the type of the document."""
     waypoint = docs.waypoint_with_topic
     locale = docs.locale_en_with_topic
@@ -362,12 +375,17 @@ def test_put_renames_topic(client, docs, update_topic):
             ],
         },
     )
-    update_topic.assert_called_once_with(
+    forum.update_topic.assert_called_once_with(
         '/t/-/1.json', title=f'{waypoint.document_id}_en · Lake · Granier lake'
+    )
+    forum.update_post.assert_called_once_with(
+        50,
+        'Comments: Lake · <a href="https://www.camptocamp.org/waypoints/'
+        f'{waypoint.document_id}/en">Granier lake</a>',
     )
 
 
-def test_put_keeps_topic(client, docs, update_topic):
+def test_put_keeps_topic(client, docs, forum):
     """An update that leaves the title as it is does not call the forum."""
     waypoint = docs.waypoint_with_topic
     locale = docs.locale_en_with_topic
@@ -389,10 +407,11 @@ def test_put_keeps_topic(client, docs, update_topic):
             ],
         },
     )
-    update_topic.assert_not_called()
+    forum.update_topic.assert_not_called()
+    forum.update_post.assert_not_called()
 
 
-def test_put_renames_route_topic(client, session, user_ids, docs, update_topic):
+def test_put_renames_route_topic(client, session, user_ids, docs, forum):
     """A new main waypoint changes the title prefix of the route, and the topic."""
     route = Route(activities=['skitouring'], elevation_max=2203)
     route.locales.append(
@@ -423,15 +442,16 @@ def test_put_renames_route_topic(client, session, user_ids, docs, update_topic):
             'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
         },
     )
-    update_topic.assert_called_once_with(
+    forum.update_post.assert_called_once()
+    forum.update_topic.assert_called_once_with(
         '/t/-/2.json',
         title=f'{route.document_id}_en · Route · Mont Granier : North face',
     )
 
 
-def test_put_rename_failure(client, docs, update_topic):
+def test_put_rename_failure(client, docs, forum):
     """The edit is saved even when the forum cannot rename the topic."""
-    update_topic.side_effect = ConnectionError()
+    forum.update_topic.side_effect = ConnectionError()
     waypoint = docs.waypoint_with_topic
     locale = docs.locale_en_with_topic
     _put_as_moderator(
@@ -452,4 +472,15 @@ def test_put_rename_failure(client, docs, update_topic):
             ],
         },
     )
-    assert update_topic.call_count == 1
+    assert forum.update_topic.call_count == 1
+
+
+def test_first_post_content_outing():
+    """The first post links the document, with the date of an outing."""
+    outing = Outing(document_id=1966268, date_start=datetime.date(2026, 11, 2))
+    locale = OutingLocale(document_id=1966268, lang='fr', title='Mont Blanc <3')
+    assert first_post_content(outing, locale) == (
+        'Commentaires : Sortie · '
+        '<a href="https://www.camptocamp.org/outings/1966268/fr">Mont Blanc &lt;3</a>'
+        ' · 2026-11-02'
+    )

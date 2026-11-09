@@ -1,3 +1,4 @@
+import html
 import logging
 import threading
 from functools import partial
@@ -19,7 +20,11 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Str
 from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.security.discourse_client import get_discourse_client
-from c2corg_api.views.forum_labels import DOCUMENT_TYPE_LABELS, WAYPOINT_TYPE_LABELS
+from c2corg_api.views.forum_labels import (
+    COMMENTS_LABELS,
+    DOCUMENT_TYPE_LABELS,
+    WAYPOINT_TYPE_LABELS,
+)
 from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
@@ -117,15 +122,21 @@ def legacy_topic_title(locale):
     return f'{locale.document_id}_{locale.lang}'
 
 
+def _document_title(locale):
+    """Give the title of a document locale, as the topic shows it."""
+    title = _deshout((locale.title or '').strip())
+    title_prefix = getattr(locale, 'title_prefix', None)
+    if title_prefix and title:
+        title = f'{_deshout(title_prefix.strip())} : {title}'
+    return title
+
+
 def topic_title(document, locale):
     """Give the title of the comment topic of a document locale."""
     # '1966268_fr · Sortie · Mont Blanc par les Grands Mulets · 2026-11-02'
     # The id comes first: titles stay unique (Discourse refuses duplicates) and the
     # topics can still be found by the id, as the older ones.
-    title = _deshout((locale.title or '').strip())
-    title_prefix = getattr(locale, 'title_prefix', None)
-    if title_prefix and title:
-        title = f'{_deshout(title_prefix.strip())} : {title}'
+    title = _document_title(locale)
 
     date = _date(document)
     head = [legacy_topic_title(locale), _type_label(document, locale.lang)]
@@ -139,8 +150,27 @@ def topic_title(document, locale):
     return TITLE_SEPARATOR.join(part for part in [*head, title, *tail] if part)
 
 
-def topic_titles(document):
-    """Give the title of the comment topics of the document, by topic id."""
+def first_post_content(document, locale):
+    """Give the first post of the comment topic of a document locale."""
+    # 'Commentaires : Sortie · <a href=".../outings/1966268/fr">Mont Blanc…</a> ·
+    # 2026-11-02'
+    document_type = association_keys_for_types[document.type]
+    path = f'/{document_type}/{locale.document_id}/{locale.lang}'
+    link = (
+        f'<a href="https://www.camptocamp.org{path}">'
+        f'{html.escape(_document_title(locale) or path)}</a>'
+    )
+    parts = [_type_label(document, locale.lang), link]
+    if document.type == document_types.OUTING_TYPE:
+        parts.append(document.date_start.isoformat())
+    comments = COMMENTS_LABELS.get(locale.lang, COMMENTS_LABELS['en'])
+    # French typography: a space before the colon
+    colon = ' : ' if locale.lang == 'fr' else ': '
+    return comments + colon + TITLE_SEPARATOR.join(part for part in parts if part)
+
+
+def topic_texts(document):
+    """Give the title and first post of the comment topics, by topic id."""
     topic_ids = dict(
         DBSession.query(DocumentTopic.document_locale_id, DocumentTopic.topic_id)
         .join(DocumentLocale, DocumentLocale.id == DocumentTopic.document_locale_id)
@@ -148,30 +178,35 @@ def topic_titles(document):
         .all()
     )
     return {
-        topic_ids[locale.id]: topic_title(document, locale)
+        topic_ids[locale.id]: (
+            topic_title(document, locale),
+            first_post_content(document, locale),
+        )
         for locale in document.locales
         if locale.id in topic_ids
     }
 
 
-def rename_topics(request, document, old_titles):
-    """Rename the comment topics whose title changed with the document."""
-    # old_titles: topic_titles(document) before the update. The older topics, titled
-    # `{id}_{lang}`, are renamed too when the title changes.
-    if not old_titles:
+def rename_topics(request, document, old_texts):
+    """Update the comment topics whose title or first post changed."""
+    # old_texts: topic_texts(document) before the update. The older topics, titled
+    # `{id}_{lang}`, are updated too when the document title changes.
+    if not old_texts:
         return
     for locale in document.locales:
         if hasattr(locale, 'title_prefix'):
             # set by an SQL update (check_title_prefix): the loaded value is stale
             DBSession.expire(locale, ['title_prefix'])
 
-    new_titles = topic_titles(document)
-    renamed = {
-        topic_id: title
-        for topic_id, title in new_titles.items()
-        if old_titles.get(topic_id) != title
+    changes = {
+        topic_id: (
+            title if title != old_texts[topic_id][0] else None,
+            content if content != old_texts[topic_id][1] else None,
+        )
+        for topic_id, (title, content) in topic_texts(document).items()
+        if topic_id in old_texts and (title, content) != old_texts[topic_id]
     }
-    if not renamed:
+    if not changes:
         return
 
     client = get_discourse_client(request.registry.settings)
@@ -179,7 +214,7 @@ def rename_topics(request, document, old_titles):
         return
     # never slows down nor fails the edit: the forum is called once it is saved
     run_on_successful_transaction(
-        partial(in_background, partial(_update_topic_titles, client, renamed))
+        partial(in_background, partial(_update_topics, client, changes))
     )
 
 
@@ -188,14 +223,20 @@ def in_background(operation):
     threading.Thread(target=operation, daemon=True).start()
 
 
-def _update_topic_titles(client, titles):
-    """Give the topics their new titles in Discourse."""
-    for topic_id, title in titles.items():
+def _update_topics(client, changes):
+    """Give the topics their new title and first post in Discourse."""
+    # changes: (title, content) by topic id, None for what is unchanged
+    for topic_id, (title, content) in changes.items():
         try:
-            client.client.update_topic(f'/t/-/{topic_id}.json', title=title)
+            if title is not None:
+                client.client.update_topic(f'/t/-/{topic_id}.json', title=title)
+            if content is not None:
+                posts = client.client.topic_posts(topic_id)['post_stream']['posts']
+                first_post = next(p for p in posts if p['post_number'] == 1)
+                client.client.update_post(first_post['id'], content)
         except Exception:
-            # the topic keeps its former title
-            log.warning(f'Renaming the forum topic {topic_id} failed', exc_info=True)
+            # the topic keeps its former title or first post
+            log.warning(f'Updating the forum topic {topic_id} failed', exc_info=True)
 
 
 # only collection_post: it creates the topic in Discourse
@@ -213,14 +254,7 @@ def create_topic(request):
 
     locale = request.validated['locale']
     document = request.validated['document']
-    document_type = association_keys_for_types[document.type]
-
-    document_path = f'/{document_type}/{locale.document_id}/{locale.lang}'
-
-    content = (
-        f'<a href="https://www.camptocamp.org{document_path}">'
-        f'{locale.title or document_path}</a>'
-    )
+    content = first_post_content(document, locale)
 
     category = settings['discourse.category']
     # category could be id or name
