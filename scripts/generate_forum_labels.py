@@ -21,6 +21,8 @@ DOCUMENT_TYPES = [
     'waypoint',
     'xreport',
 ]
+# keys Bandit takes for a password (B105)
+PASSWORD_LIKE_KEYS = {'pass'}
 OUTPUT = Path(__file__).parent.parent / 'c2corg_api' / 'views' / 'forum_labels.py'
 
 
@@ -73,10 +75,13 @@ def write_labels(catalogs):
     lines += ['}', '', 'WAYPOINT_TYPE_LABELS = {']
     for lang in default_langs:
         lines.append(f'    {lang!r}: {{')
-        lines += [
-            f'        {w!r}: {label(catalogs, lang, w, "waypoint_types")!r},'
-            for w in waypoint_types
-        ]
+        for w in waypoint_types:
+            value = label(catalogs, lang, w, 'waypoint_types')
+            if w in PASSWORD_LIKE_KEYS:
+                lines.append('        # a mountain pass, not a password')
+                lines.append(f'        {w!r}: {value!r},  # nosec B105')
+            else:
+                lines.append(f'        {w!r}: {value!r},')
         lines.append('    },')
     lines.append('}')
     OUTPUT.write_text('\n'.join(lines) + '\n', encoding='utf-8')

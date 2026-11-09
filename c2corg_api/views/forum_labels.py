@@ -109,7 +109,8 @@ DOCUMENT_TYPE_LABELS = {
 WAYPOINT_TYPE_LABELS = {
     'fr': {
         'summit': 'Sommet',
-        'pass': 'Col',
+        # a mountain pass, not a password
+        'pass': 'Col',  # nosec B105
         'lake': 'Lac',
         'waterfall': 'Cascade',
         'locality': 'Lieu-dit',
@@ -137,7 +138,8 @@ WAYPOINT_TYPE_LABELS = {
     },
     'it': {
         'summit': 'Cima',
-        'pass': 'Colle',
+        # a mountain pass, not a password
+        'pass': 'Colle',  # nosec B105
         'lake': 'Lago',
         'waterfall': 'Cascata',
         'locality': 'Luogo',
@@ -165,7 +167,8 @@ WAYPOINT_TYPE_LABELS = {
     },
     'de': {
         'summit': 'Gipfel',
-        'pass': 'Hochpass',
+        # a mountain pass, not a password
+        'pass': 'Hochpass',  # nosec B105
         'lake': 'See',
         'waterfall': 'Wasserfall',
         'locality': 'Gegend',
@@ -193,7 +196,8 @@ WAYPOINT_TYPE_LABELS = {
     },
     'en': {
         'summit': 'Summit',
-        'pass': 'Pass',
+        # a mountain pass, not a password
+        'pass': 'Pass',  # nosec B105
         'lake': 'Lake',
         'waterfall': 'Waterfall',
         'locality': 'Locality',
@@ -221,7 +225,8 @@ WAYPOINT_TYPE_LABELS = {
     },
     'es': {
         'summit': 'Cumbre',
-        'pass': 'Paso',
+        # a mountain pass, not a password
+        'pass': 'Paso',  # nosec B105
         'lake': 'Lago',
         'waterfall': 'Cascada',
         'locality': 'Localidad',
@@ -249,7 +254,8 @@ WAYPOINT_TYPE_LABELS = {
     },
     'ca': {
         'summit': 'Cim',
-        'pass': 'Coll',
+        # a mountain pass, not a password
+        'pass': 'Coll',  # nosec B105
         'lake': 'Estany',
         'waterfall': 'Cascada',
         'locality': 'Localitat',
@@ -277,7 +283,8 @@ WAYPOINT_TYPE_LABELS = {
     },
     'eu': {
         'summit': 'Gaillurra',
-        'pass': 'Lepoa',
+        # a mountain pass, not a password
+        'pass': 'Lepoa',  # nosec B105
         'lake': 'Lakua',
         'waterfall': 'Urjausia',
         'locality': 'Lekua',
@@ -305,7 +312,8 @@ WAYPOINT_TYPE_LABELS = {
     },
     'sl': {
         'summit': 'Vrh',
-        'pass': 'Sedlo',
+        # a mountain pass, not a password
+        'pass': 'Sedlo',  # nosec B105
         'lake': 'Jezero',
         'waterfall': 'Slap',
         'locality': 'Kraj',
@@ -333,7 +341,8 @@ WAYPOINT_TYPE_LABELS = {
     },
     'zh': {
         'summit': '山峰',
-        'pass': '山道',
+        # a mountain pass, not a password
+        'pass': '山道',  # nosec B105
         'lake': '湖泊',
         'waterfall': '瀑布',
         'locality': '地点',
