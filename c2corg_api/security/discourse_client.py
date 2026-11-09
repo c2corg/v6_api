@@ -78,6 +78,35 @@ class APIDiscourseClient:
         discourse_userid = self.get_userid(userid)
         return self.client.unsuspend(discourse_userid)
 
+    def is_moderator(self, userid):
+        """Tell whether a user is a moderator (or an admin) of the forum."""
+        discourse_user = self.client.by_external_id(userid)
+        return bool(discourse_user.get('moderator') or discourse_user.get('admin'))
+
+    def get_forum_user(self, discourse_userid):
+        """Return the forum account (a dict with its username...) of a forum id."""
+        return self.client.user_by_id(discourse_userid)
+
+    def merge_user(self, userid, target_discourse_userid):
+        """Merge a forum account into another one: posts, topics... are moved."""
+        discourse_userid = self.get_userid(userid)
+        target = self.get_forum_user(target_discourse_userid)
+        # the merge removes the source account in the forum
+        result = self.client._put(
+            f'/admin/users/{discourse_userid}/merge.json',
+            target_username=target['username'],
+        )
+        self.discourse_userid_cache.pop(userid, None)
+        return result
+
+    def delete_user(self, userid, delete_posts=False):
+        """Delete a forum account, and its posts if asked."""
+        discourse_userid = self.get_userid(userid)
+        kwargs = {'delete_posts': 'true'} if delete_posts else {}
+        result = self.client.delete_user(discourse_userid, **kwargs)
+        self.discourse_userid_cache.pop(userid, None)
+        return result
+
     def invite_user_to_topic(self, username, topic_id):
         """Invite a forum user, by username, to a topic."""
         # pydiscourse only invites by e-mail (invite_user_to_topic); the
@@ -205,6 +234,18 @@ class DisabledDiscourseClient:
         return None
 
     def unsuspend(self, userid):
+        return None
+
+    def is_moderator(self, userid):
+        return False
+
+    def get_forum_user(self, discourse_userid):
+        return None
+
+    def merge_user(self, userid, target_discourse_userid):
+        return None
+
+    def delete_user(self, userid, delete_posts=False):
         return None
 
     def invite_user_to_topic(self, username, topic_id):

@@ -38,6 +38,10 @@ from c2corg_api.views.user_mailinglists import read_mailinglists
 from c2corg_api.views.user_preferences import (
     read_preferences,
 )
+from c2corg_api.views.user_removal import (
+    read_removal_requests,
+    read_removal_requests_count,
+)
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
@@ -82,6 +86,8 @@ def include(app):
         ('/users/following-user/{id:int}', is_following_user),
         ('/users/blocked', blocked_users),
         ('/users/blocked/{id:int}', is_blocked),
+        ('/users/removals', removals),
+        ('/users/removals/count', removals_count),
     ):
         app.add_api_route(
             path,
@@ -200,6 +206,36 @@ def is_blocked(
     return serve_read(request, user, [typed_values(validated)], read_blocked_user)
 
 
+def removals(request: Request, user: User):
+    """Return the removal requests of the user accounts (for the moderators)."""
+    # the permission is checked by the view: a moderator of the forum is not
+    # necessarily one of the topoguide
+    return _not_cached(
+        serve_read(
+            request,
+            user,
+            [],
+            read_removal_requests,
+            permission='authenticated',
+            content_types=JSON,
+        )
+    )
+
+
+def removals_count(request: Request, user: User):
+    """Return the number of removal requests not done yet."""
+    return _not_cached(
+        serve_read(
+            request,
+            user,
+            [],
+            read_removal_requests_count,
+            permission='moderator',
+            content_types=JSON,
+        )
+    )
+
+
 # read by the route inventory of the contract tests (routes.txt)
 for _endpoint in (
     account,
@@ -210,7 +246,8 @@ for _endpoint in (
     is_following_user,
 ):
     _endpoint.permission = 'authenticated'
-for _endpoint in (blocked_users, is_blocked):
+removals.permission = 'authenticated'
+for _endpoint in (blocked_users, is_blocked, removals_count):
     _endpoint.permission = 'moderator'
 for _endpoint in (
     account,
@@ -221,6 +258,8 @@ for _endpoint in (
     is_following_user,
     blocked_users,
     is_blocked,
+    removals,
+    removals_count,
 ):
     # described in the OpenAPI document (see web.openapi)
     _endpoint.described = True
