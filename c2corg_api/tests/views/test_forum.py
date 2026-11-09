@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from unittest.mock import call, patch
 
 import pytest
+from pydiscourse.exceptions import DiscourseClientError
+from requests import Response
 from requests.exceptions import ConnectionError
 
 from c2corg_api.models.association import Association
@@ -12,13 +14,16 @@ from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
+from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.xreport import Xreport, XreportLocale
 from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
     set_discourse_client,
 )
 from c2corg_api.tests import post_json_with_contributor
+from c2corg_api.views.forum import TITLE_MAX_LENGTH, topic_title
 
 
 @dataclass
@@ -185,9 +190,112 @@ def test_post_without_title(create_post_mock, client, docs):
         '<a href="{}">{}</a>'.format(
             referer, f'/images/{locale.document_id}/{locale.lang}'
         ),
-        title=f'{locale.document_id}_{locale.lang}',
+        title=f'{locale.document_id}_{locale.lang} · Image',
         category_id='Commentaires',
     )
+
+
+@patch('pydiscourse.client.DiscourseClient.create_post')
+def test_post_title_refused(create_post_mock, client, session, docs):
+    """Fall back on the id alone when Discourse refuses the title."""
+    response = Response()
+    response.status_code = 422
+    create_post_mock.side_effect = [
+        DiscourseClientError('Title seems unclear', response=response),
+        {'topic_id': 10},
+    ]
+    locale = docs.locale_en
+    post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': docs.waypoint.document_id, 'lang': 'en'},
+        status=200,
+    )
+    titles = [c.kwargs['title'] for c in create_post_mock.call_args_list]
+    assert titles == [
+        f'{locale.document_id}_en · Summit · Mont Granier',
+        f'{locale.document_id}_en',
+    ]
+    session.expire(locale)
+    assert 10 == locale.topic_id
+
+
+@patch('pydiscourse.client.DiscourseClient.create_post')
+def test_post_discourse_client_error(create_post_mock, client, docs):
+    """Only a refused title (422) is retried, not any client error."""
+    response = Response()
+    response.status_code = 403
+    create_post_mock.side_effect = DiscourseClientError('Forbidden', response=response)
+    post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': docs.waypoint.document_id, 'lang': 'en'},
+        status=500,
+    )
+    assert create_post_mock.call_count == 1
+
+
+def test_topic_title_outing():
+    outing = Outing(document_id=1966268, date_start=datetime.date(2026, 11, 2))
+    locale = OutingLocale(
+        document_id=1966268, lang='fr', title='Mont Blanc par les Grands Mulets'
+    )
+    assert (
+        topic_title(outing, locale)
+        == '1966268_fr · Sortie · Mont Blanc par les Grands Mulets · 2026-11-02'
+    )
+
+
+def test_topic_title_route():
+    route = Route(document_id=56789)
+    locale = RouteLocale(
+        document_id=56789,
+        lang='fr',
+        title='Voie des Cristalliers',
+        title_prefix='Mont Blanc',
+    )
+    assert (
+        topic_title(route, locale)
+        == '56789_fr · Itinéraire · Mont Blanc : Voie des Cristalliers'
+    )
+
+
+def test_topic_title_waypoint_type():
+    """A waypoint is named by its type, unless the type says nothing."""
+    hut = Waypoint(document_id=123, waypoint_type='hut')
+    locale = WaypointLocale(document_id=123, lang='de', title='Goûterhütte')
+    assert topic_title(hut, locale) == '123_de · Hütte · Goûterhütte'
+
+    misc = Waypoint(document_id=124, waypoint_type='misc')
+    locale = WaypointLocale(document_id=124, lang='fr', title='Pierre plate')
+    assert topic_title(misc, locale) == '124_fr · Point de passage · Pierre plate'
+
+
+def test_topic_title_xreport():
+    xreport = Xreport(document_id=1965903, date=datetime.date(2026, 8, 14))
+    locale = XreportLocale(document_id=1965903, lang='en', title='Crevasse fall')
+    assert (
+        topic_title(xreport, locale)
+        == '1965903_en · Incident / accident · Crevasse fall · 2026-08-14'
+    )
+
+
+def test_topic_title_shouting():
+    route = Route(document_id=1)
+    locale = RouteLocale(
+        document_id=1, lang='fr', title='VOIE NORMALE', title_prefix='MONT BLANC'
+    )
+    assert topic_title(route, locale) == '1_fr · Itinéraire · Mont blanc : Voie normale'
+
+
+def test_topic_title_too_long():
+    """Only the title of the document is shortened."""
+    outing = Outing(document_id=1966268, date_start=datetime.date(2026, 11, 2))
+    locale = OutingLocale(document_id=1966268, lang='fr', title='x' * 300)
+    title = topic_title(outing, locale)
+    assert len(title) == TITLE_MAX_LENGTH
+    assert title.startswith('1966268_fr · Sortie · xxx')
+    assert title.endswith('x… · 2026-11-02')
 
 
 @patch(

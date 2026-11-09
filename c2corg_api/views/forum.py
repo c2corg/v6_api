@@ -1,5 +1,7 @@
 import logging
 
+from pydiscourse.exceptions import DiscourseClientError
+
 from c2corg_api.httpexceptions import (
     HTTPInternalServerError,
     HTTPServiceUnavailable,
@@ -14,9 +16,29 @@ from c2corg_api.models.user import User
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Str
 from c2corg_api.security.discourse_client import get_discourse_client
+from c2corg_api.views.forum_labels import DOCUMENT_TYPE_LABELS, WAYPOINT_TYPE_LABELS
 from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
+
+# Discourse's max_topic_title_length (its default)
+TITLE_MAX_LENGTH = 255
+TITLE_SEPARATOR = ' · '
+
+DOCUMENT_TYPE_NAMES = {
+    document_types.AREA_TYPE: 'area',
+    document_types.ARTICLE_TYPE: 'article',
+    document_types.BOOK_TYPE: 'book',
+    document_types.IMAGE_TYPE: 'image',
+    document_types.MAP_TYPE: 'map',
+    document_types.OUTING_TYPE: 'outing',
+    document_types.ROUTE_TYPE: 'route',
+    document_types.WAYPOINT_TYPE: 'waypoint',
+    document_types.XREPORT_TYPE: 'xreport',
+}
+
+# too vague to name a waypoint: the generic 'waypoint' label is used instead
+VAGUE_WAYPOINT_TYPES = {'misc', 'virtual'}
 
 
 class TopicCreateSchema(Schema):
@@ -58,6 +80,62 @@ def validate_topic_create(request, **kwargs):
         )
 
 
+def _deshout(text):
+    """Write an all-capitals text in sentence case."""
+    # Discourse would rewrite a shouted title anyway (title_prevent_shouting)
+    if text.isupper():
+        return text[:1].upper() + text[1:].lower()
+    return text
+
+
+def _type_label(document, lang):
+    """Name the type of the document in the given language."""
+    labels = DOCUMENT_TYPE_LABELS.get(lang, DOCUMENT_TYPE_LABELS['en'])
+    if document.type == document_types.WAYPOINT_TYPE:
+        waypoint_type = document.waypoint_type
+        if waypoint_type not in VAGUE_WAYPOINT_TYPES:
+            waypoint_labels = WAYPOINT_TYPE_LABELS.get(lang, WAYPOINT_TYPE_LABELS['en'])
+            if waypoint_type in waypoint_labels:
+                return waypoint_labels[waypoint_type]
+    return labels.get(DOCUMENT_TYPE_NAMES.get(document.type))
+
+
+def _date(document):
+    """Give the date shown in the title of the document, if any."""
+    if document.type == document_types.OUTING_TYPE:
+        return document.date_start
+    if document.type == document_types.XREPORT_TYPE:
+        return document.date
+    return None
+
+
+def legacy_topic_title(locale):
+    """Give the title of the comment topics before November 2026."""
+    return f'{locale.document_id}_{locale.lang}'
+
+
+def topic_title(document, locale):
+    """Give the title of the comment topic of a document locale."""
+    # '1966268_fr · Sortie · Mont Blanc par les Grands Mulets · 2026-11-02'
+    # The id comes first: titles stay unique (Discourse refuses duplicates) and the
+    # topics can still be found by the id, as the older ones.
+    title = _deshout((locale.title or '').strip())
+    title_prefix = getattr(locale, 'title_prefix', None)
+    if title_prefix and title:
+        title = f'{_deshout(title_prefix.strip())} : {title}'
+
+    date = _date(document)
+    head = [legacy_topic_title(locale), _type_label(document, locale.lang)]
+    tail = [date.isoformat()] if date else []
+
+    # only the title of the document is shortened, never the id or the date
+    room = TITLE_MAX_LENGTH - len(TITLE_SEPARATOR.join([*head, '', *tail]))
+    if len(title) > room:
+        title = title[: room - 1].rstrip() + '…'
+
+    return TITLE_SEPARATOR.join(part for part in [*head, title, *tail] if part)
+
+
 # only collection_post: it creates the topic in Discourse
 @write(
     validators=[body_validator(TopicCreateSchema), validate_topic_create],
@@ -90,8 +168,18 @@ def create_topic(request):
         pass  # a name: use it as it is
 
     try:
-        title = f'{locale.document_id}_{locale.lang}'
-        response = client.client.create_post(content, title=title, category_id=category)
+        try:
+            response = client.client.create_post(
+                content, title=topic_title(document, locale), category_id=category
+            )
+        except DiscourseClientError as e:
+            # a title Discourse refuses (too short, shouting...): the id still works
+            if e.response is None or e.response.status_code != 422:
+                raise
+            log.warning(f'Discourse refused the title of the topic: {e!s}')
+            response = client.client.create_post(
+                content, title=legacy_topic_title(locale), category_id=category
+            )
     except Exception as e:
         log.error(f'Error with Discourse: {e!s}', exc_info=True)
         raise HTTPInternalServerError('Error with Discourse') from e
