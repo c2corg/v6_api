@@ -290,17 +290,21 @@ def create_topic(request):
 
         if locale.type == document_types.OUTING_TYPE:
             try:
-                invite_participants(request, client, locale, topic_id)
+                watch_by_participants(client, locale, topic_id)
             except Exception:
                 log.error(
-                    f'Inviting participants of outing {locale.document_id} failed',
+                    f'Watching by the participants of outing {locale.document_id} '
+                    'failed',
                     exc_info=True,
                 )
 
     return response
 
 
-def invite_participants(request, client, locale, topic_id):
+def watch_by_participants(client, locale, topic_id):
+    """Make the participants of an outing watch its comment topic."""
+    # They are notified of each comment, and of nothing while the topic is empty
+    # (an invitation used to notify them as soon as the topic was created).
     participants = (
         DBSession.query(User.forum_username)
         .join(Association, Association.parent_document_id == User.id)
@@ -310,9 +314,9 @@ def invite_participants(request, client, locale, topic_id):
 
     for (forum_username,) in participants:
         try:
-            client.invite_user_to_topic(forum_username, topic_id)
+            client.watch_topic(forum_username, topic_id)
         except Exception:
             log.error(
-                f'Inviting forum user {forum_username} in topic {topic_id} failed',
+                f'Watching by forum user {forum_username} of topic {topic_id} failed',
                 exc_info=True,
             )

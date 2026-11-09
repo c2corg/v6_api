@@ -13,6 +13,10 @@ from c2corg_api.httpexceptions import HTTPBadRequest
 log = logging.getLogger(__name__)
 
 
+# Discourse's notification level of a topic that notifies each new post
+WATCHING = 3
+
+
 class APIDiscourseClient:
     enabled = True
 
@@ -78,11 +82,19 @@ class APIDiscourseClient:
         discourse_userid = self.get_userid(userid)
         return self.client.unsuspend(discourse_userid)
 
-    def invite_user_to_topic(self, username, topic_id):
-        """Invite a forum user, by username, to a topic."""
-        # pydiscourse only invites by e-mail (invite_user_to_topic); the
-        # c2corg fork used to add this call by username.
-        return self.client._post(f'/t/{topic_id}/invite.json', user=username)
+    def watch_topic(self, username, topic_id):
+        """Make a forum user watch a topic: notified of each new post."""
+        # Only the user can set their notification level: the call is made in
+        # their name (Api-Username), which needs an API key for all users.
+        client = DiscourseClient(
+            self.discourse_base_url,
+            api_username=username,
+            api_key=self.api_key,
+            timeout=self.timeout,
+        )
+        return client._post(
+            f'/t/{topic_id}/notifications.json', notification_level=WATCHING
+        )
 
     # Below this: SSO provider
     def decode_payload(self, payload):
@@ -207,7 +219,7 @@ class DisabledDiscourseClient:
     def unsuspend(self, userid):
         return None
 
-    def invite_user_to_topic(self, username, topic_id):
+    def watch_topic(self, username, topic_id):
         return None
 
     def redirect(self, user, sso, signature):

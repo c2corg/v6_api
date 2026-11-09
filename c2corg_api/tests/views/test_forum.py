@@ -302,25 +302,39 @@ def test_topic_title_too_long():
     assert title.endswith('x… · 2026-11-02')
 
 
-@patch(
-    'pydiscourse.client.DiscourseClient._post',
-    side_effect=[{'topic_id': 10}, {}, {}],
-)
-def test_post_invite_participants(_post_mock, client, docs):
-    """Test outing participants are invited in the topic"""
+@patch('pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10})
+@patch('c2corg_api.security.discourse_client.APIDiscourseClient.watch_topic')
+def test_post_participants_watch(watch_topic_mock, create_post_mock, client, docs):
+    """The participants of an outing watch its new topic, without invitation."""
     post_json_with_contributor(
         client,
         '/forum/topics',
         {'document_id': docs.outing.document_id, 'lang': 'en'},
         status=200,
     )
-    _post_mock.assert_has_calls(
-        [
-            call('/t/10/invite.json', user='contributor'),
-            call('/t/10/invite.json', user='contributor2'),
-        ],
-        any_order=True,
+    watch_topic_mock.assert_has_calls(
+        [call('contributor', 10), call('contributor2', 10)], any_order=True
     )
+    assert watch_topic_mock.call_count == 2
+
+
+@patch('pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10})
+@patch(
+    'c2corg_api.security.discourse_client.APIDiscourseClient.watch_topic',
+    side_effect=[ConnectionError(), {}],
+)
+def test_post_participant_watch_failure(
+    watch_topic_mock, create_post_mock, client, docs
+):
+    """A participant the forum refuses does not stop the others, nor the topic."""
+    json = post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': docs.outing.document_id, 'lang': 'en'},
+        status=200,
+    )
+    assert json['topic_id'] == 10
+    assert watch_topic_mock.call_count == 2
 
 
 def _put_as_moderator(client, url, document):
