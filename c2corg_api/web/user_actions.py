@@ -8,6 +8,13 @@ from c2corg_api.views.user_block import block_user, unblock_user
 from c2corg_api.views.user_follow import follow_user, unfollow_user
 from c2corg_api.views.user_mailinglists import update_mailinglists
 from c2corg_api.views.user_preferences import update_preferences
+from c2corg_api.views.user_removal import (
+    cancel_removal_request,
+    create_removal_request,
+    unvalidate_removal_request,
+    update_removal_request,
+    validate_removal_request,
+)
 from c2corg_api.web.documents import handler_arguments, include_handler_write
 
 # (path, HTTP method, function)
@@ -20,6 +27,11 @@ WRITES = [
     ('/users/unfollow', 'POST', unfollow_user),
     ('/users/block', 'POST', block_user),
     ('/users/unblock', 'POST', unblock_user),
+    ('/users/removals', 'POST', create_removal_request),
+    ('/users/removals/validate', 'POST', validate_removal_request),
+    ('/users/removals/unvalidate', 'POST', unvalidate_removal_request),
+    ('/users/removals/update', 'POST', update_removal_request),
+    ('/users/removals/cancel', 'POST', cancel_removal_request),
     ('/users/preferences', 'POST', update_preferences),
     ('/users/mailinglists', 'POST', update_mailinglists),
 ]
