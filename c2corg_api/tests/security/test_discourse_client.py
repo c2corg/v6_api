@@ -59,16 +59,17 @@ class TestAPIDiscourseClient:
         assert 'api_username' not in params
 
     @patch('pydiscourse.client.requests.request')
-    def test_invite_user_to_topic(self, request):
-        """Invite a user to a topic by username."""
+    def test_watch_topic(self, request):
+        """Make a user watch a topic, in the name of the user."""
         request.return_value = _ok_response({})
 
-        APIDiscourseClient(SETTINGS).invite_user_to_topic('contributor', 10)
+        APIDiscourseClient(SETTINGS).watch_topic('contributor', 10)
 
         verb, url = request.call_args.args
         assert verb == 'POST'
-        assert url == 'http://discourse.test/t/10/invite.json'
-        assert request.call_args.kwargs['data'] == {'user': 'contributor'}
+        assert url == 'http://discourse.test/t/10/notifications.json'
+        assert request.call_args.kwargs['data'] == {'notification_level': 3}
+        assert request.call_args.kwargs['headers']['Api-Username'] == 'contributor'
 
 
 class TestDisabledDiscourseClient:
@@ -106,7 +107,7 @@ class TestDisabledDiscourseClient:
         assert client.logout(5) is None
         assert client.suspend(5, 10, 'reason') is None
         assert client.unsuspend(5) is None
-        assert client.invite_user_to_topic('contributor', 10) is None
+        assert client.watch_topic('contributor', 10) is None
         assert client.redirect_without_nonce(user) is None
         get.assert_not_called()
         request.assert_not_called()
