@@ -12,6 +12,7 @@ from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.common.document_types import OUTING_TYPE
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
@@ -22,7 +23,8 @@ from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
     set_discourse_client,
 )
-from c2corg_api.tests import post_json_with_contributor
+from c2corg_api.tests import auth_headers, post_json_with_contributor, send_json
+from c2corg_api.views.document import create_new_version
 from c2corg_api.views.forum import TITLE_MAX_LENGTH, topic_title
 
 
@@ -83,6 +85,8 @@ def docs(session, user_ids) -> Docs:
     )
     session.add(outing)
     session.flush()
+    create_new_version(waypoint_with_topic, user_ids['contributor'])
+    update_feed_document_create(waypoint_with_topic, user_ids['contributor'])
 
     for user_id in (
         user_ids['contributor'],
@@ -317,3 +321,135 @@ def test_post_invite_participants(_post_mock, client, docs):
         ],
         any_order=True,
     )
+
+
+def _put_as_moderator(client, url, document):
+    """PUT a document update as the moderator."""
+    body = {'message': 'Update', 'document': document}
+    headers = auth_headers(username='moderator')
+    return send_json(client, 'put', url, body, headers=headers, status=200)
+
+
+@pytest.fixture
+def update_topic():
+    """Mock the renaming of the topics in Discourse, run as soon as committed."""
+    with (
+        patch('c2corg_api.views.forum.in_background', side_effect=lambda op: op()),
+        patch('pydiscourse.client.DiscourseClient.update_topic') as update_topic,
+    ):
+        yield update_topic
+
+
+def test_put_renames_topic(client, docs, update_topic):
+    """The topic follows the title and the type of the document."""
+    waypoint = docs.waypoint_with_topic
+    locale = docs.locale_en_with_topic
+    _put_as_moderator(
+        client,
+        f'/waypoints/{waypoint.document_id}',
+        {
+            'document_id': waypoint.document_id,
+            'version': waypoint.version,
+            'waypoint_type': 'lake',
+            'elevation': 2203,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Granier lake',
+                    'description': '...',
+                    'version': locale.version,
+                }
+            ],
+        },
+    )
+    update_topic.assert_called_once_with(
+        '/t/-/1.json', title=f'{waypoint.document_id}_en · Lake · Granier lake'
+    )
+
+
+def test_put_keeps_topic(client, docs, update_topic):
+    """An update that leaves the title as it is does not call the forum."""
+    waypoint = docs.waypoint_with_topic
+    locale = docs.locale_en_with_topic
+    _put_as_moderator(
+        client,
+        f'/waypoints/{waypoint.document_id}',
+        {
+            'document_id': waypoint.document_id,
+            'version': waypoint.version,
+            'waypoint_type': 'summit',
+            'elevation': 2500,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Granier',
+                    'description': 'another description',
+                    'version': locale.version,
+                }
+            ],
+        },
+    )
+    update_topic.assert_not_called()
+
+
+def test_put_renames_route_topic(client, session, user_ids, docs, update_topic):
+    """A new main waypoint changes the title prefix of the route, and the topic."""
+    route = Route(activities=['skitouring'], elevation_max=2203)
+    route.locales.append(
+        RouteLocale(
+            lang='en', title='North face', document_topic=DocumentTopic(topic_id=2)
+        )
+    )
+    session.add(route)
+    session.flush()
+    create_new_version(route, user_ids['contributor'])
+    update_feed_document_create(route, user_ids['contributor'])
+    _put_as_moderator(
+        client,
+        f'/routes/{route.document_id}',
+        {
+            'document_id': route.document_id,
+            'version': route.version,
+            'activities': ['skitouring'],
+            'elevation_max': 2203,
+            'main_waypoint_id': docs.waypoint.document_id,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'North face',
+                    'version': route.locales[0].version,
+                }
+            ],
+            'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+        },
+    )
+    update_topic.assert_called_once_with(
+        '/t/-/2.json',
+        title=f'{route.document_id}_en · Route · Mont Granier : North face',
+    )
+
+
+def test_put_rename_failure(client, docs, update_topic):
+    """The edit is saved even when the forum cannot rename the topic."""
+    update_topic.side_effect = ConnectionError()
+    waypoint = docs.waypoint_with_topic
+    locale = docs.locale_en_with_topic
+    _put_as_moderator(
+        client,
+        f'/waypoints/{waypoint.document_id}',
+        {
+            'document_id': waypoint.document_id,
+            'version': waypoint.version,
+            'waypoint_type': 'summit',
+            'elevation': 2203,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Granier',
+                    'description': '...',
+                    'version': locale.version,
+                }
+            ],
+        },
+    )
+    assert update_topic.call_count == 1

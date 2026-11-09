@@ -1,4 +1,6 @@
 import logging
+import threading
+from functools import partial
 
 from pydiscourse.exceptions import DiscourseClientError
 
@@ -15,6 +17,7 @@ from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.user import User
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Str
+from c2corg_api.search.notify_sync import run_on_successful_transaction
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views.forum_labels import DOCUMENT_TYPE_LABELS, WAYPOINT_TYPE_LABELS
 from c2corg_api.views.resource import write
@@ -134,6 +137,65 @@ def topic_title(document, locale):
         title = title[: room - 1].rstrip() + '…'
 
     return TITLE_SEPARATOR.join(part for part in [*head, title, *tail] if part)
+
+
+def topic_titles(document):
+    """Give the title of the comment topics of the document, by topic id."""
+    topic_ids = dict(
+        DBSession.query(DocumentTopic.document_locale_id, DocumentTopic.topic_id)
+        .join(DocumentLocale, DocumentLocale.id == DocumentTopic.document_locale_id)
+        .filter(DocumentLocale.document_id == document.document_id)
+        .all()
+    )
+    return {
+        topic_ids[locale.id]: topic_title(document, locale)
+        for locale in document.locales
+        if locale.id in topic_ids
+    }
+
+
+def rename_topics(request, document, old_titles):
+    """Rename the comment topics whose title changed with the document."""
+    # old_titles: topic_titles(document) before the update. The older topics, titled
+    # `{id}_{lang}`, are renamed too when the title changes.
+    if not old_titles:
+        return
+    for locale in document.locales:
+        if hasattr(locale, 'title_prefix'):
+            # set by an SQL update (check_title_prefix): the loaded value is stale
+            DBSession.expire(locale, ['title_prefix'])
+
+    new_titles = topic_titles(document)
+    renamed = {
+        topic_id: title
+        for topic_id, title in new_titles.items()
+        if old_titles.get(topic_id) != title
+    }
+    if not renamed:
+        return
+
+    client = get_discourse_client(request.registry.settings)
+    if not client.enabled:
+        return
+    # never slows down nor fails the edit: the forum is called once it is saved
+    run_on_successful_transaction(
+        partial(in_background, partial(_update_topic_titles, client, renamed))
+    )
+
+
+def in_background(operation):
+    """Run an operation in a thread of its own."""
+    threading.Thread(target=operation, daemon=True).start()
+
+
+def _update_topic_titles(client, titles):
+    """Give the topics their new titles in Discourse."""
+    for topic_id, title in titles.items():
+        try:
+            client.client.update_topic(f'/t/-/{topic_id}.json', title=title)
+        except Exception:
+            # the topic keeps its former title
+            log.warning(f'Renaming the forum topic {topic_id} failed', exc_info=True)
 
 
 # only collection_post: it creates the topic in Discourse

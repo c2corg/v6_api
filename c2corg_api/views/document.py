@@ -55,6 +55,7 @@ from c2corg_api.views.document_listings import (
     add_load_for_profiles,
     get_documents,
 )
+from c2corg_api.views.forum import rename_topics, topic_titles
 from c2corg_api.views.license import get_license
 from c2corg_api.views.validation import (
     association_permission_checker,
@@ -119,6 +120,9 @@ def update_document(
     if before_update:
         before_update(document, document_in)
 
+    # the comment topics are titled from the document: renamed if it changes
+    old_topic_titles = topic_titles(document)
+
     # update the document with the input document
     document.update(document_in)
 
@@ -156,6 +160,8 @@ def update_document(
 
         if after_update:
             after_update(document, update_types, user_id=user_id)
+
+        rename_topics(request, document, old_topic_titles)
 
         update_cache_version(document)
 
