@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy import event
 
 from c2corg_api.models import es_sync
 from c2corg_api.models.association import Association
@@ -20,6 +21,7 @@ from c2corg_api.scripts.es.sync import (
     get_changed_routes_and_outings_wr,
     get_changed_users,
     get_deleted_locale_documents,
+    get_documents,
     get_documents_per_type,
     sync_deleted_documents,
     sync_documents,
@@ -247,6 +249,34 @@ def test_get_deleted_locale_documents(session, docs):
 
     assert len(changed_documents) == 1
     assert 'w' == changed_documents[0][1]
+
+
+def test_get_documents_reads_only_the_given_ids(db_connection, session, docs):
+    statements = []
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    # a chunk size of 1: one query per document
+    ids = {docs.waypoint2.document_id, docs.waypoint1.document_id}
+    event.listen(db_connection, 'before_cursor_execute', record)
+    try:
+        found = list(get_documents(session, 'w', 1, ids))
+    finally:
+        event.remove(db_connection, 'before_cursor_execute', record)
+
+    # no window over the whole documents table, as for fill_index
+    assert not [s for s in statements if 'row_number' in s]
+    assert [doc.document_id for doc in found] == sorted(ids)
+
+
+def test_get_documents_all(session, docs):
+    found = list(get_documents(session, 'w', 1, ignore_redirects=True))
+
+    found_ids = [doc.document_id for doc in found]
+    assert docs.waypoint1.document_id in found_ids
+    assert docs.waypoint2.document_id in found_ids
+    assert docs.waypoint3.document_id not in found_ids
 
 
 def test_get_documents_per_type():

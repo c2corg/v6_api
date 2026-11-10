@@ -19,7 +19,7 @@ from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.models.utils import windowed_query
+from c2corg_api.models.utils import chunked_query, windowed_query
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import elasticsearch_config, search_documents
@@ -415,8 +415,6 @@ def get_documents(
     base_query = session.query(clazz)
     if ignore_redirects:
         base_query = base_query.filter(clazz.redirects_to.is_(None))
-    if document_ids:
-        base_query = base_query.filter(clazz.document_id.in_(document_ids))
 
     locale_fields = [locales_clazz.title]
     if clazz == Route:
@@ -447,6 +445,10 @@ def get_documents(
 
     base_query = add_load_for_profiles(base_query, clazz)
 
+    if document_ids:
+        # the documents changed since the last sync: query only those
+        return chunked_query(base_query, Document.document_id, document_ids, batch_size)
+    # all the documents (fill_index)
     return windowed_query(base_query, Document.document_id, batch_size)
 
 
