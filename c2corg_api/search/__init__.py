@@ -1,3 +1,4 @@
+import hashlib
 import re
 
 from elasticsearch import Elasticsearch
@@ -96,6 +97,18 @@ _WORD_RE = re.compile(r'\w+', re.UNICODE)
 # sort of a full-text search: relevance first, then the id to break the ties
 # between documents with the same score, so that paging is stable
 SCORE_SORT = ({'_score': {'order': 'desc'}}, {'id': {'order': 'desc'}})
+
+
+def search_preference(search_term):
+    """Return the ES `preference` that sends a search to the same shard copies."""
+    # ES computes the scores per shard copy, and the primary and the replica of
+    # a shard can give the same document a slightly different score (their
+    # deleted documents differ). Without a preference, the pages of a search
+    # can hit different copies, see different orders and skip or repeat
+    # documents. One preference per search term keeps all the pages of a
+    # search on the same copies and still spreads the searches over the
+    # cluster. Hashed: a preference must not start with `_`.
+    return hashlib.sha1(search_term.encode(), usedforsecurity=False).hexdigest()
 
 
 def get_text_query_on_title(search_term, search_lang=None):
