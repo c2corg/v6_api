@@ -16,7 +16,7 @@ from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
-from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.models.xreport import Xreport, XreportLocale
 from c2corg_api.security.discourse_client import (
@@ -122,6 +122,17 @@ def test_post_document_not_exists(client, docs):
     )
     errors = json.get('errors')
     assert 'Document not found' == errors[0].get('description')
+
+
+def test_post_profile(client, user_ids):
+    """A profile has no comments: no topic is created for it."""
+    json = post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': user_ids['contributor'], 'lang': 'fr'},
+        status=400,
+    )
+    assert 'No comments for a profile' == json['errors'][0]['description']
 
 
 def test_post_topic_exists(client, docs):
@@ -248,6 +259,13 @@ def test_topic_title_outing():
         topic_title(outing, locale)
         == '1966268_fr · Sortie · Mont Blanc par les Grands Mulets · 2026-11-02'
     )
+
+
+def test_topic_title_profile():
+    """A profile has no type label nor title: its topic keeps the former title."""
+    profile = UserProfile(document_id=269315)
+    locale = DocumentLocale(document_id=269315, lang='fr', title='')
+    assert topic_title(profile, locale) == '269315_fr'
 
 
 def test_topic_title_route():
@@ -397,6 +415,32 @@ def test_put_renames_topic(client, docs, forum):
         'Comments: Lake · <a href="https://www.camptocamp.org/waypoints/'
         f'{waypoint.document_id}/en">Granier lake</a>',
     )
+
+
+def test_put_profile_with_topic(client, session, user_ids, forum):
+    """A profile with a comment topic can be changed: its topic keeps its title."""
+    profile = session.get(UserProfile, user_ids['contributor'])
+    locale = profile.get_locale('fr')
+    locale.document_topic = DocumentTopic(topic_id=3)
+    session.flush()
+    send_json(
+        client,
+        'put',
+        f'/profiles/{profile.document_id}',
+        {
+            'message': 'Update',
+            'document': {
+                'document_id': profile.document_id,
+                'version': profile.version,
+                'categories': ['amateur'],
+                'locales': [
+                    {'lang': 'fr', 'description': 'Moi !', 'version': locale.version}
+                ],
+            },
+        },
+        headers=auth_headers(username='contributor'),
+    )
+    forum.update_topic.assert_not_called()
 
 
 def test_put_keeps_topic(client, docs, forum):

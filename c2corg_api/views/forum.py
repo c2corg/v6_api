@@ -79,6 +79,11 @@ def validate_topic_create(request, **kwargs):
         return
     request.validated['document'] = document
 
+    # the profiles have no comments: the UI does not show them
+    if document.type == document_types.USERPROFILE_TYPE:
+        request.errors.add('body', f'{document_id}_{lang}', 'No comments for a profile')
+        return
+
     if locale.topic_id is not None:
         request.errors.add(
             'body',
@@ -139,7 +144,12 @@ def topic_title(document, locale):
     title = _document_title(locale)
 
     date = _date(document)
-    head = [legacy_topic_title(locale), _type_label(document, locale.lang)]
+    # no type label for some types (profiles)
+    head = [
+        part
+        for part in [legacy_topic_title(locale), _type_label(document, locale.lang)]
+        if part
+    ]
     tail = [date.isoformat()] if date else []
 
     # only the title of the document is shortened, never the id or the date
