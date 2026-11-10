@@ -9,7 +9,12 @@ from elasticsearch_dsl.query import (
     Terms,
 )
 
-from c2corg_api.search import SCORE_SORT, create_search, get_text_query_on_title
+from c2corg_api.search import (
+    SCORE_SORT,
+    create_search,
+    get_text_query_on_title,
+    search_preference,
+)
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
@@ -36,6 +41,21 @@ def test_build_query():
         .extra(from_=0, size=10)
     )
     assert_query_equal(query, expected_query)
+
+
+def test_build_query_preference():
+    """Send every page of a full-text search to the same shard copies."""
+    meta_params = {'limit': 10, 'offset': 0}
+    page1 = build_query({'q': 'dry-tooling'}, meta_params, 'w')
+    page2 = build_query({'q': 'dry-tooling'}, {'limit': 10, 'offset': 10}, 'w')
+    other = build_query({'q': 'mont blanc'}, meta_params, 'w')
+    no_term = build_query({'walt': '1500'}, meta_params, 'w')
+
+    assert page1._params['preference'] == search_preference('dry-tooling')
+    assert page1._params['preference'] == page2._params['preference']
+    assert other._params['preference'] != page1._params['preference']
+    assert not page1._params['preference'].startswith('_')
+    assert 'preference' not in no_term._params
 
 
 def test_build_query_bbox():

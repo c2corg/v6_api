@@ -21,6 +21,7 @@ from c2corg_api.search import (
     create_search,
     get_text_query_on_title,
     search_documents,
+    search_preference,
 )
 from c2corg_api.search.mapping_types import reserved_query_fields
 
@@ -37,7 +38,7 @@ def build_query(url_params, meta_params, doc_type):
     if search_term:
         search = search.query(
             get_text_query_on_title(search_term, meta_params.get('lang'))
-        )
+        ).params(preference=search_preference(search_term))
 
     search_model = search_documents[doc_type]
     for param in url_params:
