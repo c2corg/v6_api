@@ -139,7 +139,12 @@ def topic_title(document, locale):
     title = _document_title(locale)
 
     date = _date(document)
-    head = [legacy_topic_title(locale), _type_label(document, locale.lang)]
+    # no type label for some types (profiles)
+    head = [
+        part
+        for part in [legacy_topic_title(locale), _type_label(document, locale.lang)]
+        if part
+    ]
     tail = [date.isoformat()] if date else []
 
     # only the title of the document is shortened, never the id or the date
