@@ -196,7 +196,8 @@ def test_decode_polyline():
     assert decode_polyline(encode_polyline(TRACK)) == TRACK
 
 
-@pytest.mark.parametrize('encoded', ['_p~iF', '_p~iF~ps|', 'é'])
+# truncated, a value of 7 chunks, out of the alphabet
+@pytest.mark.parametrize('encoded', ['_p~iF', '_p~iF~ps|', '~~~~~~?', 'é'])
 def test_decode_polyline_invalid(encoded):
     with pytest.raises(ValueError):
         decode_polyline(encoded)

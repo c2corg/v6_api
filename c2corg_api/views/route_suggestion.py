@@ -27,6 +27,10 @@ from c2corg_api.views.document_schemas import route_documents_config
 SIMPLIFY = 20
 # the candidates: the routes whose point is this close to the track, in metres
 CANDIDATE_DISTANCE = 2000
+# and only the nearest ones: a track has ~50 candidates (99% of the outing
+# tracks are under 63 km). This bounds the cost of a public GET: a 150 km
+# zigzag of 5000 points had 2500 candidates and took 2 s.
+MAX_CANDIDATES = 300
 # a waypoint or a point of a route track this close is on the track, in metres
 NEAR = 300
 # the points taken along a route track: SAMPLES + 1
@@ -70,6 +74,8 @@ c as (
     on d.document_id = r.document_id and d.redirects_to is null
   where cast(:activities as varchar[]) is null
     or cast(r.activities as varchar[]) && cast(:activities as varchar[])
+  order by st_distance(g.geom, t.trk)
+  limit :max_candidates
 ),
 s as (
   select c.rid, st_distance(c.rgeom, c.trk) / c.k distance,
@@ -130,6 +136,7 @@ def suggested_route_ids(points, activities, limit):
             'limit': limit,
             'simplify': SIMPLIFY,
             'candidate_distance': CANDIDATE_DISTANCE,
+            'max_candidates': MAX_CANDIDATES,
             'near': NEAR,
             'samples': SAMPLES,
             'track_weight': TRACK_WEIGHT,
@@ -150,10 +157,15 @@ def decode_polyline(encoded, precision=5):
     # returned as lon, lat. A malformed string raises ValueError.
     values = []
     value = shift = 0
+    # 6 chunks hold 30 bits: more than any longitude or latitude needs, and a
+    # longer value would only grow an integer from a hostile string
+    max_shift = 30
     for char in encoded:
         byte = ord(char) - 63
         if not 0 <= byte < 64:
             raise ValueError(f'invalid character {char!r}')
+        if shift >= max_shift:
+            raise ValueError('value too long')
         value |= (byte & 0x1F) << shift
         shift += 5
         if byte < 0x20:
