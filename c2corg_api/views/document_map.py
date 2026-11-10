@@ -205,6 +205,17 @@ def _filtered_ids(doc_type, params, document_ids):
     return [int(doc.meta.id) for doc in search.execute()]
 
 
+def _matching_ids(doc_type, params, cap):
+    """Return the ids matching the filters (anywhere), or None if over `cap`."""
+    # Selective filters (`r`, `u`, `w`...) match few documents, wherever they
+    # are: the database then has only these to look at.
+    search = build_query(params, {'limit': cap, 'offset': 0}, doc_type).sort()
+    response = search.execute()
+    if response.hits.total > cap:
+        return None
+    return [int(doc.meta.id) for doc in response]
+
+
 def _titles_by_document_id(locale_model, document_ids, lang):
     locales_by_document = {}
     for locale in get_titles(locale_model, document_ids):
@@ -285,22 +296,38 @@ def get_tracks_response(doc_type, model, locale_model, request):
     bbox = request.validated['bbox']
     lang = request.validated.get('lang')
 
-    # What has a track in the bbox comes first, from the database: exactly,
-    # and only the ids. The search index then only has to filter them.
-    document_ids = get_track_ids(
-        model, bbox, TRACKS_CANDIDATES_MAX, document_ids=_document_ids(request)
-    )
-    if len(document_ids) > TRACKS_CANDIDATES_MAX:
+    # Filters that match few documents (a route, a user...) come first, from
+    # the search index: the database then only looks at these, whatever the
+    # number of tracks in the view.
+    document_ids = _document_ids(request)
+    matching = None
+    if params:
+        matching = _matching_ids(doc_type, params, TRACKS_CANDIDATES_MAX)
+        if matching is not None:
+            document_ids = (
+                matching
+                if document_ids is None
+                else [i for i in matching if i in document_ids]
+            )
+    filtered = matching is not None
+
+    # What has a track in the bbox comes from the database, the ids only. The
+    # search index then filters them, unless it already did, or there are no
+    # filters. Without that second step, the answer is known from the first
+    # `tracks_limit() + 1` ids.
+    needs_filter = bool(params) and not filtered
+    cap = TRACKS_CANDIDATES_MAX if needs_filter else tracks_limit()
+    document_ids = get_track_ids(model, bbox, cap, document_ids=document_ids)
+    if len(document_ids) > cap:
         return {'documents': [], 'truncated': True}
-    # without filters, the search index has nothing to say
-    if params and document_ids:
+    if needs_filter and document_ids:
         document_ids = _filtered_ids(doc_type, params, document_ids)
     if len(document_ids) > tracks_limit():
         return {'documents': [], 'truncated': True}
 
     fields = tuple(field for field in TRACK_FIELDS if hasattr(model, field))
     tolerance, decimals = _simplification(bbox)
-    rows = get_tracks(model, document_ids, tolerance, decimals, fields)
+    rows = get_tracks(model, document_ids, tolerance, decimals, fields, bbox)
     titles = _titles_by_document_id(
         locale_model, [row.document_id for row in rows], lang
     )

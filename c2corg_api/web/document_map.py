@@ -53,6 +53,8 @@ def include(app):
         ('routes', ROUTE_TYPE, routes_heatmap, routes_tracks),
     ):
         parameters = search_filter_parameters(doc_type)
+        # described in the OpenAPI document (see web.openapi)
+        heatmap.described = tracks.described = True
         app.add_api_route(
             f'/{prefix}/map/heatmap',
             heatmap,

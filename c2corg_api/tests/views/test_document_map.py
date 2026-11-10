@@ -393,11 +393,54 @@ def test_outings_tracks_truncated(client, tracks):
 
 
 def test_outings_tracks_truncated_by_candidates(client, tracks):
+    # filters that match many documents: the database candidates are capped
     with patch('c2corg_api.views.document_map.TRACKS_CANDIDATES_MAX', 1):
-        body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+        url = f'/outings/map/tracks?bbox={BBOX}&act=hiking'
+        body = client.get(url, status=200).json
 
     assert body['truncated']
     assert body['documents'] == []
+
+
+def test_outings_tracks_with_selective_filters_beat_the_cap(client, tracks):
+    # a filter that matches few documents (the outings of a route) is
+    # answered from them, however many tracks there are in the view
+    outing, route = tracks
+    with patch('c2corg_api.views.document_map.TRACKS_CANDIDATES_MAX', 1):
+        url = f'/outings/map/tracks?bbox={BBOX}&r={route.document_id}'
+        body = client.get(url, status=200).json
+
+    assert not body['truncated']
+    assert [o['document_id'] for o in body['documents']] == [outing.document_id]
+
+
+def test_outings_tracks_without_filters_stop_at_the_limit(client, tracks):
+    # no search index, and no need to look at more than `limit + 1` tracks
+    with patch('c2corg_api.views.document_map.TRACKS_CANDIDATES_MAX', 1):
+        body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+
+    assert not body['truncated']
+    assert len(body['documents']) == 3
+
+
+def test_a_track_next_to_the_view_is_not_returned(client, session):
+    # the box of the track crosses the view, the track does not
+    session.add(
+        _outing(
+            'Diagonal',
+            ['hiking'],
+            1,
+            'SRID=3857;POINT(635000 5723000)',
+            'SRID=3857;LINESTRING(635000 5723000, 636000 5724000)',
+        )
+    )
+    session.flush()
+    reset_search_index(session)
+
+    body = client.get('/outings/map/tracks?bbox=635700,5723000,636000,5723300').json
+
+    assert body['documents'] == []
+    assert not body['truncated']
 
 
 def test_outings_tracks_count_only_the_documents_with_a_track(client, tracks):
