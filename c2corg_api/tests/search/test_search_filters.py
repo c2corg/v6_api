@@ -9,7 +9,7 @@ from elasticsearch_dsl.query import (
     Terms,
 )
 
-from c2corg_api.search import create_search, get_text_query_on_title
+from c2corg_api.search import SCORE_SORT, create_search, get_text_query_on_title
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
@@ -28,6 +28,7 @@ def test_build_query():
     expected_query = (
         create_search('w')
         .query(get_text_query_on_title('search word'))
+        .sort(*SCORE_SORT)
         .filter(Term(available_locales='fr'))
         .filter(Terms(areas=[1234, 4567]))
         .filter(Range(elevation={'gte': 1500}))
@@ -48,6 +49,7 @@ def test_build_query_bbox():
     expected_query = (
         create_search('w')
         .query(get_text_query_on_title('search word'))
+        .sort(*SCORE_SORT)
         .filter(Range(elevation={'gte': 1500}))
         .filter(
             GeoBoundingBox(
@@ -73,6 +75,7 @@ def test_build_query_limit_offset():
     expected_query = (
         create_search('w')
         .query(get_text_query_on_title('search word'))
+        .sort(*SCORE_SORT)
         .fields([])
         .extra(from_=40, size=20)
     )

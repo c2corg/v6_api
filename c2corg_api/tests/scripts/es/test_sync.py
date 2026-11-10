@@ -8,13 +8,14 @@ from sqlalchemy import event
 from c2corg_api.models import es_sync
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
-from c2corg_api.models.es_sync import ESDeletedLocale
+from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import (
+    SYNC_OVERLAP,
     create_search_documents,
     get_changed_documents,
     get_changed_documents_for_associations,
@@ -25,6 +26,7 @@ from c2corg_api.scripts.es.sync import (
     get_documents_per_type,
     sync_deleted_documents,
     sync_documents,
+    sync_es,
 )
 from c2corg_api.tests import global_userids
 from c2corg_api.views.document import create_new_version
@@ -384,6 +386,32 @@ def test_sync_deleted_documents(mock, session, docs):
 
     outing_doc = _get_by_id(search_documents, docs.outing1.document_id)
     assert outing_doc['_op_type'] == 'delete'
+
+
+@pytest.mark.parametrize(
+    ('age', 'synced'),
+    [
+        (datetime.timedelta(minutes=1), True),
+        (SYNC_OVERLAP + datetime.timedelta(minutes=1), False),
+    ],
+)
+@patch('c2corg_api.scripts.es.sync.ElasticBatch')
+def test_sync_es_reads_late_commits(mock, session, docs, age, synced):
+    """Sync a change committed after the last sync with an older timestamp."""
+    # a deletion whose transaction started before the last sync and committed
+    # after it: its `deleted_at` is older than `last_update`
+    search_documents = []
+    mock.side_effect = _create_mock_match(search_documents)
+    last_update, _ = es_sync.get_status(session)
+    session.add(
+        ESDeletedDocument(document_id=987654, type='w', deleted_at=last_update - age)
+    )
+    session.flush()
+
+    sync_es(session)
+
+    deleted = _get_by_id(search_documents, 987654)
+    assert (deleted is not None and deleted['_op_type'] == 'delete') is synced
 
 
 def _get_by_id(search_documents, document_id):

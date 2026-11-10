@@ -93,6 +93,11 @@ def create_search(document_type):
 _WORD_RE = re.compile(r'\w+', re.UNICODE)
 
 
+# sort of a full-text search: relevance first, then the id to break the ties
+# between documents with the same score, so that paging is stable
+SCORE_SORT = ({'_score': {'order': 'desc'}}, {'id': {'order': 'desc'}})
+
+
 def get_text_query_on_title(search_term, search_lang=None):
     fields = []
 

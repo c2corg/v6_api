@@ -16,7 +16,12 @@ from elasticsearch_dsl.query import (
 from pyproj import Transformer
 
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.search import create_search, get_text_query_on_title, search_documents
+from c2corg_api.search import (
+    SCORE_SORT,
+    create_search,
+    get_text_query_on_title,
+    search_documents,
+)
 from c2corg_api.search.mapping_types import reserved_query_fields
 
 log = logging.getLogger(__name__)
@@ -52,9 +57,12 @@ def build_query(url_params, meta_params, doc_type):
     if url_params.get('sort'):
         keys_to_sort = url_params.get('sort').split(',')
         search = search.sort(*keys_to_sort)
-    elif not search_term:
-        # if a search term is given, the documents are sorted by a relevance
-        # score. if not explicitly sort by id/date.
+    elif search_term:
+        # sort by relevance score. Many documents share a title and so a
+        # score: the id breaks the ties, otherwise their order changes
+        # between requests and paging skips or repeats documents.
+        search = search.sort(*SCORE_SORT)
+    else:
         if doc_type == OUTING_TYPE:
             search = search.sort(
                 {'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}}
