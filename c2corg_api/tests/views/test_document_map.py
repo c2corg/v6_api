@@ -12,6 +12,7 @@ from c2corg_api.views.document_map import (
     _geohash_center,
     _heatmap_precision,
     _lon_lat_to_3857,
+    tracks_overlay_enabled,
 )
 
 BBOX = '635000,5723000,637000,5724000'
@@ -360,3 +361,58 @@ def test_routes_tracks_filtered_by_empty_ids(client, routes):
     body = client.get(f'/routes/map/tracks?bbox={BBOX}&ids=', status=200).json
 
     assert body['documents'] == []
+
+
+@pytest.mark.parametrize('value', [None, '', 'true', 'TRUE', '1', 'yes', 'on', 'oui'])
+def test_tracks_overlay_enabled(monkeypatch, value):
+    if value is None:
+        monkeypatch.delenv('TRACKS_OVERLAY_ENABLED', raising=False)
+    else:
+        monkeypatch.setenv('TRACKS_OVERLAY_ENABLED', value)
+
+    assert tracks_overlay_enabled()
+
+
+@pytest.mark.parametrize(
+    'value', ['false', 'False', 'FALSE', ' false ', '0', 'no', 'off']
+)
+def test_tracks_overlay_disabled(monkeypatch, value):
+    monkeypatch.setenv('TRACKS_OVERLAY_ENABLED', value)
+
+    assert not tracks_overlay_enabled()
+
+
+@pytest.mark.parametrize(
+    'path',
+    [
+        '/outings/map/heatmap',
+        '/outings/map/tracks',
+        '/routes/map/heatmap',
+        '/routes/map/tracks',
+    ],
+)
+def test_overlays_turned_off(client, monkeypatch, path):
+    monkeypatch.setenv('TRACKS_OVERLAY_ENABLED', 'false')
+
+    # a 503 before anything else: not even the missing box is reported
+    response = client.get(path, status=503)
+
+    assert response.json['errors'][0]['name'] == 'Service Unavailable'
+
+
+def test_overlays_turned_off_do_not_search(client, monkeypatch):
+    monkeypatch.setenv('TRACKS_OVERLAY_ENABLED', 'false')
+
+    with patch('c2corg_api.views.document_map.build_query') as build_query:
+        client.get(f'/outings/map/tracks?bbox={BBOX}', status=503)
+        client.get(f'/routes/map/heatmap?bbox={BBOX}&zoom=8', status=503)
+
+    build_query.assert_not_called()
+
+
+def test_overlays_turned_on_again(client, monkeypatch):
+    monkeypatch.setenv('TRACKS_OVERLAY_ENABLED', 'false')
+    client.get(f'/outings/map/tracks?bbox={BBOX}', status=503)
+
+    monkeypatch.setenv('TRACKS_OVERLAY_ENABLED', 'true')
+    client.get(f'/outings/map/tracks?bbox={BBOX}', status=200)

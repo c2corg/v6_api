@@ -1,7 +1,9 @@
 import logging
 import math
+import os
 
 from c2corg_api.ext.wkb import geojson_from_wkbelement
+from c2corg_api.httpexceptions import HTTPServiceUnavailable
 from c2corg_api.models.document_map_queries import get_locales_for_documents, get_tracks
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
@@ -9,6 +11,13 @@ from c2corg_api.search.search_filters import build_query
 from c2corg_api.views import get_best_locale
 
 log = logging.getLogger(__name__)
+
+# The environment variable that turns the map overlays off (the four endpoints
+# answer 503 without touching the database nor the search index), when they
+# load the servers too much. Read at each request: the value of the container
+# is the one that counts.
+TRACKS_OVERLAY_ENV = 'TRACKS_OVERLAY_ENABLED'
+TRACKS_OVERLAY_OFF_VALUES = ('false', '0', 'no', 'off')
 
 # above this number of individual tracks in a bbox, the tracks endpoints
 # report "too many results" instead of returning a partial list
@@ -292,6 +301,19 @@ def get_heatmap_response(doc_type, request):
 #   If more than `TRACKS_LIMIT_MAX` documents intersect the bbox, an empty,
 #   `"truncated": true` response is returned instead of a silently
 #   incomplete list, so that the frontend can prompt the user to zoom in.
+
+
+def tracks_overlay_enabled():
+    """Tell whether the map overlays are on (they are unless turned off)."""
+    value = os.environ.get(TRACKS_OVERLAY_ENV, '')
+    return value.strip().lower() not in TRACKS_OVERLAY_OFF_VALUES
+
+
+def validate_tracks_overlay_enabled(request, **kwargs):
+    """Refuse the request with a 503 when the overlays are turned off."""
+    # the first validator: nothing else is worth doing then
+    if not tracks_overlay_enabled():
+        raise HTTPServiceUnavailable('the map overlays are turned off')
 
 
 def read_outings_heatmap(request):

@@ -15,6 +15,7 @@ from c2corg_api.views.document_map import (
     read_outings_tracks,
     read_routes_heatmap,
     read_routes_tracks,
+    validate_tracks_overlay_enabled,
 )
 from c2corg_api.views.validation import (
     validate_bbox,
@@ -87,7 +88,10 @@ def include(app):
 def outings_heatmap(request: Request, user: User, bbox: Bbox = None, zoom: Zoom = None):
     """Return the density of the outings in a box."""
     return serve_read(
-        request, user, [validate_bbox, validate_zoom], read_outings_heatmap
+        request,
+        user,
+        [validate_tracks_overlay_enabled, validate_bbox, validate_zoom],
+        read_outings_heatmap,
     )
 
 
@@ -98,7 +102,11 @@ def outings_tracks(
     return serve_read(
         request,
         user,
-        [validate_bbox, validate_preferred_lang_param],
+        [
+            validate_tracks_overlay_enabled,
+            validate_bbox,
+            validate_preferred_lang_param,
+        ],
         read_outings_tracks,
     )
 
@@ -106,7 +114,10 @@ def outings_tracks(
 def routes_heatmap(request: Request, user: User, bbox: Bbox = None, zoom: Zoom = None):
     """Return the density of the routes in a box."""
     return serve_read(
-        request, user, [validate_bbox, validate_zoom], read_routes_heatmap
+        request,
+        user,
+        [validate_tracks_overlay_enabled, validate_bbox, validate_zoom],
+        read_routes_heatmap,
     )
 
 
@@ -117,6 +128,10 @@ def routes_tracks(
     return serve_read(
         request,
         user,
-        [validate_bbox, validate_preferred_lang_param],
+        [
+            validate_tracks_overlay_enabled,
+            validate_bbox,
+            validate_preferred_lang_param,
+        ],
         read_routes_tracks,
     )
