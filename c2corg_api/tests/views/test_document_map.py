@@ -14,6 +14,7 @@ from c2corg_api.views.document_map import (
     _geohash_center,
     _heatmap_precision,
     _lon_lat_to_3857,
+    tracks_limit,
     tracks_overlay_enabled,
 )
 
@@ -302,6 +303,43 @@ def test_outings_tracks_filtered_by_several_routes(client, session, user_ids, tr
         'Hike 1',
         'Ski tour',
     }
+
+
+@pytest.mark.parametrize(
+    ('value', 'limit'),
+    [
+        (None, 100),
+        ('', 100),
+        ('250', 250),
+        (' 250 ', 250),
+        ('1', 1),
+        ('0', 100),
+        ('-5', 100),
+        ('many', 100),
+        ('2.5', 100),
+        ('100000', 500),
+    ],
+)
+def test_tracks_limit(monkeypatch, value, limit):
+    if value is None:
+        monkeypatch.delenv('TRACKS_OVERLAY_MAX_TRACKS', raising=False)
+    else:
+        monkeypatch.setenv('TRACKS_OVERLAY_MAX_TRACKS', value)
+
+    assert tracks_limit() == limit
+
+
+def test_outings_tracks_limit_from_the_environment(client, monkeypatch, tracks):
+    url = f'/outings/map/tracks?bbox={BBOX}'
+
+    monkeypatch.setenv('TRACKS_OVERLAY_MAX_TRACKS', '2')
+    assert client.get(url, status=200).json['truncated']
+
+    # 3 tracks cross the box
+    monkeypatch.setenv('TRACKS_OVERLAY_MAX_TRACKS', '3')
+    body = client.get(url, status=200).json
+    assert not body['truncated']
+    assert len(body['documents']) == 3
 
 
 def test_outings_tracks_truncated(client, tracks):

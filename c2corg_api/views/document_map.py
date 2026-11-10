@@ -18,10 +18,15 @@ log = logging.getLogger(__name__)
 TRACKS_OVERLAY_ENV = 'TRACKS_OVERLAY_ENABLED'
 TRACKS_OVERLAY_OFF_VALUES = ('false', '0', 'no', 'off')
 
-# above this number of tracks in a bbox, the tracks endpoints report "too many
+# Above this number of tracks in a bbox, the tracks endpoints report "too many
 # results" (and the map shows their density) instead of returning a partial
-# list
+# list. This is the default: the environment variable TRACKS_OVERLAY_MAX_TRACKS
+# changes it without a new release, once the answers of a real server say how
+# many a view can afford.
 TRACKS_LIMIT_MAX = 100
+TRACKS_LIMIT_ENV = 'TRACKS_OVERLAY_MAX_TRACKS'
+# whatever the variable says: the answers would be too heavy
+TRACKS_LIMIT_CEILING = 500
 
 # maximum number of documents with a track in the bbox that are looked at
 # (only their ids are read, and sent to the search index when filters are
@@ -264,7 +269,7 @@ def get_tracks_response(doc_type, model, locale_model, request):
     # without filters, the search index has nothing to say
     if params and document_ids:
         document_ids = _filtered_ids(doc_type, params, document_ids)
-    if len(document_ids) > TRACKS_LIMIT_MAX:
+    if len(document_ids) > tracks_limit():
         return {'documents': [], 'truncated': True}
 
     fields = tuple(field for field in TRACK_FIELDS if hasattr(model, field))
@@ -324,9 +329,25 @@ def get_heatmap_response(doc_type, request):
 #   The tracks are in 2D and simplified for the screen (the track in the
 #   database is not changed: the page of the document gives it as it is).
 #
-#   If more than `TRACKS_LIMIT_MAX` tracks cross the bbox, an empty,
+#   If more than `tracks_limit()` tracks cross the bbox, an empty,
 #   `"truncated": true` response is returned instead of a silently
 #   incomplete list: the frontend can ask the heatmap of the same bbox.
+
+
+def tracks_limit():
+    """Return the number of tracks above which a bbox has "too many" of them.
+
+    It is `TRACKS_LIMIT_MAX` unless `TRACKS_OVERLAY_MAX_TRACKS` is a positive
+    integer, and never more than `TRACKS_LIMIT_CEILING`. Read at each request,
+    as the variable that turns the overlays off.
+    """
+    try:
+        value = int(os.environ.get(TRACKS_LIMIT_ENV, ''))
+    except ValueError:
+        return TRACKS_LIMIT_MAX
+    if value < 1:
+        return TRACKS_LIMIT_MAX
+    return min(value, TRACKS_LIMIT_CEILING)
 
 
 def tracks_overlay_enabled():
