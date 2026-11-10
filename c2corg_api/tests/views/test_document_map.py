@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from unittest.mock import patch
 
@@ -7,6 +8,7 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.search.search_filters import build_query
 from c2corg_api.tests.search import reset_search_index
 from c2corg_api.views.document_map import (
     _geohash_center,
@@ -62,25 +64,27 @@ def test_lon_lat_to_3857():
     assert _lon_lat_to_3857(180, 0)[0] == pytest.approx(20037508.34, abs=0.1)
 
 
+def _viewport(zoom, y=5700000):
+    """Return the bbox of a map 680 pixels wide at the zoom (Alps latitude)."""
+    width = 680 * 156543.03 / 2**zoom
+    return (0, y - width / 2, width, y + width / 2)
+
+
 @pytest.mark.parametrize(
     ('zoom', 'precision'),
-    [
-        (0, 2),
-        (3, 3),
-        (4, 4),
-        (5, 4),
-        (6, 5),
-        (8, 5),
-        (9, 6),
-        (10, 6),
-        (11, 7),
-        (13, 7),
-        (14, 8),
-        (30, 8),
-    ],
+    [(3, 4), (4, 4), (6, 5), (8, 6), (11, 7), (13, 8), (16, 9), (18, 9)],
 )
-def test_heatmap_precision(zoom, precision):
-    assert _heatmap_precision(zoom) == precision
+def test_heatmap_precision_follows_the_box(zoom, precision):
+    # cells of a few pixels whatever the zoom: finer cells for a smaller box
+    assert _heatmap_precision(_viewport(zoom)) == precision
+
+
+def test_heatmap_precision_is_bounded():
+    world = (-20037508, -20037508, 20037508, 20037508)
+
+    # the whole world cannot be asked in fine cells
+    assert _heatmap_precision(world) == 3
+    assert _heatmap_precision((0, 5700000, 100, 5700100)) == 9
 
 
 @pytest.fixture
@@ -101,46 +105,57 @@ def _count(response):
 
 
 def test_outings_heatmap_missing_bbox(client):
-    response = client.get('/outings/map/heatmap?zoom=8', status=400)
+    response = client.get('/outings/map/heatmap', status=400)
 
     assert 'bbox' in _error_names(response)
 
 
-def test_outings_heatmap_missing_zoom(client):
-    response = client.get(f'/outings/map/heatmap?bbox={BBOX}', status=400)
-
-    assert 'zoom' in _error_names(response)
-
-
 def test_outings_heatmap_invalid_bbox(client):
-    response = client.get('/outings/map/heatmap?bbox=1,2,3&zoom=8', status=400)
+    response = client.get('/outings/map/heatmap?bbox=1,2,3', status=400)
 
     assert 'bbox' in _error_names(response)
 
 
 def test_outings_heatmap(client, outings):
-    response = client.get(f'/outings/map/heatmap?bbox={BBOX}&zoom=8', status=200)
+    response = client.get(f'/outings/map/heatmap?bbox={BBOX}', status=200)
 
     # only the 3 outings within the bbox are counted, not the one at (0, 0)
     assert _count(response) == 3
 
 
 def test_outings_heatmap_zoomed_in(client, outings):
-    response = client.get(f'/outings/map/heatmap?bbox={BBOX}&zoom=16', status=200)
+    # a small box, so fine cells
+    bbox = '635900,5723550,636000,5723650'
+    response = client.get(f'/outings/map/heatmap?bbox={bbox}', status=200)
 
     assert _count(response) == 3
     # whole meters
     assert all(isinstance(bucket['x'], int) for bucket in response.json['buckets'])
 
 
+def test_outings_heatmap_beyond_the_world(client, outings):
+    # a map zoomed out far shows more than the world of the projection
+    bbox = '-30000000,-30000000,30000000,30000000'
+    response = client.get(f'/outings/map/heatmap?bbox={bbox}', status=200)
+
+    assert _count(response) == 4
+
+
+def test_outings_heatmap_still_accepts_zoom(client, outings):
+    # the parameter of the first version: ignored, not a filter
+    response = client.get(f'/outings/map/heatmap?bbox={BBOX}&zoom=8', status=200)
+
+    assert _count(response) == 3
+
+
 def test_outings_heatmap_filtered_by_activity(client, outings):
-    url = f'/outings/map/heatmap?bbox={BBOX}&zoom=8&act=skitouring'
+    url = f'/outings/map/heatmap?bbox={BBOX}&act=skitouring'
 
     assert _count(client.get(url, status=200)) == 1
 
 
 def test_outings_heatmap_filtered_by_date(client, outings):
-    url = f'/outings/map/heatmap?bbox={BBOX}&zoom=8&date=2016-01-01,2016-01-02'
+    url = f'/outings/map/heatmap?bbox={BBOX}&date=2016-01-01,2016-01-02'
 
     assert _count(client.get(url, status=200)) == 2
 
@@ -272,6 +287,113 @@ def test_outings_tracks_truncated_by_candidates(client, tracks):
     assert body['documents'] == []
 
 
+def test_outings_tracks_count_only_the_documents_with_a_track(client, tracks):
+    # 4 outings are around, one has no track: 3 are looked at
+    with patch('c2corg_api.views.document_map.TRACKS_CANDIDATES_MAX', 3):
+        body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+
+    assert not body['truncated']
+    assert len(body['documents']) == 3
+
+
+def test_outings_tracks_do_not_search_without_filters(client, tracks):
+    with patch(
+        'c2corg_api.views.document_map.build_query', wraps=build_query
+    ) as search:
+        client.get(f'/outings/map/tracks?bbox={BBOX}&pl=fr', status=200)
+        search.assert_not_called()
+
+        client.get(f'/outings/map/tracks?bbox={BBOX}&act=hiking', status=200)
+        search.assert_called_once()
+
+
+def test_outings_tracks_found_by_their_track_not_by_their_point(client, tracks):
+    # the point of "Long hike" is out of this box, its track crosses it
+    bbox = '635400,5723400,635600,5723600'
+    body = client.get(f'/outings/map/tracks?bbox={bbox}', status=200).json
+
+    assert [o['title'] for o in body['documents']] == ['Long hike']
+
+
+@pytest.fixture
+def long_tracks(session):
+    """Add outings whose tracks have many points, in 3D, and a bend."""
+    line = ', '.join(
+        f'{635000 + i} {5723000 + i // 2} {1000 + i}' for i in range(0, 2000, 4)
+    )
+    session.add(
+        _outing(
+            'Straight',
+            ['hiking'],
+            1,
+            'SRID=3857;POINT(635000 5723000)',
+            f'SRID=3857;LINESTRING({line})',
+        )
+    )
+    session.add(
+        _outing(
+            'Bend',
+            ['hiking'],
+            2,
+            'SRID=3857;POINT(635000 5723000)',
+            'SRID=3857;LINESTRING(635000 5723000, 635500 5723400, 636000 5723000)',
+        )
+    )
+    session.flush()
+    reset_search_index(session)
+
+
+def test_outings_tracks_are_simplified_and_in_2d(client, long_tracks):
+    body = client.get('/outings/map/tracks?bbox=634000,5722000,637000,5725000').json
+    tracks = {
+        o['title']: json.loads(o['geometry']['geom_detail']) for o in body['documents']
+    }
+
+    # 500 points on a straight line: its ends
+    assert len(tracks['Straight']['coordinates']) == 2
+    assert tracks['Straight']['coordinates'][0] == [635000, 5723000]
+    # what is a bend of the track stays
+    assert len(tracks['Bend']['coordinates']) == 3
+    # no elevation, no CRS, whole meters for a box of this size
+    assert all(len(point) == 2 for point in tracks['Bend']['coordinates'])
+    assert 'crs' not in tracks['Bend']
+    assert all(isinstance(value, int) for value in tracks['Bend']['coordinates'][1])
+
+
+@pytest.fixture
+def wiggle(session):
+    """Add an outing whose track has a bend of 8 meters."""
+    # (the database already simplifies the tracks of routes and outings by 5 m
+    # when it saves them, see simplify_geom_detail: the bend is more than that)
+    session.add(
+        _outing(
+            'Wiggle',
+            ['hiking'],
+            1,
+            'SRID=3857;POINT(635100 5723000)',
+            'SRID=3857;LINESTRING(635000 5723000, 635100 5723008, 635200 5723000)',
+        )
+    )
+    session.flush()
+    reset_search_index(session)
+
+
+def _wiggle_points(client, bbox):
+    body = client.get(f'/outings/map/tracks?bbox={bbox}', status=200).json
+    return json.loads(body['documents'][0]['geometry']['geom_detail'])['coordinates']
+
+
+def test_tracks_are_simplified_for_the_size_of_the_box(client, wiggle):
+    # about a pixel of the map: a bend of 8 m is nothing for a box of 13.5 km
+    # (9 m), but is seen in one of 600 m (0.4 m, and a decimal)
+    assert len(_wiggle_points(client, '628000,5716000,641500,5729500')) == 2
+    assert _wiggle_points(client, '634900,5722900,635500,5723100') == [
+        [635000, 5723000],
+        [635100, 5723008],
+        [635200, 5723000],
+    ]
+
+
 @pytest.fixture
 def routes(session):
     """Add two routes with a track in the box and one far away."""
@@ -307,13 +429,13 @@ def routes(session):
 
 
 def test_routes_heatmap(client, routes):
-    response = client.get(f'/routes/map/heatmap?bbox={BBOX}&zoom=8', status=200)
+    response = client.get(f'/routes/map/heatmap?bbox={BBOX}', status=200)
 
     assert _count(response) == 2
 
 
 def test_routes_heatmap_filtered_by_activity(client, routes):
-    url = f'/routes/map/heatmap?bbox={BBOX}&zoom=8&act=skitouring'
+    url = f'/routes/map/heatmap?bbox={BBOX}&act=skitouring'
 
     assert _count(client.get(url, status=200)) == 1
 
@@ -405,7 +527,7 @@ def test_overlays_turned_off_do_not_search(client, monkeypatch):
 
     with patch('c2corg_api.views.document_map.build_query') as build_query:
         client.get(f'/outings/map/tracks?bbox={BBOX}', status=503)
-        client.get(f'/routes/map/heatmap?bbox={BBOX}&zoom=8', status=503)
+        client.get(f'/routes/map/heatmap?bbox={BBOX}', status=503)
 
     build_query.assert_not_called()
 

@@ -23,7 +23,7 @@ class TestMapOverlays:
     @contract(OUTINGS_HEATMAP, ROUTES_HEATMAP)
     def test_heatmap(self, browser, searchable):
         for kind in ('outings', 'routes'):
-            response = browser.get(f'/{kind}/map/heatmap?bbox={WORLD}&zoom=3')
+            response = browser.get(f'/{kind}/map/heatmap?bbox={WORLD}')
             check_snapshot(f'{kind}_map_heatmap', response)
             assert response.json['buckets']
 
@@ -37,7 +37,7 @@ class TestMapOverlays:
     @contract(OUTINGS_HEATMAP, ROUTES_HEATMAP, OUTINGS_TRACKS, ROUTES_TRACKS)
     def test_missing_box(self, browser):
         for kind in ('outings', 'routes'):
-            for path in ('heatmap?zoom=3', 'tracks'):
+            for path in ('heatmap', 'tracks'):
                 response = browser.get(f'/{kind}/map/{path}', status=400)
                 check_snapshot(f'{kind}_map_{path.split("?")[0]}_no_bbox', response)
 

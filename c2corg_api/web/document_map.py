@@ -20,7 +20,6 @@ from c2corg_api.views.document_map import (
 from c2corg_api.views.validation import (
     validate_bbox,
     validate_preferred_lang_param,
-    validate_zoom,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.handlers import serve_read
@@ -32,13 +31,6 @@ User = Annotated[CurrentUser | None, Depends(current_user)]
 Bbox = Annotated[
     described({'type': 'string'}),
     Query(description='The box: `xmin,ymin,xmax,ymax`, in EPSG:3857.'),
-]
-Zoom = Annotated[
-    described({'type': 'integer'}),
-    Query(
-        description='The zoom level of the map: it sets the size of the cells '
-        'of the density.'
-    ),
 ]
 PreferredLang = Annotated[
     Lang | None,
@@ -67,7 +59,7 @@ def include(app):
             operation_id=heatmap.__name__,
             summary=f'The density of the {prefix} in a box.',
             description='Buckets `{x, y, count}` (EPSG:3857) of a grid whose '
-            f'cells depend on the zoom, for a heatmap. {FILTERS}',
+            f'cells depend on the size of the box, for a heatmap. {FILTERS}',
             tags=[prefix],
             openapi_extra={'parameters': parameters},
         )
@@ -85,12 +77,12 @@ def include(app):
         )
 
 
-def outings_heatmap(request: Request, user: User, bbox: Bbox = None, zoom: Zoom = None):
+def outings_heatmap(request: Request, user: User, bbox: Bbox = None):
     """Return the density of the outings in a box."""
     return serve_read(
         request,
         user,
-        [validate_tracks_overlay_enabled, validate_bbox, validate_zoom],
+        [validate_tracks_overlay_enabled, validate_bbox],
         read_outings_heatmap,
     )
 
@@ -111,12 +103,12 @@ def outings_tracks(
     )
 
 
-def routes_heatmap(request: Request, user: User, bbox: Bbox = None, zoom: Zoom = None):
+def routes_heatmap(request: Request, user: User, bbox: Bbox = None):
     """Return the density of the routes in a box."""
     return serve_read(
         request,
         user,
-        [validate_tracks_overlay_enabled, validate_bbox, validate_zoom],
+        [validate_tracks_overlay_enabled, validate_bbox],
         read_routes_heatmap,
     )
 

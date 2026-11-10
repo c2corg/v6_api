@@ -2,9 +2,8 @@ import logging
 import math
 import os
 
-from c2corg_api.ext.wkb import geojson_from_wkbelement
 from c2corg_api.httpexceptions import HTTPServiceUnavailable
-from c2corg_api.models.document_map_queries import get_locales_for_documents, get_tracks
+from c2corg_api.models.document_map_queries import get_titles, get_track_ids, get_tracks
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.search.search_filters import build_query
@@ -19,39 +18,52 @@ log = logging.getLogger(__name__)
 TRACKS_OVERLAY_ENV = 'TRACKS_OVERLAY_ENABLED'
 TRACKS_OVERLAY_OFF_VALUES = ('false', '0', 'no', 'off')
 
-# above this number of individual tracks in a bbox, the tracks endpoints
-# report "too many results" instead of returning a partial list
+# above this number of tracks in a bbox, the tracks endpoints report "too many
+# results" (and the map shows their density) instead of returning a partial
+# list
 TRACKS_LIMIT_MAX = 100
 
-# maximum number of candidate documents asked to ElasticSearch for the
-# tracks endpoints (the bbox is then applied again on the actual tracks)
-TRACKS_CANDIDATES_MAX = 1000
+# maximum number of documents with a track in the bbox that are looked at
+# (only their ids are read, and sent to the search index when filters are
+# given)
+TRACKS_CANDIDATES_MAX = 5000
+
+# The tracks are simplified by the database: the points of a line that are not
+# more than `bbox width / TRACKS_SIMPLIFY_DIVISOR` meters from it are dropped,
+# about a pixel of the map for a typical viewport.
+TRACKS_SIMPLIFY_DIVISOR = 1500
 
 # the most populated cells of the grid that are kept (the answer would be too
 # big otherwise)
 HEATMAP_BUCKETS_MAX = 5000
 
-# geohash length (cell size) used for the heatmap, indexed by the lowest map
-# zoom level it applies to: ~1250km, 156km, 39km, 4.9km, 1.2km, 150m and 38m
-# cells. Meant to give cells of a few pixels on the screen (the heatmap blurs
-# them): a coarser grid makes blobs.
-HEATMAP_PRECISION_BY_MIN_ZOOM = (
-    (0, 2),
-    (3, 3),
-    (4, 4),
-    (6, 5),
-    (9, 6),
-    (11, 7),
-    (14, 8),
-)
+# The cells of the heatmap: about this many across the bbox, which the map
+# blurs. The size of the cells comes from the bbox, never from the client: a
+# fine grid cannot be asked over a large area.
+HEATMAP_CELLS_ACROSS = 330
 
-# radius of the sphere used by EPSG:3857 (meters)
+# the width of a geohash cell, by length of the geohash, at the equator (meters)
+GEOHASH_CELL_WIDTH = {
+    2: 1252300,
+    3: 156500,
+    4: 39100,
+    5: 4890,
+    6: 1220,
+    7: 152.9,
+    8: 38.2,
+    9: 4.77,
+}
+
+# radius of the sphere used by EPSG:3857 (meters), and half of the width of
+# the world in this projection
 WEB_MERCATOR_RADIUS = 6378137
+WORLD_EXTENT = 20037508.342789244
 
 GEOHASH_BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz'
 
-# url parameters that are not search filters
-NON_FILTER_PARAMS = ('zoom',)
+# url parameters that are not search filters (`ids` is read here, `zoom` was
+# the one of the first version of the heatmap)
+NON_FILTER_PARAMS = ('zoom', 'bbox', 'pl', 'ids')
 
 
 def _search_params(request):
@@ -61,30 +73,42 @@ def _search_params(request):
     match a search made from the listing.
     """
     return {
-        key: request.GET.get(key) for key in request.GET if key not in NON_FILTER_PARAMS
+        key: value
+        for key in request.GET
+        if key not in NON_FILTER_PARAMS and (value := request.GET.get(key))
     }
 
 
-def _expanded_bbox(bbox, ratio=0.5):
-    """Grow the bbox by `ratio` of its size on each side.
+def _document_ids(request):
+    """Return the ids given by `ids=1,2`, or None if there is no such parameter.
 
-    The search index only knows one point per document, whereas a track can
-    extend far away from this point.
+    An empty list matches nothing.
+    """
+    ids = request.GET.get('ids')
+    if ids is None:
+        return None
+    return [int(value) for value in ids.split(',') if value.isdigit()]
+
+
+def _heatmap_precision(bbox):
+    """Return the geohash length (the cell size) for a heatmap of the bbox.
+
+    Cells of a few pixels once on the screen, whatever the zoom: a coarser grid
+    makes blobs, and a finer one is useless and costly.
     """
     xmin, ymin, xmax, ymax = bbox
-    dx = (xmax - xmin) * ratio
-    dy = (ymax - ymin) * ratio
-    return xmin - dx, ymin - dy, xmax + dx, ymax + dy
+    latitude = math.degrees(
+        2 * math.atan(math.exp((ymin + ymax) / 2 / WEB_MERCATOR_RADIUS)) - math.pi / 2
+    )
+    # the cells shrink with the latitude, as the ground does in the projection
+    stretch = math.cos(math.radians(latitude))
+    wanted = (xmax - xmin) * stretch / HEATMAP_CELLS_ACROSS
 
-
-def _bbox_param(bbox):
-    return ','.join(str(value) for value in bbox)
-
-
-def _heatmap_precision(zoom):
-    precision = HEATMAP_PRECISION_BY_MIN_ZOOM[0][1]
-    for min_zoom, candidate in HEATMAP_PRECISION_BY_MIN_ZOOM:
-        if zoom >= min_zoom:
+    precision = min(GEOHASH_CELL_WIDTH)
+    for candidate, width in GEOHASH_CELL_WIDTH.items():
+        # a cell a bit smaller than wanted is fine (the cells go from one
+        # length to the next by a factor of 5 or 8)
+        if width * stretch >= wanted * 0.8:
             precision = candidate
     return precision
 
@@ -110,35 +134,25 @@ def _lon_lat_to_3857(lon, lat):
     return x, y
 
 
-def _build_search(doc_type, params, bbox, meta_params):
-    """Build the search query of the documents matching the filters in the bbox.
-
-    On top of the filters of the documents listing, an `ids=1,2` parameter
-    restricts the result to the given documents (an empty list matches
-    nothing).
-    """
-    params = dict(params, bbox=_bbox_param(bbox))
-    ids = params.pop('ids', None)
-
-    search = build_query(params, meta_params, doc_type)
-    if ids is not None:
-        search = search.filter(
-            'ids', values=[value for value in ids.split(',') if value.isdigit()]
-        )
-    return search
+def _bbox_param(bbox):
+    return ','.join(str(value) for value in bbox)
 
 
-def get_heatmap(doc_type, params, bbox, zoom):
+def get_heatmap(doc_type, params, bbox, document_ids):
     """Return the density buckets (`{x, y, count}` in EPSG:3857).
 
     They are those of the documents matching the search filters in the bbox.
     """
-    search = _build_search(doc_type, params, bbox, {'limit': 0, 'offset': 0})
+    search = build_query(
+        dict(params, bbox=_bbox_param(bbox)), {'limit': 0, 'offset': 0}, doc_type
+    )
+    if document_ids is not None:
+        search = search.filter('ids', values=document_ids)
     search.aggs.bucket(
         'density',
         'geohash_grid',
         field='geom',
-        precision=_heatmap_precision(zoom),
+        precision=_heatmap_precision(bbox),
         size=HEATMAP_BUCKETS_MAX,
     )
     response = search.execute()
@@ -152,26 +166,17 @@ def get_heatmap(doc_type, params, bbox, zoom):
     return {'buckets': buckets}
 
 
-def get_track_candidates(doc_type, params, bbox):
-    """Return `(document_ids, truncated)` for the documents matching the filters.
-
-    The documents are searched around the given bbox. `truncated` is set when
-    there are more candidates than what is asked to the search index.
-    """
-    search = _build_search(
-        doc_type,
-        params,
-        _expanded_bbox(bbox),
-        {'limit': TRACKS_CANDIDATES_MAX, 'offset': 0},
-    )
-    response = search.execute()
-    document_ids = [int(doc.meta.id) for doc in response]
-    return document_ids, response.hits.total > len(document_ids)
+def _filtered_ids(doc_type, params, document_ids):
+    """Return those of the ids that match the search filters."""
+    # ids only, in any order: nothing is sorted nor read
+    search = build_query(params, {'limit': len(document_ids), 'offset': 0}, doc_type)
+    search = search.filter('ids', values=document_ids).sort()
+    return [int(doc.meta.id) for doc in search.execute()]
 
 
 def _titles_by_document_id(locale_model, document_ids, lang):
     locales_by_document = {}
-    for locale in get_locales_for_documents(locale_model, document_ids):
+    for locale in get_titles(locale_model, document_ids):
         locales_by_document.setdefault(locale.document_id, {})[locale.lang] = locale
 
     titles = {}
@@ -228,20 +233,43 @@ def _track_fields(row, fields):
     return values
 
 
+def _simplification(bbox):
+    """Return the `(tolerance, decimals)` of the tracks of a bbox.
+
+    The tolerance is about a pixel of the map, in meters, and the coordinates
+    have as many decimals as it needs.
+    """
+    tolerance = (bbox[2] - bbox[0]) / TRACKS_SIMPLIFY_DIVISOR
+    if tolerance >= 1:
+        decimals = 0
+    elif tolerance >= 0.1:
+        decimals = 1
+    else:
+        decimals = 2
+    return tolerance, decimals
+
+
 def get_tracks_response(doc_type, model, locale_model, request):
     params = _search_params(request)
     bbox = request.validated['bbox']
     lang = request.validated.get('lang')
 
-    document_ids, truncated = get_track_candidates(doc_type, params, bbox)
-    if truncated:
+    # What has a track in the bbox comes first, from the database: exactly,
+    # and only the ids. The search index then only has to filter them.
+    document_ids = get_track_ids(
+        model, bbox, TRACKS_CANDIDATES_MAX, document_ids=_document_ids(request)
+    )
+    if len(document_ids) > TRACKS_CANDIDATES_MAX:
+        return {'documents': [], 'truncated': True}
+    # without filters, the search index has nothing to say
+    if params and document_ids:
+        document_ids = _filtered_ids(doc_type, params, document_ids)
+    if len(document_ids) > TRACKS_LIMIT_MAX:
         return {'documents': [], 'truncated': True}
 
     fields = tuple(field for field in TRACK_FIELDS if hasattr(model, field))
-    rows = get_tracks(model, document_ids, bbox, TRACKS_LIMIT_MAX, fields)
-    if len(rows) > TRACKS_LIMIT_MAX:
-        return {'documents': [], 'truncated': True}
-
+    tolerance, decimals = _simplification(bbox)
+    rows = get_tracks(model, document_ids, tolerance, decimals, fields)
     titles = _titles_by_document_id(
         locale_model, [row.document_id for row in rows], lang
     )
@@ -252,7 +280,7 @@ def get_tracks_response(doc_type, model, locale_model, request):
                 'document_id': row.document_id,
                 'type': doc_type,
                 'title': titles.get(row.document_id),
-                'geometry': {'geom_detail': geojson_from_wkbelement(row.geom_detail)},
+                'geometry': {'geom_detail': row.geojson},
                 **_track_fields(row, fields),
             }
             for row in rows
@@ -266,31 +294,26 @@ def get_heatmap_response(doc_type, request):
         doc_type,
         _search_params(request),
         request.validated['bbox'],
-        request.validated['zoom'],
+        _document_ids(request),
     )
 
 
 # The heatmap routes (web/document_map.py) return a grid of density buckets for
-# the given bbox,
-# meant to feed a heatmap layer at low/medium map zoom levels.
+# the given bbox, meant to feed a heatmap layer.
 #
-#   `GET` `/{outings,routes}/map/heatmap?bbox=...&zoom=...[&<filters>]`
+#   `GET` `/{outings,routes}/map/heatmap?bbox=...[&<filters>]`
 #
-#   `bbox=xmin,ymin,xmax,ymax` (required, EPSG:3857)
-#
-#   `zoom=...` (required): the current map zoom level. Used server-side to
-#   pick a grid cell size, so that a client cannot request an arbitrarily
-#   fine-grained aggregation over a large area.
+#   `bbox=xmin,ymin,xmax,ymax` (required, EPSG:3857): the size of the cells
+#   comes from it, a few pixels once on the screen.
 #
 #   Any filter accepted by the documents listing (`act`, `r`, `date`, ...)
-#   restricts the heatmap accordingly.
+#   restricts the heatmap accordingly, and so does `ids=1,2`.
 #
 #   Response: `{"buckets": [{"x":.., "y":.., "count":..}]}`
 #   Coordinates are in EPSG:3857, matching the map's projection.
 #
 # The tracks routes return individual tracks for the given bbox, meant to
-# feed a vector layer at high map zoom levels (once the number of documents
-# in the viewport is bounded).
+# feed a vector layer once the number of tracks in the viewport is bounded.
 #
 #   `GET` `/{outings,routes}/map/tracks?bbox=...[&pl=...][&<filters>]`
 #
@@ -298,9 +321,12 @@ def get_heatmap_response(doc_type, request):
 #   "title":.., "geometry": {"geom_detail": "<geojson>"}}],
 #   "truncated": false}`
 #
-#   If more than `TRACKS_LIMIT_MAX` documents intersect the bbox, an empty,
+#   The tracks are in 2D and simplified for the screen (the track in the
+#   database is not changed: the page of the document gives it as it is).
+#
+#   If more than `TRACKS_LIMIT_MAX` tracks cross the bbox, an empty,
 #   `"truncated": true` response is returned instead of a silently
-#   incomplete list, so that the frontend can prompt the user to zoom in.
+#   incomplete list: the frontend can ask the heatmap of the same bbox.
 
 
 def tracks_overlay_enabled():

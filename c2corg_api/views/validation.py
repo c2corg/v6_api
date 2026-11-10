@@ -1,4 +1,5 @@
 import functools
+import math
 import urllib
 
 from dateutil import parser as datetime_parser
@@ -188,16 +189,16 @@ def validate_token_pagination(request, **kwargs):
     validate_token(request)
 
 
-def validate_zoom(request, **kwargs):
-    """Check that a required `zoom=...` integer query parameter is given."""
-    check_get_for_integer_property(request, 'zoom', True)
+# half of the width of the world in EPSG:3857 (meters)
+WORLD_EXTENT_3857 = 20037508.342789244
 
 
 def validate_bbox(request, **kwargs):
     """Check and parse a required `bbox=xmin,ymin,xmax,ymax` query parameter.
 
     The bbox is in EPSG:3857, stored into `request.validated['bbox']` as a
-    4-tuple of floats.
+    4-tuple of floats, cut to the extent of the world of this projection (a
+    map zoomed out far shows more of it, and it cannot be reprojected).
 
     This is distinct from `create_bbox_filter` in
     `c2corg_api.search.search_filters`, which parses the same shape of
@@ -222,6 +223,16 @@ def validate_bbox(request, **kwargs):
         request.errors.add('querystring', 'bbox', 'invalid bbox')
         return
 
+    if not all(math.isfinite(value) for value in (xmin, ymin, xmax, ymax)):
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    xmin, xmax = (
+        max(min(value, WORLD_EXTENT_3857), -WORLD_EXTENT_3857) for value in (xmin, xmax)
+    )
+    ymin, ymax = (
+        max(min(value, WORLD_EXTENT_3857), -WORLD_EXTENT_3857) for value in (ymin, ymax)
+    )
     if xmin >= xmax or ymin >= ymax:
         request.errors.add('querystring', 'bbox', 'invalid bbox')
         return
