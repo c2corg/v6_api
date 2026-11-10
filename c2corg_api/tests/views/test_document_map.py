@@ -271,6 +271,39 @@ def test_outings_tracks_filtered_by_route(client, tracks):
     assert [o['document_id'] for o in body['documents']] == [outing.document_id]
 
 
+def test_outings_tracks_filtered_by_several_routes(client, session, user_ids, tracks):
+    # an outing can be linked to several routes: the outings of any of them
+    outing1, route1 = tracks
+    ski_tour = (
+        session.query(Outing)
+        .filter(Outing.locales.any(OutingLocale.title == 'Ski tour'))
+        .one()
+    )
+    route2 = _route('Second route', ['hiking'], 'SRID=3857;POINT(635960 5723610)')
+    session.add(route2)
+    session.flush()
+    for route, outing in ((route2, ski_tour), (route2, outing1)):
+        association = Association.create(parent_document=route, child_document=outing)
+        session.add(association)
+        session.add(association.get_log(user_ids['contributor'], is_creation=True))
+    session.flush()
+    # the routes of "Hike 1" were read when the first route was linked
+    session.expire_all()
+    reset_search_index(session)
+
+    def titles(routes):
+        url = f'/outings/map/tracks?bbox={BBOX}&r={routes}'
+        return {o['title'] for o in client.get(url, status=200).json['documents']}
+
+    # "Long hike" has no route
+    assert titles(route2.document_id) == {'Hike 1', 'Ski tour'}
+    assert titles(route1.document_id) == {'Hike 1'}
+    assert titles(f'{route1.document_id},{route2.document_id}') == {
+        'Hike 1',
+        'Ski tour',
+    }
+
+
 def test_outings_tracks_truncated(client, tracks):
     with patch('c2corg_api.views.document_map.TRACKS_LIMIT_MAX', 1):
         body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
