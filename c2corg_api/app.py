@@ -21,6 +21,7 @@ from c2corg_api.web import (
     navitia,
     openapi,
     params,
+    route_suggestions,
     search,
     sitemaps,
     stopareas,
@@ -94,6 +95,7 @@ def create_fastapi_app(settings, registry=None):
     feeds.include(app)
     sitemaps.include(app)
     stopareas.include(app)
+    route_suggestions.include(app)
     misc.include(app)
     users.include(app)
     navitia.include(app)
