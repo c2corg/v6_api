@@ -15,6 +15,7 @@ from c2corg_api.views.document_map import (
     read_outings_tracks,
     read_routes_heatmap,
     read_routes_tracks,
+    validate_ids,
     validate_tracks_overlay_enabled,
 )
 from c2corg_api.views.validation import (
@@ -70,8 +71,9 @@ def include(app):
             operation_id=tracks.__name__,
             summary=f'The tracks of the {prefix} in a box.',
             description='The tracks (GeoJSON) of the documents crossing the box. '
-            'With more than 100 of them the answer is empty and `truncated` is '
-            f'set. {FILTERS} `ids` restricts the answer to some documents.',
+            'With too many of them (100 by default) the answer is empty and '
+            f'`truncated` is set. {FILTERS} `ids` restricts the answer to some '
+            'documents.',
             tags=[prefix],
             openapi_extra={'parameters': parameters},
         )
@@ -82,7 +84,7 @@ def outings_heatmap(request: Request, user: User, bbox: Bbox = None):
     return serve_read(
         request,
         user,
-        [validate_tracks_overlay_enabled, validate_bbox],
+        [validate_tracks_overlay_enabled, validate_bbox, validate_ids],
         read_outings_heatmap,
     )
 
@@ -97,6 +99,7 @@ def outings_tracks(
         [
             validate_tracks_overlay_enabled,
             validate_bbox,
+            validate_ids,
             validate_preferred_lang_param,
         ],
         read_outings_tracks,
@@ -108,7 +111,7 @@ def routes_heatmap(request: Request, user: User, bbox: Bbox = None):
     return serve_read(
         request,
         user,
-        [validate_tracks_overlay_enabled, validate_bbox],
+        [validate_tracks_overlay_enabled, validate_bbox, validate_ids],
         read_routes_heatmap,
     )
 
@@ -123,6 +126,7 @@ def routes_tracks(
         [
             validate_tracks_overlay_enabled,
             validate_bbox,
+            validate_ids,
             validate_preferred_lang_param,
         ],
         read_routes_tracks,

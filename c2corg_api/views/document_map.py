@@ -1,6 +1,7 @@
 import logging
 import math
 import os
+import re
 
 from c2corg_api.httpexceptions import HTTPServiceUnavailable
 from c2corg_api.models.document_map_queries import get_titles, get_track_ids, get_tracks
@@ -59,16 +60,16 @@ GEOHASH_CELL_WIDTH = {
     9: 4.77,
 }
 
-# radius of the sphere used by EPSG:3857 (meters), and half of the width of
-# the world in this projection
+# radius of the sphere used by EPSG:3857 (meters)
 WEB_MERCATOR_RADIUS = 6378137
-WORLD_EXTENT = 20037508.342789244
 
 GEOHASH_BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz'
 
-# url parameters that are not search filters (`ids` is read here, `zoom` was
-# the one of the first version of the heatmap)
-NON_FILTER_PARAMS = ('zoom', 'bbox', 'pl', 'ids')
+# url parameters that are not search filters: `ids` is read here, `zoom` was the
+# one of the first version of the heatmap, and the sort and the pagination of
+# the listing mean nothing for a map (a `sort` on an unknown field is an error
+# of the search index)
+NON_FILTER_PARAMS = ('zoom', 'bbox', 'pl', 'ids', 'sort', 'offset', 'limit')
 
 
 def _search_params(request):
@@ -84,15 +85,37 @@ def _search_params(request):
     }
 
 
-def _document_ids(request):
-    """Return the ids given by `ids=1,2`, or None if there is no such parameter.
+# `ids=` is a list of document ids, as long as that of the routes of an outing
+IDS_MAX = 500
 
-    An empty list matches nothing.
+
+def validate_ids(request, **kwargs):
+    """Check and parse the optional `ids=1,2` parameter.
+
+    The list is stored in `request.validated['ids']`, or None if there is no
+    such parameter. An empty list matches nothing.
     """
-    ids = request.GET.get('ids')
-    if ids is None:
-        return None
-    return [int(value) for value in ids.split(',') if value.isdigit()]
+    value = request.GET.get('ids')
+    if value is None:
+        request.validated['ids'] = None
+        return
+
+    tokens = [token for token in value.split(',') if token]
+    # ASCII digits, and the size of an id (not Unicode digits, nor numbers
+    # that the database cannot take)
+    if not all(re.fullmatch('[0-9]{1,9}', token) for token in tokens):
+        request.errors.add('querystring', 'ids', 'invalid ids')
+        return
+    if len(tokens) > IDS_MAX:
+        request.errors.add('querystring', 'ids', 'too many ids')
+        return
+
+    request.validated['ids'] = [int(token) for token in tokens]
+
+
+def _document_ids(request):
+    """Return the ids given by `ids=1,2`, or None if there is no such parameter."""
+    return request.validated.get('ids')
 
 
 def _heatmap_precision(bbox):
@@ -111,8 +134,11 @@ def _heatmap_precision(bbox):
 
     precision = min(GEOHASH_CELL_WIDTH)
     for candidate, width in GEOHASH_CELL_WIDTH.items():
-        # a cell a bit smaller than wanted is fine (the cells go from one
-        # length to the next by a factor of 5 or 8)
+        # the finest cells that are not much smaller than wanted (a finer grid
+        # has too many cells: only the most populated ones are kept). The cells
+        # go from one length to the next by a factor of 4 or 8, so the ones
+        # chosen are between 0.8 and 6.4 times the wanted size: from 2 to 19
+        # pixels for the 3 of the target
         if width * stretch >= wanted * 0.8:
             precision = candidate
     return precision

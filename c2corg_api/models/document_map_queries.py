@@ -47,15 +47,13 @@ def get_tracks(model, document_ids, tolerance, decimals, fields=()):
     if not document_ids:
         return []
 
-    # the points of the line that are not more than `tolerance` from it go;
-    # a line that would collapse keeps its ends. No CRS member (options 0),
-    # whatever the version of PostGIS.
+    # The points of the line that are not more than `tolerance` from it go. A
+    # line that collapses (a short loop) is NULL: the line as it is, then, it
+    # is short. The two arguments form is the one of every version of PostGIS.
+    # No CRS member (options 0), whatever the version.
+    flat = func.ST_Force2D(DocumentGeometry.geom_detail)
     geojson = func.ST_AsGeoJSON(
-        func.ST_Simplify(
-            func.ST_Force2D(DocumentGeometry.geom_detail), tolerance, True
-        ),
-        decimals,
-        0,
+        func.coalesce(func.ST_Simplify(flat, tolerance), flat), decimals, 0
     ).label('geojson')
 
     # the most recent first: the outings by date, the other documents by id

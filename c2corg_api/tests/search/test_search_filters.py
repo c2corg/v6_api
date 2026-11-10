@@ -358,6 +358,16 @@ def test_create_filter_date():
     )
 
 
+def test_create_bbox_filter_with_a_zero_coordinate():
+    # the Greenwich meridian is x = 0, the equator y = 0: they are not missing
+    assert create_bbox_filter('0,5000000,100000,5100000') is not None
+    assert create_bbox_filter('-100000,0,100000,100000') is not None
+    assert create_bbox_filter('0,0,100000,100000') is not None
+    # a missing or invalid one still is
+    assert create_bbox_filter('0,5000000,100000') is None
+    assert create_bbox_filter('0,5000000,100000,abc') is None
+
+
 def test_create_bbox_filter():
     assert create_bbox_filter('') is None
     assert create_bbox_filter('a,b,c,d') is None

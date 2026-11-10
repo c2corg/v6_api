@@ -149,6 +149,48 @@ def test_outings_heatmap_still_accepts_zoom(client, outings):
     assert _count(response) == 3
 
 
+def test_outings_heatmap_over_the_meridian(client, session):
+    # a box with a 0 in it (the Greenwich meridian is x = 0) is still a box
+    session.add(_outing('Near', ['hiking'], 1, 'SRID=3857;POINT(50000 5700000)'))
+    session.add(_outing('Far', ['hiking'], 2, 'SRID=3857;POINT(3000000 5700000)'))
+    session.flush()
+    reset_search_index(session)
+
+    response = client.get(
+        '/outings/map/heatmap?bbox=0,5600000,100000,5800000', status=200
+    )
+
+    assert _count(response) == 1
+
+
+def test_outings_heatmap_ignores_the_sort_of_the_listing(client, outings):
+    # `sort` on an unknown field is an error of the search index
+    url = f'/outings/map/heatmap?bbox={BBOX}&sort=nothing&offset=30&limit=5'
+
+    assert _count(client.get(url, status=200)) == 3
+
+
+@pytest.mark.parametrize('ids', ['abc', '1,x', '²', '99999999999', '1.5', '-1'])
+@pytest.mark.parametrize('path', ['heatmap', 'tracks'])
+def test_invalid_ids(client, path, ids):
+    response = client.get(f'/routes/map/{path}?bbox={BBOX}&ids={ids}', status=400)
+
+    assert 'ids' in _error_names(response)
+
+
+def test_too_many_ids(client):
+    ids = ','.join(str(i) for i in range(1, 502))
+    response = client.get(f'/routes/map/tracks?bbox={BBOX}&ids={ids}', status=400)
+
+    assert 'ids' in _error_names(response)
+
+
+def test_ids_may_be_empty_or_end_with_a_comma(client, routes):
+    for ids in ('', ','):
+        body = client.get(f'/routes/map/tracks?bbox={BBOX}&ids={ids}', status=200).json
+        assert body['documents'] == []
+
+
 def test_outings_heatmap_filtered_by_activity(client, outings):
     url = f'/outings/map/heatmap?bbox={BBOX}&act=skitouring'
 
@@ -463,6 +505,28 @@ def test_tracks_are_simplified_for_the_size_of_the_box(client, wiggle):
         [635100, 5723008],
         [635200, 5723000],
     ]
+
+
+def test_a_track_that_collapses_is_still_there(client, session):
+    # a 30 m loop survives the 5 m simplification of the database trigger, but
+    # not the 100 m tolerance of a 150 km wide box: it would be NULL
+    session.add(
+        _outing(
+            'Loop',
+            ['hiking'],
+            1,
+            'SRID=3857;POINT(635000 5723000)',
+            'SRID=3857;LINESTRING(635000 5723000, 635030 5723030, 635000 5723000)',
+        )
+    )
+    session.flush()
+    reset_search_index(session)
+
+    body = client.get('/outings/map/tracks?bbox=560000,5650000,710000,5800000').json
+
+    assert [o['title'] for o in body['documents']] == ['Loop']
+    coordinates = json.loads(body['documents'][0]['geometry']['geom_detail'])
+    assert coordinates['coordinates'][0] == [635000, 5723000]
 
 
 @pytest.fixture
