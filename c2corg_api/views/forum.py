@@ -79,6 +79,11 @@ def validate_topic_create(request, **kwargs):
         return
     request.validated['document'] = document
 
+    # the profiles have no comments: the UI does not show them
+    if document.type == document_types.USERPROFILE_TYPE:
+        request.errors.add('body', f'{document_id}_{lang}', 'No comments for a profile')
+        return
+
     if locale.topic_id is not None:
         request.errors.add(
             'body',

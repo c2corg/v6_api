@@ -124,6 +124,17 @@ def test_post_document_not_exists(client, docs):
     assert 'Document not found' == errors[0].get('description')
 
 
+def test_post_profile(client, user_ids):
+    """A profile has no comments: no topic is created for it."""
+    json = post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': user_ids['contributor'], 'lang': 'fr'},
+        status=400,
+    )
+    assert 'No comments for a profile' == json['errors'][0]['description']
+
+
 def test_post_topic_exists(client, docs):
     json = post_json_with_contributor(
         client,
