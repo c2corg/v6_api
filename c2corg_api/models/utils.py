@@ -138,6 +138,16 @@ def windowed_query(q, column, windowsize):
             yield row
 
 
+def chunked_query(q, column, values, chunksize):
+    """Run a Query on the given column values, one chunk of values at a time."""
+    # Unlike `windowed_query`, this reads only the rows of the given values:
+    # the windows of `column_windows` cover the whole table.
+    values = sorted(values)
+    for start in range(0, len(values), chunksize):
+        chunk = values[start : start + chunksize]
+        yield from q.filter(column.in_(chunk)).order_by(column)
+
+
 def column_windows(session, column, windowsize):
     """Return WHERE clauses that break a column into windows.
 
