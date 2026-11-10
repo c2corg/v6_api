@@ -5,9 +5,12 @@ from sqlalchemy.orm import contains_eager, joinedload, load_only, with_polymorph
 from sqlalchemy.orm.exc import StaleDataError
 
 import c2corg_api.views.document_associations as doc_associations
+from c2corg_api import caching
 from c2corg_api.caching import (
+    LISTING_TOTAL_EXPIRATION,
     cache_document_cooked,
     cache_document_detail,
+    cache_listing_total,
     get_or_create,
 )
 from c2corg_api.httpexceptions import (
@@ -622,13 +625,17 @@ def collection_get(request, doc_type, documents_config):
         )
     else:
         # if no search parameters, directly load documents from the db
-        search_documents = partial(search_documents_paginated, meta_params)
+        search_documents = partial(search_documents_paginated, meta_params, doc_type)
 
     return get_documents(documents_config, meta_params, search_documents)
 
 
-def search_documents_paginated(meta_params, base_query, base_total_query):
+def search_documents_paginated(meta_params, doc_type, base_query, base_total_query):
     """Return a batch of document ids with the given `offset` and `limit`."""
+    # The total of a listing without search parameters only depends on the
+    # document type. Counting reads the whole table (about 1 s for the
+    # images, asked by every home page), so it is cached for a few minutes:
+    # a slightly stale total only changes the number of pages.
     offset = meta_params['offset']
     limit = meta_params['limit']
     documents = (
@@ -639,7 +646,12 @@ def search_documents_paginated(meta_params, base_query, base_total_query):
         .limit(limit)
         .all()
     )
-    total = base_total_query.count()
+    total = get_or_create(
+        cache_listing_total,
+        f'{doc_type}-{caching.CACHE_VERSION}',
+        base_total_query.count,
+        expiration_time=LISTING_TOTAL_EXPIRATION,
+    )
 
     document_ids = [doc.document_id for doc in documents]
 
