@@ -376,7 +376,8 @@ def create_number_range_filter(field, query_term):
 def create_bbox_filter(query_term):
     query_terms = query_term.split(',')
     bbox3857 = list(map(parse_num, query_terms))
-    if len(bbox3857) != 4 or not all(bbox3857):
+    # a 0 is a coordinate (the Greenwich meridian is x = 0), not a missing one
+    if len(bbox3857) != 4 or any(value is None for value in bbox3857):
         return None
 
     # transform the bbox from 3857 to 4326

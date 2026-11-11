@@ -13,6 +13,7 @@ from starlette.routing import Match
 
 from c2corg_api.web import (
     document_actions,
+    document_map,
     documents,
     feeds,
     health,
@@ -94,6 +95,7 @@ def create_fastapi_app(settings, registry=None):
     history.include(app)
     feeds.include(app)
     sitemaps.include(app)
+    document_map.include(app)
     stopareas.include(app)
     route_suggestions.include(app)
     misc.include(app)
