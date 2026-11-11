@@ -209,11 +209,12 @@ def _matching_ids(doc_type, params, cap):
     """Return the ids matching the filters (anywhere), or None if over `cap`."""
     # Selective filters (`r`, `u`, `w`...) match few documents, wherever they
     # are: the database then has only these to look at.
-    search = build_query(params, {'limit': cap, 'offset': 0}, doc_type).sort()
-    response = search.execute()
-    if response.hits.total > cap:
+    # The count comes first: a broad filter (`act=skitouring`) would otherwise
+    # fetch `cap` hits only to drop them.
+    search = build_query(params, {'limit': 0, 'offset': 0}, doc_type).sort()
+    if search.execute().hits.total > cap:
         return None
-    return [int(doc.meta.id) for doc in response]
+    return [int(doc.meta.id) for doc in search.extra(size=cap).execute()]
 
 
 def _titles_by_document_id(locale_model, document_ids, lang):
@@ -304,14 +305,16 @@ def get_tracks_response(doc_type, model, locale_model, request):
     if params:
         matching = _matching_ids(doc_type, params, TRACKS_CANDIDATES_MAX)
         if matching is not None:
+            given = None if document_ids is None else set(document_ids)
             document_ids = (
-                matching
-                if document_ids is None
-                else [i for i in matching if i in document_ids]
+                matching if given is None else [i for i in matching if i in given]
             )
     filtered = matching is not None
 
-    # What has a track in the bbox comes from the database, the ids only. The
+    # What has a track in the bbox comes from the database, the ids only. It is
+    # counted on the box of the tracks (not the exact tracks, see
+    # `get_track_ids`): a view can be reported as truncated with `tracks_limit()`
+    # tracks or fewer really crossing it, and the heatmap shows it then. The
     # search index then filters them, unless it already did, or there are no
     # filters. Without that second step, the answer is known from the first
     # `tracks_limit() + 1` ids.
