@@ -32,6 +32,10 @@ TRACKS_LIMIT_CEILING = 500
 # maximum number of documents with a track in the bbox that are looked at
 # (only their ids are read, and sent to the search index when filters are
 # given)
+# How long a browser or a proxy can keep an answer. The answers do not depend on
+# who asks, and the UI asks for boxes on a grid: the same views are asked again
+# and again. A new document shows within this time.
+CACHE_SECONDS = 60
 TRACKS_CANDIDATES_MAX = 5000
 
 # The tracks are simplified by the database: the points of a line that are not
@@ -292,7 +296,12 @@ def _simplification(bbox):
     return tolerance, decimals
 
 
+def _cacheable(request):
+    request.response.headers['Cache-Control'] = f'public, max-age={CACHE_SECONDS}'
+
+
 def get_tracks_response(doc_type, model, locale_model, request):
+    _cacheable(request)
     params = _search_params(request)
     bbox = request.validated['bbox']
     lang = request.validated.get('lang')
@@ -351,6 +360,7 @@ def get_tracks_response(doc_type, model, locale_model, request):
 
 
 def get_heatmap_response(doc_type, request):
+    _cacheable(request)
     return get_heatmap(
         doc_type,
         _search_params(request),

@@ -269,6 +269,19 @@ def test_outings_tracks(client, tracks):
         assert 'geom_detail' in outing['geometry']
 
 
+@pytest.mark.parametrize('path', ['heatmap', 'tracks'])
+def test_answers_can_be_cached(client, tracks, path):
+    response = client.get(f'/outings/map/{path}?bbox={BBOX}', status=200)
+
+    assert response.headers['Cache-Control'] == 'public, max-age=60'
+
+
+def test_errors_are_not_cached(client):
+    response = client.get('/outings/map/tracks?bbox=x', status=400)
+
+    assert 'max-age' not in response.headers.get('Cache-Control', '')
+
+
 def test_outings_tracks_most_recent_first(client, tracks):
     body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
 
