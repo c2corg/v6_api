@@ -142,6 +142,17 @@ docker compose exec -u postgres -T postgresql /v6_api/scripts/database/create_te
 fill_es_index development.ini
 ```
 
+- Rebuild the whole index without interrupting the search (production)
+
+```shell
+reindex_es production.ini
+```
+
+A new timestamped index is built next to the live one, then `elasticsearch.index`
+is switched to it as an alias, atomically. It must be an alias: the first time,
+if it is still a real index, run once with `--replace-index` (short search gap,
+once). `--keep-old` keeps the previous index instead of deleting it.
+
 ## Running the API
 
 - Make sure the postgres redis and elasticsearch docker containers are running
