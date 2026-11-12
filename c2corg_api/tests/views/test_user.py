@@ -402,10 +402,9 @@ def test_register_search_index(_send_email, client, session, queue_config):
 
     # check that the profile is not inserted in the search index
     sync_es(session)
-    search_doc = search_documents[USERPROFILE_TYPE].get(
-        id=user_id, index=index_name(USERPROFILE_TYPE), ignore=404
+    assert not search_documents[USERPROFILE_TYPE].exists(
+        id=user_id, index=index_name(USERPROFILE_TYPE)
     )
-    assert search_doc is None
 
     # Simulate confirmation email validation
     nonce = extract_nonce(_send_email, 'validate_register_email')

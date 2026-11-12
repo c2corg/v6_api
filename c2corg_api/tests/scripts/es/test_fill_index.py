@@ -233,7 +233,7 @@ def test_fill_index(session):
     assert xreport.c2corg_doc_type == 'x'
 
     # merged document is ignored
-    assert SearchWaypoint.get(id=71174, index=index_name('w'), ignore=404) is None
+    assert not SearchWaypoint.exists(id=71174, index=index_name('w'))
 
     # check that the sync. status was updated
     last_update, _ = es_sync.get_status(session)
