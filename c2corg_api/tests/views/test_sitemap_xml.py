@@ -1,102 +1,123 @@
+from dataclasses import dataclass
+
+import pytest
+
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.tests.views import BaseTestRest
+
+PREFIX = '/sitemaps.xml'
+
+UI_URL = 'https://www.camptocamp.org'
+
+SCHEMA_URL = '{http://www.sitemaps.org/schemas/sitemap/0.9}'
 
 
-class TestSitemapXml(BaseTestRest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/sitemaps.xml'
-        self.ui_url = 'https://www.camptocamp.org'
-        self.schema_url = '{http://www.sitemaps.org/schemas/sitemap/0.9}'
+@dataclass
+class Docs:
+    """The documents of the tests, built by `docs`."""
 
-        self.waypoint1 = Waypoint(
-            waypoint_type='summit',
-            elevation=2000,
-            locales=[WaypointLocale(lang='fr', title='Dent de Crolles')],
-        )
-        self.session.add(self.waypoint1)
-        self.waypoint2 = Waypoint(
-            waypoint_type='summit',
-            elevation=4985,
-            locales=[
-                WaypointLocale(lang='en', title='Mont Blanc'),
-                WaypointLocale(lang='fr', title='Mont Blanc'),
-            ],
-        )
-        self.session.add(self.waypoint2)
-        self.route = Route(
-            activities=['skitouring'],
-            elevation_max=1500,
-            elevation_min=700,
-            locales=[
-                RouteLocale(
-                    lang='fr', title='Mont Blanc du ciel', title_prefix='Mont Blanc'
-                )
-            ],
-        )
-        self.session.add(self.route)
-        self.session.flush()
+    waypoint1: Waypoint
+    waypoint2: Waypoint
+    route: Route
 
-    def test_get(self):
-        response = self.app.get(self._prefix, status=200)
-        sitemaps = response.xml
 
-        base_url = 'https://api.camptocamp.org/sitemaps.xml'
+@pytest.fixture(autouse=True)
+def docs(session) -> Docs:
+    waypoint1 = Waypoint(
+        waypoint_type='summit',
+        elevation=2000,
+        locales=[WaypointLocale(lang='fr', title='Dent de Crolles')],
+    )
+    session.add(waypoint1)
+    waypoint2 = Waypoint(
+        waypoint_type='summit',
+        elevation=4985,
+        locales=[
+            WaypointLocale(lang='en', title='Mont Blanc'),
+            WaypointLocale(lang='fr', title='Mont Blanc'),
+        ],
+    )
+    session.add(waypoint2)
+    route = Route(
+        activities=['skitouring'],
+        elevation_max=1500,
+        elevation_min=700,
+        locales=[
+            RouteLocale(
+                lang='fr', title='Mont Blanc du ciel', title_prefix='Mont Blanc'
+            )
+        ],
+    )
+    session.add(route)
+    session.flush()
+    return Docs(waypoint1=waypoint1, waypoint2=waypoint2, route=route)
 
-        def waypoint_filter(s):
-            return s[0].text == base_url + '/w/0.xml'
 
-        def route_filter(s):
-            return s[0].text == base_url + '/r/0.xml'
+def test_get(client):
+    response = client.get(PREFIX, status=200)
+    sitemaps = response.xml
 
-        assert next(filter(waypoint_filter, sitemaps), None) is not None
-        assert next(filter(route_filter, sitemaps), None) is not None
+    base_url = 'https://api.camptocamp.org/sitemaps.xml'
 
-    def test_get_sitemap_invalid_doc_type(self):
-        response = self.app.get(
-            self._prefix + '/z/0.xml', headers={'Cookie': 'a=b'}, status=400
-        )
-        # the errors only, as for the JSON routes: not the request headers
-        assert response.json['errors'] == [
+    def waypoint_filter(s):
+        return s[0].text == base_url + '/w/0.xml'
+
+    def route_filter(s):
+        return s[0].text == base_url + '/r/0.xml'
+
+    assert next(filter(waypoint_filter, sitemaps), None) is not None
+    assert next(filter(route_filter, sitemaps), None) is not None
+
+
+def test_get_sitemap_invalid_doc_type(client):
+    response = client.get(PREFIX + '/z/0.xml', headers={'Cookie': 'a=b'}, status=422)
+    # the errors only, as for the JSON routes: not the request headers
+    assert response.json == {
+        'detail': [
             {
-                'location': 'querystring',
-                'name': 'doc_type',
-                'description': 'invalid doc_type',
+                'type': 'c2corg',
+                'loc': ['path', 'doc_type'],
+                'msg': 'invalid doc_type',
+                'input': 'z',
             }
         ]
+    }
 
-    def test_get_sitemap_invalid_page(self):
-        # a page that is not a number: not found
-        self.app.get(self._prefix + '/a/-123.xml', status=404)
 
-    def test_get_waypoint_sitemap(self):
-        response = self.app.get(self._prefix + '/w/0.xml', status=200)
-        urlset = response.xml
+def test_get_sitemap_invalid_page(client):
+    # a page that is not a number: not found
+    client.get(PREFIX + '/a/-123.xml', status=404)
 
-        assert len(urlset) == 3
-        url = urlset[0]
 
-        assert url[0].tag == f'{self.schema_url}loc'
-        assert url[1].tag == f'{self.schema_url}lastmod'
-        assert (
-            url[0].text == f'{self.ui_url}/waypoints/{self.waypoint1.document_id}'
-            '/fr/dent-de-crolles'
-        )
+def test_get_waypoint_sitemap(client, docs):
+    response = client.get(PREFIX + '/w/0.xml', status=200)
+    urlset = response.xml
 
-    def test_get_waypoint_sitemap_no_pages(self):
-        self.app.get(self._prefix + '/w/1.xml', status=404)
+    assert len(urlset) == 3
+    url = urlset[0]
 
-    def test_get_route_sitemap(self):
-        response = self.app.get(self._prefix + '/r/0.xml', status=200)
-        urlset = response.xml
+    assert url[0].tag == f'{SCHEMA_URL}loc'
+    assert url[1].tag == f'{SCHEMA_URL}lastmod'
+    assert (
+        url[0].text == f'{UI_URL}/waypoints/{docs.waypoint1.document_id}'
+        '/fr/dent-de-crolles'
+    )
 
-        assert len(urlset) == 1
-        url = urlset[0]
 
-        assert url[0].tag == f'{self.schema_url}loc'
-        assert url[1].tag == f'{self.schema_url}lastmod'
-        assert (
-            url[0].text == f'{self.ui_url}/routes/{self.route.document_id}'
-            '/fr/mont-blanc-mont-blanc-du-ciel'
-        )
+def test_get_waypoint_sitemap_no_pages(client):
+    client.get(PREFIX + '/w/1.xml', status=404)
+
+
+def test_get_route_sitemap(client, docs):
+    response = client.get(PREFIX + '/r/0.xml', status=200)
+    urlset = response.xml
+
+    assert len(urlset) == 1
+    url = urlset[0]
+
+    assert url[0].tag == f'{SCHEMA_URL}loc'
+    assert url[1].tag == f'{SCHEMA_URL}lastmod'
+    assert (
+        url[0].text == f'{UI_URL}/routes/{docs.route.document_id}'
+        '/fr/mont-blanc-mont-blanc-du-ciel'
+    )

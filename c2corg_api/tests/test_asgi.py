@@ -3,6 +3,7 @@ import os
 import subprocess  # nosec B404 (the Python of the tests, a constant script)
 import sys
 
+from c2corg_api.config import get_appsettings
 from c2corg_api.tests import configfile
 
 # c2corg_api.asgi reads its .ini file when it is imported: the check runs in
@@ -38,7 +39,9 @@ def _run(env):
 
 
 def test_the_app_of_the_configured_ini_file():
-    from c2corg_api.tests import settings
+    # the settings of the file, not those of the tests: with pytest-xdist,
+    # the tests use another database per worker
+    settings = get_appsettings(configfile)
 
     result = _run({'C2C_API_CONFIG': configfile})
     assert result == {

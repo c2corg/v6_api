@@ -1,18 +1,23 @@
 {
   "body": {
-    "errors": [
+    "detail": [
       {
-        "description": "str",
-        "location": "str",
-        "name": "str"
+        "ctx": {
+          "message": "str"
+        },
+        "input": "str",
+        "loc": [
+          "str"
+        ],
+        "msg": "str",
+        "type": "str"
       }
-    ],
-    "status": "str"
+    ]
   },
   "headers": {
     "Access-Control-Allow-Origin": "http://localhost:6553",
     "Access-Control-Expose-Headers": "Content-Type",
     "Content-Type": "application/json"
   },
-  "status": 400
+  "status": 422
 }

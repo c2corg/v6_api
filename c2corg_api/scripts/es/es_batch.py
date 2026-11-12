@@ -1,7 +1,6 @@
 import logging
 
 from elasticsearch import helpers
-from elasticsearch.helpers import BulkIndexError
 
 from c2corg_api.scripts.es.batch import Batch
 
@@ -38,10 +37,22 @@ class ElasticBatch(Batch):
 
     def flush(self):
         if self.actions:
-            try:
-                helpers.bulk(self.client, self.actions)
-            except BulkIndexError:
-                # when trying to delete a document that does not exist, an
-                # error is raised, and other documents are not inserted
-                log.warning('error sending bulk update to ElasticSearch', exc_info=True)
+            # do not raise on failed actions: the helper would raise after the
+            # first chunk with a failure and never send the next chunks, so
+            # the documents of those chunks were silently never (un)indexed
+            _, errors = helpers.bulk(self.client, self.actions, raise_on_error=False)
+            failed = [error for error in errors if not _is_missing_delete(error)]
+            if failed:
+                log.warning(
+                    f'{len(failed)} action(s) failed in a bulk update to '
+                    f'ElasticSearch, first: {failed[0]}'
+                )
             self.actions = []
+
+
+def _is_missing_delete(error):
+    """Tell if a bulk error is the delete of a document not in the index."""
+    # deleting a document that is already gone is expected: a sync may read a
+    # deleted or merged document more than once
+    delete = error.get('delete')
+    return delete is not None and delete.get('status') == 404

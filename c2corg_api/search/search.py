@@ -2,7 +2,11 @@ import logging
 
 from elasticsearch_dsl.search import MultiSearch
 
-from c2corg_api.search import create_search, get_text_query_on_title
+from c2corg_api.search import (
+    SCORE_SORT,
+    create_search,
+    get_text_query_on_title,
+)
 from c2corg_api.views.document_listings import get_documents
 
 log = logging.getLogger(__name__)
@@ -56,6 +60,7 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
         search = (
             create_search(get_documents_config.document_type)
             .query(get_text_query_on_title(search_term, lang))
+            .sort(*SCORE_SORT)
             .source(False)
             .extra(from_=0, size=limit, track_total_hits=True)
         )

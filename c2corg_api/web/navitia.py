@@ -136,8 +136,6 @@ def _endpoint(function, required, optional, job):
             *_parameters(required, optional, job),
         ]
     )
-    # the message of the validators for a missing parameter
-    endpoint.missing_message = 'Parameter {name} required'
     # described in the OpenAPI document (see web.openapi)
     endpoint.described = True
     return endpoint

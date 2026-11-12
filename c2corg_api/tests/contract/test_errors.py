@@ -1,9 +1,14 @@
 import datetime
 from unittest.mock import patch
 
+import pytest
+
 from c2corg_api.models.user import User
+from c2corg_api.tests import errors_of, invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
-from c2corg_api.tests.contract.test_documents import POINT, DocumentContractTest
+from c2corg_api.tests.contract.test_documents import POINT
+
+pytestmark = pytest.mark.usefixtures('documents')
 
 WAYPOINT = {
     'waypoint_type': 'summit',
@@ -13,182 +18,203 @@ WAYPOINT = {
 }
 
 
-class TestErrors(DocumentContractTest):
-    """The error responses, in the Cornice shape {status, errors: [...]}."""
+@contract(('POST', '/waypoints'))
+def test_invalid_body(browser):
+    body = dict(WAYPOINT, locales=[{'lang': 'en'}], waypoint_type='nothing')
+    response = browser.post('/waypoints', body, user='contributor', status=422)
+    check_snapshot('error_invalid_body', response)
+    names = {error['name'] for error in errors_of(response.json)}
+    assert names == {'locales.0.title', 'waypoint_type'}
+    assert {e['location'] for e in errors_of(response.json)} == {'body'}
 
-    @contract(('POST', '/waypoints'))
-    def test_invalid_body(self):
-        body = dict(WAYPOINT, locales=[{'lang': 'en'}], waypoint_type='nothing')
-        response = self.post('/waypoints', body, user='contributor', status=400)
-        check_snapshot('error_invalid_body', response)
-        names = {error['name'] for error in response.json['errors']}
-        assert names == {'locales.0.title', 'waypoint_type'}
-        assert {e['location'] for e in response.json['errors']} == {'body'}
 
-    @contract(('GET', '/waypoints'))
-    def test_invalid_querystring(self):
-        response = self.get('/waypoints', params={'offset': 'invalid'}, status=400)
-        check_snapshot('error_invalid_querystring', response)
-        assert response.json['errors'][0]['location'] == 'querystring'
+@contract(('GET', '/waypoints'))
+def test_invalid_querystring(browser):
+    response = browser.get('/waypoints', params={'offset': 'invalid'}, status=422)
+    check_snapshot('error_invalid_querystring', response)
+    assert invalid_parameters(response) == [('query', 'offset', 'invalid offset')]
 
-    @contract(('GET', '/waypoints/{id}'))
-    def test_invalid_id(self):
-        response = self.get('/waypoints/abc', status=404)
-        check_snapshot('error_invalid_id', response)
 
-    @contract(('GET', '/waypoints/{id}'))
-    def test_unknown_document(self):
-        check_snapshot('error_not_found', self.get('/waypoints/9999999', status=404))
+@contract(('GET', '/waypoints/{id}'))
+def test_invalid_id(browser):
+    response = browser.get('/waypoints/abc', status=404)
+    check_snapshot('error_invalid_id', response)
 
-    @contract(('GET', '/waypoints/{id}/{lang}/info'))
-    def test_info_of_a_missing_locale(self):
-        # not an error: the info falls back to an existing locale
-        response = self.get(self.url('waypoints', '/de/info'))
-        check_snapshot('waypoints_info_fallback', response)
-        assert response.json['locales'][0]['lang'] == 'en'
 
-    def test_unknown_route(self):
-        # not a route of the API: the answer of the web framework itself
-        response = self.get('/no-such-route', status=404)
-        check_snapshot('error_unknown_route', response)
+@contract(('GET', '/waypoints/{id}'))
+def test_unknown_document(browser):
+    check_snapshot(
+        'error_not_found',
+        browser.get('/waypoints/9999999', status=404),
+    )
+
+
+@contract(('GET', '/waypoints/{id}/{lang}/info'))
+def test_info_of_a_missing_locale(browser, documents):
+    # not an error: the info falls back to an existing locale
+    response = browser.get(documents.url('waypoints', '/de/info'))
+    check_snapshot('waypoints_info_fallback', response)
+    assert response.json['locales'][0]['lang'] == 'en'
+
+
+def test_unknown_route(browser, documents):
+    # not a route of the API: the answer of the web framework itself
+    response = browser.get('/no-such-route', status=404)
+    check_snapshot('error_unknown_route', response)
+    assert response.json['errors'] == [
+        {'location': 'body', 'name': 'Not Found', 'description': '/no-such-route'}
+    ]
+    # also for a CORS preflight
+    response = browser.request('OPTIONS', '/no-such-route', status=404)
+    assert response.json['errors'][0]['description'] == '/no-such-route'
+    # no redirection to the path without its trailing slash
+    for path in ('/', '/books/', documents.url('books', '/')):
+        response = browser.get(path, status=404)
+        assert response.json['errors'][0]['description'] == path
+
+
+def test_method_not_allowed(browser, documents):
+    # a route without a view for the method (not a route of routes.txt)
+    check_snapshot(
+        'error_method_not_allowed',
+        browser.request('DELETE', '/waypoints', status=405),
+    )
+    # the description and the Allow header give the methods of the path,
+    # whatever route of the path has them
+    for method, path, allowed in (
+        ('DELETE', '/waypoints', 'GET, POST'),
+        ('PATCH', '/waypoints', 'GET, POST'),
+        ('DELETE', documents.url('books'), 'GET, PUT'),
+        ('GET', '/images/list', 'POST'),
+        # a fixed path, not a document id
+        ('PUT', '/routes/update_public_transportation_rating', 'POST'),
+        # a write: GET is not allowed
+        ('GET', '/routes/update_public_transportation_rating', 'POST'),
+    ):
+        response = browser.request(method, path, status=405)
+        assert response.headers['Allow'] == allowed
         assert response.json['errors'] == [
-            {'location': 'body', 'name': 'Not Found', 'description': '/no-such-route'}
+            {
+                'location': 'body',
+                'name': 'Method Not Allowed',
+                'description': f'{method} is not allowed here: use {allowed}',
+            }
         ]
-        # also for a CORS preflight
-        response = self.request('OPTIONS', '/no-such-route', status=404)
-        assert response.json['errors'][0]['description'] == '/no-such-route'
-        # no redirection to the path without its trailing slash
-        for path in ('/', '/books/', self.url('books', '/')):
-            response = self.get(path, status=404)
-            assert response.json['errors'][0]['description'] == path
 
-    def test_method_not_allowed(self):
-        # a route without a view for the method (not a route of routes.txt)
-        check_snapshot(
-            'error_method_not_allowed',
-            self.request('DELETE', '/waypoints', status=405),
-        )
-        # the description and the Allow header give the methods of the path,
-        # whatever route of the path has them
-        for method, path, allowed in (
-            ('DELETE', '/waypoints', 'GET, POST'),
-            ('PATCH', '/waypoints', 'GET, POST'),
-            ('DELETE', self.url('books'), 'GET, PUT'),
-            ('GET', '/images/list', 'POST'),
-            # a fixed path, not a document id
-            ('PUT', '/routes/update_public_transportation_rating', 'POST'),
-            # a write: GET is not allowed
-            ('GET', '/routes/update_public_transportation_rating', 'POST'),
-        ):
-            response = self.request(method, path, status=405)
-            assert response.headers['Allow'] == allowed
-            assert response.json['errors'] == [
-                {
-                    'location': 'body',
-                    'name': 'Method Not Allowed',
-                    'description': f'{method} is not allowed here: use {allowed}',
-                }
-            ]
 
-    def test_invalid_ids(self):
-        # the ids of the paths are numbers: a path with anything else is not
-        # found, whatever the method and the permission of the route
-        for method, path in (
-            ('GET', '/books/abc'),
-            ('GET', '/books/abc/en/info'),
-            ('GET', '/books/abc/en/12'),
-            ('GET', self.url('books', '/en/abc')),
-            ('GET', '/document/abc/history/en'),
-            ('GET', '/images/proxy/abc'),
-            ('GET', '/stopareas/abc'),
-            ('GET', '/stopareas/abc/en/info'),
-            ('GET', '/waypoints_stopareas/abc/en/info'),
-            ('GET', '/waypoints/abc/stopareas'),
-            ('GET', '/tags/has/abc'),
-            ('GET', '/sitemaps/w/abc'),
-            ('PUT', '/books/abc'),
-            ('DELETE', '/documents/delete/abc'),
-            ('DELETE', '/documents/delete/abc/en'),
-            ('GET', '/users/following-user/abc'),
-            ('GET', '/users/blocked/abc'),
-        ):
-            response = self.request(method, path, status=404)
-            assert response.json['errors'] == [
-                {'location': 'body', 'name': 'Not Found', 'description': path}
-            ], path
+def test_invalid_ids(browser, documents):
+    # the ids of the paths are numbers: a path with anything else is not
+    # found, whatever the method and the permission of the route
+    for method, path in (
+        ('GET', '/books/abc'),
+        ('GET', '/books/abc/en/info'),
+        ('GET', '/books/abc/en/12'),
+        ('GET', documents.url('books', '/en/abc')),
+        ('GET', '/document/abc/history/en'),
+        ('GET', '/images/proxy/abc'),
+        ('GET', '/stopareas/abc'),
+        ('GET', '/stopareas/abc/en/info'),
+        ('GET', '/waypoints_stopareas/abc/en/info'),
+        ('GET', '/waypoints/abc/stopareas'),
+        ('GET', '/tags/has/abc'),
+        ('GET', '/sitemaps/w/abc'),
+        ('PUT', '/books/abc'),
+        ('DELETE', '/documents/delete/abc'),
+        ('DELETE', '/documents/delete/abc/en'),
+        ('GET', '/users/following-user/abc'),
+        ('GET', '/users/blocked/abc'),
+    ):
+        response = browser.request(method, path, status=404)
+        assert response.json['errors'] == [
+            {'location': 'body', 'name': 'Not Found', 'description': path}
+        ], path
 
-    @contract(('PUT', '/maps/{id}'))
-    def test_forbidden(self):
-        document = self.get(self.url('maps')).json
-        body = {'message': 'contract test', 'document': document}
-        response = self.put(self.url('maps'), body, user='contributor', status=403)
-        check_snapshot('error_forbidden', response)
 
-    @contract(('PUT', '/waypoints/{id}'))
-    def test_anonymous(self):
-        body = {'message': 'contract test', 'document': {}}
-        check_snapshot(
-            'error_anonymous', self.put(self.url('waypoints'), body, status=403)
-        )
+@contract(('PUT', '/maps/{id}'))
+def test_forbidden(browser, documents):
+    document = browser.get(documents.url('maps')).json
+    body = {'message': 'contract test', 'document': document}
+    response = browser.put(
+        documents.url('maps'),
+        body,
+        user='contributor',
+        status=403,
+    )
+    check_snapshot('error_forbidden', response)
 
-    @contract(('POST', '/waypoints'))
-    def test_invalid_token(self):
-        response = self.post(
-            '/waypoints',
-            WAYPOINT,
-            headers={'Authorization': 'JWT token="not-a-token"'},
-            status=401,
-        )
-        check_snapshot('error_invalid_token', response)
 
-    @contract(('POST', '/waypoints'))
-    def test_invalid_token_from_another_origin(self):
-        # the error answers carry the CORS headers (#720, #730), but only
-        # for the allowed origins
-        response = self.app.post_json(
-            '/waypoints',
-            WAYPOINT,
-            headers={
-                'Authorization': 'JWT token="not-a-token"',
-                'Origin': 'https://evil.example.org',
-            },
-            status=401,
-        )
-        assert 'Access-Control-Allow-Origin' not in response.headers
+@contract(('PUT', '/waypoints/{id}'))
+def test_anonymous(browser, documents):
+    body = {'message': 'contract test', 'document': {}}
+    check_snapshot(
+        'error_anonymous',
+        browser.put(documents.url('waypoints'), body, status=403),
+    )
 
-    @contract(('GET', '/books/{id}'))
-    def test_invalid_token_from_another_origin_on_a_read(self):
-        # the token is checked before the origin, as on the writes above:
-        # on a route served by FastAPI too
-        response = self.app.get(
-            '/books/1',
-            headers={
-                'Authorization': 'JWT token="not-a-token"',
-                'Origin': 'https://evil.example.org',
-            },
-            status=401,
-        )
-        assert 'Access-Control-Allow-Origin' not in response.headers
 
-    @contract(('GET', '/books/{id}'))
-    def test_another_origin_with_an_invalid_lang(self):
-        # the origin is the first validator: its error comes with the others
-        response = self.app.get(
-            '/books/1',
-            params={'l': 'xx'},
-            headers={'Origin': 'https://evil.example.org'},
-            status=400,
-        )
-        assert [e['name'] for e in response.json['errors']] == ['Origin', 'lang']
+@contract(('POST', '/waypoints'))
+def test_invalid_token(browser):
+    response = browser.post(
+        '/waypoints',
+        WAYPOINT,
+        headers={'Authorization': 'JWT token="not-a-token"'},
+        status=401,
+    )
+    check_snapshot('error_invalid_token', response)
 
-    @contract(('POST', '/waypoints'))
-    def test_rate_limited(self):
-        user = self.session.get(User, self.global_userids['contributor'])
-        user.ratelimit_reset = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-            minutes=5
-        )
-        user.ratelimit_remaining = 0
-        self.session.flush()
-        with patch('c2corg_api.emails.email_service.EmailService._send_email'):
-            response = self.post('/waypoints', WAYPOINT, user='contributor', status=429)
-        check_snapshot('error_rate_limited', response)
+
+@contract(('POST', '/waypoints'))
+def test_invalid_token_from_another_origin(client):
+    # the error answers carry the CORS headers (#720, #730), but only
+    # for the allowed origins
+    response = client.post_json(
+        '/waypoints',
+        WAYPOINT,
+        headers={
+            'Authorization': 'JWT token="not-a-token"',
+            'Origin': 'https://evil.example.org',
+        },
+        status=401,
+    )
+    assert 'Access-Control-Allow-Origin' not in response.headers
+
+
+@contract(('GET', '/books/{id}'))
+def test_invalid_token_from_another_origin_on_a_read(client):
+    # the token is checked before the origin, as on the writes above:
+    # on a route served by FastAPI too
+    response = client.get(
+        '/books/1',
+        headers={
+            'Authorization': 'JWT token="not-a-token"',
+            'Origin': 'https://evil.example.org',
+        },
+        status=401,
+    )
+    assert 'Access-Control-Allow-Origin' not in response.headers
+
+
+@contract(('GET', '/books/{id}'))
+def test_another_origin_with_an_invalid_lang(client):
+    # the origin is checked first: a request from another origin is
+    # refused (400), whatever its parameters (not a 422)
+    response = client.get(
+        '/books/1',
+        params={'l': 'xx'},
+        headers={'Origin': 'https://evil.example.org'},
+        status=400,
+    )
+    assert [e['name'] for e in response.json['errors']] == ['Origin']
+
+
+@contract(('POST', '/waypoints'))
+def test_rate_limited(session, user_ids, browser):
+    user = session.get(User, user_ids['contributor'])
+    user.ratelimit_reset = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+        minutes=5
+    )
+    user.ratelimit_remaining = 0
+    session.flush()
+    with patch('c2corg_api.emails.email_service.EmailService._send_email'):
+        response = browser.post('/waypoints', WAYPOINT, user='contributor', status=429)
+    check_snapshot('error_rate_limited', response)

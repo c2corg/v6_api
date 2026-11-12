@@ -18,7 +18,7 @@ from c2corg_api.web.answers import (
 )
 from c2corg_api.web.checks import refusal, validate_origin
 from c2corg_api.web.db import request_session
-from c2corg_api.web.errors import error_response
+from c2corg_api.web.errors import error_response, validation_response
 from c2corg_api.web.request import ValidatedRequest
 
 
@@ -93,6 +93,7 @@ def _serve_write(request, user, body, validators, handler, permission, content_t
     # limiting with its counters).
     from c2corg_api.security.rate_limiting import rate_limit_error
     from c2corg_api.views import invalid_json_body
+    from c2corg_api.views.resource import json_invalid
 
     adapted = ValidatedRequest(request, user, body=body)
     with request_session():
@@ -108,6 +109,16 @@ def _serve_write(request, user, body, validators, handler, permission, content_t
         try:
             for validator in (validate_origin, *validators):
                 validator(adapted)
+            refused_origin = [e for e in adapted.errors if e['name'] == 'Origin']
+            if refused_origin:
+                # a request from another origin is refused, whatever its body
+                DBSession.commit()
+                return error_response(refused_origin)
+            if adapted.invalid:
+                # an invalid body: FastAPI's answer (#2546), before the errors
+                # of the rules of the API, which need a valid body
+                DBSession.commit()
+                return validation_response(adapted.invalid)
             if adapted.errors:
                 DBSession.commit()
                 return error_response(adapted.errors, adapted.errors.status)
@@ -121,10 +132,10 @@ def _serve_write(request, user, body, validators, handler, permission, content_t
         except Exception:
             # a view reading an invalid JSON body fails on it: an error of the
             # client, answered as the catch-all error view of Pyramid does
-            reason = invalid_json_body(adapted)
-            if reason is None:
+            error = invalid_json_body(adapted)
+            if error is None:
                 raise
-            return error_response([('body', '', f'Invalid JSON: {reason}')])
+            return validation_response([json_invalid(error)])
         if adapted.errors:
             # as Cornice: the errors the view itself adds are the answer
             # (e.g. a failed login, 401), returned and so committed

@@ -37,8 +37,8 @@ A [Dev Container](https://containers.dev/) configuration is provided in the `.de
 3. Wait for the container to build and the `postCreateCommand` setup script to finish. On the first run this takes a few minutes — it will:
    - Install all Python dependencies
    - Generate the configuration files
-   - Create and initialize both the dev and test databases
-   - Populate the Elasticsearch indexes
+   - Start the dev database (a lightweight anonymized extract of the production data, restored from the image `ghcr.io/c2corg/c2corg-dev-db`) and create the test database
+   - Start Elasticsearch 8 and build its indices from that database (kept in a volume, and rebuilt if they were made by a different version of the indexing code)
 
 4. You're ready to go! See [Running the API](#running-the-api), [Running tests](#running-tests), and [Linting](#linting) below.
 
@@ -219,7 +219,19 @@ Get-Content test.ini.in | cmd /c "python .\scripts\env_replace config/env.defaul
 pytest
 ```
 
+- Or in parallel, with [pytest-xdist](https://pytest-xdist.readthedocs.io/) (`make test` uses 4 workers):
+
+```shell
+pytest -n 4
+```
+
+  Each worker uses its own database (`<test database>_gw0`, `_gw1`...), Elasticsearch index and Redis names, created on the first run. The test database user needs the right to create databases.
+
 - Or directly in your favorite development IDE (pycharm, vscode...)
+
+- Write new tests as plain functions asking for the fixtures of `c2corg_api/tests/conftest.py` (`client`, `session`, `user_ids`, `tokens`, `settings`...) and the helpers of `c2corg_api.tests` (`auth_headers`, `send_json`...); the shared document scenarios are in `c2corg_api/tests/views/scenarios.py`. See #2610.
+
+- A warning fails the tests (`filterwarnings` in `pyproject.toml`): fix its cause rather than ignoring it. The only exceptions are the warnings of the Elasticsearch 2 client, still shown until the move to Elasticsearch 8.
 
 ### API contract tests
 

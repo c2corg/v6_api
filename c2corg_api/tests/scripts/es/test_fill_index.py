@@ -18,225 +18,223 @@ from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.mappings.xreport_mapping import SearchXreport
-from c2corg_api.tests import BaseTestCase
 
 
-class TestFillIndex(BaseTestCase):
-    def test_fill_index(self):
-        """Tests that documents are inserted into the ElasticSearch index."""
-        self.session.add(
-            Waypoint(
-                document_id=71171,
-                waypoint_type='summit',
-                elevation=2000,
-                quality='medium',
-                access_time='15min',
-                geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-                locales=[
-                    WaypointLocale(
-                        lang='fr',
-                        title='Mont Granier',
-                        description='...',
-                        summary='Le Mont [b]Granier[/b]',
-                    ),
-                    WaypointLocale(
-                        lang='en',
-                        title='Mont Granier',
-                        description='...',
-                        summary='The Mont Granier',
-                    ),
-                ],
-            )
+def test_fill_index(session):
+    """Tests that documents are inserted into the ElasticSearch index."""
+    session.add(
+        Waypoint(
+            document_id=71171,
+            waypoint_type='summit',
+            elevation=2000,
+            quality='medium',
+            access_time='15min',
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                WaypointLocale(
+                    lang='fr',
+                    title='Mont Granier',
+                    description='...',
+                    summary='Le Mont [b]Granier[/b]',
+                ),
+                WaypointLocale(
+                    lang='en',
+                    title='Mont Granier',
+                    description='...',
+                    summary='The Mont Granier',
+                ),
+            ],
         )
-        self.session.add(
-            Waypoint(
-                document_id=71172,
-                waypoint_type='summit',
-                elevation=4985,
-                geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-                locales=[
-                    WaypointLocale(
-                        lang='en',
-                        title='Mont Blanc',
-                        description='...',
-                        summary='The heighest point in Europe',
-                    )
-                ],
-            )
+    )
+    session.add(
+        Waypoint(
+            document_id=71172,
+            waypoint_type='summit',
+            elevation=4985,
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                WaypointLocale(
+                    lang='en',
+                    title='Mont Blanc',
+                    description='...',
+                    summary='The heighest point in Europe',
+                )
+            ],
         )
-        self.session.add(
-            Route(
-                document_id=71173,
-                activities=['skitouring'],
-                elevation_max=1500,
-                elevation_min=700,
-                height_diff_up=800,
-                height_diff_down=800,
-                durations=['1'],
-                locales=[
-                    RouteLocale(
-                        lang='en',
-                        title='Face N',
-                        description='...',
-                        gear='paraglider',
-                        title_prefix='Mont Blanc',
-                    )
-                ],
-            )
+    )
+    session.add(
+        Route(
+            document_id=71173,
+            activities=['skitouring'],
+            elevation_max=1500,
+            elevation_min=700,
+            height_diff_up=800,
+            height_diff_down=800,
+            durations=['1'],
+            locales=[
+                RouteLocale(
+                    lang='en',
+                    title='Face N',
+                    description='...',
+                    gear='paraglider',
+                    title_prefix='Mont Blanc',
+                )
+            ],
         )
-        self.session.add(
-            Waypoint(
-                document_id=71174,
-                redirects_to=71171,
-                waypoint_type='summit',
-                elevation=4985,
-                geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-                locales=[
-                    WaypointLocale(
-                        lang='en',
-                        title='Mont Blanc',
-                        description='...',
-                        summary='The heighest point in Europe',
-                    )
-                ],
-            )
+    )
+    session.add(
+        Waypoint(
+            document_id=71174,
+            redirects_to=71171,
+            waypoint_type='summit',
+            elevation=4985,
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                WaypointLocale(
+                    lang='en',
+                    title='Mont Blanc',
+                    description='...',
+                    summary='The heighest point in Europe',
+                )
+            ],
         )
-        self.session.add(
-            Outing(
-                document_id=71175,
-                activities=['skitouring'],
-                date_start=datetime.date(2016, 1, 1),
-                date_end=datetime.date(2016, 1, 1),
-                frequentation='overcrowded',
-                locales=[
-                    OutingLocale(
-                        lang='en',
-                        title='Mont Blanc : Face N !',
-                        description='...',
-                        weather='sunny',
-                    )
-                ],
-            )
+    )
+    session.add(
+        Outing(
+            document_id=71175,
+            activities=['skitouring'],
+            date_start=datetime.date(2016, 1, 1),
+            date_end=datetime.date(2016, 1, 1),
+            frequentation='overcrowded',
+            locales=[
+                OutingLocale(
+                    lang='en',
+                    title='Mont Blanc : Face N !',
+                    description='...',
+                    weather='sunny',
+                )
+            ],
         )
-        self.session.add(
-            Article(
-                document_id=71176,
-                categories=['site_info'],
-                activities=['hiking'],
-                article_type='collab',
-                geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-                locales=[
-                    DocumentLocale(
-                        lang='en', title="Lac d'Annecy", description='...', summary=''
-                    ),
-                    DocumentLocale(
-                        lang='fr', title="Lac d'Annecy", description='...', summary=''
-                    ),
-                ],
-            )
+    )
+    session.add(
+        Article(
+            document_id=71176,
+            categories=['site_info'],
+            activities=['hiking'],
+            article_type='collab',
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+            locales=[
+                DocumentLocale(
+                    lang='en', title="Lac d'Annecy", description='...', summary=''
+                ),
+                DocumentLocale(
+                    lang='fr', title="Lac d'Annecy", description='...', summary=''
+                ),
+            ],
         )
-        self.session.flush()
+    )
+    session.flush()
 
-        self.session.add(
-            Book(
-                document_id=71177,
-                activities=['hiking'],
-                book_types=['biography'],
-                author='Denis Dainat',
-                publication_date='',
-                locales=[
-                    DocumentLocale(
-                        lang='fr',
-                        title='Escalades au Thaurac',
-                        description='...',
-                        summary='',
-                    ),
-                    DocumentLocale(
-                        lang='en',
-                        title='Escalades au Thaurac',
-                        description='...',
-                        summary='',
-                    ),
-                ],
-            )
+    session.add(
+        Book(
+            document_id=71177,
+            activities=['hiking'],
+            book_types=['biography'],
+            author='Denis Dainat',
+            publication_date='',
+            locales=[
+                DocumentLocale(
+                    lang='fr',
+                    title='Escalades au Thaurac',
+                    description='...',
+                    summary='',
+                ),
+                DocumentLocale(
+                    lang='en',
+                    title='Escalades au Thaurac',
+                    description='...',
+                    summary='',
+                ),
+            ],
         )
-        self.session.flush()
+    )
+    session.flush()
 
-        self.session.add(
-            Xreport(
-                document_id=71178,
-                event_type='person_fall',
-                event_activity='skitouring',
-                nb_participants=10,
-                elevation=1500,
-                date=datetime.date(2016, 1, 1),
-                locales=[
-                    XreportLocale(
-                        lang='en',
-                        title='Death in the mountains',
-                        description='...',
-                        place='some place description',
-                    )
-                ],
-            )
+    session.add(
+        Xreport(
+            document_id=71178,
+            event_type='person_fall',
+            event_activity='skitouring',
+            nb_participants=10,
+            elevation=1500,
+            date=datetime.date(2016, 1, 1),
+            locales=[
+                XreportLocale(
+                    lang='en',
+                    title='Death in the mountains',
+                    description='...',
+                    place='some place description',
+                )
+            ],
         )
-        self.session.flush()
+    )
+    session.flush()
 
-        # fill the ElasticSearch index
-        fill_index(self.session)
+    # fill the ElasticSearch index
+    fill_index(session)
 
-        waypoint1 = SearchWaypoint.get(id=71171, index=index_name('w'))
-        assert waypoint1 is not None
-        assert waypoint1.title_en == 'Mont Granier'
-        assert waypoint1.title_fr == 'Mont Granier'
-        # self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
-        assert waypoint1.c2corg_doc_type == 'w'
-        assert waypoint1.quality == 2
-        assert waypoint1.access_time == 3
-        assert waypoint1.geom[0] == pytest.approx(5.71288994, abs=5e-8)
-        assert waypoint1.geom[1] == pytest.approx(45.64476395, abs=5e-8)
+    waypoint1 = SearchWaypoint.get(id=71171, index=index_name('w'))
+    assert waypoint1 is not None
+    assert waypoint1.title_en == 'Mont Granier'
+    assert waypoint1.title_fr == 'Mont Granier'
+    # self.assertEqual(waypoint1.summary_fr, 'Le Mont  Granier ')
+    assert waypoint1.c2corg_doc_type == 'w'
+    assert waypoint1.quality == 2
+    assert waypoint1.access_time == 3
+    assert waypoint1.geom[0] == pytest.approx(5.71288994, abs=5e-8)
+    assert waypoint1.geom[1] == pytest.approx(45.64476395, abs=5e-8)
 
-        waypoint2 = SearchWaypoint.get(id=71172, index=index_name('w'))
-        assert waypoint2 is not None
-        assert waypoint2.title_en == 'Mont Blanc'
-        assert waypoint2.title_fr is None
-        assert waypoint2.c2corg_doc_type == 'w'
+    waypoint2 = SearchWaypoint.get(id=71172, index=index_name('w'))
+    assert waypoint2 is not None
+    assert waypoint2.title_en == 'Mont Blanc'
+    assert waypoint2.title_fr is None
+    assert waypoint2.c2corg_doc_type == 'w'
 
-        route = SearchRoute.get(id=71173, index=index_name('r'))
-        assert route is not None
-        assert route.title_en == 'Mont Blanc : Face N'
-        assert route.title_fr is None
-        assert route.c2corg_doc_type == 'r'
-        assert route.durations == [0]
+    route = SearchRoute.get(id=71173, index=index_name('r'))
+    assert route is not None
+    assert route.title_en == 'Mont Blanc : Face N'
+    assert route.title_fr is None
+    assert route.c2corg_doc_type == 'r'
+    assert route.durations == [0]
 
-        outing = SearchOuting.get(id=71175, index=index_name('o'))
-        assert outing is not None
-        assert outing.title_en == 'Mont Blanc : Face N !'
-        assert outing.title_fr is None
-        assert outing.c2corg_doc_type == 'o'
-        assert outing.frequentation == 3
+    outing = SearchOuting.get(id=71175, index=index_name('o'))
+    assert outing is not None
+    assert outing.title_en == 'Mont Blanc : Face N !'
+    assert outing.title_fr is None
+    assert outing.c2corg_doc_type == 'o'
+    assert outing.frequentation == 3
 
-        article = SearchArticle.get(id=71176, index=index_name('c'))
-        assert article is not None
-        assert article.title_en == "Lac d'Annecy"
-        assert article.title_fr == "Lac d'Annecy"
-        assert article.c2corg_doc_type == 'c'
+    article = SearchArticle.get(id=71176, index=index_name('c'))
+    assert article is not None
+    assert article.title_en == "Lac d'Annecy"
+    assert article.title_fr == "Lac d'Annecy"
+    assert article.c2corg_doc_type == 'c'
 
-        book = SearchBook.get(id=71177, index=index_name('b'))
-        assert book is not None
-        assert book.title_en == 'Escalades au Thaurac'
-        assert book.title_fr == 'Escalades au Thaurac'
-        assert book.c2corg_doc_type == 'b'
-        assert book.book_types == ['biography']
+    book = SearchBook.get(id=71177, index=index_name('b'))
+    assert book is not None
+    assert book.title_en == 'Escalades au Thaurac'
+    assert book.title_fr == 'Escalades au Thaurac'
+    assert book.c2corg_doc_type == 'b'
+    assert book.book_types == ['biography']
 
-        xreport = SearchXreport.get(id=71178, index=index_name('x'))
-        assert xreport is not None
-        assert xreport.title_en == 'Death in the mountains'
-        assert xreport.c2corg_doc_type == 'x'
+    xreport = SearchXreport.get(id=71178, index=index_name('x'))
+    assert xreport is not None
+    assert xreport.title_en == 'Death in the mountains'
+    assert xreport.c2corg_doc_type == 'x'
 
-        # merged document is ignored
-        assert SearchWaypoint.get(id=71174, index=index_name('w'), ignore=404) is None
+    # merged document is ignored
+    assert SearchWaypoint.get(id=71174, index=index_name('w'), ignore=404) is None
 
-        # check that the sync. status was updated
-        last_update, _ = es_sync.get_status(self.session)
-        assert last_update is not None
+    # check that the sync. status was updated
+    last_update, _ = es_sync.get_status(session)
+    assert last_update is not None

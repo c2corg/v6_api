@@ -6,8 +6,10 @@ import threading
 import time
 import uuid
 
+import anyio
 import redis
 import requests
+from anyio import to_thread
 from fastapi.responses import StreamingResponse
 from pyproj import Transformer
 from shapely.geometry import Point, shape
@@ -814,49 +816,63 @@ def _event_stream(events):
     return StreamingResponse(events, media_type='text/event-stream; charset=UTF-8')
 
 
-def progress_stream(r, job_id, poll_interval=0.5, max_duration=STREAM_MAX_DURATION):
+async def progress_stream(
+    r, job_id, poll_interval=0.5, max_duration=STREAM_MAX_DURATION
+):
     """Yield the job progress, until the job ends, is unknown or takes too long."""
-    # The stream holds a worker of the server: it must end. An unknown job id
-    # (or a job whose values expired, e.g. lost with its worker) ends it at
-    # once, and so does a job running for longer than max_duration.
+    # The stream must end: an unknown job id (or a job whose values expired,
+    # e.g. lost with its worker) ends it at once, and so does a job running
+    # for longer than max_duration. An async generator: on a uvicorn worker,
+    # the reads borrow one of its threads (server.threads) for a moment, and
+    # the wait holds none. A sync one held a thread for the whole stream: a
+    # few searches at once blocked every other request of the worker (#2448).
     deadline = time.monotonic() + max_duration
     while True:
-        raw_progress = r.get(f'job:{job_id}:progress')
-        raw_found = r.get(f'job:{job_id}:found')
-        raw_not_found = r.get(f'job:{job_id}:not_found')
-        raw_total = r.get(f'job:{job_id}:total')
-        status = r.get(f'job:{job_id}:status')
-
-        if status is None:
-            yield _error_event('unknown_job', f'Unknown job {job_id}')
-            break
-
-        progress = int(raw_progress) if raw_progress is not None else 0
-        found = int(raw_found) if raw_found is not None else 0
-        not_found = int(raw_not_found) if raw_not_found is not None else 0
-        total = int(raw_total) if raw_total is not None else 0
-
-        payload = {
-            'progress': progress,
-            'total': total,
-            'found': found,
-            'not_found': not_found,
-        }
-        yield (f'data: {json.dumps(payload)}\n\n').encode()
-
-        if status.decode() == 'done':
-            yield b'event: done\ndata: done\n\n'
-            break
-        elif status.decode() == 'error':
-            error = _read_job_error(r.get(f'job:{job_id}:error'))
-            yield _error_event(error['id'], error['message'])
+        events, ended = await to_thread.run_sync(_progress_events, r, job_id)
+        for event in events:
+            yield event
+        if ended:
             break
 
         if time.monotonic() >= deadline:
             yield _error_event('timeout', 'The job takes too long')
             break
 
-        time.sleep(poll_interval)
+        await anyio.sleep(poll_interval)
+
+
+def _progress_events(r, job_id):
+    """Return the events of the job progress, and whether the stream ends."""
+    raw_progress = r.get(f'job:{job_id}:progress')
+    raw_found = r.get(f'job:{job_id}:found')
+    raw_not_found = r.get(f'job:{job_id}:not_found')
+    raw_total = r.get(f'job:{job_id}:total')
+    status = r.get(f'job:{job_id}:status')
+
+    if status is None:
+        return [_error_event('unknown_job', f'Unknown job {job_id}')], True
+
+    progress = int(raw_progress) if raw_progress is not None else 0
+    found = int(raw_found) if raw_found is not None else 0
+    not_found = int(raw_not_found) if raw_not_found is not None else 0
+    total = int(raw_total) if raw_total is not None else 0
+
+    payload = {
+        'progress': progress,
+        'total': total,
+        'found': found,
+        'not_found': not_found,
+    }
+    events = [(f'data: {json.dumps(payload)}\n\n').encode()]
+
+    if status.decode() == 'done':
+        events.append(b'event: done\ndata: done\n\n')
+        return events, True
+    elif status.decode() == 'error':
+        error = _read_job_error(r.get(f'job:{job_id}:error'))
+        events.append(_error_event(error['id'], error['message']))
+        return events, True
+    return events, False
 
 
 def _job_error(exc):

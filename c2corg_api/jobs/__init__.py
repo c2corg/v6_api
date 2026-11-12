@@ -28,14 +28,15 @@ def configure_scheduler_from_config(settings):
         minute=0,
     )
 
-    # run `purge_token` job at 0:30
+    # run `purge_token` job every hour, at :30: it also closes the forum
+    # session of the users whose token expired (a token may last a day)
     scheduler.add_job(
         purge_token,
         id='purge_token',
         name='Purge expired tokens',
         trigger='cron',
-        hour=0,
         minute=30,
+        kwargs={'settings': settings},
     )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)

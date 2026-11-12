@@ -53,9 +53,28 @@ def extract_body(request):
     try:
         body = request.json_body
     except ValueError as e:
-        request.errors.add('body', '', f'Invalid JSON: {e}')
+        request.invalid.append(json_invalid(e))
         return {}
     if not hasattr(body, 'items') and not isinstance(body, list):
-        request.errors.add('body', '', 'Should be a JSON object or an array')
+        request.invalid.append(
+            {
+                'type': 'json_type',
+                'loc': ['body'],
+                'msg': 'Should be a JSON object or an array',
+                'input': body,
+            }
+        )
         return {}
     return body
+
+
+def json_invalid(error):
+    """Return the error of an invalid JSON body, as FastAPI gives it."""
+    # a JSONDecodeError has the position of the error, a UnicodeDecodeError not
+    return {
+        'type': 'json_invalid',
+        'loc': ['body', getattr(error, 'pos', 0)],
+        'msg': 'JSON decode error',
+        'input': {},
+        'ctx': {'error': getattr(error, 'msg', str(error))},
+    }

@@ -1,185 +1,233 @@
 from unittest.mock import patch
 
+import pytest
+
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.search import index_name, search_documents
-from c2corg_api.tests.views.test_user import BaseUserTestRest, forum_username_tests
+from c2corg_api.tests import (
+    assert_body_equal,
+    assert_errors_contain,
+    errors_of,
+    extract_nonce,
+    get_json_with_contributor,
+    post_json_with_contributor,
+    send_json,
+    sync_es_queue,
+)
+from c2corg_api.tests.views import scenarios
+from c2corg_api.tests.views.test_user import PREFIX, forum_username_tests
+
+pytestmark = pytest.mark.usefixtures('discourse')
 
 
-class TestUserAccountRest(BaseUserTestRest):
-    def test_read_account_info(self):
-        url = '/users/account'
-        body = self.get_json_with_contributor(url, status=200)
-        self.assertBodyEqual(body, 'name', 'Contributor')
-        self.assertBodyEqual(body, 'email', 'contributor@camptocamp.org')
-        self.assertBodyEqual(body, 'forum_username', 'contributor')
-        self.assertBodyEqual(body, 'is_profile_public', False)
+def _update_account_field_discourse_up(discourse, client, passwords, field, value):
+    url = '/users/account'
+    currentpassword = passwords['contributor']
 
-    def test_read_account_info_blocked_account(self):
-        contributor = self.session.get(User, self.global_userids['contributor'])
-        contributor.blocked = True
-        self.session.flush()
+    data = {'currentpassword': currentpassword}
+    data[field] = value
+    post_json_with_contributor(client, url, data, status=200)
 
-        body = self.get_json_with_contributor('/users/account', status=403)
-        self.assertErrorsContain(body, 'Forbidden', 'account blocked')
+    assert 1 == int(discourse.client.sso_sync.called_count)
 
-    def _update_account_field_discourse_up(self, field, value):
-        url = '/users/account'
-        currentpassword = self.global_passwords['contributor']
 
-        data = {'currentpassword': currentpassword}
-        data[field] = value
-        self.post_json_with_contributor(url, data, status=200)
+def _update_account_field_discourse_down(
+    discourse, client, settings, passwords, field, value
+):
+    discourse.down()
 
-        assert 1 == int(self.discourse_client.sso_sync.called_count)
+    url = '/users/account'
+    currentpassword = passwords['contributor']
 
-    def _update_account_field_discourse_down(self, field, value):
-        self.set_discourse_down()
+    data = {'currentpassword': currentpassword}
+    data[field] = value
+    post_json_with_contributor(client, url, data, status=500)
 
-        url = '/users/account'
-        currentpassword = self.global_passwords['contributor']
+    assert 1 == int(discourse.client.sso_sync.called_count)
 
-        data = {'currentpassword': currentpassword}
-        data[field] = value
-        self.post_json_with_contributor(url, data, status=500)
 
-        assert 1 == int(self.discourse_client.sso_sync.called_count)
+def test_read_account_info(client):
+    url = '/users/account'
+    body = get_json_with_contributor(client, url, status=200)
+    assert_body_equal(body, 'name', 'Contributor')
+    assert_body_equal(body, 'email', 'contributor@camptocamp.org')
+    assert_body_equal(body, 'forum_username', 'contributor')
+    assert_body_equal(body, 'is_profile_public', False)
 
-    @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_update_account_email_discourse_up(self, _send_email):
-        new_email = 'superemail@localhost.localhost'
-        self._update_account_field_discourse_up('email', new_email)
 
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
-        assert user.email_to_validate == new_email
-        assert user.email != new_email
+def test_read_account_info_blocked_account(client, session, user_ids):
+    contributor = session.get(User, user_ids['contributor'])
+    contributor.blocked = True
+    session.flush()
 
-        _send_email.assert_called_once()
+    body = get_json_with_contributor(client, '/users/account', status=403)
+    assert_errors_contain(body, 'Forbidden', 'account blocked')
 
-        # Simulate confirmation email validation
-        nonce = self.extract_nonce(_send_email, 'validate_change_email')
-        url_api_validation = f'/users/validate_change_email/{nonce}'
-        self.app_post_json(url_api_validation, {}, status=200)
 
-        self.session.expunge(user)
-        user = self.session.get(User, user_id)
-        assert user.email == new_email
-        assert user.validation_nonce is None
+@patch('c2corg_api.emails.email_service.EmailService._send_email')
+def test_update_account_email_discourse_up(
+    _send_email, client, session, user_ids, passwords, discourse
+):
+    new_email = 'superemail@localhost.localhost'
+    _update_account_field_discourse_up(discourse, client, passwords, 'email', new_email)
 
-    def test_update_account_email_discourse_down(self):
-        new_email = 'superemail@localhost.localhost'
-        self._update_account_field_discourse_down('email', new_email)
+    user_id = user_ids['contributor']
+    user = session.get(User, user_id)
+    assert user.email_to_validate == new_email
+    assert user.email != new_email
 
-    def test_update_account_name_discourse_up(self):
-        self._update_account_field_discourse_up('name', 'changed')
+    _send_email.assert_called_once()
 
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
-        assert user.name == 'changed'
+    # Simulate confirmation email validation
+    nonce = extract_nonce(_send_email, 'validate_change_email')
+    url_api_validation = f'/users/validate_change_email/{nonce}'
+    send_json(client, 'post', url_api_validation, {}, status=200)
 
-        # check that the search index is updated with the new name
-        self.sync_es()
-        search_doc = search_documents[USERPROFILE_TYPE].get(
-            id=user_id, index=index_name(USERPROFILE_TYPE)
-        )
+    session.expunge(user)
+    user = session.get(User, user_id)
+    assert user.email == new_email
+    assert user.validation_nonce is None
 
-        # and check that the cache version of the user profile was updated
-        # (from 2: creating the profile version of the test data bumped it)
-        self.check_cache_version(user_id, 3)
 
-        assert search_doc['c2corg_doc_type'] is not None
-        assert search_doc['title_en'] == 'changed contributor'
+def test_update_account_email_discourse_down(client, settings, passwords, discourse):
+    new_email = 'superemail@localhost.localhost'
+    _update_account_field_discourse_down(
+        discourse, client, settings, passwords, 'email', new_email
+    )
 
-    def test_update_account_name_discourse_down(self):
-        self._update_account_field_discourse_down('name', 'changed')
 
-    def test_update_account_forum_username_validity(self):
-        url = '/users/account'
-        i = 0
-        for forum_username, value in forum_username_tests.items():
-            i += 1
-            body = {
-                'currentpassword': self.global_passwords['contributor'],
-                'forum_username': forum_username,
-            }
-            if value is False:
-                self.post_json_with_contributor(url, body, status=200)
-            else:
-                json = self.post_json_with_contributor(url, body, status=400)
-                assert json['errors'][0]['description'] == value
+def test_update_account_name_discourse_up(
+    client, session, user_ids, passwords, queue_config, discourse
+):
+    _update_account_field_discourse_up(discourse, client, passwords, 'name', 'changed')
 
-    def test_update_account_forum_username_unique(self):
-        url = '/users/account'
+    user_id = user_ids['contributor']
+    user = session.get(User, user_id)
+    assert user.name == 'changed'
 
-        data = {
-            'currentpassword': self.global_passwords['contributor'],
-            'forum_username': 'unique',
+    # check that the search index is updated with the new name
+    sync_es_queue(session, queue_config)
+    search_doc = search_documents[USERPROFILE_TYPE].get(
+        id=user_id, index=index_name(USERPROFILE_TYPE)
+    )
+
+    # and check that the cache version of the user profile was updated
+    # (from 2: creating the profile version of the test data bumped it)
+    scenarios.check_cache_version(session, user_id, 3)
+
+    assert search_doc['c2corg_doc_type'] is not None
+    assert search_doc['title_en'] == 'changed contributor'
+
+
+def test_update_account_name_discourse_down(client, settings, passwords, discourse):
+    _update_account_field_discourse_down(
+        discourse, client, settings, passwords, 'name', 'changed'
+    )
+
+
+def test_update_account_forum_username_validity(client, passwords):
+    url = '/users/account'
+    i = 0
+    for forum_username, value in forum_username_tests.items():
+        i += 1
+        body = {
+            'currentpassword': passwords['contributor'],
+            'forum_username': forum_username,
         }
-        self.post_json_with_contributor(url, data, status=200)
+        if value is False:
+            post_json_with_contributor(client, url, body, status=200)
+        else:
+            # the schema checks it: 422
+            json = post_json_with_contributor(client, url, body, status=422)
+            assert errors_of(json)[0]['description'] == value
 
-        data = {
-            'currentpassword': self.global_passwords['contributor2'],
-            'forum_username': 'Unique',
-        }
-        json = self.post_json_with_contributor(
-            url, data, status=400, username='contributor2'
-        )
-        assert json['errors'][0]['description'] == 'Already used forum name'
 
-    def test_update_account_forum_username_discourse_up(self):
-        self._update_account_field_discourse_up('forum_username', 'changed')
+def test_update_account_forum_username_unique(client, passwords):
+    url = '/users/account'
 
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
-        assert user.forum_username == 'changed'
+    data = {
+        'currentpassword': passwords['contributor'],
+        'forum_username': 'unique',
+    }
+    post_json_with_contributor(client, url, data, status=200)
 
-    def test_update_account_forum_username_discourse_down(self):
-        self._update_account_field_discourse_down('forum_username', 'changed')
+    data = {
+        'currentpassword': passwords['contributor2'],
+        'forum_username': 'Unique',
+    }
+    json = post_json_with_contributor(
+        client, url, data, status=422, username='contributor2'
+    )
+    assert errors_of(json)[0]['description'] == 'Already used forum name'
 
-    def test_update_is_profile_public_discourse_down(self):
-        data = {
-            'currentpassword': self.global_passwords['contributor'],
-            'is_profile_public': True,
-        }
-        self.post_json_with_contributor('/users/account', data, status=200)
 
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
-        assert user.is_profile_public is True
+def test_update_account_forum_username_discourse_up(
+    client, session, user_ids, passwords, discourse
+):
+    _update_account_field_discourse_up(
+        discourse, client, passwords, 'forum_username', 'changed'
+    )
 
-    def test_update_account_newpassword_too_weak(self):
-        data = {
-            'currentpassword': self.global_passwords['contributor'],
-            'newpassword': 'alllowercase1',  # nosec - test fixture
-        }
-        body = self.post_json_with_contributor('/users/account', data, status=400)
-        self.assertErrorsContain(body, 'newpassword')
+    user_id = user_ids['contributor']
+    user = session.get(User, user_id)
+    assert user.forum_username == 'changed'
 
-    def test_update_account_newpassword_success(self):
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
-        initial_encoded_password = user.password
 
-        data = {
-            'currentpassword': self.global_passwords['contributor'],
-            'newpassword': 'New$Password1',  # nosec - test fixture
-        }
-        self.post_json_with_contributor('/users/account', data, status=200)
+def test_update_account_forum_username_discourse_down(
+    client, settings, passwords, discourse
+):
+    _update_account_field_discourse_down(
+        discourse, client, settings, passwords, 'forum_username', 'changed'
+    )
 
-        self.session.expunge(user)
-        user = self.session.get(User, user_id)
-        assert initial_encoded_password != user.password
 
-    def test_update_preferred_lang(self):
-        user_id = self.global_userids['contributor']
-        user = self.session.get(User, user_id)
-        assert user.lang == 'fr'
+def test_update_is_profile_public_discourse_down(client, session, user_ids, passwords):
+    data = {
+        'currentpassword': passwords['contributor'],
+        'is_profile_public': True,
+    }
+    post_json_with_contributor(client, '/users/account', data, status=200)
 
-        request_body = {'lang': 'en'}
-        url = self._prefix + '/update_preferred_language'
-        self.post_json_with_contributor(url, request_body, status=200)
+    user_id = user_ids['contributor']
+    user = session.get(User, user_id)
+    assert user.is_profile_public is True
 
-        self.session.expunge(user)
-        user = self.session.get(User, user_id)
-        assert user.lang == 'en'
+
+def test_update_account_newpassword_too_weak(client, passwords):
+    data = {
+        'currentpassword': passwords['contributor'],
+        'newpassword': 'alllowercase1',  # nosec - test fixture
+    }
+    body = post_json_with_contributor(client, '/users/account', data, status=422)
+    assert_errors_contain(body, 'newpassword')
+
+
+def test_update_account_newpassword_success(client, session, user_ids, passwords):
+    user_id = user_ids['contributor']
+    user = session.get(User, user_id)
+    initial_encoded_password = user.password
+
+    data = {
+        'currentpassword': passwords['contributor'],
+        'newpassword': 'New$Password1',  # nosec - test fixture
+    }
+    post_json_with_contributor(client, '/users/account', data, status=200)
+
+    session.expunge(user)
+    user = session.get(User, user_id)
+    assert initial_encoded_password != user.password
+
+
+def test_update_preferred_lang(client, session, user_ids):
+    user_id = user_ids['contributor']
+    user = session.get(User, user_id)
+    assert user.lang == 'fr'
+
+    request_body = {'lang': 'en'}
+    url = PREFIX + '/update_preferred_language'
+    post_json_with_contributor(client, url, request_body, status=200)
+
+    session.expunge(user)
+    user = session.get(User, user_id)
+    assert user.lang == 'en'

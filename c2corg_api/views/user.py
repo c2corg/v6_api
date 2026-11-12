@@ -1,6 +1,5 @@
 import datetime
 import logging
-import re
 from functools import partial
 
 import requests
@@ -15,14 +14,19 @@ from c2corg_api.models.user import Purpose, User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Bool, Str, email_check
-from c2corg_api.schemas.user import UserCreateSchema, user_create_schema, user_schema
+from c2corg_api.schemas.user import (
+    UserCreateSchema,
+    forum_username_check,
+    user_create_schema,
+    user_schema,
+)
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import (
-    extract_token,
     log_validated_user_i_know_what_i_do,
     remove_token,
     renew_token,
+    token_expire,
     try_login,
 )
 from c2corg_api.views import (
@@ -126,30 +130,17 @@ def validate_unique_attribute(attrname, request, lowercase=False, **kwargs):
 
 # https://github.com/discourse/discourse/blob/master/app/models/username_validator.rb
 def check_forum_username(value):
+    """Return why a forum username is invalid, or False."""
     if len(value) < 3:
         return 'Shorter than minimum length 3'
     if len(value) > 25:
         return 'Longer than maximum length 25'
-    if re.search(r'[^\w.-]', value):
-        return 'Contain invalid character(s)'
-    if re.match(r'\W', value[0]):
-        return 'First character is invalid'
-    if re.match(r'[^A-Za-z0-9]', value[-1]):
-        return 'Last character is invalid'
-    if re.search(r'[-_\.]{2,}', value):
-        return 'Contains consecutive special characters'
-    if re.search(
-        (
-            r'\.(js|json|css|htm|html|xml|jpg|jpeg|'
-            r'png|gif|bmp|ico|tif|tiff|woff)$'
-        ),
-        value,
-    ):
-        return 'Ended by confusing suffix'
-    return False
+    return forum_username_check(value) or False
 
 
 def validate_forum_username(request, **kwargs):
+    """Check the forum username given to an SSO sync."""
+    # the other routes check it in their schema (forum_username_check)
     attrname = 'forum_username'
     if attrname in request.json:
         value = request.json[attrname]
@@ -237,7 +228,6 @@ def validate_captcha(request, **kwargs):
         partial(validate_unique_attribute, 'email'),
         partial(validate_unique_attribute, 'forum_username', lowercase=True),
         validate_username,
-        validate_forum_username,
         validate_captcha,
     ],
     json=True,
@@ -456,10 +446,11 @@ class LoginSchema(Schema):
     username: Str()
     password: Str()
     accept_tos: Bool = False
+    # "remember me": a token of 14 days, renewable; else of a day
+    remember: Bool = True
 
 
 def token_to_response(user, token, request):
-    assert token is not None
     roles = ['moderator'] if user.moderator else []
     return {
         'token': token.value,
@@ -490,7 +481,8 @@ def login_user(request):
     if user is None and is_valid_email(username):
         user = DBSession.query(User).filter(User.email == username).first()
 
-    token = try_login(user, password, request) if user else None
+    remember = request.validated['remember']
+    token = try_login(user, password, request, remember) if user else None
     if token:
         # Check if the user has validated Terms of Service, if not,
         # return a 403 with an explicit message that can be caught
@@ -584,7 +576,7 @@ def renew_login(request):
 def logout_user(request):
     userid = request.authenticated_userid
     result = {'user': userid}
-    remove_token(extract_token(request))
+    remove_token(request.authorization.token)
     if 'discourse' in request.json:
         try:
             settings = request.registry.settings
@@ -594,3 +586,12 @@ def logout_user(request):
             # Any error with discourse should not prevent logout
             log.warning('Error logging out of discourse for %d', userid, exc_info=True)
     return result
+
+
+def read_token(request):
+    """Return the user and the expiry of the token of the request."""
+    # For the other services sharing the tokens (c2c_tracking): the signature
+    # of a token is not enough, it may have been revoked (logout, renewal) or
+    # its user blocked. The token was checked before this view (401, 403).
+    expire = token_expire(request.authorization.token)
+    return {'user': request.authenticated_userid, 'expire': int(expire.timestamp())}

@@ -12,17 +12,39 @@ License: [BSD](http://www.opensource.org/licenses/bsd-license.php)
 Modified for C2C : remove title emphasis, toc HTML class. Add c2c:role
 """
 
+import re
+
 from markdown.extensions.toc import (
     AtomicString,
     TocExtension,
     TocTreeprocessor,
     html,
     nest_toc_tokens,
-    stashedHTML2text,
     unescape,
     unique,
 )
-from markdown.util import code_escape
+from markdown.util import HTML_PLACEHOLDER_RE, code_escape
+
+
+def stashed_html_to_text(text, md, strip_entities=True):
+    """Extract raw HTML from stash, reduce to plain text and swap with placeholder."""
+    # copy of markdown 3.11's helper, deprecated there: its replacements
+    # (render_inner_html, strip_tags) give other ids to the headers holding
+    # inline markup, and would break the links to them
+
+    def _html_sub(m):
+        """Substitute raw html with plain text."""
+        try:
+            raw = md.htmlStash.rawHtmlBlocks[int(m.group(1))]
+        except IndexError, TypeError:  # pragma: no cover
+            return m.group(0)
+        # Strip out tags and/or entities - leaving text
+        res = re.sub(r'(<[^>]+>)', '', raw)
+        if strip_entities:
+            res = re.sub(r'(&[\#a-zA-Z0-9]+;)', '', res)
+        return res
+
+    return HTML_PLACEHOLDER_RE.sub(_html_sub, text)
 
 
 def not_emphasis(elt):
@@ -78,7 +100,7 @@ class C2CTocTreeprocessor(TocTreeprocessor):
 
                 # Do not override pre-existing ids
                 if 'id' not in el.attrib:
-                    innertext = unescape(stashedHTML2text(text, self.md))
+                    innertext = unescape(stashed_html_to_text(text, self.md))
                     el.attrib['id'] = unique(
                         self.slugify(innertext, self.sep), used_ids
                     )
@@ -92,7 +114,7 @@ class C2CTocTreeprocessor(TocTreeprocessor):
                             'level': int(el.tag[-1]),
                             'id': el.attrib['id'],
                             'name': unescape(
-                                stashedHTML2text(
+                                stashed_html_to_text(
                                     code_escape(el.attrib.get('data-toc-label', text)),
                                     self.md,
                                     strip_entities=False,

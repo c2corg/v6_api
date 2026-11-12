@@ -25,12 +25,18 @@ services:
       PYTHONPATH: /workspace
 
   postgresql:
-    image: postgis/postgis:16-3.4
+    # PostgreSQL 18 + PostGIS with a lightweight anonymized database (scripts/dev-database): it is restored
+    # at the first start, a minute or so. The volume is mounted on /var/lib/postgresql (the layout of the
+    # PostgreSQL 18 images), not on /var/lib/postgresql/data.
+    image: ghcr.io/c2corg/c2corg-dev-db:latest
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: test
+      # the restore ends with a checkpoint which can take more than the 60 s pg_ctl waits by default
+      # on a slow disk (the first start would then fail)
+      PGCTLTIMEOUT: 600
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       - ..:/v6_api
       - ../docker/conf/postgresql.conf:/etc/postgresql.conf
     command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
@@ -48,6 +54,8 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
     ulimits:
       nofile:
         soft: 65536
@@ -63,3 +71,4 @@ services:
 
 volumes:
   postgres_data:
+  es_data:

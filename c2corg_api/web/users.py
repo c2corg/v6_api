@@ -13,6 +13,7 @@ from c2corg_api.views.user import (
     discourse_redirect,
     login_user,
     logout_user,
+    read_token,
     register_user,
     renew_login,
     request_password_change,
@@ -34,6 +35,7 @@ from c2corg_api.views.user_follow import (
     read_following_user,
 )
 from c2corg_api.views.user_mailinglists import read_mailinglists
+from c2corg_api.views.user_partners import read_partners
 from c2corg_api.views.user_preferences import (
     read_preferences,
 )
@@ -74,10 +76,12 @@ def include(app):
     # a numeric id only, as the document routes (see web.documents)
     for path, endpoint in (
         ('/users/account', account),
+        ('/users/token', token),
         ('/users/preferences', preferences),
         ('/users/mailinglists', mailinglists),
         ('/users/following', following),
         ('/users/following-user/{id:int}', is_following_user),
+        ('/users/partners', partners),
         ('/users/blocked', blocked_users),
         ('/users/blocked/{id:int}', is_blocked),
     ):
@@ -94,7 +98,20 @@ def include(app):
 
 def account(request: Request, user: User):
     """Return the account of the authenticated user."""
-    response = serve_read(request, user, [], read_account, permission='authenticated')
+    return _not_cached(
+        serve_read(request, user, [], read_account, permission='authenticated')
+    )
+
+
+def token(request: Request, user: User):
+    """Return the user and the expiry of the token of the request."""
+    return _not_cached(
+        serve_read(request, user, [], read_token, permission='authenticated')
+    )
+
+
+def _not_cached(response):
+    """Answer a read that no cache may keep."""
     if isinstance(response, Response):
         return response
     # http_cache=0 of the Pyramid view
@@ -151,6 +168,15 @@ def following(
     return serve_read(request, user, [], read_following)
 
 
+def partners(
+    request: Request,
+    user: User,
+    _: _checks('authenticated', JSON),
+):
+    """Return the users of the recent outings of the authenticated user."""
+    return serve_read(request, user, [], read_partners)
+
+
 def is_following_user(
     request: Request,
     user: User,
@@ -186,16 +212,26 @@ def is_blocked(
 
 
 # read by the route inventory of the contract tests (routes.txt)
-for _endpoint in (account, preferences, mailinglists, following, is_following_user):
+for _endpoint in (
+    account,
+    token,
+    preferences,
+    mailinglists,
+    following,
+    is_following_user,
+    partners,
+):
     _endpoint.permission = 'authenticated'
 for _endpoint in (blocked_users, is_blocked):
     _endpoint.permission = 'moderator'
 for _endpoint in (
     account,
+    token,
     preferences,
     mailinglists,
     following,
     is_following_user,
+    partners,
     blocked_users,
     is_blocked,
 ):
