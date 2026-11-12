@@ -298,6 +298,10 @@ def _simplification(bbox):
 
 def _cacheable(request):
     request.response.headers['Cache-Control'] = f'public, max-age={CACHE_SECONDS}'
+    # the CORS middleware copies the origin of the request into the answer: a
+    # shared cache must not give the answer made for an origin (or for none)
+    # to another one
+    request.response.headers['Vary'] = 'Origin'
 
 
 def get_tracks_response(doc_type, model, locale_model, request):

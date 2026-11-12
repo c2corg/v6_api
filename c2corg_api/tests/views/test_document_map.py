@@ -274,6 +274,17 @@ def test_answers_can_be_cached(client, tracks, path):
     response = client.get(f'/outings/map/{path}?bbox={BBOX}', status=200)
 
     assert response.headers['Cache-Control'] == 'public, max-age=60'
+    # the answer depends on the origin (CORS): a shared cache keeps one per origin
+    assert 'Origin' in response.headers['Vary']
+
+
+@pytest.mark.parametrize('origin', [None, 'http://localhost:6553'])
+def test_cached_answers_differ_by_origin(client, tracks, origin):
+    headers = {'Origin': origin} if origin else {}
+    response = client.get(f'/outings/map/tracks?bbox={BBOX}', headers=headers)
+
+    assert 'Origin' in response.headers['Vary']
+    assert ('Access-Control-Allow-Origin' in response.headers) == bool(origin)
 
 
 def test_errors_are_not_cached(client):
