@@ -23,7 +23,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.utils import chunked_query, windowed_query
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es.es_batch import ElasticBatch
-from c2corg_api.search import elasticsearch_config, search_documents
+from c2corg_api.search import elasticsearch_config, index_name, search_documents
 from c2corg_api.views.document_listings import add_load_for_profiles
 
 log = logging.getLogger(__name__)
@@ -373,15 +373,13 @@ def sync_documents(session, changed_documents, batch_size):
 def sync_deleted_documents(session, deleted_documents, batch_size):
     client = elasticsearch_config['client']
     batch = ElasticBatch(client, batch_size)
-    index = elasticsearch_config['index']
     n = 0
     with batch:
         for document_id, doc_type in deleted_documents:
             batch.add(
                 {
-                    '_index': index,
+                    '_index': index_name(doc_type),
                     '_id': document_id,
-                    '_type': doc_type,
                     'id': document_id,
                     '_op_type': 'delete',
                 }
@@ -467,7 +465,7 @@ def get_documents(
 
 def create_search_documents(doc_type, documents, batch):
     to_search_document = search_documents[doc_type].to_search_document
-    index = elasticsearch_config['index']
+    index = index_name(doc_type)
     n = 0
     for doc in documents:
         batch.add(to_search_document(doc, index))

@@ -4,7 +4,7 @@ import pytest
 
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.search import elasticsearch_config, search_documents
+from c2corg_api.search import index_name, search_documents
 from c2corg_api.tests import (
     assert_body_equal,
     assert_errors_contain,
@@ -109,14 +109,14 @@ def test_update_account_name_discourse_up(
     # check that the search index is updated with the new name
     sync_es_queue(session, queue_config)
     search_doc = search_documents[USERPROFILE_TYPE].get(
-        id=user_id, index=elasticsearch_config['index']
+        id=user_id, index=index_name(USERPROFILE_TYPE)
     )
 
     # and check that the cache version of the user profile was updated
     # (from 2: creating the profile version of the test data bumped it)
     scenarios.check_cache_version(session, user_id, 3)
 
-    assert search_doc['doc_type'] is not None
+    assert search_doc['c2corg_doc_type'] is not None
     assert search_doc['title_en'] == 'changed contributor'
 
 

@@ -26,19 +26,9 @@
                 "type": "elision",
                 "articles_case": true,
                 "articles": [
-                    "l",
-                    "m",
-                    "t",
-                    "qu",
-                    "n",
-                    "s",
-                    "j",
-                    "d",
-                    "c",
-                    "jusqu",
-                    "quoiqu",
-                    "lorsqu",
-                    "puisqu"
+                    "l", "m", "t", "qu", "n", "s",
+                    "j", "d", "c", "jusqu", "quoiqu",
+                    "lorsqu", "puisqu"
                 ]
             },
             "french_stop": {
@@ -61,27 +51,10 @@
                 "type": "elision",
                 "articles_case": true,
                 "articles": [
-                    "c",
-                    "l",
-                    "all",
-                    "dall",
-                    "dell",
-                    "nell",
-                    "sull",
-                    "coll",
-                    "pell",
-                    "gl",
-                    "agl",
-                    "dagl",
-                    "degl",
-                    "negl",
-                    "sugl",
-                    "un",
-                    "m",
-                    "t",
-                    "s",
-                    "v",
-                    "d"
+                    "c", "l", "all", "dall", "dell",
+                    "nell", "sull", "coll", "pell",
+                    "gl", "agl", "dagl", "degl", "negl",
+                    "sugl", "un", "m", "t", "s", "v", "d"
                 ]
             },
             "italian_stop": {
@@ -103,14 +76,7 @@
             "catalan_elision": {
                 "type": "elision",
                 "articles_case": true,
-                "articles": [
-                    "d",
-                    "l",
-                    "m",
-                    "n",
-                    "s",
-                    "t"
-                ]
+                "articles": ["d", "l", "m", "n", "s", "t"]
             },
             "catalan_stop": {
                 "type": "stop",
@@ -129,6 +95,11 @@
                 "language": "basque"
             }
         },
+        "similarity": {
+            "c2corgsimilarity": {
+                "type": "BM25"
+            }
+        },
         "char_filter": {
             "punctuationgreedy": {
                 "type": "pattern_replace",
@@ -137,51 +108,28 @@
         },
         "analyzer": {
             "index_ngram": {
-                "char_filter": [
-                    "punctuationgreedy"
-                ],
+                "char_filter": ["punctuationgreedy"],
                 "filter": [
-                    "word_delimiter",
-                    "lowercase",
-                    "icu_folding",
-                    "autocomplete_filter"
-                ],
+                    "word_delimiter", "lowercase", "icu_folding",
+                    "autocomplete_filter"],
                 "tokenizer": "icu_tokenizer"
             },
             "search_ngram": {
-                "char_filter": [
-                    "punctuationgreedy"
-                ],
+                "char_filter": ["punctuationgreedy"],
                 "filter": [
-                    "word_delimiter",
-                    "lowercase",
-                    "icu_folding",
-                    "unique"
-                ],
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
                 "tokenizer": "standard"
             },
             "index_raw": {
-                "char_filter": [
-                    "punctuationgreedy"
-                ],
+                "char_filter": ["punctuationgreedy"],
                 "filter": [
-                    "word_delimiter",
-                    "lowercase",
-                    "asciifolding",
-                    "unique"
-                ],
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
                 "tokenizer": "standard"
             },
             "search_raw": {
-                "char_filter": [
-                    "punctuationgreedy"
-                ],
+                "char_filter": ["punctuationgreedy"],
                 "filter": [
-                    "word_delimiter",
-                    "lowercase",
-                    "asciifolding",
-                    "unique"
-                ],
+                    "word_delimiter", "lowercase", "asciifolding", "unique"],
                 "tokenizer": "standard"
             },
             "index_english": {

@@ -19,6 +19,7 @@ from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import (
     configure_es_from_config,
     elasticsearch_config,
+    index_name,
     search_documents,
 )
 
@@ -54,18 +55,21 @@ class FillResult(NamedTuple):
     # database time taken before reading the documents: everything modified
     # since then has to be replayed by the syncer
     sync_date: datetime
+    # the same count, by document type
+    counts: dict | None = None
 
 
-def fill_index(session, batch_size=1000, index_name=None, mark_updated=True):
+def fill_index(session, batch_size=1000, index_names=None, mark_updated=True):
     """Index every document.
 
-    By default the configured index is filled in place. `index_name` targets
-    another index (see `reindex.py`). `mark_updated=False` leaves the sync
+    By default the indices of the document types are filled in place.
+    `index_names` (document type -> index) targets other indices (see
+    `reindex.py`). `mark_updated=False` leaves the sync
     status untouched, the caller then has to call `es_sync.mark_as_updated`
     with the returned `sync_date` once the index is actually in use.
     """
     client = elasticsearch_config['client']
-    index_name = index_name or elasticsearch_config['index']
+    index_names = index_names or {t: index_name(t) for t in search_documents}
 
     status = {'start_time': datetime.now(UTC), 'last_progress_update': None}
 
@@ -82,6 +86,7 @@ def fill_index(session, batch_size=1000, index_name=None, mark_updated=True):
 
     batch = ElasticBatch(client, batch_size)
     count = 0
+    counts = dict.fromkeys(index_names, 0)
     with batch:
         for doc_type in document_types:
             if doc_type not in search_documents:
@@ -95,9 +100,10 @@ def fill_index(session, batch_size=1000, index_name=None, mark_updated=True):
             for doc in sync.get_documents(
                 session, doc_type, batch_size, ignore_redirects=True
             ):
-                batch.add(to_search_document(doc, index_name))
+                batch.add(to_search_document(doc, index_names[doc_type]))
 
                 count += 1
+                counts[doc_type] += 1
                 progress(count, total)
 
     if mark_updated:
@@ -105,7 +111,7 @@ def fill_index(session, batch_size=1000, index_name=None, mark_updated=True):
 
     duration = datetime.now(UTC) - status['start_time']
     print(f'Done (duration: {duration})')
-    return FillResult(count, date_now)
+    return FillResult(count, date_now, counts)
 
 
 if __name__ == '__main__':

@@ -6,8 +6,8 @@ from functools import partial
 
 from elasticsearch_dsl.query import (
     Bool,
+    Exists,
     GeoBoundingBox,
-    Missing,
     Range,
     Script,
     Term,
@@ -48,7 +48,9 @@ def build_query(url_params, meta_params, doc_type):
         if filter:
             search = search.filter(filter)
 
-    search = search.fields([]).extra(from_=offset, size=limit)
+    # only the document ids are needed, and the exact total (not capped at
+    # 10000 hits)
+    search = search.source(False).extra(from_=offset, size=limit, track_total_hits=True)
 
     if url_params.get('bbox'):
         bbox_filter = create_bbox_filter(url_params.get('bbox'))
@@ -191,9 +193,9 @@ def create_enum_range_min_max_filter(field, query_term):
                 Range(**kwargs_start),
                 Range(**kwargs_end),
                 Bool(
-                    must=[
-                        Missing(field=field.field_min),
-                        Missing(field=field.field_max),
+                    must_not=[
+                        Exists(field=field.field_min),
+                        Exists(field=field.field_max),
                     ]
                 ),
             ]
@@ -363,9 +365,9 @@ def create_number_range_filter(field, query_term):
                 Range(**kwargs_start),
                 Range(**kwargs_end),
                 Bool(
-                    must=[
-                        Missing(field=field.field_min),
-                        Missing(field=field.field_max),
+                    must_not=[
+                        Exists(field=field.field_min),
+                        Exists(field=field.field_max),
                     ]
                 ),
             ]
@@ -388,7 +390,7 @@ def create_bbox_filter(query_term):
         return None
 
     return GeoBoundingBox(
-        geom={'left': xmin, 'bottom': ymin, 'right': xmax, 'top': ymax}, type='indexed'
+        geom={'left': xmin, 'bottom': ymin, 'right': xmax, 'top': ymax}
     )
 
 

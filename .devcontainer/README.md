@@ -37,10 +37,10 @@ documents, a few hundred accounts, the stop areas), restored at the first start 
 [`scripts/dev-database`](../scripts/dev-database/README.md) for what it contains and how it is built.
 
 - Accounts (password `c2c` for all): `moderator`, `user`, `blocked`, `unvalidated`.
-- Elasticsearch comes from the image `ghcr.io/c2corg/c2corg-dev-es`, published with the database and
-  already indexed. The setup script keeps that index if it was built by the same indexing code as your
-  checkout (see `es_index_fingerprint`); otherwise it rebuilds it from the database (about 5 minutes). The
-  data of both services lives in the Docker volumes `postgres_data` and `es_data`.
+- Elasticsearch 8 is built from `docker/Dockerfile.elasticsearch`. The setup script keeps the index of the
+  `es_data` volume if it was built by the same indexing code as your checkout (see `es_index_fingerprint`);
+  otherwise it rebuilds it from the database (about 5 minutes). The data of both services lives in the
+  Docker volumes `postgres_data` and `es_data`.
 - To get a fresh database and index, rebuild the container after removing these two volumes (the
   names are prefixed by the Compose project): `docker volume rm <project>_postgres_data <project>_es_data`.
 - Newer images are used after removing the two volumes and pulling them
@@ -88,7 +88,7 @@ If dependencies change, rebuild the container:
   fail with connection errors, check: `curl http://elasticsearch:9200`
 
 - **The search finds nothing**: the index was created without its mappings or is empty. Delete it and
-  run the setup again: `curl -XDELETE http://elasticsearch:9200/c2corg && bash .devcontainer/setup.sh`
+  run the setup again: `for t in a b c i m o r u w x; do curl -XDELETE http://elasticsearch:9200/c2corg_$t; done && bash .devcontainer/setup.sh`
 
 - **Config out of date**: Re-generate config files:
 

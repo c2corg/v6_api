@@ -16,7 +16,7 @@ from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import elasticsearch_config, search_documents
+from c2corg_api.search import index_name, search_documents
 from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
 )
@@ -402,10 +402,9 @@ def test_register_search_index(_send_email, client, session, queue_config):
 
     # check that the profile is not inserted in the search index
     sync_es(session)
-    search_doc = search_documents[USERPROFILE_TYPE].get(
-        id=user_id, index=elasticsearch_config['index'], ignore=404
+    assert not search_documents[USERPROFILE_TYPE].exists(
+        id=user_id, index=index_name(USERPROFILE_TYPE)
     )
-    assert search_doc is None
 
     # Simulate confirmation email validation
     nonce = extract_nonce(_send_email, 'validate_register_email')
@@ -415,11 +414,11 @@ def test_register_search_index(_send_email, client, session, queue_config):
     # check that the profile is inserted in the index after confirmation
     sync_es_queue(session, queue_config)
     search_doc = search_documents[USERPROFILE_TYPE].get(
-        id=user_id, index=elasticsearch_config['index']
+        id=user_id, index=index_name(USERPROFILE_TYPE)
     )
     assert search_doc is not None
 
-    assert search_doc['doc_type'] is not None
+    assert search_doc['c2corg_doc_type'] is not None
     assert search_doc['title_fr'] == 'Max Mustermann testf'
 
 

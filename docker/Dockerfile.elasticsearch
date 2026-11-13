@@ -1,3 +1,3 @@
-FROM docker.io/c2corg/c2corg_es:anon-2018-11-02
+FROM docker.elastic.co/elasticsearch/elasticsearch:8.19.18
 
-RUN /usr/share/elasticsearch/bin/plugin install --batch analysis-icu
+RUN /usr/share/elasticsearch/bin/elasticsearch-plugin install --batch analysis-icu

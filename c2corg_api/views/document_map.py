@@ -216,7 +216,7 @@ def _matching_ids(doc_type, params, cap):
     # The count comes first: a broad filter (`act=skitouring`) would otherwise
     # fetch `cap` hits only to drop them.
     search = build_query(params, {'limit': 0, 'offset': 0}, doc_type).sort()
-    if search.execute().hits.total > cap:
+    if search.execute().hits.total.value > cap:
         return None
     return [int(doc.meta.id) for doc in search.extra(size=cap).execute()]
 

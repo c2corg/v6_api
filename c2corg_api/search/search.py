@@ -5,7 +5,6 @@ from elasticsearch_dsl.search import MultiSearch
 from c2corg_api.search import (
     SCORE_SORT,
     create_search,
-    elasticsearch_config,
     get_text_query_on_title,
 )
 from c2corg_api.views.document_listings import get_documents
@@ -54,7 +53,7 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
     and returns a list of tuples (document_ids, total) containing the results
     for each type.
     """
-    multi_search = MultiSearch(index=elasticsearch_config['index'])
+    multi_search = MultiSearch()
 
     for search_type in search_types:
         (_, get_documents_config) = search_type
@@ -62,8 +61,8 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
             create_search(get_documents_config.document_type)
             .query(get_text_query_on_title(search_term, lang))
             .sort(*SCORE_SORT)
-            .fields([])
-            .extra(from_=0, size=limit)
+            .source(False)
+            .extra(from_=0, size=limit, track_total_hits=True)
         )
         log.debug(
             f'Search filter for type {get_documents_config.document_type}: '
@@ -77,7 +76,7 @@ def do_multi_search_for_types(search_types, search_term, limit, lang):
     for response in responses:
         # only requesting the document ids from ES
         document_ids = [int(doc.meta.id) for doc in response]
-        total = response.hits.total
+        total = response.hits.total.value
         results_for_type.append((document_ids, total))
     return results_for_type
 

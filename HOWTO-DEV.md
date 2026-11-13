@@ -38,7 +38,7 @@ A [Dev Container](https://containers.dev/) configuration is provided in the `.de
    - Install all Python dependencies
    - Generate the configuration files
    - Start the dev database (a lightweight anonymized extract of the production data, restored from the image `ghcr.io/c2corg/c2corg-dev-db`) and create the test database
-   - Start Elasticsearch with the index already built for that database (`ghcr.io/c2corg/c2corg-dev-es`), and rebuild it from the database if it was made by a different version of the indexing code
+   - Start Elasticsearch 8 and build its indices from that database (kept in a volume, and rebuilt if they were made by a different version of the indexing code)
 
 4. You're ready to go! See [Running the API](#running-the-api), [Running tests](#running-tests), and [Linting](#linting) below.
 
@@ -145,22 +145,26 @@ initialize_c2corg_api_db development.ini
 docker compose exec -u postgres -T postgresql /v6_api/scripts/database/create_test_schema.sh
 ```
 
-- Initialize elastic search indexes
+- Create the elastic search indices (one per document type, with their mapping), then fill them with the documents of the database
 
 ```shell
+initialize_c2corg_api_es development.ini
 fill_es_index development.ini
 ```
 
-- Rebuild the whole index without interrupting the search (production)
+The indices are named `<elasticsearch_index>_<document type>` (e.g. `c2corg_w` for the waypoints). Their settings and mappings are the JSON files of `c2corg_api/search/es_mappings`. To re-create them, run `python -m c2corg_api.scripts.es.create_index development.ini` (it deletes the existing ones), then `fill_es_index` again. If Elasticsearch has authentication enabled, set `elasticsearch_scheme`, `elasticsearch_user` and `elasticsearch_passwd` in `config/env.local`.
+
+- Rebuild all the indices without interrupting the search (production)
 
 ```shell
 reindex_es production.ini
 ```
 
-A new timestamped index is built next to the live one, then `elasticsearch.index`
-is switched to it as an alias, atomically. It must be an alias: the first time,
-if it is still a real index, run once with `--replace-index` (short search gap,
-once). `--keep-old` keeps the previous index instead of deleting it.
+New timestamped indices (`<elasticsearch_index>_<type>_<timestamp>`) are built
+next to the live ones, then the names of the document types (`c2corg_w`...) are
+switched to them as aliases, atomically. They must be aliases: the first time,
+if they are still real indices, run once with `--replace-index` (short search
+gap, once). `--keep-old` keeps the previous indices instead of deleting them.
 
 ## Running the API
 

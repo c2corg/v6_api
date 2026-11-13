@@ -47,14 +47,15 @@ services:
       retries: 5
 
   elasticsearch:
-    # Elasticsearch 2.4 with the index of the dev database (built with it by scripts/dev-database/publish.sh,
-    # same tag). The data is in /esdata, a volume which starts from the content of the image.
-    image: ghcr.io/c2corg/c2corg-dev-es:latest
-    command: elasticsearch -Des.path.data=/esdata -Des.index.number_of_replicas=0 -Des.script.inline=true
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.elasticsearch
     environment:
-      ES_HEAP_SIZE: 512m
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
-      - es_data:/esdata
+      - es_data:/usr/share/elasticsearch/data
     ulimits:
       nofile:
         soft: 65536

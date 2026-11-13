@@ -1,8 +1,8 @@
 import pytest
 from elasticsearch_dsl.query import (
     Bool,
+    Exists,
     GeoBoundingBox,
-    Missing,
     Range,
     Script,
     Term,
@@ -37,8 +37,8 @@ def test_build_query():
         .filter(Term(available_locales='fr'))
         .filter(Terms(areas=[1234, 4567]))
         .filter(Range(elevation={'gte': 1500}))
-        .fields([])
-        .extra(from_=0, size=10)
+        .source(False)
+        .extra(from_=0, size=10, track_total_hits=True)
     )
     assert_query_equal(query, expected_query)
 
@@ -79,11 +79,10 @@ def test_build_query_bbox():
                     'right': 6.28369744,
                     'top': 46.03191439,
                 },
-                type='indexed',
             )
         )
-        .fields([])
-        .extra(from_=0, size=10)
+        .source(False)
+        .extra(from_=0, size=10, track_total_hits=True)
     )
     assert_query_equal(query, expected_query)
 
@@ -96,8 +95,8 @@ def test_build_query_limit_offset():
         create_search('w')
         .query(get_text_query_on_title('search word'))
         .sort(*SCORE_SORT)
-        .fields([])
-        .extra(from_=40, size=20)
+        .source(False)
+        .extra(from_=40, size=20, track_total_hits=True)
     )
     assert_query_equal(query, expected_query)
 
@@ -109,9 +108,9 @@ def test_build_query_sort_outing():
     expected_query = (
         create_search('o')
         .filter(Term(activities='skitouring'))
-        .fields([])
+        .source(False)
         .sort({'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}})
-        .extra(from_=40, size=20)
+        .extra(from_=40, size=20, track_total_hits=True)
     )
     assert_query_equal(query, expected_query)
 
@@ -120,7 +119,8 @@ def assert_query_equal(query1, query2):
     q1 = query1.to_dict()
     q2 = query2.to_dict()
 
-    assert q1.get('fields') == q2.get('fields')
+    assert q1.get('_source') == q2.get('_source')
+    assert q1.get('track_total_hits') == q2.get('track_total_hits')
     assert q1['from'] == q2['from']
     assert q1['size'] == q2['size']
     assert q1.get('sort') == q2.get('sort')
@@ -212,9 +212,9 @@ def test_create_filter_enum_range_min_max():
                 Range(climbing_rating_min={'gt': 17}),
                 Range(climbing_rating_max={'lt': 5}),
                 Bool(
-                    must=[
-                        Missing(field='climbing_rating_min'),
-                        Missing(field='climbing_rating_max'),
+                    must_not=[
+                        Exists(field='climbing_rating_min'),
+                        Exists(field='climbing_rating_max'),
                     ]
                 ),
             ]
@@ -235,9 +235,9 @@ def test_create_filter_integer_range():
                 Range(elevation_min={'gt': 2400}),
                 Range(elevation_max={'lt': 1200}),
                 Bool(
-                    must=[
-                        Missing(field='elevation_min'),
-                        Missing(field='elevation_max'),
+                    must_not=[
+                        Exists(field='elevation_min'),
+                        Exists(field='elevation_max'),
                     ]
                 ),
             ]
@@ -248,7 +248,12 @@ def test_create_filter_integer_range():
             should=[
                 Range(height_min={'gt': 2400}),
                 Range(height_max={'lt': 1200}),
-                Bool(must=[Missing(field='height_min'), Missing(field='height_max')]),
+                Bool(
+                    must_not=[
+                        Exists(field='height_min'),
+                        Exists(field='height_max'),
+                    ]
+                ),
             ]
         )
     )
@@ -409,7 +414,6 @@ def test_create_bbox_filter():
                 'right': 6.28369744,
                 'top': 46.03191439,
             },
-            type='indexed',
         ).to_dict(),
     )
 

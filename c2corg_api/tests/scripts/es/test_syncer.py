@@ -6,7 +6,7 @@ from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.es_sync import ESDeletedDocument
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.scripts.es.syncer import SyncWorker
-from c2corg_api.search import elasticsearch_config
+from c2corg_api.search import index_name
 from c2corg_api.search.mappings.waypoint_mapping import SearchWaypoint
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.document import create_new_version
@@ -49,10 +49,10 @@ def test_process_task(session, user_ids, queue_config):
     )
     next(syncer.consume(limit=1))
 
-    index = elasticsearch_config['index']
+    index = index_name(WAYPOINT_TYPE)
     doc = SearchWaypoint.get(id=document_id, index=index)
     assert doc['title_fr'] == 'Mont Granier'
-    assert doc['doc_type'] == 'w'
+    assert doc['c2corg_doc_type'] == 'w'
 
     # simulate removing a document
     session.add(ESDeletedDocument(document_id=document_id, type=WAYPOINT_TYPE))

@@ -94,10 +94,10 @@ echo "==> Initializing the Elasticsearch index..."
 # creates the index by itself when documents arrive, without the search mappings, and the search finds nothing.
 initialize_c2corg_api_es development.ini
 
-# The Elasticsearch image already contains the index of the dev database. It is kept if it was built by
-# this version of the indexing code (the fingerprint stored with it is compared with the one of the code);
+# The Elasticsearch data volume may already contain the index of the dev database. It is kept if it was built
+# by this version of the indexing code (the fingerprint stored with it is compared with the one of the code);
 # otherwise, or if it is empty, it is rebuilt from the database (about 5 minutes).
-ES_COUNT=$(curl -s "http://elasticsearch:9200/c2corg/_count" | sed -n 's/.*"count":\([0-9]*\).*/\1/p')
+ES_COUNT=$(curl -s "http://elasticsearch:9200/c2corg_*/_count" | sed -n 's/.*"count":\([0-9]*\).*/\1/p')
 REBUILD=1
 if [ "${ES_COUNT:-0}" -gt 0 ]; then
   if es_index_fingerprint check development.ini; then
@@ -105,7 +105,10 @@ if [ "${ES_COUNT:-0}" -gt 0 ]; then
     REBUILD=
   else
     echo "  Rebuilding the index with the current indexing code"
-    curl -s -XDELETE "http://elasticsearch:9200/c2corg" > /dev/null
+    # one index per document type; ES refuses to delete them with a wildcard
+    for doc_type in a b c i m o r u w x; do
+      curl -s -XDELETE "http://elasticsearch:9200/c2corg_${doc_type}" > /dev/null
+    done
     initialize_c2corg_api_es development.ini
   fi
 fi
