@@ -84,7 +84,9 @@ def test_switch_alias_replaces_concrete_index():
     client.indices.put_alias.assert_called_once_with(index='c2corg_new', name='c2corg')
 
 
-def test_bulk_load_settings():
+def test_bulk_load_settings(monkeypatch):
+    # the mappings are saved through the global connection, not the client
+    monkeypatch.setattr(im, 'search_documents', {})
     client = MagicMock()
     im.create_index(client, 'c2corg_new', bulk_load=True)
     settings = client.indices.create.call_args.kwargs['body']['settings']
