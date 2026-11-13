@@ -44,8 +44,8 @@ dependencies = [
     "python-dotenv==1.2.4",
     # Discourse API client
     "pydiscourse==1.7.0",
-    "pydantic==2.14.2",
-    "fastapi==0.162.0",
+    "pydantic==2.14.3",
+    "fastapi==0.162.4",
 ]
 
 [dependency-groups]
