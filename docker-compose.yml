@@ -1,35 +1,68 @@
+# Companion services for the manual setup (HOWTO-DEV.md, "Option 2"). Works with Docker and with
+# rootless Podman (`podman compose`, or `make DOCKER_COMPOSE="podman compose" ...`).
+# Ports are published on 127.0.0.1 only: the dev passwords below are not secrets.
 services:
   postgresql:
-    image: postgis/postgis:16-3.4
-    container_name: postgresql
+    # PostgreSQL 18 + PostGIS with a lightweight anonymized extract of the production database
+    # (scripts/dev-database): restored at the first start, a minute or so. Same image as the dev container.
+    # The volume is mounted on /var/lib/postgresql (the layout of the PostgreSQL 18 images), not on
+    # /var/lib/postgresql/data; it is named postgres18_data so that a volume of the former PostGIS 16
+    # setup (postgres_data) is never mounted by mistake.
+    image: ghcr.io/c2corg/c2corg-dev-db:latest
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: test
+      # the restore ends with a checkpoint which can take more than the 60 s pg_ctl waits by default
+      # on a slow disk (the first start would then fail)
+      PGCTLTIMEOUT: 600
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/conf/postgresql.conf:/etc/postgresql.conf
-      - .:/v6_api
+      - postgres18_data:/var/lib/postgresql
+      - ./docker/conf/postgresql.conf:/etc/postgresql.conf:ro
+      - .:/v6_api:ro
     command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
+    healthcheck:
+      # over TCP: the temporary server of the first start (while the dump is restored) only listens on the
+      # Unix socket, so the service is healthy only once the database is complete
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10m
 
   elasticsearch:
-    build:
-      context: ./docker
-      dockerfile: Dockerfile.elasticsearch
-    image: c2corg_es:analysis-icu
+    # Elasticsearch 2.4 (+ analysis-icu) with the index of the dev database already built (published
+    # together with the database image, same tag). The data is in /esdata, a volume which starts from the
+    # content of the image. `make init-elastic` rebuilds the index if the indexing code changed since.
+    image: ghcr.io/c2corg/c2corg-dev-es:latest
     ports:
-      - 9200:9200
-    command: -Des.index.number_of_replicas=0 -Des.path.data=/c2corg_anon -Des.script.inline=true
+      - "127.0.0.1:9200:9200"
+    command: elasticsearch -Des.path.data=/esdata -Des.index.number_of_replicas=0 -Des.script.inline=true
+    environment:
+      ES_HEAP_SIZE: 512m
+    volumes:
+      - es_data:/esdata
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=4s"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
 
   redis:
-    image: redis:7.2
+    image: docker.io/library/redis:7.2
     ports:
-      - 6379:6379
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  postgres_data:
+  postgres18_data:
+  es_data:

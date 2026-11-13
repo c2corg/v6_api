@@ -68,6 +68,8 @@ def configure_cors_policy(settings):
             'back to the default origins: %s',
             ', '.join(DEFAULT_CORS_ORIGINS),
         )
+        # reset, not keep: the origins of a previous configuration would otherwise stay
+        cors_policy['origins'] = DEFAULT_CORS_ORIGINS
         return
 
     cors_policy['origins'] = origins
