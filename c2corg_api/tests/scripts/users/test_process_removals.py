@@ -74,7 +74,8 @@ def make_outing(session, user_id):
 class TestFindReadyRequests:
     def test_ready(self, session, user_ids):
         removal = make_removal(session, user_ids)
-        assert find_ready_requests(NOW) == [removal]
+        # compare the ids: the function reads with DBSession, not this session
+        assert [r.id for r in find_ready_requests(NOW)] == [removal.id]
 
     def test_not_validated_by_both_sides(self, session, user_ids):
         make_removal(
@@ -134,7 +135,13 @@ class TestProcessRemoval:
         spam_id = spam.document_id
         shared = make_outing(session, source_id)
         shared_id = shared.document_id
-        # someone else contributed to the second one
+        # someone else contributed to the second one: a new version, as an
+        # update does (the archive of the version 1 already exists)
+        shared.version += 1
+        shared.geometry.version += 1
+        for locale in shared.locales:
+            locale.version += 1
+        session.flush()
         create_new_version(shared, user_ids['contributor2'])
 
         assert find_purged_documents(source_id) == [(spam_id, spam.type)]

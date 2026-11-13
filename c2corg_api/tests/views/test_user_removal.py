@@ -56,13 +56,15 @@ def body_for(user_id, target_user_id, **kwargs):
 class TestCreate:
     PREFIX = '/users/removals'
 
-    def test_unauthorized(self, client, discourse):
-        send_json(client, 'post', self.PREFIX, {}, status=403)
+    def test_unauthorized(self, client, discourse, user_ids):
+        # a valid body: it is validated before the role is checked
+        body = body_for(user_ids['contributor'], user_ids['contributor2'])
+        send_json(client, 'post', self.PREFIX, body, status=403)
 
         # neither a moderator of the topoguide, nor of the forum
         discourse.is_moderator = Mock(return_value=False)
         headers = auth_headers(username='contributor')
-        send_json(client, 'post', self.PREFIX, {}, headers=headers, status=403)
+        send_json(client, 'post', self.PREFIX, body, headers=headers, status=403)
 
     def test_create(self, client, session, user_ids):
         headers = auth_headers(username='moderator')
