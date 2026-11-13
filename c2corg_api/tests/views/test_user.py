@@ -12,6 +12,13 @@ import pytest
 from c2corg_api.httpexceptions import HTTPBadRequest
 
 # from pytest import mark
+from c2corg_api.models.document import (
+    ArchiveDocument,
+    ArchiveDocumentGeometry,
+    ArchiveDocumentLocale,
+    Document,
+)
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
