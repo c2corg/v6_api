@@ -911,6 +911,35 @@ def test_delete_article(client, session, docs):
     scenarios.check_cache_version(session, docs.outing2.document_id, 2)
 
 
+def test_delete_with_history_metadata_shared_with_another_document(
+    client, session, docs
+):
+    # documents changed in one changeset (as the migration from v5 did) share a
+    # history metadata entry: kept for the other document
+    shared_id = (
+        session.query(DocumentVersion.history_metadata_id)
+        .filter(DocumentVersion.document_id == docs.route2.document_id)
+        .limit(1)
+        .scalar()
+    )
+    session.query(DocumentVersion).filter(
+        DocumentVersion.document_id == docs.article1.document_id
+    ).update({DocumentVersion.history_metadata_id: shared_id})
+    session.flush()
+
+    _test_delete(
+        client,
+        session,
+        docs.article1.document_id,
+        Article,
+        None,
+        ArchiveArticle,
+        None,
+    )
+
+    assert session.get(HistoryMetaData, shared_id) is not None
+
+
 def test_delete_book(client, session, docs):
     _test_delete(client, session, docs.book1.document_id, Book, None, ArchiveBook, None)
 
