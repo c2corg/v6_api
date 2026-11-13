@@ -18,6 +18,7 @@ from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.views import set_best_locale, to_json_dict
+from c2corg_api.views.license import get_license
 
 
 def get_documents_for_ids(document_ids, lang, documents_config, total=None):
@@ -149,17 +150,25 @@ def _get_documents_from_ids(document_ids, base_query, documents_config, lang):
     documents = [document_index.get(id) for id in document_ids]
 
     return [
-        to_json_dict(
-            doc,
-            documents_config.schema
-            if not documents_config.adapt_schema
-            else documents_config.adapt_schema(documents_config.schema, doc),
-            with_special_geometry_attrs=True,
+        _with_license(
+            to_json_dict(
+                doc,
+                documents_config.schema
+                if not documents_config.adapt_schema
+                else documents_config.adapt_schema(documents_config.schema, doc),
+                with_special_geometry_attrs=True,
+            ),
+            documents_config.document_type,
         )
         if doc
         else None
         for doc in documents
     ]
+
+
+def _with_license(doc_dict, document_type):
+    doc_dict['license'] = get_license(document_type, doc_dict)
+    return doc_dict
 
 
 def _load_documents(document_ids, clazz, base_query):

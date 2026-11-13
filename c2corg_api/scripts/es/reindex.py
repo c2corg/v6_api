@@ -17,13 +17,11 @@ import logging
 import os
 import sys
 
-import transaction
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm.session import sessionmaker
-from zope.sqlalchemy import register
 
 from c2corg_api.config import get_appsettings, parse_vars, setup_logging
-from c2corg_api.models import es_sync
+from c2corg_api.models import commit_or_rollback, es_sync
 from c2corg_api.scripts.es import index_management
 from c2corg_api.scripts.es.fill_index import fill_index
 from c2corg_api.search import configure_es_from_config, elasticsearch_config
@@ -53,7 +51,6 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
     Session = sessionmaker()  # noqa
-    register(Session)
     session = Session(bind=engine)
     configure_es_from_config(settings)
 
@@ -88,7 +85,7 @@ def reindex(session, batch_size=1000, replace_index=False, keep_old=False):
     index_management.create_index(client, new_index, bulk_load=True)
 
     try:
-        with transaction.manager:
+        with commit_or_rollback(session):
             result = fill_index(
                 session, batch_size, index_name=new_index, mark_updated=False
             )
@@ -116,7 +113,7 @@ def reindex(session, batch_size=1000, replace_index=False, keep_old=False):
     # the syncer kept updating the old index (and moved the sync status
     # forward) during the import: go back to the time the import started so
     # that everything modified since is replayed on the new index
-    with transaction.manager:
+    with commit_or_rollback(session):
         es_sync.mark_as_updated(session, result.sync_date)
 
     if state == index_management.ALIAS and not keep_old:

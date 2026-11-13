@@ -44,18 +44,37 @@ def make_image_url_resolver(base_url, filenames):
     return resolve
 
 
+def make_image_size_resolver(sizes):
+    """Return a `document_id -> (width, height) or None` for `parse_code()`."""
+
+    # sizes maps image document ids (int) to the (width, height) of the
+    # original image, either of them possibly None
+    def resolve(document_id):
+        width, height = sizes.get(int(document_id), (None, None))
+        if not width or not height:
+            return None
+        return width, height
+
+    return resolve
+
+
 class C2CImageExtension(Extension):
     def __init__(self, *args, **kwargs):
-        """Take an optional `url_secret_attribute` keyword argument."""
-        # name of the attribute holding the direct image URL, renamed to
-        # c2c:url after sanitizing (see c2corg_api.markdown.parse_code)
-        self._url_secret_attribute = kwargs.pop('url_secret_attribute', 'c2c:url')
+        """Take optional `*_secret_attribute` keyword arguments."""
+        # names of the attributes holding the direct image URL and the size
+        # of the original, renamed to c2c:url, c2c:width and c2c:height after
+        # sanitizing (see c2corg_api.markdown.parse_code)
+        self._secret_attributes = {
+            'url': kwargs.pop('url_secret_attribute', 'c2c:url'),
+            'width': kwargs.pop('width_secret_attribute', 'c2c:width'),
+            'height': kwargs.pop('height_secret_attribute', 'c2c:height'),
+        }
         super().__init__(*args, **kwargs)
 
     def extendMarkdown(self, md):  # noqa: N802
         self.md = md
         md.parser.blockprocessors.register(
-            C2CImageBlock(md.parser, self.getConfigs(), self._url_secret_attribute),
+            C2CImageBlock(md.parser, self.getConfigs(), self._secret_attributes),
             'c2c_imgblock',
             15,
         )
@@ -64,11 +83,11 @@ class C2CImageExtension(Extension):
 class C2CImageBlock(BlockProcessor):
     RE = re.compile(IMG_RE)
 
-    def __init__(self, parser, config, url_secret_attribute):
+    def __init__(self, parser, config, secret_attributes):
         """Build the processor, see `C2CImageExtension.__init__`."""
         super().__init__(parser)
         self.config = config
-        self._url_secret_attribute = url_secret_attribute
+        self._secret_attributes = secret_attributes
 
     def test(self, parent, block):
         return bool(self.RE.search(block))
@@ -119,10 +138,18 @@ class C2CImageBlock(BlockProcessor):
         resolve = getattr(self.parser.md, 'c2c_image_url_resolver', None)
         direct_url = resolve(img_id, img_size) if resolve else None
         if direct_url:
-            img.set(self._url_secret_attribute, direct_url)
+            img.set(self._secret_attributes['url'], direct_url)
         img.set('c2c:role', 'embedded-image')
         img.set('c2c:document-id', img_id)
         img.set('c2c:size', img_size)
+
+        # the size of the original image, when known: the UI computes the
+        # thumbnail's from it, and keeps its space while it loads
+        resolve_size = getattr(self.parser.md, 'c2c_image_size_resolver', None)
+        original_size = resolve_size(img_id) if resolve_size else None
+        if original_size:
+            img.set(self._secret_attributes['width'], str(original_size[0]))
+            img.set(self._secret_attributes['height'], str(original_size[1]))
 
         fig = ElementTree.Element('figure')
 

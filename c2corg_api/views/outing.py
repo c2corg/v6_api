@@ -18,31 +18,27 @@ from c2corg_api.schemas.outing import (
     outing_schema,
 )
 from c2corg_api.views import (
-    restricted_json_view,
     set_default_geom_from_associations,
 )
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
+    read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import (
     outing_documents_config,
     outing_schema_adaptor,
 )
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     has_permission_for_outing,
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 validate_outing_create = make_validator_create(fields_outing, 'activities', activities)
@@ -135,56 +131,61 @@ def validate_required_associations(request, **kwargs):
         request.errors.add('body', 'associations.routes', 'at least one route required')
 
 
-@resource(collection_path='/outings', path='/outings/{id}')
-class OutingRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(OUTING_TYPE, outing_documents_config)
-
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            outing_documents_config, outing_schema, adapt_schema=outing_schema_adaptor
-        )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(OutingCreateSchema),
-            validate_outing_create,
-            validate_associations_create,
-            validate_required_associations,
-            validate_dates_on_creation,
-        ],
+@write(
+    validators=[
+        body_validator(OutingCreateSchema),
+        validate_outing_create,
+        validate_associations_create,
+        validate_required_associations,
+        validate_dates_on_creation,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def create_outing(request):
+    set_default_geom = functools.partial(
+        set_default_geometry, request.validated['associations']['routes']
     )
-    def collection_post(self):
-        set_default_geom = functools.partial(
-            set_default_geometry, self.request.validated['associations']['routes']
-        )
-        return self._collection_post(outing_schema, before_add=set_default_geom)
+    return create_document(request, outing_schema, before_add=set_default_geom)
 
-    @restricted_json_view(
-        validators=[
-            body_validator(OutingUpdateSchema),
-            validate_id,
-            validate_outing_update,
-            validate_associations_update,
-            validate_required_associations,
-            validate_dates_on_update,
-        ],
+
+@write(
+    validators=[
+        body_validator(OutingUpdateSchema),
+        validate_id,
+        validate_outing_update,
+        validate_associations_update,
+        validate_required_associations,
+        validate_dates_on_update,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def update_outing(request):
+    if not has_permission_for_outing(request, request.validated['id']):
+        # moderators can change every outing, but a normal user can only
+        # change an outing that they are associated to
+        raise HTTPForbidden('No permission to change this outing')
+    return put_document(
+        request, Outing, outing_schema, before_update=update_default_geometry
     )
-    def put(self):
-        if not has_permission_for_outing(self.request, self.request.validated['id']):
-            # moderators can change every outing, but a normal user can only
-            # change an outing that they are associated to
-            raise HTTPForbidden('No permission to change this outing')
-        return self._put(Outing, outing_schema, before_update=update_default_geometry)
 
 
-@resource(path='/outings/{id}/{lang}/info')
-class OutingInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(outing_documents_config)
+def list_outings(request):
+    return collection_get(request, OUTING_TYPE, outing_documents_config)
+
+
+def get_outing(request):
+    return read_document(
+        request,
+        outing_documents_config,
+        outing_schema,
+        adapt_schema=outing_schema_adaptor,
+    )
+
+
+def get_outing_info(request):
+    return document_info(request, outing_documents_config)
 
 
 def set_default_geometry(linked_routes, outing, user_id):
@@ -210,23 +211,36 @@ def update_default_geometry(outing, outing_in):
     """Update the default geometry of an outing.
 
     When updating an outing, set the default geometry to the middle point
-    of a new track if proovided.
+    of a new track if provided, unless the default geometry was moved.
     """
+    geometry = outing.geometry
     geometry_in = outing_in.geometry
 
-    if geometry_in is not None and geometry_in.geom_detail is not None:
-        # update the default geom with the new track
-        geometry_in.geom = get_mid_point(geometry_in.geom_detail)
+    if geometry_in is None or geometry_in.geom_detail is None:
+        return
+
+    if (
+        geometry is not None
+        and geometry.geom is not None
+        and geometry_in.geom is not None
+    ):
+        if not geometry._almost_equals(geometry.geom, geometry_in.geom):
+            # the default geom was placed by the user, keep it
+            return
+        if geometry._almost_equals(geometry.geom_detail, geometry_in.geom_detail):
+            # the track has not changed, keep the current default geom
+            return
+
+    # update the default geom with the new track
+    geometry_in.geom = get_mid_point(geometry_in.geom_detail)
 
 
-@resource(path='/outings/{id}/{lang}/{version_id}')
-class OutingVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveOuting,
-            OUTING_TYPE,
-            ArchiveOutingLocale,
-            outing_schema,
-            outing_schema_adaptor,
-        )
+def get_outing_version(request):
+    return document_version(
+        request,
+        ArchiveOuting,
+        OUTING_TYPE,
+        ArchiveOutingLocale,
+        outing_schema,
+        outing_schema_adaptor,
+    )

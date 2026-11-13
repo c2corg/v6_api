@@ -1,0 +1,19 @@
+{
+  "body": {
+    "buckets": [
+      {
+        "count": "int",
+        "x": "int",
+        "y": "int"
+      }
+    ]
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "public, max-age=60",
+    "Content-Type": "application/json",
+    "Vary": "Origin"
+  },
+  "status": 200
+}

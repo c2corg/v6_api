@@ -6,9 +6,8 @@ from c2corg_api.models.cache_version import update_cache_version_direct
 from c2corg_api.models.document import Document, UpdateType
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
-from c2corg_api.views import restricted_json_view
-from c2corg_api.views.document import DocumentRest
-from c2corg_api.views.resource import BaseView, resource
+from c2corg_api.views.document import update_version
+from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
@@ -26,71 +25,57 @@ def _get_document(document_id):
     return document
 
 
-@resource(path='/documents/protect')
-class DocumentProtectRest(BaseView):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[body_validator(ProtectSchema)],
-    )
-    def post(self):
-        """Mark the given document as not editable.
+@write(validators=[body_validator(ProtectSchema)], permission='moderator', json=True)
+def protect_document(request):
+    """Mark the given document as not editable.
 
-        Request:
-            `POST` `/documents/protect`
+    Request:
+        `POST` `/documents/protect`
 
-        Request body:
-            {'document_id': @document_id@}
+    Request body:
+        {'document_id': @document_id@}
 
-        """
-        document_id = self.request.validated['document_id']
-        document = _get_document(document_id)
+    """
+    document_id = request.validated['document_id']
+    document = _get_document(document_id)
 
-        # Do nothing if document is already protected.
-        if document.protected:
-            return {}
-
-        document.protected = True
-
-        user_id = self.request.authenticated_userid
-        DocumentRest.update_version(
-            document, user_id, 'Protected document', [UpdateType.FIGURES], []
-        )
-
-        update_cache_version_direct(document_id)
-
+    # Do nothing if document is already protected.
+    if document.protected:
         return {}
 
+    document.protected = True
 
-@resource(path='/documents/unprotect')
-class DocumentUnprotectRest(BaseView):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[body_validator(ProtectSchema)],
-    )
-    def post(self):
-        """Mark the given document as editable.
+    user_id = request.authenticated_userid
+    update_version(document, user_id, 'Protected document', [UpdateType.FIGURES], [])
 
-        Request:
-            `POST` `/documents/unprotect`
+    update_cache_version_direct(document_id)
 
-        Request body:
-            {'document_id': @document_id@}
+    return {}
 
-        """
-        document_id = self.request.validated['document_id']
-        document = _get_document(document_id)
 
-        # Do nothing if document is already not protected.
-        if not document.protected:
-            return {}
+@write(validators=[body_validator(ProtectSchema)], permission='moderator', json=True)
+def unprotect_document(request):
+    """Mark the given document as editable.
 
-        document.protected = False
+    Request:
+        `POST` `/documents/unprotect`
 
-        user_id = self.request.authenticated_userid
-        DocumentRest.update_version(
-            document, user_id, 'Unprotected document', [UpdateType.FIGURES], []
-        )
+    Request body:
+        {'document_id': @document_id@}
 
-        update_cache_version_direct(document_id)
+    """
+    document_id = request.validated['document_id']
+    document = _get_document(document_id)
 
+    # Do nothing if document is already not protected.
+    if not document.protected:
         return {}
+
+    document.protected = False
+
+    user_id = request.authenticated_userid
+    update_version(document, user_id, 'Unprotected document', [UpdateType.FIGURES], [])
+
+    update_cache_version_direct(document_id)
+
+    return {}

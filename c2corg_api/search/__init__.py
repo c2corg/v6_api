@@ -1,3 +1,4 @@
+import hashlib
 import re
 
 from elasticsearch import Elasticsearch
@@ -93,77 +94,171 @@ def create_search(document_type):
 _WORD_RE = re.compile(r'\w+', re.UNICODE)
 
 
+# Relative weights of the clauses of the title query. They only need to keep
+# this order: whole word > stemmed word > phrase bonus > prefix > typo.
+_BOOST_EXACT = 10
+_BOOST_STEMMED = 3
+_BOOST_PHRASE = 2
+_BOOST_PREFIX = 1
+_BOOST_FUZZY = 0.2
+
+# below this length a fuzzy match is too loose (every 4-letter word is one
+# edit away from dozens of others)
+_FUZZY_MIN_LENGTH = 5
+
+# shortest prefix indexed in the ngram fields (`min_gram` of the
+# `autocomplete_filter`, see the analysis settings in search/mapping.py)
+_NGRAM_MIN_LENGTH = 2
+
+
+def _title_fields(suffix, search_lang):
+    """Return the `title_<lang>.<suffix>` field of every language.
+
+    Always search every language, using explicit field names rather than a
+    `title_*` wildcard so the query does not depend on ES resolving the
+    field pattern correctly. Documents only translated in a language other
+    than the preferred one (e.g. waypoints) must still be found. The
+    preferred language (if given) is boosted so its matches rank first
+    without excluding the other languages.
+    """
+    return [
+        f'title_{lang}.{suffix}' + ('^3' if search_lang and lang == search_lang else '')
+        for lang in default_langs
+    ]
+
+
+# sort of a full-text search: relevance first, then the id to break the ties
+# between documents with the same score, so that paging is stable
+SCORE_SORT = ({'_score': {'order': 'desc'}}, {'id': {'order': 'desc'}})
+
+
+def search_preference(search_term):
+    """Return the ES `preference` that sends a search to the same shard copies."""
+    # ES computes the scores per shard copy, and the primary and the replica of
+    # a shard can give the same document a slightly different score (their
+    # deleted documents differ). Without a preference, the pages of a search
+    # can hit different copies, see different orders and skip or repeat
+    # documents. One preference per search term keeps all the pages of a
+    # search on the same copies and still spreads the searches over the
+    # cluster. Hashed: a preference must not start with `_`.
+    return hashlib.sha1(search_term.encode(), usedforsecurity=False).hexdigest()
+
+
 def get_text_query_on_title(search_term, search_lang=None):
-    fields = []
+    """Build the text query used on the titles of the documents.
 
-    mots = len(_WORD_RE.findall(search_term)) > 1
+    The same query is used whatever the number of words (it used to be a
+    typo-tolerant prefix query for one word and a stemmed exact query for
+    several, which gave contradictory results: "Vens" ranked far behind
+    unrelated titles, but "le Vens" found it first). It is a disjunction of
+    clauses of decreasing strictness, so the better the match, the higher
+    the score:
 
-    # always search every language, using explicit field names rather than
-    # a `title_*` wildcard so the query does not depend on ES resolving the
-    # field pattern correctly. Documents only translated in a language
-    # other than the preferred one (e.g. waypoints) must still be found.
-    # The preferred language (if given) is boosted so its matches rank
-    # first without excluding the other languages.
-    for lang in default_langs:
-        if not mots:
-            field = f'title_{lang}.ngram'
-        else:
-            field = f'title_{lang}.contentheavy'
-        if search_lang and lang == search_lang:
-            field += '^3'
-        fields.append(field)
+    - `raw`: all the words, as written (only case and accents ignored).
+      Without this clause a whole word could not be told apart from the
+      beginning of a longer one, since the `ngram` fields index prefixes.
+    - `contentheavy`: all the words, in any order, stemmed and without stop
+      words ("Arêtes de Gerbier" matches "Gerbier : Traversée des arêtes"),
+      plus a bonus when they also appear close to each other.
+    - `ngram`: the last word may be incomplete (as-you-type), the other
+      ones must be complete words.
+    - a typo-tolerant match on the `ngram` fields, for long single words
+      only. It is not applied to several words: once stemmed, distinct
+      short words can be one edit apart and unrelated titles would match.
+    """
+    words = _WORD_RE.findall(search_term)
+    stemmed_fields = _title_fields('contentheavy', search_lang)
+    ngram_fields = _title_fields('ngram', search_lang)
 
-    if not mots:
-        return MultiMatch(
+    should = [
+        MultiMatch(
             query=search_term,
-            fields=fields,
+            fields=_title_fields('raw', search_lang),
             type='best_fields',
-            fuzziness=1,
-            # max_expansions caps how many candidate terms the fuzzy match
-            # can consider, not the edit distance. With only 2, on an index
-            # with as many documents as ours the exact term the user typed
-            # can lose out to unrelated terms and the query silently misses
-            # documents that obviously match. 50 is elasticsearch's own
-            # default for fuzzy queries.
-            max_expansions=50,
+            operator='and',
             zero_terms_query='none',
-            slop=4,
-        )
-    else:
-        # require all query words to be present, in any order (so e.g.
-        # "Arêtes de Gerbier" matches "Gerbier : Traversée des arêtes"),
-        # then give an extra score boost to documents where the words also
-        # appear as a (near-)exact phrase, so that word order still
-        # improves ranking without excluding legitimate matches that use a
-        # different order. A plain `phrase` match (the previous behaviour)
-        # requires the words to appear in essentially the same order, which
-        # silently drops matches whenever the title reorders or interleaves
-        # them with other words.
-        #
-        # No `fuzziness` here (unlike the single-word query above): the
-        # `contentheavy` fields are already stemmed, so distinct short
-        # words can end up just one edit apart once stemmed (e.g. "Gerbier"
-        # and "Gerri" both stem towards "gerb(i)"/"geri") - adding fuzzy
-        # matching on top of that conflates unrelated titles instead of
-        # tolerating typos.
-        return Bool(
-            must=MultiMatch(
+            boost=_BOOST_EXACT,
+        ),
+        MultiMatch(
+            query=search_term,
+            fields=stemmed_fields,
+            type='best_fields',
+            operator='and',
+            zero_terms_query='none',
+            boost=_BOOST_STEMMED,
+        ),
+    ]
+
+    if len(words) > 1:
+        should.append(
+            MultiMatch(
                 query=search_term,
-                fields=fields,
-                type='best_fields',
-                operator='and',
-                # see the comment on max_expansions above
-                max_expansions=50,
-                zero_terms_query='none',
-            ),
-            should=MultiMatch(
-                query=search_term,
-                fields=fields,
+                fields=stemmed_fields,
                 type='phrase',
                 slop=4,
                 zero_terms_query='none',
-            ),
+                boost=_BOOST_PHRASE,
+            )
         )
+        # the words but the last one must be complete. A word that is a stop
+        # word in some language is ignored there (zero_terms_query='all'),
+        # so "le vens" behaves like "vens".
+        #
+        # The ngram fields start at 2 letters: a last word of one letter
+        # ("mont b") cannot match anything there and would empty the result,
+        # so it is left out until the user types the next letter.
+        has_prefix = len(words[-1]) >= _NGRAM_MIN_LENGTH
+        must = [
+            MultiMatch(
+                query=' '.join(words[:-1]),
+                fields=stemmed_fields,
+                type='best_fields',
+                operator='and',
+                zero_terms_query='all' if has_prefix else 'none',
+            )
+        ]
+        if has_prefix:
+            must.append(
+                MultiMatch(
+                    query=words[-1],
+                    fields=ngram_fields,
+                    type='best_fields',
+                    zero_terms_query='none',
+                )
+            )
+        should.append(Bool(must=must, boost=_BOOST_PREFIX))
+    else:
+        should.append(
+            MultiMatch(
+                query=search_term,
+                fields=ngram_fields,
+                type='best_fields',
+                zero_terms_query='none',
+                boost=_BOOST_PREFIX,
+            )
+        )
+        if len(words[0] if words else '') >= _FUZZY_MIN_LENGTH:
+            should.append(
+                MultiMatch(
+                    query=search_term,
+                    fields=ngram_fields,
+                    type='best_fields',
+                    fuzziness=1,
+                    # the first letter is assumed to be right: far fewer
+                    # candidate terms, and typos rarely hit the first letter
+                    prefix_length=1,
+                    # max_expansions caps how many candidate terms the fuzzy
+                    # match can consider, not the edit distance. With a low
+                    # value the exact term the user typed can lose out to
+                    # unrelated ones on an index as large as ours. 50 is
+                    # elasticsearch's own default for fuzzy queries.
+                    max_expansions=50,
+                    zero_terms_query='none',
+                    boost=_BOOST_FUZZY,
+                )
+            )
+
+    return Bool(should=should, minimum_should_match=1)
 
 
 search_documents = {

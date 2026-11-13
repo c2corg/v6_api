@@ -9,8 +9,7 @@ from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, OneOf
-from c2corg_api.views import restricted_json_view
-from c2corg_api.views.resource import BaseView, resource
+from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
@@ -72,57 +71,55 @@ def _get_version(request):
     return version
 
 
-@resource(path='/versions/mask')
-class VersionMaskRest(BaseView):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[body_validator(MaskSchema), validate_version],
-    )
-    def post(self):
-        """Mask the given document version.
+@write(
+    validators=[body_validator(MaskSchema), validate_version],
+    permission='moderator',
+    json=True,
+)
+def mask_version(request):
+    """Mask the given document version.
 
-        Request:
-            `POST` `/versions/mask`
+    Request:
+        `POST` `/versions/mask`
 
-        Request body:
-            {
-                'document_id': @document_id@,
-                'lang': @lang@,
-                'version_id': @version_id@
-            }
+    Request body:
+        {
+            'document_id': @document_id@,
+            'lang': @lang@,
+            'version_id': @version_id@
+        }
 
-        """
-        version = _get_version(self.request)
-        version.masked = True
+    """
+    version = _get_version(request)
+    version.masked = True
 
-        update_cache_version_direct(self.request.validated['document_id'])
+    update_cache_version_direct(request.validated['document_id'])
 
-        return {}
+    return {}
 
 
-@resource(path='/versions/unmask')
-class VersionUnmaskRest(BaseView):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[body_validator(MaskSchema), validate_version],
-    )
-    def post(self):
-        """Unmask the given version.
+@write(
+    validators=[body_validator(MaskSchema), validate_version],
+    permission='moderator',
+    json=True,
+)
+def unmask_version(request):
+    """Unmask the given version.
 
-        Request:
-            `POST` `/versions/unmask`
+    Request:
+        `POST` `/versions/unmask`
 
-        Request body:
-            {
-                'document_id': @document_id@,
-                'lang': @lang@,
-                'version_id': @version_id@
-            }
+    Request body:
+        {
+            'document_id': @document_id@,
+            'lang': @lang@,
+            'version_id': @version_id@
+        }
 
-        """
-        version = _get_version(self.request)
-        version.masked = False
+    """
+    version = _get_version(request)
+    version.masked = False
 
-        update_cache_version_direct(self.request.validated['document_id'])
+    update_cache_version_direct(request.validated['document_id'])
 
-        return {}
+    return {}

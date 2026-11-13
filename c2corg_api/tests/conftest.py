@@ -60,7 +60,9 @@ def db_connection(test_database, db_engine):
 
     connection = db_engine.connect()
     trans = connection.begin()
-    DBSession.configure(bind=connection)
+    # the commits and rollbacks of DBSession act on a SAVEPOINT of this
+    # transaction, never on the transaction itself
+    DBSession.configure(bind=connection, join_transaction_mode='create_savepoint')
     yield connection
     if keep:
         trans.commit()
@@ -72,53 +74,89 @@ def db_connection(test_database, db_engine):
 
 
 @pytest.fixture(scope='class')
-def wsgi_app(test_database):
-    """Build the API's WSGI application, once per test class."""
-    from c2corg_api import main
+def fastapi_app(test_database):
+    """Build the API's application, once per test class."""
+    from c2corg_api import create_app
     from c2corg_api.tests import settings
 
-    return main({}, **settings)
+    return create_app(settings)
 
 
 @pytest.fixture
-def client(wsgi_app):
+def client(fastapi_app, db_connection):
     """Return the HTTP client the tests use to call the API."""
-    # A WebTest TestApp around the WSGI application. This is the single place
-    # to swap in another client (e.g. an adapter over FastAPI's TestClient
-    # with the same interface) when the server changes (#2449).
-    from webtest import TestApp
+    # FastAPI's TestClient, with the interface of WebTest (see client.py).
+    # It needs db_connection: the views then work in the test's transaction.
+    # The state that outlives a request is reset first: the ES sync queue,
+    # the cache key, the feed admin account and the shared email service.
+    from c2corg_api.emails.email_service import EmailService
+    from c2corg_api.tests import reset_cache_key, reset_queue
+    from c2corg_api.tests.client import Client
 
-    return TestApp(wsgi_app)
+    with Client(fastapi_app) as client:
+        reset_queue(client.registry.queue_config)
+        reset_cache_key()
+        client.registry.feed_admin_user_account_id = None
+        EmailService.instance = None
+        yield client
+
+
+@pytest.fixture
+def session(db_connection):
+    """Return a session in the test's transaction, as the views' DBSession."""
+    from c2corg_api.models import sessionmaker
+
+    session = sessionmaker()(bind=db_connection)
+    yield session
+    session.close()
+
+
+@pytest.fixture
+def settings():
+    """Return the settings of the tests (test.ini)."""
+    from c2corg_api.tests import settings
+
+    return settings
+
+
+@pytest.fixture
+def user_ids():
+    """Return the ids of the test users, by username."""
+    from c2corg_api.tests import global_userids
+
+    return global_userids
+
+
+@pytest.fixture
+def tokens():
+    """Return the tokens of the test users, by username."""
+    from c2corg_api.tests import global_tokens
+
+    return global_tokens
+
+
+@pytest.fixture
+def passwords():
+    """Return the passwords of the test users, by username."""
+    from c2corg_api.tests import global_passwords
+
+    return global_passwords
 
 
 @pytest.fixture
 def email_service():
-    """Return a new email service and reset the shared one."""
+    """Return a new email service."""
     from c2corg_api.emails.email_service import EmailService
     from c2corg_api.tests import settings
 
-    service = EmailService(settings)
-    EmailService.instance = None
-    return service
+    # the shared one is reset by `client`
+    return EmailService(settings)
 
 
 @pytest.fixture
 def queue_config(client):
-    """Return the ES sync queue configuration, with the queue emptied."""
-    from c2corg_api.tests import reset_queue
-
-    config = client.app.registry.queue_config
-    reset_queue(config)
-    return config
-
-
-@pytest.fixture
-def app_state(client):
-    """Reset the application state that outlives a request."""
-    from c2corg_api.tests import reset_cache_key
-
-    reset_cache_key()
-    client.app.registry.feed_admin_user_account_id = None
+    """Return the ES sync queue configuration (emptied by `client`)."""
+    return client.registry.queue_config
 
 
 @pytest.fixture(autouse=True)
@@ -141,3 +179,15 @@ def reset_discourse_client():
     from c2corg_api.security.discourse_client import set_discourse_client
 
     set_discourse_client(None)
+
+
+@pytest.fixture
+def discourse(settings):
+    """Fake the Discourse client (up); restore the real one after the test."""
+    # the Discourse client is global: without the restore, the fake leaks
+    # into the tests that run after this one
+    from c2corg_api.tests.forum import FakeDiscourse
+
+    discourse = FakeDiscourse(settings)
+    yield discourse
+    discourse.restore()

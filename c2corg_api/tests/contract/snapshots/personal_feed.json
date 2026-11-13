@@ -58,6 +58,11 @@
           "hiking_mtb_exposition": "null",
           "hiking_rating": "null",
           "img_count": "int",
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",
@@ -110,6 +115,11 @@
           ],
           "document_id": "int",
           "forum_username": "str",
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",

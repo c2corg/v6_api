@@ -15,8 +15,8 @@ from c2corg_api.views import configure_cors_policy
 log = logging.getLogger(__name__)
 
 
-def main(global_config, **settings):
-    """Return the WSGI application of the API (see `c2corg_api.app`)."""
+def create_app(settings):
+    """Return the FastAPI application of the API, configured by `settings`."""
     # Configure SQLAlchemy
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
@@ -29,15 +29,17 @@ def main(global_config, **settings):
 
     configure_caches(settings)
     # imported here: the view modules need the package initialized
+    from c2corg_api.views.license import configure_license
     from c2corg_api.views.markdown import configure_image_url
     from c2corg_api.views.navitia import configure_jobs_redis
 
     configure_jobs_redis(settings)
     configure_image_url(settings)
+    configure_license(settings)
 
     # imported here: the FastAPI routes import the views, which need the
     # package initialized
-    from c2corg_api.app import Application, Registry, create_fastapi_app
+    from c2corg_api.app import Registry, create_fastapi_app
 
     registry = Registry(
         settings,
@@ -45,7 +47,7 @@ def main(global_config, **settings):
         feed_admin_user_account_id=_account_id(settings, 'feed.admin_user_account'),
         anonymous_user_id=_account_id(settings, 'guidebook.anonymous_user_account'),
     )
-    return Application(create_fastapi_app(settings, registry))
+    return create_fastapi_app(settings, registry)
 
 
 def _account_id(settings, name):
@@ -618,12 +620,8 @@ def _update_route_duration(connection, route_id, calculated_duration_in_days):
         ),
         {'duration': calculated_duration_in_days, 'route_id': route_id},
     )
-    if calculated_duration_in_days is None:
-        calculated_duration_in_days_str = 'None'
-    else:
-        calculated_duration_in_days_str = '%f', calculated_duration_in_days
     log.info(
         'Route %d: Database updated with calculated_duration = %s days.',
         route_id,
-        calculated_duration_in_days_str,
+        calculated_duration_in_days,
     )

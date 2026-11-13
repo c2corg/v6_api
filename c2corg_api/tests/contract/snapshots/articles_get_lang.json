@@ -39,6 +39,11 @@
             "geom": "str",
             "version": "int"
           },
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",
@@ -67,6 +72,11 @@
       "str"
     ],
     "document_id": "int",
+    "license": {
+      "attribution_url": "str",
+      "id": "str",
+      "url": "str"
+    },
     "locales": [
       {
         "description": "null",

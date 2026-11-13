@@ -3,7 +3,9 @@ import re
 
 import pytest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import auth_headers
+
+pytestmark = pytest.mark.usefixtures('client')
 
 ROUTES_FILE = os.path.join(os.path.dirname(__file__), '..', 'contract', 'routes.txt')
 
@@ -25,27 +27,28 @@ def _write_routes():
 WITHOUT_BODY = {
     ('DELETE', '/documents/delete/1'),
     ('DELETE', '/documents/delete/1/fr'),
+    ('POST', '/routes/update_public_transportation_rating'),
     ('POST', '/users/renew'),
     ('POST', '/users/validate_change_email/1'),
     ('POST', '/users/validate_register_email/1'),
 }
 
 
-class TestInvalidJson(BaseTestRest):
-    @pytest.mark.parametrize(('method', 'path'), _write_routes())
-    def test_invalid_json_body(self, method, path):
-        # a body that is not JSON is an error of the client, answered as
-        # Cornice does: a 400, not an unexpected error
-        headers = self.add_authorization_header(username='moderator')
-        headers['Content-Type'] = 'application/json'
-        response = self.app.request(
-            path, method=method, body=b'{not json', headers=headers, expect_errors=True
-        )
-        assert response.status_int != 500, response.body
-        if (method, path) in WITHOUT_BODY:
-            return
-        assert response.status_int == 400, response.body
-        # first: the views of outings and routes run more validators after it
-        error = response.json['errors'][0]
-        assert error['location'] == 'body'
-        assert error['description'].startswith('Invalid JSON: ')
+@pytest.mark.parametrize(('method', 'path'), _write_routes())
+def test_invalid_json_body(method, path, client):
+    # a body that is not JSON is an error of the client, answered as
+    # FastAPI does: a 422, not an unexpected error
+    headers = auth_headers(username='moderator')
+    headers['Content-Type'] = 'application/json'
+    response = client.request(
+        path, method=method, body=b'{not json', headers=headers, expect_errors=True
+    )
+    assert response.status_int != 500, response.body
+    if (method, path) in WITHOUT_BODY:
+        return
+    assert response.status_int == 422, response.body
+    # alone: the validators of the rules of the API need a valid body
+    [error] = response.json['detail']
+    assert error['type'] == 'json_invalid'
+    assert error['loc'] == ['body', 1]
+    assert error['msg'] == 'JSON decode error'

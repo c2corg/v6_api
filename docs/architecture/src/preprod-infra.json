@@ -1,0 +1,795 @@
+{
+ "schema_version": 1,
+ "diagram_type": "architecture",
+ "meta": {
+  "title": "Preprod infrastructure (v7, on demand, Exoscale)",
+  "output": "preprod-infra.html",
+  "locale": "en",
+  "quality_profile": "showcase",
+  "repository": {
+   "url": "git@github.com:c2corg/v6-docker-compose.git",
+   "provider": "github",
+   "link_mode": "local-only",
+   "revision": "30ac4aeaac154926fb69bc0a7a123420d1aebb3a"
+  }
+ },
+ "components": [
+  {
+   "id": "users",
+   "type": "external",
+   "label": "Testers",
+   "sublabel": "browsers, public",
+   "pos": [
+    20,
+    330
+   ],
+   "size": [
+    100,
+    60
+   ],
+   "sources": [
+    {
+     "path": "PREPROD.md",
+     "line": 20,
+     "end_line": 27
+    }
+   ]
+  },
+  {
+   "id": "eip",
+   "type": "cloud",
+   "label": "Elastic IP + DNS",
+   "sublabel": "*.preprod domain",
+   "pos": [
+    180,
+    330
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "terraform/elastic_ip.tf",
+     "line": 28,
+     "end_line": 32
+    },
+    {
+     "path": "ansible/inventory/group_vars/preprod.yml",
+     "line": 68,
+     "end_line": 76
+    }
+   ]
+  },
+  {
+   "id": "haproxy",
+   "type": "security",
+   "label": "HAProxy 3.4",
+   "sublabel": "TLS, host routing, quotas",
+   "tag": "same image as prod",
+   "pos": [
+    380,
+    330
+   ],
+   "size": [
+    170,
+    66
+   ],
+   "sources": [
+    {
+     "path": "composition/v7/haproxy/docker-compose.preprod.yml",
+     "line": 1,
+     "end_line": 43
+    },
+    {
+     "path": "images/v7/c2corg_haproxy/Dockerfile",
+     "line": 38,
+     "end_line": 48
+    }
+   ]
+  },
+  {
+   "id": "varnish",
+   "type": "backend",
+   "label": "Varnish",
+   "sublabel": "images.* cache",
+   "pos": [
+    380,
+    670
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "composition/v7/haproxy/docker-compose.yml",
+     "line": 72,
+     "end_line": 80
+    }
+   ]
+  },
+  {
+   "id": "tracking_off",
+   "type": "backend",
+   "label": "tracking: not started",
+   "sublabel": "on purpose; ui1 alias DOWN",
+   "pos": [
+    380,
+    840
+   ],
+   "size": [
+    170,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod.yml",
+     "line": 60,
+     "end_line": 66
+    },
+    {
+     "path": "PREPROD.md",
+     "line": 293,
+     "end_line": 303
+    }
+   ]
+  },
+  {
+   "id": "ui",
+   "type": "frontend",
+   "label": "UI (c2c_ui)",
+   "sublabel": "openresty, env banner",
+   "pos": [
+    590,
+    160
+   ],
+   "size": [
+    160,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod_app.yml",
+     "line": 32,
+     "end_line": 44
+    }
+   ]
+  },
+  {
+   "id": "api",
+   "type": "backend",
+   "label": "API ×2 (v6_api)",
+   "sublabel": "api0 + api1, ghcr.io",
+   "pos": [
+    590,
+    330
+   ],
+   "size": [
+    160,
+    60
+   ],
+   "sources": [
+    {
+     "path": "composition/v7/api/docker-compose.preprod.yml",
+     "line": 1,
+     "end_line": 29
+    },
+    {
+     "path": "ansible/inventory/group_vars/preprod_app.yml",
+     "line": 10,
+     "end_line": 21
+    }
+   ]
+  },
+  {
+   "id": "workers",
+   "type": "backend",
+   "label": "syncer + scheduler",
+   "sublabel": "v6_api jobs",
+   "pos": [
+    590,
+    500
+   ],
+   "size": [
+    160,
+    60
+   ],
+   "sources": [
+    {
+     "path": "composition/v7/workers/docker-compose.yml",
+     "line": 1,
+     "end_line": 65
+    }
+   ]
+  },
+  {
+   "id": "images",
+   "type": "backend",
+   "label": "Images (c2c_images)",
+   "sublabel": "upload, resize",
+   "pos": [
+    590,
+    670
+   ],
+   "size": [
+    160,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod_app.yml",
+     "line": 23,
+     "end_line": 26
+    }
+   ]
+  },
+  {
+   "id": "redis",
+   "type": "database",
+   "label": "Redis 8",
+   "sublabel": "API cache",
+   "pos": [
+    810,
+    250
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod_data.yml",
+     "line": 20,
+     "end_line": 21
+    }
+   ]
+  },
+  {
+   "id": "pg",
+   "type": "database",
+   "label": "PostgreSQL 18",
+   "sublabel": "copy of prod, scrubbed",
+   "pos": [
+    810,
+    400
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod_data.yml",
+     "line": 9,
+     "end_line": 18
+    },
+    {
+     "path": "PREPROD.md",
+     "line": 156,
+     "end_line": 205
+    }
+   ]
+  },
+  {
+   "id": "es",
+   "type": "database",
+   "label": "Elasticsearch 8.19",
+   "sublabel": "node 1, master",
+   "pos": [
+    810,
+    550
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod_data.yml",
+     "line": 23,
+     "end_line": 26
+    }
+   ]
+  },
+  {
+   "id": "certbot",
+   "type": "security",
+   "label": "certbot",
+   "sublabel": "Let's Encrypt, cert push",
+   "pos": [
+    810,
+    700
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod_data.yml",
+     "line": 28,
+     "end_line": 34
+    }
+   ]
+  },
+  {
+   "id": "backups",
+   "type": "cloud",
+   "label": "c2corg-preprod-backups",
+   "sublabel": "SOS: WAL-G + dumps",
+   "pos": [
+    1010,
+    250
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod.yml",
+     "line": 78,
+     "end_line": 94
+    }
+   ]
+  },
+  {
+   "id": "replica",
+   "type": "database",
+   "label": "PG replica (streaming)",
+   "sublabel": "dump, restore test",
+   "pos": [
+    1010,
+    400
+   ],
+   "size": [
+    160,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod_backup.yml",
+     "line": 1,
+     "end_line": 16
+    }
+   ]
+  },
+  {
+   "id": "es1",
+   "type": "database",
+   "label": "Elasticsearch node 2",
+   "sublabel": "data only",
+   "pos": [
+    1010,
+    550
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/preprod_backup.yml",
+     "line": 18,
+     "end_line": 24
+    }
+   ]
+  },
+  {
+   "id": "legacy",
+   "type": "external",
+   "label": "Legacy prod backup VM",
+   "sublabel": "daily pg dump",
+   "pos": [
+    1010,
+    760
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "PREPROD.md",
+     "line": 78,
+     "end_line": 137
+    },
+    {
+     "path": "scripts/preprod-scrub.sql",
+     "line": 1,
+     "end_line": 32
+    }
+   ]
+  },
+  {
+   "id": "sos",
+   "type": "cloud",
+   "label": "Exoscale SOS",
+   "sublabel": "preprod-incoming/-active, c2corg-dem",
+   "pos": [
+    590,
+    1000
+   ],
+   "size": [
+    210,
+    60
+   ],
+   "sources": [
+    {
+     "path": "EXOSCALE_KEYS.md",
+     "line": 33,
+     "end_line": 33
+    },
+    {
+     "path": "TERRAIN_BUCKET.md",
+     "line": 213,
+     "end_line": 214
+    }
+   ]
+  },
+  {
+   "id": "prod",
+   "type": "external",
+   "label": "Production site",
+   "sublabel": "forum.* and media.*",
+   "pos": [
+    380,
+    40
+   ],
+   "size": [
+    170,
+    60
+   ],
+   "sources": [
+    {
+     "path": "images/v7/c2corg_haproxy/Dockerfile",
+     "line": 75,
+     "end_line": 133
+    }
+   ]
+  },
+  {
+   "id": "prod_tracking",
+   "type": "external",
+   "label": "Production tracking",
+   "sublabel": "accepts preprod JWT",
+   "pos": [
+    590,
+    40
+   ],
+   "size": [
+    160,
+    60
+   ],
+   "sources": [
+    {
+     "path": "ansible/inventory/group_vars/all/envs.yml",
+     "line": 104,
+     "end_line": 112
+    },
+    {
+     "path": "PREPROD.md",
+     "line": 266,
+     "end_line": 291
+    }
+   ]
+  },
+  {
+   "id": "grafana",
+   "type": "external",
+   "label": "Grafana Cloud",
+   "sublabel": "dashboard c2c - preprod",
+   "pos": [
+    810,
+    40
+   ],
+   "size": [
+    160,
+    60
+   ],
+   "sources": [
+    {
+     "path": "monitoring/README.md",
+     "line": 11,
+     "end_line": 18
+    },
+    {
+     "path": "ansible/playbooks/site.yml",
+     "line": 226,
+     "end_line": 231
+    }
+   ]
+  },
+  {
+   "id": "pforum",
+   "type": "backend",
+   "label": "Discourse (empty)",
+   "sublabel": "forum.preprod",
+   "pos": [
+    180,
+    160
+   ],
+   "size": [
+    150,
+    60
+   ],
+   "sources": [
+    {
+     "path": "terraform/instances.tf",
+     "line": 86,
+     "end_line": 92
+    },
+    {
+     "path": "ansible/inventory/group_vars/preprod_forum.yml",
+     "line": 1,
+     "end_line": 14
+    }
+   ]
+  },
+  {
+   "id": "admins",
+   "type": "external",
+   "label": "Admins",
+   "sublabel": "SSH",
+   "pos": [
+    20,
+    1000
+   ],
+   "size": [
+    100,
+    60
+   ],
+   "sources": [
+    {
+     "path": "INFRA_ARCHITECTURE.md",
+     "line": 73,
+     "end_line": 76
+    }
+   ]
+  },
+  {
+   "id": "bastion",
+   "type": "security",
+   "label": "Bastion",
+   "sublabel": "Terraform + Ansible",
+   "pos": [
+    180,
+    1000
+   ],
+   "size": [
+    160,
+    60
+   ],
+   "sources": [
+    {
+     "path": "PREPROD.md",
+     "line": 139,
+     "end_line": 154
+    },
+    {
+     "path": "ansible/playbooks/deploy.yml",
+     "line": 1,
+     "end_line": 13
+    }
+   ]
+  }
+ ],
+ "boundaries": [
+  {
+   "kind": "region",
+   "label": "preprod-app VM",
+   "wraps": [
+    "haproxy",
+    "varnish",
+    "tracking_off",
+    "ui",
+    "api",
+    "workers",
+    "images"
+   ],
+   "pad": 16
+  },
+  {
+   "kind": "region",
+   "label": "preprod-data VM",
+   "wraps": [
+    "redis",
+    "pg",
+    "es",
+    "certbot"
+   ],
+   "pad": 16
+  },
+  {
+   "kind": "region",
+   "label": "preprod-backup VM (optional)",
+   "wraps": [
+    "replica",
+    "es1"
+   ],
+   "pad": 16
+  },
+  {
+   "kind": "region",
+   "label": "preprod-forum VM (optional)",
+   "wraps": [
+    "pforum"
+   ],
+   "pad": 12
+  }
+ ],
+ "connections": [
+  {
+   "from": "users",
+   "to": "eip",
+   "label": "HTTPS",
+   "variant": "emphasis"
+  },
+  {
+   "from": "eip",
+   "to": "haproxy",
+   "variant": "emphasis"
+  },
+  {
+   "from": "haproxy",
+   "to": "ui",
+   "label": "www"
+  },
+  {
+   "from": "haproxy",
+   "to": "api",
+   "label": "api",
+   "variant": "emphasis"
+  },
+  {
+   "from": "haproxy",
+   "to": "varnish",
+   "label": "images"
+  },
+  {
+   "from": "varnish",
+   "to": "images"
+  },
+  {
+   "from": "haproxy",
+   "to": "sos",
+   "label": "media"
+  },
+  {
+   "from": "haproxy",
+   "to": "prod",
+   "label": "forum read-only, media fallback",
+   "variant": "dashed"
+  },
+  {
+   "from": "haproxy",
+   "to": "pforum",
+   "label": "forum (opt.)",
+   "variant": "dashed"
+  },
+  {
+   "from": "ui",
+   "to": "prod_tracking",
+   "label": "browser, preprod JWT",
+   "variant": "dashed"
+  },
+  {
+   "from": "api",
+   "to": "redis",
+   "label": "cache"
+  },
+  {
+   "from": "api",
+   "to": "pg",
+   "label": "SQL/TLS"
+  },
+  {
+   "from": "api",
+   "to": "es",
+   "label": "search :9200"
+  },
+  {
+   "from": "workers",
+   "to": "pg",
+   "label": "changes"
+  },
+  {
+   "from": "workers",
+   "to": "es",
+   "label": "index"
+  },
+  {
+   "from": "images",
+   "to": "sos",
+   "label": "S3 put"
+  },
+  {
+   "from": "certbot",
+   "to": "haproxy",
+   "label": "cert push, nightly",
+   "variant": "security"
+  },
+  {
+   "from": "pg",
+   "to": "replica",
+   "variant": "dashed"
+  },
+  {
+   "from": "replica",
+   "to": "backups",
+   "label": "dumps, restore test",
+   "variant": "dashed"
+  },
+  {
+   "from": "es",
+   "to": "es1",
+   "variant": "dashed"
+  },
+  {
+   "from": "legacy",
+   "to": "pg",
+   "label": "scrubbed dataset",
+   "variant": "security"
+  },
+  {
+   "from": "api",
+   "to": "grafana",
+   "label": "Alloy, every VM",
+   "variant": "dashed"
+  },
+  {
+   "from": "admins",
+   "to": "bastion",
+   "label": "SSH"
+  },
+  {
+   "from": "bastion",
+   "to": "images",
+   "label": "Ansible site/deploy, all VMs",
+   "variant": "security"
+  }
+ ],
+ "cards": [
+  {
+   "dot": "cyan",
+   "title": "On demand",
+   "items": [
+    "terraform apply -var preprod=true creates preprod-data + preprod-app; false destroys them, the elastic IP stays",
+    "-var preprod_forum=true / preprod_replica=true add the optional VMs",
+    "Same compositions and images as production (composition/v7), other variables and secrets",
+    "All preprod VMs sit on their own VPC subnet and security group; only the bastion is in both the production and the preprod group"
+   ]
+  },
+  {
+   "dot": "rose",
+   "title": "Real data, guarded",
+   "items": [
+    "Database = production dump with third-party tokens and SSO keys removed (preprod-scrub.sql)",
+    "No mail (no SMTP credentials); reCAPTCHA uses Google's test keys",
+    "A v6_api PR preview (-e preprod_api_version=<tag>) runs against these data",
+    "Writes never reach production: own buckets, own keys, forum off by default",
+    "With the replica VM, preprod-data also archives its WAL (WAL-G) to c2corg-preprod-backups"
+   ]
+  },
+  {
+   "dot": "amber",
+   "title": "Borrowed from production",
+   "items": [
+    "forum.preprod: read-only proxy of the public forum; HTML pages redirect to it",
+    "media: missing file → 302 to media.camptocamp.org (not for /c2corg-dem/)",
+    "tracking: the production one, user ids of preprod tokens shifted by 1e9",
+    "Tracker OAuth goes through the production return URL (UI relay)"
+   ]
+  },
+  {
+   "dot": "emerald",
+   "title": "Everyday",
+   "items": [
+    "deploy.yml --limit preprod: API, images, workers, UI (fast path)",
+    "site.yml --limit preprod: everything else, and after each data load",
+    "HAProxy follows recreated containers via Docker DNS, no restart"
+   ]
+  }
+ ]
+}

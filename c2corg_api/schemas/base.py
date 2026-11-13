@@ -1,5 +1,6 @@
 """Schema base class, body validator, and the mapping to SQLAlchemy models."""
 
+from fastapi.encoders import jsonable_encoder
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -42,14 +43,12 @@ class Schema(BaseModel):
 
 
 def validation_errors(error):
-    """Return the (name, description) of each error, as Colander named them."""
-    return [
-        (
-            '.'.join(str(part) for part in e['loc']),
-            e['msg'] if e['type'] != 'missing' else 'Required',
-        )
-        for e in error.errors()
-    ]
+    """Return the errors of the body, as FastAPI answers them."""
+    # as FastAPI's validation of a body: in the body, without the url of
+    # pydantic's documentation, and in JSON (ctx may hold an exception)
+    return jsonable_encoder(
+        [{**e, 'loc': ('body', *e['loc'])} for e in error.errors(include_url=False)]
+    )
 
 
 class _Drop:
@@ -84,19 +83,20 @@ def body_validator(schema):
     """Return a validator of the JSON body against `schema`."""
     # It replaces `schema=...` with `colander_body_validator` in a view: the
     # validated fields go into `request.validated`, the errors into
-    # `request.errors` with the location `body`.
+    # `request.invalid`, answered with a 422 (#2546).
 
     def validator(request, **kwargs):
         body = extract_body(request)
-        if request.errors:
+        if request.invalid:
             # not a JSON body: extract_body reported it (and returned {})
             return
         validated, errors = validate(schema, body)
-        for name, description in errors:
-            request.errors.add('body', name, description)
+        request.invalid.extend(errors)
         if validated is not None:
             request.validated.update(validated)
 
+    # read by the OpenAPI document: the body of the route
+    validator.schema = schema
     return validator
 
 

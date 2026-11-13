@@ -29,6 +29,13 @@
           "geom": "str",
           "version": "int"
         },
+        "height": "int",
+        "image_type": "str",
+        "license": {
+          "attribution_url": "str",
+          "id": "str",
+          "url": "str"
+        },
         "locales": [
           {
             "lang": "str",
@@ -38,7 +45,8 @@
         ],
         "protected": "bool",
         "type": "str",
-        "version": "int"
+        "version": "int",
+        "width": "null"
       }
     ],
     "total": "int"

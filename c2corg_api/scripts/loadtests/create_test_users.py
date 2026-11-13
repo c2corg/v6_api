@@ -1,13 +1,13 @@
+import datetime
 import logging
 import os
 import sys
 
-import transaction
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
-from zope.sqlalchemy import register
 
 from c2corg_api.config import get_appsettings
+from c2corg_api.models import commit_or_rollback
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
@@ -35,10 +35,9 @@ def main(argv=sys.argv):
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
     Session = sessionmaker()  # noqa
-    register(Session)
     session = Session(bind=engine)
 
-    with transaction.manager:
+    with commit_or_rollback(session):
         for i in range(1, NB_USERS_TO_CREATE + 1):
             username = BASE_USERNAME + str(i)
             password = username
@@ -59,15 +58,17 @@ def main(argv=sys.argv):
                 password=password,
                 profile=profile,
             )
-            # make sure user account is directly validated
+            # make sure user account is directly validated, with the terms of
+            # service accepted (else the login answers 403)
             user.clear_validation_nonce()
             user.email_validated = True
+            user.tos_validated = datetime.datetime.now(datetime.UTC)
 
             session.add(user)
             session.flush()
 
             # also create a version for the profile
-            # code from DocumentRest.create_new_version
+            # code from views.document.create_new_version
             archive = user.profile.to_archive()
             archive_locales = user.profile.get_archive_locales()
             archive_geometry = user.profile.get_archive_geometry()

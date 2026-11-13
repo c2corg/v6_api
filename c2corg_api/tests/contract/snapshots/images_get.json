@@ -56,6 +56,11 @@
             "geom": "str",
             "version": "int"
           },
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",
@@ -99,6 +104,11 @@
     "height": "int",
     "image_type": "str",
     "iso_speed": "null",
+    "license": {
+      "attribution_url": "str",
+      "id": "str",
+      "url": "str"
+    },
     "locales": [
       {
         "description": "null",

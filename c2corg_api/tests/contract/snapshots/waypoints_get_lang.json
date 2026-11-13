@@ -61,6 +61,11 @@
             "height_diff_up": "int",
             "hiking_mtb_exposition": "null",
             "hiking_rating": "null",
+            "license": {
+              "attribution_url": "str",
+              "id": "str",
+              "url": "str"
+            },
             "locales": [
               {
                 "lang": "str",
@@ -93,6 +98,11 @@
             "str"
           ],
           "document_id": "int",
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",
@@ -120,6 +130,11 @@
             "str"
           ],
           "document_id": "int",
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",
@@ -163,6 +178,13 @@
             "geom": "str",
             "version": "int"
           },
+          "height": "int",
+          "image_type": "str",
+          "license": {
+            "attribution_url": "str",
+            "id": "str",
+            "url": "str"
+          },
           "locales": [
             {
               "lang": "str",
@@ -172,7 +194,8 @@
           ],
           "protected": "bool",
           "type": "str",
-          "version": "int"
+          "version": "int",
+          "width": "null"
         }
       ],
       "recent_outings": {
@@ -218,6 +241,11 @@
             "height_diff_up": "null",
             "hiking_rating": "null",
             "img_count": "int",
+            "license": {
+              "attribution_url": "str",
+              "id": "str",
+              "url": "str"
+            },
             "locales": [
               {
                 "lang": "str",
@@ -247,6 +275,11 @@
     "geometry": {
       "geom": "str",
       "version": "int"
+    },
+    "license": {
+      "attribution_url": "str",
+      "id": "str",
+      "url": "str"
     },
     "locales": [
       {

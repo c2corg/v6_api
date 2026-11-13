@@ -3,13 +3,12 @@ import logging
 import os
 import sys
 
-import transaction
 from sqlalchemy import engine_from_config
 from sqlalchemy.sql.expression import and_, any_, or_
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.config import get_appsettings
-from c2corg_api.models import DBSession
+from c2corg_api.models import DBSession, commit_or_rollback
 from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import AssociationLog
 from c2corg_api.models.cache_version import (
@@ -106,7 +105,7 @@ def main(argv=sys.argv):
         'Please wait...'
     )
 
-    with transaction.manager:
+    with commit_or_rollback(DBSession):
         merge_user_accounts(source_user_id, target_user_id, queue_config)
 
     print(

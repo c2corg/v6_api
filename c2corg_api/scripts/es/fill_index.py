@@ -4,17 +4,15 @@ import sys
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
-import transaction
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm.session import sessionmaker
-from zope.sqlalchemy import register
 
 from c2corg_api.config import (
     get_appsettings,
     parse_vars,
     setup_logging,
 )
-from c2corg_api.models import document_types, es_sync
+from c2corg_api.models import commit_or_rollback, document_types, es_sync
 from c2corg_api.models.document import Document
 from c2corg_api.scripts.es import sync
 from c2corg_api.scripts.es.es_batch import ElasticBatch
@@ -41,13 +39,12 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
     Session = sessionmaker()  # noqa
-    register(Session)
     session = Session(bind=engine)
     configure_es_from_config(settings)
 
     batch_size = int(settings.get('elasticsearch.batch_size.fill_index', 1000))
 
-    with transaction.manager:
+    with commit_or_rollback(session):
         fill_index(session, batch_size)
 
 

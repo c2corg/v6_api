@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from c2corg_api.views.resource import Errors, extract_body, resource, view
+from c2corg_api.views.resource import JSON, Errors, extract_body, write
 
 
 class _Request:
@@ -12,6 +12,7 @@ class _Request:
         self.body = body
         self.content_type = content_type
         self.errors = Errors()
+        self.invalid = []
         self.POST = {}
 
     @property
@@ -21,16 +22,20 @@ class _Request:
 
 
 class TestDeclarations:
-    def test_view_keeps_its_arguments(self):
-        @resource(path='/things/{id}')
-        class Things:
-            @view(permission='authenticated', validators=[len])
-            def put(self):
-                pass
+    def test_write_keeps_its_checks(self):
+        @write(validators=[len], permission='authenticated', json=True)
+        def put_thing(request):
+            pass
 
-        assert Things.put.__views__ == [
-            {'permission': 'authenticated', 'validators': [len]}
-        ]
+        assert put_thing.checks == ([len], 'authenticated', JSON)
+
+    def test_defaults(self):
+        @write()
+        def post_thing(request):
+            pass
+
+        # no validator, no permission, any content type
+        assert post_thing.checks == ([], None, None)
 
 
 class TestErrors:
@@ -51,7 +56,7 @@ class TestExtractBody:
     def test_json_object(self):
         request = _Request(b'{"a": 1}')
         assert extract_body(request) == {'a': 1}
-        assert request.errors == []
+        assert request.invalid == []
 
     def test_no_body(self):
         assert extract_body(_Request(b'')) == {}
@@ -59,16 +64,26 @@ class TestExtractBody:
     def test_invalid_json(self):
         request = _Request(b'{')
         assert extract_body(request) == {}
-        assert request.errors[0]['description'].startswith('Invalid JSON: ')
+        # as FastAPI answers an invalid JSON body
+        assert request.invalid == [
+            {
+                'type': 'json_invalid',
+                'loc': ['body', 1],
+                'msg': 'JSON decode error',
+                'input': {},
+                'ctx': {'error': 'Expecting property name enclosed in double quotes'},
+            }
+        ]
 
     def test_not_an_object_or_an_array(self):
         request = _Request(b'"text"')
         assert extract_body(request) == {}
-        assert request.errors == [
+        assert request.invalid == [
             {
-                'location': 'body',
-                'name': '',
-                'description': 'Should be a JSON object or an array',
+                'type': 'json_type',
+                'loc': ['body'],
+                'msg': 'Should be a JSON object or an array',
+                'input': 'text',
             }
         ]
 

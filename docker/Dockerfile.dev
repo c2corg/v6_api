@@ -37,4 +37,5 @@ COPY es_migration es_migration
 COPY pyproject.toml uv.lock MANIFEST.in *.ini README.md .
 RUN uv sync --frozen --no-dev --no-editable
 
-CMD ["gunicorn", "--paste", "development.ini", "--bind", "0.0.0.0:6543"]
+ENV C2C_API_CONFIG=development.ini
+CMD ["uvicorn", "c2corg_api.asgi:app", "--host", "0.0.0.0", "--port", "6543"]

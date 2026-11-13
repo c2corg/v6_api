@@ -6,6 +6,23 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/323754cf688042688899e6028fdfeff7)](https://app.codacy.com/gh/c2corg/v6_api/dashboard)
 [![Known Vulnerabilities](https://snyk.io/test/github/c2corg/v6_api/badge.svg)](https://snyk.io/test/github/c2corg/v6_api)
 
+## Architecture diagrams
+
+Click a diagram to open its interactive version (zoom, search, details, links to the source code). All the diagrams of camptocamp.org: <https://c2corg.github.io/v6_api/>.
+
+### Backend (v6_api)
+
+[![Backend (v6_api)](docs/architecture/backend.png)](https://c2corg.github.io/v6_api/architecture/backend.html)
+
+### Local development
+
+[![Local development](docs/architecture/local-dev.png)](https://c2corg.github.io/v6_api/architecture/local-dev.html)
+
+### CI/CD
+
+[![CI/CD](docs/architecture/ci-cd.png)](https://c2corg.github.io/v6_api/architecture/ci-cd.html)
+
+
 ## Getting started
 
 ```sh

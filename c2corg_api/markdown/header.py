@@ -55,7 +55,7 @@ class C2CHeaderProcessor(BlockProcessor):
                 blocks.insert(0, after)
         else:  # pragma: no cover
             # This should never happen, but just in case...
-            logger.warn(f"We've got a problem header: {block!r}")
+            logger.warning(f"We've got a problem header: {block!r}")
 
 
 class C2CHeaderExtension(Extension):
