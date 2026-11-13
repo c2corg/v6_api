@@ -88,7 +88,7 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13 or newer, which installs the right Python version (3.15) and all dependencies for you
 - A docker environment with docker compose plugin (either [docker desktop](https://www.docker.com/products/docker-desktop/) or a manual installation)
 - A development IDE is not mandatory, but highly recommended (pycharm, vscode...)
-- If you have GNU make installed, you can use it to run all the commands below to initialize and run your development environment (run `make help` to see what can be done) instead of running them "by hand"
+- If you have GNU make installed, you can use it to run all the commands below to initialize and run your development environment (run `make help` to see what can be done) instead of running them "by hand". In short, after `cp config/env.local.sample config/env.local`: `make bootstrap`, then `make serve`.
 
 ### Installing the development environment
 
@@ -111,15 +111,21 @@ source .venv/bin/activate
 
 - To add or upgrade a dependency, edit `pyproject.toml` and run `uv lock`, then commit both files.
 
-- Start the necessary tools (postgres database, redis, and elasticsearch) in docker containers:
+- Start the necessary tools (postgres database, redis, and elasticsearch) in containers (`make start`):
 
 ```shell
 docker compose up -d
 ```
 
+  They are the same images as in the dev container: PostgreSQL 18 + PostGIS with the **lightweight anonymized extract
+  of the production database** (`ghcr.io/c2corg/c2corg-dev-db`, about 45,000 documents, restored at the first start in a
+  minute or so; wait for `docker compose logs postgresql` to show `PostgreSQL init process complete`), and
+  Elasticsearch 2.4 with the index of that database already built (`ghcr.io/c2corg/c2corg-dev-es`). See
+  [`scripts/dev-database`](scripts/dev-database/README.md). Ports are published on `127.0.0.1` only.
+
 - Go to the config directory and copy the `env.local.sample` to `env.local`
 - You should not need to modify it as it is already filled with the necessary values to be compatible with the docker compose defaults but if necessary you can
-- Update the `*.ini` file:
+- Update the `*.ini` files (`make load-env` does all of them, `test.ini` included):
 
 ```shell
 # Linux or WSL
@@ -132,31 +138,49 @@ Get-Content common.ini.in | cmd /c "python .\scripts\env_replace config/env.defa
 Get-Content development.ini.in | cmd /c "python .\scripts\env_replace config/env.default config/env.dev config/env.local > development.ini"
 ```
 
-- Initialize database:
+- Database (`make init-database`): the dev database comes already restored with the image. It is at the alembic
+  revision of the code when the image was published, so bring it to the revision of your checkout:
 
 ```shell
-docker compose exec -u postgres -T postgresql /v6_api/scripts/database/create_schema.sh
-initialize_c2corg_api_db development.ini
+alembic upgrade head
 ```
 
-- Initialize test database:
+  (With an empty PostgreSQL instead, create the schema with
+  `docker compose exec -u postgres -T postgresql /v6_api/scripts/database/create_schema.sh` then
+  `initialize_c2corg_api_db development.ini`; that command fails on a database which already has data.)
+
+- Initialize test database (`make init-test-database`):
 
 ```shell
 docker compose exec -u postgres -T postgresql /v6_api/scripts/database/create_test_schema.sh
 ```
 
-- Initialize elastic search indexes
+- Elasticsearch index (`make init-elastic`): the index of the image is kept if it was built by the indexing code of
+  your checkout, otherwise rebuild it from the database (about 2 to 5 minutes). Always create the index (and its
+  mappings) **before** filling it, or the search silently finds nothing:
 
 ```shell
+initialize_c2corg_api_es development.ini     # does nothing if the index exists
+es_index_fingerprint check development.ini   # up to date? then you are done
+# otherwise:
+curl -XDELETE http://localhost:9200/c2corg
+initialize_c2corg_api_es development.ini
 fill_es_index development.ini
+es_index_fingerprint store development.ini
 ```
+
+- Log in with the accounts `moderator`, `user`, `blocked` or `unvalidated` (password `c2c` for all).
+
+- To start again from a fresh database and index: `docker compose down -v` (removes the volumes `postgres18_data` and
+  `es_data`), `docker compose pull`, then the steps above. If you used the former setup (PostGIS 16 and the 2018
+  Elasticsearch image), its volume `postgres_data` is no longer used and can be removed.
 
 ## Running the API
 
-- Make sure the postgres redis and elasticsearch docker containers are running
+- Make sure the postgres redis and elasticsearch containers are running
 
 ```shell
-docker ps
+docker compose ps
 ```
 
 - If you do not see them running, restart them (without the initialization steps that should have been done just once when setting up the environment):
@@ -165,7 +189,7 @@ docker ps
 docker compose up -d
 ```
 
-- Run the API (this command will not exit so you should run it in a separate terminal):
+- Run the API (this command will not exit so you should run it in a separate terminal; `make serve` does the same):
 
 ```shell
 C2C_API_CONFIG=development.ini uvicorn c2corg_api.asgi:app --reload --host 0.0.0.0 --port 6543
