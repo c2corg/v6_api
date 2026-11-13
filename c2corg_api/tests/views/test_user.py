@@ -504,6 +504,7 @@ class TestUserRest(BaseUserTestRest):
 
         # The user should still exist
         user = query.one()
+        user_id = user.id
 
         # Expire nonce
         user.validation_nonce_expire = now
@@ -512,6 +513,18 @@ class TestUserRest(BaseUserTestRest):
         # The user should be removed
         purge_account()
         assert 0 == query.count()
+
+        # and so should its profile, with the archives and the history of it
+        self.session.expire_all()
+        assert self.session.get(Document, user_id) is None
+        for model in (
+            ArchiveDocument,
+            ArchiveDocumentLocale,
+            ArchiveDocumentGeometry,
+            DocumentVersion,
+        ):
+            query_model = self.session.query(model)
+            assert 0 == query_model.filter(model.document_id == user_id).count()
 
     # @mark.jobs
     def test_purge_tokens(self):
