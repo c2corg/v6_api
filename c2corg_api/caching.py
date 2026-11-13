@@ -33,6 +33,13 @@ cache_document_version = create_region('version')
 cache_document_info = create_region('info')
 cache_sitemap = create_region('sitemap')
 cache_sitemap_xml = create_region('sitemap_xml')
+# the total of the listings without search parameters, see
+# `views.document.search_documents_paginated` and `views.association_history`
+cache_listing_total = create_region('listing_total')
+
+# how long the total of a listing is kept (seconds): counting all the
+# documents of a type reads the whole table (about 1 s for the images)
+LISTING_TOTAL_EXPIRATION = 300
 
 caches = [
     cache_document_cooked,
@@ -43,6 +50,7 @@ caches = [
     cache_document_info,
     cache_sitemap,
     cache_sitemap_xml,
+    cache_listing_total,
 ]
 
 
@@ -97,17 +105,20 @@ def initialize_cache_status(refresh_period):
     cache_status = CacheStatus(refresh_period)
 
 
-def get_or_create(cache, key, creator):
+def get_or_create(cache, key, creator, expiration_time=-1):
     """Try to get the value for the given key from the cache.
 
     In case of errors fallback to the creator function (e.g. load from the database).
+    By default, the value never expires (the key changes instead).
     """
     if cache_status.is_down():
         log.warning('Not getting value from cache because it seems to be down')
         return creator()
 
     try:
-        value = cache.get_or_create(key, creator_wrapper(creator), expiration_time=-1)
+        value = cache.get_or_create(
+            key, creator_wrapper(creator), expiration_time=expiration_time
+        )
         cache_status.request_success()
         return value
     except CreatorException as creator_exception:

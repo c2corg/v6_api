@@ -60,7 +60,7 @@ Updating an existing document
 Updating an existing document is a bit more involved. To avoid that data is
 duplicated for no reason, it makes a difference if only figures (in `Document`/
 `Waypoint`) are changed, if only translation fields are changed or if only
-the geometry has changed.. The process is as follows (see `views.document.DocumentRest._put`):
+the geometry has changed.. The process is as follows (see `views.document.put_document`):
 
  - The JSON input data is validated by the Pydantic schema of the document type
    (`c2corg_api/schemas/`), and its `ModelSchema` builds a `Document` instance

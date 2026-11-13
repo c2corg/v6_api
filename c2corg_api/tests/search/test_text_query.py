@@ -58,3 +58,11 @@ def test_preferred_language_is_boosted_but_all_languages_are_searched():
     fields = _clauses('vens', 'fr')[0]['multi_match']['fields']
     assert 'title_fr.raw^3' in fields
     assert 'title_en.raw' in fields
+
+
+def test_one_letter_last_word_is_left_out_of_the_prefix_clause():
+    # the ngram fields start at two letters: "b" would match nothing
+    clauses = _clauses('mont b')
+    prefix = next(c['bool'] for c in clauses if 'bool' in c)
+    assert len(prefix['must']) == 1
+    assert prefix['must'][0]['multi_match']['query'] == 'mont'

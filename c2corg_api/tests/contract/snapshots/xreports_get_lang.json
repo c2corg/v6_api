@@ -46,6 +46,11 @@
       "geom_detail": "null",
       "version": "int"
     },
+    "license": {
+      "attribution_url": "str",
+      "id": "str",
+      "url": "str"
+    },
     "locales": [
       {
         "conditions": "null",

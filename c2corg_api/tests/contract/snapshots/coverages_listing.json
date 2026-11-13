@@ -28,6 +28,7 @@
           "geom_detail": "str",
           "version": "int"
         },
+        "license": "null",
         "locales": [
           {
             "lang": "str",

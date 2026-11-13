@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import auth_headers
 
 SNAPSHOT_DIR = os.path.join(os.path.dirname(__file__), 'snapshots')
 
@@ -125,22 +125,26 @@ def check_snapshot(name, response, extra_headers=()):
     assert actual == expected
 
 
-class ContractTest(BaseTestRest):
-    """Base class of the contract tests: requests as a browser client sends them."""
+class Browser:
+    """Requests as a browser client sends them: from an allowed CORS origin."""
+
+    def __init__(self, client, settings):
+        self.client = client
+        self.origin = settings['cors.allowed_origins'].split()[0]
 
     def request(self, method, url, body=None, user=None, status=200, **kwargs):
         """Send a request from an allowed CORS origin, as `user` if given."""
         headers = kwargs.pop('headers', {})
         # an allowed origin, unless the test gives one (None: no Origin)
-        headers.setdefault('Origin', self.settings['cors.allowed_origins'].split()[0])
+        headers.setdefault('Origin', self.origin)
         if headers['Origin'] is None:
             del headers['Origin']
         if user:
-            self.add_authorization_header(username=user, headers=headers)
+            auth_headers(username=user, headers=headers)
         if body is None:
-            call = getattr(self.app, method.lower())
+            call = getattr(self.client, method.lower())
             return call(url, headers=headers, status=status, **kwargs)
-        call = getattr(self.app, method.lower() + '_json')
+        call = getattr(self.client, method.lower() + '_json')
         return call(url, body, headers=headers, status=status, **kwargs)
 
     def get(self, url, user=None, status=200, **kwargs):
@@ -151,3 +155,7 @@ class ContractTest(BaseTestRest):
 
     def put(self, url, body, user=None, status=200, **kwargs):
         return self.request('PUT', url, body, user=user, status=status, **kwargs)
+
+    def create(self, prefix, body, user='contributor'):
+        """Create a document through the API and return its id."""
+        return self.post(f'/{prefix}', body, user=user).json['document_id']

@@ -8,15 +8,14 @@ version = "0.0"
 description = "c2corg_api"
 readme = "README.md"
 requires-python = "==3.15.*"
-keywords = ["web", "wsgi", "fastapi"]
+keywords = ["web", "asgi", "fastapi"]
 classifiers = [
     "Programming Language :: Python",
     "Framework :: FastAPI",
     "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
 ]
 dependencies = [
-    "alembic==1.20.0",
+    "alembic==1.20.1",
     "apscheduler==3.11.3",
     "bcrypt==5.0.0",
     "nh3==0.3.7",
@@ -26,49 +25,47 @@ dependencies = [
     "geoalchemy2==0.20.0",
     "geojson==3.3.0",
     "geomet==1.1.0",
-    "kombu==5.6.2",
-    "Markdown==3.10.3",
+    "kombu==5.7.0",
+    "Markdown==3.11.3",
     "psycopg2-binary==2.9.13",
     "pyjwt==2.15.1",
-    "pymdown-extensions==12.1",
+    "pymdown-extensions==12.3",
     "pyproj==3.8.0",
     "python-json-logger==4.2.0",
     "python-slugify==9.1.3",
-    "redis==6.4.0",
+    "redis==7.4.1",
     "requests==2.34.2",
     "Shapely==2.2.0",
     "SQLAlchemy==2.1.4",
-    "transaction==5.1",
-    "zope.sqlalchemy==4.1",
     "gunicorn==26.2.0",
-    # loads the application and the settings of the .ini files
-    "PasteDeploy==3.1.0",
+    # the ASGI server, run by gunicorn: -k uvicorn_worker.UvicornWorker
+    "uvicorn==0.54.0",
+    "uvicorn-worker==0.4.0",
     "python-dotenv==1.2.4",
     # Discourse API client
     "pydiscourse==1.7.0",
-    "pydantic==2.14.1",
-    "fastapi==0.143.0",
-    "a2wsgi==1.10.10",
+    "pydantic==2.14.2",
+    "fastapi==0.162.0",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff==0.17.1",
-    "pre-commit==4.6.2",
-    "WebTest==3.0.7",
+    "ruff==0.17.3",
+    "pre-commit==4.7.0",
+    # the client of FastAPI's TestClient, for the tests
+    "httpx2==2.16.0",
     "ipdb==0.13.13",
     "httmock==1.4.0",
-    "pytest==9.1.1",
+    "pytest==9.2.0",
     "pytest-cov==7.1.0",
+    "pytest-xdist==3.8.0",
 ]
-
-[project.entry-points."paste.app_factory"]
-main = "c2corg_api:main"
 
 [project.scripts]
 initialize_c2corg_api_db = "c2corg_api.scripts.initializedb:main"
 initialize_c2corg_api_es = "c2corg_api.scripts.initializees:main"
 fill_es_index = "c2corg_api.scripts.es.fill_index:main"
+es_index_fingerprint = "c2corg_api.scripts.es.fingerprint:main"
 
 [tool.setuptools]
 zip-safe = false
@@ -144,4 +141,14 @@ exclude_also = [
 
 [tool.pytest.ini_options]
 addopts = "--cov=c2corg_api"
-filterwarnings = ["ignore::DeprecationWarning"]
+# a new warning fails the tests: fix it rather than hide it
+filterwarnings = [
+    "error",
+    # shown, not raised: they come from the Elasticsearch 2 client (invalid
+    # escapes in its code, seen when it is compiled) and the urllib3 1.26 it
+    # holds (its vendored six changes http.client's __spec__); they go with
+    # the move to Elasticsearch 8 (#2550)
+    "default::SyntaxWarning:elasticsearch",
+    "default::DeprecationWarning:elasticsearch",
+    "default:Module globals:DeprecationWarning",
+]

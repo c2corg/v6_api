@@ -29,18 +29,10 @@ ANONYMOUS_RATE_LIMITED_BUCKETS = {
 
 
 def _client_ip(request):
-    """
-    Best-effort client IP resolution.
-
-    In production the application is served behind a reverse proxy /
-    load balancer (see apache/wsgi.conf.in), which is expected to set
-    `X-Forwarded-For`; fall back to the direct peer address otherwise
-    (e.g. local development).
-    """
-    forwarded_for = request.headers.get('X-Forwarded-For')
-    if forwarded_for:
-        # the left-most entry is the original client address
-        return forwarded_for.split(',')[0].strip()
+    """Return the address of the client, as the server received it."""
+    # not X-Forwarded-For, which any client can send: the server sets the
+    # address from the load balancer (PROXY protocol, or the proxy headers
+    # it trusts)
     return request.remote_addr or 'unknown'
 
 
@@ -116,7 +108,7 @@ def _check_anonymous_rate_limit(request, settings, bucket):
 
 def rate_limit_error(request, settings):
     """Return the error answering a write request over its rate limit, or None."""
-    # web.compat calls it in the transaction of the request: the counters it
+    # web.handlers calls it in the transaction of the request: the counters it
     # updates are committed with the request, also when it answers an error.
     # Only write requests are considered for rate limiting.
     if request.method not in ['POST', 'PUT', 'DELETE']:

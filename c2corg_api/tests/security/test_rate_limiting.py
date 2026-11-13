@@ -1,9 +1,14 @@
 import datetime
 import types
+from dataclasses import dataclass
 from unittest.mock import patch
 
+import pytest
+
 from c2corg_api.models.user import User
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import auth_headers, send_json
+
+PREFIX = '/waypoints'
 
 
 class _Clock:
@@ -30,156 +35,44 @@ class _Clock:
         )
 
 
-class TestRateLimiting(BaseTestRest):
-    def setUp(self):
-        BaseTestRest.setUp(self)
+@dataclass(frozen=True)
+class Limits:
+    """The rate limiting settings of the tests."""
 
-        # The rate limiting window is a few seconds long in the tests: with
-        # the real clock it could expire in the middle of a test on a slow
-        # run, so the rate limiting reads the time from a clock the test controls.
-        self.clock = _Clock()
-        clock_patch = patch(
-            'c2corg_api.security.rate_limiting.datetime', self.clock.datetime_module()
-        )
-        clock_patch.start()
-        self._clock_patch = clock_patch
-        self._prefix = '/waypoints'
+    limit: int
+    limit_moderator: int
+    limit_robot: int
+    window_span: int
+    max_times: int
 
-        self.username = None
-        self.user = None
+    def of(self, user):
+        if user.robot:
+            return self.limit_robot
+        return self.limit_moderator if user.moderator else self.limit
 
-        self.limit = int(self.settings['rate_limiting.limit'])
-        self.limit_moderator = int(self.settings['rate_limiting.limit_moderator'])
-        self.limit_robot = int(self.settings['rate_limiting.limit_robot'])
-        self.window_span = int(self.settings['rate_limiting.window_span'])
-        self.max_times = int(self.settings['rate_limiting.max_times'])
 
-    def tearDown(self):
-        self._clock_patch.stop()
+class _Writer:
+    """Writes a waypoint as a user, and keeps its last version."""
 
-    @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_contributor(self, _send_email):
-        self._set_user('contributor')
-        self._test_requests()
-        _send_email.assert_called_once()
+    def __init__(self, client, username):
+        self.client = client
+        self.username = username
+        self.document = None
 
-    @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_moderator(self, _send_email):
-        self._set_user('moderator')
-        self._test_requests()
-        _send_email.assert_called_once()
-
-    def _test_requests(self):
-        limit = (
-            self.limit_robot
-            if self.user.robot
-            else self.limit_moderator
-            if self.user.moderator
-            else self.limit
-        )
-
-        # Check contributor has no rate limiting data yet
-        assert self.user.ratelimit_remaining is None
-        assert self.user.ratelimit_reset is None
-
-        self._create_document()
-
-        # Check rating limiting data are now available
-        self.session.refresh(self.user)
-        assert self.user.ratelimit_remaining == limit - 1
-
-        expiration_date = self.user.ratelimit_reset
-        assert expiration_date == self.clock.now + datetime.timedelta(
-            seconds=self.window_span
-        )
-
-        # Make as many requests as allowed according to the settings
-        # (already 1 request as been consumed when creating the document)
-        for i in range(1, limit):
-            self._update_document()
-            self.session.refresh(self.user)
-            assert self.user.ratelimit_remaining == limit - 1 - i
-            assert self.user.ratelimit_reset == expiration_date
-
-        # Counter "remaining" is now set to 0 => write requests should be
-        # refused with error code 429 ("Too many requests")
-        assert self.user.ratelimit_remaining == 0
-        self._update_document(status=429)
-        self.session.refresh(self.user)
-        assert self.user.ratelimit_remaining == 0
-
-        # GET requests are still allowed
-        document_id = self.document['document_id']
-        self.app.get(self._prefix + '/' + str(document_id), status=200)
-
-        # Test write requests are accepted again after window is expired
-        self._wait()
-        self._update_document()
-        self.session.refresh(self.user)
-        assert self.user.ratelimit_remaining == limit - 1
-
-        # Deleting the document is also considered by rate limiting
-        # (only tested for moderators to skip permission issues)
-        if self.user.moderator:
-            self._delete_document()
-            self.session.refresh(self.user)
-            assert self.user.ratelimit_remaining == limit - 2
-
-    @patch('c2corg_api.emails.email_service.EmailService._send_email')
-    def test_blocked(self, _send_email):
-        """Check that user is blocked if rate limited too many times"""
-        self._set_user('contributor')
-        self._create_document()
-        self.session.refresh(self.user)
-
-        for n in range(0, self.max_times + 1):
-            assert not self.user.blocked
-            self._wait()
-            for i in range(0, self.limit):
-                self._update_document()
-                self.session.refresh(self.user)
-                assert self.user.ratelimit_remaining == self.limit - 1 - i
-            self._update_document(status=429)
-            self.session.refresh(self.user)
-            assert self.user.ratelimit_times == n + 1
-
-        # User has reached their max number of allowed rate limited windows
-        # thus is now blocked:
-        assert self.user.blocked
-        assert self.user.ratelimit_times == self.max_times + 1
-        # Two emails have been set for each rate limited windows, and one
-        # after the user has been blocked
-        assert _send_email.call_count == 3
-        user_profile = f'{self.settings["ui.url"]}/profiles/{self.user.id}'
-        _send_email.assert_called_with(
-            'fixme@camptocamp.org',
-            subject="Un usage excessif de l'API a été détecté",
-            body=(
-                'Bonjour\n\n'
-                f'Le contributeur {self.user.name} a atteint une '
-                'nouvelle fois le nombre maximum autorisé de modifications '
-                "via l'API camptocamp.org.\n"
-                'Il a également dépassé le nombre maximum autorisé '
-                'de blocages temporaires et a donc été '
-                'définitivement bloqué.\nSon profil : '
-                f'{user_profile}'
-            ),
-        )
-        self._update_document(status=403)
-
-    def _create_document(self):
+    def create(self):
         body = {
             'waypoint_type': 'summit',
             'elevation': 2203,
             'geometry': {'geom': '{"type": "Point", "coordinates": [635956, 5723604]}'},
             'locales': [{'lang': 'en', 'title': 'Mont Granier'}],
         }
-        headers = self.add_authorization_header(username=self.username)
-        response = self.app_post_json(self._prefix, body, headers=headers, status=200)
-        document_id = response.json.get('document_id')
-        self._set_document(document_id)
+        headers = auth_headers(username=self.username)
+        response = send_json(
+            self.client, 'post', PREFIX, body, headers=headers, status=200
+        )
+        self._reload(response.json.get('document_id'))
 
-    def _update_document(self, status=200):
+    def update(self, status=200):
         document_id = self.document['document_id']
         body = {
             'message': 'Update',
@@ -197,29 +90,159 @@ class TestRateLimiting(BaseTestRest):
                 ],
             },
         }
-        headers = self.add_authorization_header(username=self.username)
-        self.app_put_json(
-            self._prefix + '/' + str(document_id), body, headers=headers, status=status
+        headers = auth_headers(username=self.username)
+        send_json(
+            self.client,
+            'put',
+            f'{PREFIX}/{document_id}',
+            body,
+            headers=headers,
+            status=status,
         )
-        self._set_document(document_id)
+        self._reload(document_id)
 
-    def _set_document(self, document_id):
-        response = self.app.get(self._prefix + '/' + str(document_id), status=200)
-        self.document = response.json
-
-    def _delete_document(self):
-        headers = self.add_authorization_header(username=self.username)
-        self.app.delete_json(
+    def delete(self):
+        headers = auth_headers(username=self.username)
+        self.client.delete_json(
             '/documents/delete/' + str(self.document['document_id']),
             headers=headers,
             status=200,
         )
 
-    def _wait(self):
-        # let the rate limiting window expire
-        self.clock.advance(self.window_span + 1)
+    def _reload(self, document_id):
+        response = self.client.get(f'{PREFIX}/{document_id}', status=200)
+        self.document = response.json
 
-    def _set_user(self, username):
-        self.username = username
-        user_id = self.global_userids[username]
-        self.user = self.session.get(User, user_id)
+
+@pytest.fixture
+def clock(client):
+    """Let the rate limiting read the time from a clock the test moves."""
+    # The rate limiting window is a few seconds long in the tests: with the
+    # real clock it could expire in the middle of a test on a slow run.
+    clock = _Clock()
+    with patch('c2corg_api.security.rate_limiting.datetime', clock.datetime_module()):
+        yield clock
+
+
+@pytest.fixture
+def limits(settings) -> Limits:
+    """Return the rate limiting settings."""
+    return Limits(
+        limit=int(settings['rate_limiting.limit']),
+        limit_moderator=int(settings['rate_limiting.limit_moderator']),
+        limit_robot=int(settings['rate_limiting.limit_robot']),
+        window_span=int(settings['rate_limiting.window_span']),
+        max_times=int(settings['rate_limiting.max_times']),
+    )
+
+
+def _wait(clock, limits):
+    # let the rate limiting window expire
+    clock.advance(limits.window_span + 1)
+
+
+def _check_requests(client, session, clock, limits, user, username):
+    writer = _Writer(client, username)
+    limit = limits.of(user)
+
+    # Check the user has no rate limiting data yet
+    assert user.ratelimit_remaining is None
+    assert user.ratelimit_reset is None
+
+    writer.create()
+
+    # Check rating limiting data are now available
+    session.refresh(user)
+    assert user.ratelimit_remaining == limit - 1
+
+    expiration_date = user.ratelimit_reset
+    assert expiration_date == clock.now + datetime.timedelta(seconds=limits.window_span)
+
+    # Make as many requests as allowed according to the settings
+    # (already 1 request as been consumed when creating the document)
+    for i in range(1, limit):
+        writer.update()
+        session.refresh(user)
+        assert user.ratelimit_remaining == limit - 1 - i
+        assert user.ratelimit_reset == expiration_date
+
+    # Counter "remaining" is now set to 0 => write requests should be
+    # refused with error code 429 ("Too many requests")
+    assert user.ratelimit_remaining == 0
+    writer.update(status=429)
+    session.refresh(user)
+    assert user.ratelimit_remaining == 0
+
+    # GET requests are still allowed
+    client.get(f'{PREFIX}/{writer.document["document_id"]}', status=200)
+
+    # Test write requests are accepted again after window is expired
+    _wait(clock, limits)
+    writer.update()
+    session.refresh(user)
+    assert user.ratelimit_remaining == limit - 1
+
+    # Deleting the document is also considered by rate limiting
+    # (only tested for moderators to skip permission issues)
+    if user.moderator:
+        writer.delete()
+        session.refresh(user)
+        assert user.ratelimit_remaining == limit - 2
+
+
+@patch('c2corg_api.emails.email_service.EmailService._send_email')
+def test_contributor(_send_email, client, session, user_ids, clock, limits):
+    user = session.get(User, user_ids['contributor'])
+    _check_requests(client, session, clock, limits, user, 'contributor')
+    _send_email.assert_called_once()
+
+
+@patch('c2corg_api.emails.email_service.EmailService._send_email')
+def test_moderator(_send_email, client, session, user_ids, clock, limits):
+    user = session.get(User, user_ids['moderator'])
+    _check_requests(client, session, clock, limits, user, 'moderator')
+    _send_email.assert_called_once()
+
+
+@patch('c2corg_api.emails.email_service.EmailService._send_email')
+def test_blocked(_send_email, client, session, settings, user_ids, clock, limits):
+    """Check that user is blocked if rate limited too many times"""
+    user = session.get(User, user_ids['contributor'])
+    writer = _Writer(client, 'contributor')
+    writer.create()
+    session.refresh(user)
+
+    for n in range(0, limits.max_times + 1):
+        assert not user.blocked
+        _wait(clock, limits)
+        for i in range(0, limits.limit):
+            writer.update()
+            session.refresh(user)
+            assert user.ratelimit_remaining == limits.limit - 1 - i
+        writer.update(status=429)
+        session.refresh(user)
+        assert user.ratelimit_times == n + 1
+
+    # User has reached their max number of allowed rate limited windows
+    # thus is now blocked:
+    assert user.blocked
+    assert user.ratelimit_times == limits.max_times + 1
+    # Two emails have been set for each rate limited windows, and one
+    # after the user has been blocked
+    assert _send_email.call_count == 3
+    user_profile = f'{settings["ui.url"]}/profiles/{user.id}'
+    _send_email.assert_called_with(
+        'fixme@camptocamp.org',
+        subject="Un usage excessif de l'API a été détecté",
+        body=(
+            'Bonjour\n\n'
+            f'Le contributeur {user.name} a atteint une '
+            'nouvelle fois le nombre maximum autorisé de modifications '
+            "via l'API camptocamp.org.\n"
+            'Il a également dépassé le nombre maximum autorisé '
+            'de blocages temporaires et a donc été '
+            'définitivement bloqué.\nSon profil : '
+            f'{user_profile}'
+        ),
+    )
+    writer.update(status=403)

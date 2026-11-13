@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.13.1"
       - name: Check the locked dependencies for known vulnerabilities
@@ -76,7 +76,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.15"
-      - uses: astral-sh/setup-uv@v10.3.2
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.13.1"
           enable-cache: true
@@ -121,14 +121,14 @@ jobs:
           export $(cat .env | grep -v "^#" | grep -v "^NAVITIA_API_KEY" | xargs)
           export NAVITIA_API_KEY="${NAVITIA_API_KEY:-test-key}"
           # coverage floor just below the baseline (90%, see pyproject.toml)
-          pytest --cov-report term --cov-report xml --cov=c2corg_api --cov-fail-under=89
+          pytest -n 4 --cov-report term --cov-report xml --cov=c2corg_api --cov-fail-under=89
       - name: Run tests (without secrets)
         # secrets are not available for dependabot runs
         if: ${{ github.actor == 'dependabot[bot]' }}
         run: |
           export $(cat .env | grep -v "^#" | xargs)
           export NAVITIA_API_KEY="${NAVITIA_API_KEY:-test-key}"
-          pytest --cov-report term --cov-report xml --cov=c2corg_api -k "not test_navitia"
+          pytest -n 4 --cov-report term --cov-report xml --cov=c2corg_api -k "not test_navitia"
       - name: Send coverage to codacy
         # secrets are not available for PR from forks, and dependabot PRs
         if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' && matrix.services == 'prod' }}

@@ -37,8 +37,8 @@ A [Dev Container](https://containers.dev/) configuration is provided in the `.de
 3. Wait for the container to build and the `postCreateCommand` setup script to finish. On the first run this takes a few minutes — it will:
    - Install all Python dependencies
    - Generate the configuration files
-   - Create and initialize both the dev and test databases
-   - Populate the Elasticsearch indexes
+   - Start the dev database (a lightweight anonymized extract of the production data, restored from the image `ghcr.io/c2corg/c2corg-dev-db`) and create the test database
+   - Start Elasticsearch with the index already built for that database (`ghcr.io/c2corg/c2corg-dev-es`), and rebuild it from the database if it was made by a different version of the indexing code
 
 4. You're ready to go! See [Running the API](#running-the-api), [Running tests](#running-tests), and [Linting](#linting) below.
 
@@ -52,6 +52,15 @@ A [Dev Container](https://containers.dev/) configuration is provided in the `.de
 | API (when run) | `localhost`     | 6543 |
 
 All ports are forwarded to your host machine automatically.
+
+### The forum
+
+There is no Discourse in the dev environment: `config/env.dev` sets
+`discourse_enabled="false"`, so the API makes no call to it. Logging in, registering and
+editing a profile work; creating the topic of a document (the comments) answers 503. To
+work on the forum features, run a Discourse and set `discourse_enabled="true"` (and its
+`discourse_url`, key and secret) in `config/env.local`. The tests do not depend on it:
+`test.ini` always enables the forum, and mocks it.
 
 ### Rebuilding the dev container
 
@@ -159,7 +168,7 @@ docker compose up -d
 - Run the API (this command will not exit so you should run it in a separate terminal):
 
 ```shell
-gunicorn --paste development.ini --reload --bind 0.0.0.0:6543
+C2C_API_CONFIG=development.ini uvicorn c2corg_api.asgi:app --reload --host 0.0.0.0 --port 6543
 ```
 
 - Run background jobs (run each of these commands in a separate terminal, as they will not exit):
@@ -174,11 +183,17 @@ python c2corg_api/scripts/jobs/scheduler.py development.ini
 
 ## Code layout
 
-The API is a [FastAPI](https://fastapi.tiangolo.com/) application, served by gunicorn through PasteDeploy (`c2corg_api:main`, the settings come from the `.ini` file).
+The API is a [FastAPI](https://fastapi.tiangolo.com/) application, served by uvicorn: `c2corg_api/asgi.py` reads the `.ini` file named by `C2C_API_CONFIG` (`production.ini` by default). In production, gunicorn runs uvicorn workers (`gunicorn -k uvicorn_worker.UvicornWorker c2corg_api.asgi:app`).
+
+`c2corg_api.config` reads the settings of the `.ini` files, for the application and the scripts. The tests drive the application through a WSGI bridge (`c2corg_api:main`).
+
+```shell
+C2C_API_CONFIG=development.ini gunicorn -k uvicorn_worker.UvicornWorker c2corg_api.asgi:app --reload --bind 0.0.0.0:6543
+```
 
 - `c2corg_api/app.py`: the FastAPI application, its middlewares (CORS, token validation, unexpected errors) and the answers to unknown routes and methods.
-- `c2corg_api/web/`: the routes, one module per resource (`documents.py`, `users.py`, `navitia.py`…). They are thin: each one runs a method of a view class through `web/compat.py`, which gives the views the request they expect (`validated`, `errors`, `matchdict`…) and turns what they return or raise into the answer.
-- `c2corg_api/views/`: the view classes and their validators (`views/validation.py`). `@view(...)` in `views/resource.py` declares the validators, permission and content type of a method; the route checks the rate limiting (writes only), then the content type, the permission and the validators, and calls the method.
+- `c2corg_api/web/`: the routes, one module per resource (`documents.py`, `users.py`, `navitia.py`…). They are thin: each one runs a function of `views/` through `web/handlers.py` (the order of the checks, the commit of the writes); `web/request.py` gives the views the request they expect (`validated`, `errors`, `matchdict`…), `web/checks.py` checks the content type, the permission and the origin, and `web/answers.py` turns what the views return or raise into the answer.
+- `c2corg_api/views/`: the view functions and their validators (`views/validation.py`). `@write(...)` in `views/resource.py` declares the validators, permission and content type of a write view; the read routes declare theirs in `web/`. The route checks the rate limiting (writes only), then the content type, the permission and the validators, and calls the view.
 - `c2corg_api/schemas/`: the Pydantic schemas of the request bodies; `c2corg_api/models/`: the SQLAlchemy models.
 - `c2corg_api/security/`: tokens (`roles.py`), rate limiting, Discourse client; `c2corg_api/httpexceptions.py`: the HTTP errors the views raise.
 - `c2corg_api/scripts/`: the Elasticsearch syncer, the job scheduler and the maintenance scripts; they read the `.ini` file with `c2corg_api/config.py`.
@@ -201,7 +216,19 @@ Get-Content test.ini.in | cmd /c "python .\scripts\env_replace config/env.defaul
 pytest
 ```
 
+- Or in parallel, with [pytest-xdist](https://pytest-xdist.readthedocs.io/) (`make test` uses 4 workers):
+
+```shell
+pytest -n 4
+```
+
+  Each worker uses its own database (`<test database>_gw0`, `_gw1`...), Elasticsearch index and Redis names, created on the first run. The test database user needs the right to create databases.
+
 - Or directly in your favorite development IDE (pycharm, vscode...)
+
+- Write new tests as plain functions asking for the fixtures of `c2corg_api/tests/conftest.py` (`client`, `session`, `user_ids`, `tokens`, `settings`...) and the helpers of `c2corg_api.tests` (`auth_headers`, `send_json`...); the shared document scenarios are in `c2corg_api/tests/views/scenarios.py`. See #2610.
+
+- A warning fails the tests (`filterwarnings` in `pyproject.toml`): fix its cause rather than ignoring it. The only exceptions are the warnings of the Elasticsearch 2 client, still shown until the move to Elasticsearch 8.
 
 ### API contract tests
 
@@ -218,6 +245,8 @@ pytest
 ```shell
 python scripts/loadtest.py http://localhost:6543 --threads 8 --duration 60
 ```
+
+For load tests of a staging environment (anonymous and logged-in users, ramp-up, percentiles over time, reports), use the Locust scenarios in [`c2corg_api/scripts/loadtests/`](c2corg_api/scripts/loadtests/README.md).
 
 ## Linting
 

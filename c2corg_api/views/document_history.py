@@ -8,69 +8,62 @@ from c2corg_api.models.document import DOCUMENT_TYPE, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.views import etag_cache
 from c2corg_api.views.document_version import serialize_version
-from c2corg_api.views.resource import resource, view
-from c2corg_api.views.validation import validate_id, validate_lang
+
+# Unique class for returning history of a document.
 
 
-@resource(path='/document/{id}/history/{lang}')
-class HistoryDocumentRest:
-    """Unique class for returning history of a document."""
+def read_document_history(request):
+    document_id = request.validated['id']
+    lang = request.validated['lang']
 
-    def __init__(self, request, **kwargs):
-        self.request = request
+    def create_response():
+        return _get_history(request, document_id, lang)
 
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        document_id = self.request.validated['id']
-        lang = self.request.validated['lang']
+    # history entry point does no precise document type.
+    cache_key = get_cache_key(document_id, lang, document_type=DOCUMENT_TYPE)
 
-        def create_response():
-            return self._get_history(document_id, lang)
+    if not cache_key:
+        raise HTTPNotFound(f'no version for document {document_id}')
+    else:
+        # set and check the etag: if the etag value provided in the
+        # request equals the current etag, return 'NotModified'
+        etag_cache(request, cache_key)
 
-        # history entry point does no precise document type.
-        cache_key = get_cache_key(document_id, lang, document_type=DOCUMENT_TYPE)
+        return get_or_create(cache_document_history, cache_key, create_response)
 
-        if not cache_key:
-            raise HTTPNotFound(f'no version for document {document_id}')
-        else:
-            # set and check the etag: if the etag value provided in the
-            # request equals the current etag, return 'NotModified'
-            etag_cache(self.request, cache_key)
 
-            return get_or_create(cache_document_history, cache_key, create_response)
+def _get_history(request, document_id, lang):
+    # FIXME conditional permission check (when outings implemented)
+    # is_outing = DBSession.query(Outing) \
+    #       .filter(Outing.document_id == document_id).count()
+    # if is_outing > 0:
+    #    # validate permission (authenticated + associated)
+    #    # return 403 if not correct
 
-    def _get_history(self, document_id, lang):
-        # FIXME conditional permission check (when outings implemented)
-        # is_outing = DBSession.query(Outing) \
-        #       .filter(Outing.document_id == document_id).count()
-        # if is_outing > 0:
-        #    # validate permission (authenticated + associated)
-        #    # return 403 if not correct
+    title = (
+        DBSession.query(DocumentLocale.title)
+        .filter(DocumentLocale.document_id == document_id)
+        .filter(DocumentLocale.lang == lang)
+        .first()
+    )
 
-        title = (
-            DBSession.query(DocumentLocale.title)
-            .filter(DocumentLocale.document_id == document_id)
-            .filter(DocumentLocale.lang == lang)
-            .first()
-        )
+    if not title:
+        raise HTTPNotFound(f'no locale document for "{lang}"')
 
-        if not title:
-            raise HTTPNotFound(f'no locale document for "{lang}"')
-
-        versions = (
-            DBSession.query(DocumentVersion)
-            .options(
-                joinedload(DocumentVersion.history_metadata).joinedload(
-                    HistoryMetaData.user
-                )
+    versions = (
+        DBSession.query(DocumentVersion)
+        .options(
+            joinedload(DocumentVersion.history_metadata).joinedload(
+                HistoryMetaData.user
             )
-            .filter(DocumentVersion.document_id == document_id)
-            .filter(DocumentVersion.lang == lang)
-            .order_by(DocumentVersion.id)
-            .all()
         )
+        .filter(DocumentVersion.document_id == document_id)
+        .filter(DocumentVersion.lang == lang)
+        .order_by(DocumentVersion.id)
+        .all()
+    )
 
-        return {
-            'title': title.title,
-            'versions': [serialize_version(v) for v in versions],
-        }
+    return {
+        'title': title.title,
+        'versions': [serialize_version(v) for v in versions],
+    }

@@ -25,7 +25,13 @@ def include(app):
     # routes are added to the application itself rather than through an
     # APIRouter, which FastAPI keeps nested: the dispatcher and the CORS
     # middleware read the route list
-    app.add_api_route('/health', health, methods=['GET', 'HEAD'])
+    app.add_api_route(
+        '/health',
+        health,
+        methods=['GET', 'HEAD'],
+        operation_id='health',
+        tags=['health'],
+    )
 
 
 def health(request: Request, response: Response):
@@ -34,7 +40,7 @@ def health(request: Request, response: Response):
     # number of documents, Redis and its number of keys, the maintenance mode
     origin = request.headers.get('Origin')
     if origin and not origin_allowed(origin):
-        # as the other routes (see web.compat.validate_origin)
+        # as the other routes (see web.checks.validate_origin)
         return error_response([('header', 'Origin', f'{origin} not allowed')])
     status = {'version': request.app.state.settings.get('cache_version')}
     with request_session() as session:
@@ -101,3 +107,7 @@ def _add_maintenance_mode_status(status):
         )
     status['maintenance_mode'] = maintenance_mode
     return maintenance_mode
+
+
+# described in the OpenAPI document (see web.openapi)
+health.described = True

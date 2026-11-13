@@ -1,95 +1,92 @@
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 
+from c2corg_api import caching
+from c2corg_api.caching import (
+    LISTING_TOTAL_EXPIRATION,
+    cache_listing_total,
+    get_or_create,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import AssociationLog
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.views.resource import resource, view
-from c2corg_api.views.validation import (
-    validate_document_id_not_required,
-    validate_pagination,
-    validate_user_id_not_required,
-)
 
 # max/default sizes of requests
 LIMIT_MAX = 500
 LIMIT_DEFAULT = 50
 
 
-@resource(path='/associations-history')
-class HistoryAssociationRest:
-    """Unique class for returning history of a document's associations."""
+# Unique class for returning history of a document's associations.
 
-    def __init__(self, request, **kwargs):
-        self.request = request
 
-    @view(
-        validators=[
-            validate_document_id_not_required,
-            validate_pagination,
-            validate_user_id_not_required,
-        ]
+def read_association_history(request):
+    validated = request.validated
+    document_id = validated.get('d', None)
+    user_id = validated.get('u', None)
+    offset = validated.get('offset', 0)
+    limit = min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX)
+
+    user_join = joinedload(AssociationLog.user).load_only(
+        User.id,
+        User.name,
+        User.forum_username,
+        User.robot,
+        User.moderator,
+        User.blocked,
     )
-    def get(self):
-        validated = self.request.validated
-        document_id = validated.get('d', None)
-        user_id = validated.get('u', None)
-        offset = validated.get('offset', 0)
-        limit = min(validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX)
 
-        user_join = joinedload(AssociationLog.user).load_only(
-            User.id,
-            User.name,
-            User.forum_username,
-            User.robot,
-            User.moderator,
-            User.blocked,
-        )
+    child_join = (
+        joinedload(AssociationLog.child_document)
+        .load_only(Document.document_id, Document.type)
+        .joinedload(Document.locales)
+        .load_only(DocumentLocale.title, DocumentLocale.lang)
+    )
 
-        child_join = (
-            joinedload(AssociationLog.child_document)
-            .load_only(Document.document_id, Document.type)
-            .joinedload(Document.locales)
-            .load_only(DocumentLocale.title, DocumentLocale.lang)
-        )
+    parent_join = (
+        joinedload(AssociationLog.parent_document)
+        .load_only(Document.document_id, Document.type)
+        .joinedload(Document.locales)
+        .load_only(DocumentLocale.title, DocumentLocale.lang)
+    )
 
-        parent_join = (
-            joinedload(AssociationLog.parent_document)
-            .load_only(Document.document_id, Document.type)
-            .joinedload(Document.locales)
-            .load_only(DocumentLocale.title, DocumentLocale.lang)
-        )
+    query = (
+        DBSession.query(AssociationLog)
+        .options(user_join)
+        .options(parent_join)
+        .options(child_join)
+    )
 
-        query = (
-            DBSession.query(AssociationLog)
-            .options(user_join)
-            .options(parent_join)
-            .options(child_join)
-        )
-
-        if document_id:
-            query = query.filter(
-                or_(
-                    AssociationLog.parent_document_id == document_id,
-                    AssociationLog.child_document_id == document_id,
-                )
+    if document_id:
+        query = query.filter(
+            or_(
+                AssociationLog.parent_document_id == document_id,
+                AssociationLog.child_document_id == document_id,
             )
-
-        if user_id:
-            query = query.filter(AssociationLog.user_id == user_id)
-
-        count = query.count()
-
-        query = (
-            query.order_by(AssociationLog.id.desc()).limit(limit).offset(offset).all()
         )
 
-        return {
-            'count': count,
-            'associations': [serialize_association_log(log) for log in query],
-        }
+    if user_id:
+        query = query.filter(AssociationLog.user_id == user_id)
+
+    if document_id or user_id:
+        count = query.count()
+    else:
+        # counting all the association changes reads the whole table: cache
+        # it for a few minutes, as the total of the document listings
+        count = get_or_create(
+            cache_listing_total,
+            f'association_log-{caching.CACHE_VERSION}',
+            query.count,
+            expiration_time=LISTING_TOTAL_EXPIRATION,
+        )
+
+    query = query.order_by(AssociationLog.id.desc()).limit(limit).offset(offset).all()
+
+    return {
+        'count': count,
+        'associations': [serialize_association_log(log) for log in query],
+    }
 
 
 def serialize_document(document):

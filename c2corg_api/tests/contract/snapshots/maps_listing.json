@@ -25,6 +25,7 @@
         "code": "str",
         "document_id": "int",
         "editor": "str",
+        "license": "null",
         "locales": [
           {
             "lang": "str",

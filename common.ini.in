@@ -1,7 +1,6 @@
 # common configuration between production.ini and development.ini
 
 [app:main]
-use = egg:c2corg_api
 
 # size of the connection pool for the database. note that this number is
 # per application instance.
@@ -14,6 +13,15 @@ sqlalchemy.pool_size=5
 # extra connections opened above `pool_size` during bursts, closed again
 # when they are given back to the pool (10 is SQLAlchemy's default)
 sqlalchemy.max_overflow=10
+
+# requests a uvicorn worker serves at once (c2corg_api.asgi), the others
+# wait for one of them to end: more overloads the database and
+# Elasticsearch. The size of the database pool if empty.
+server.threads = {server_threads}
+
+# serve the OpenAPI document of the routes with typed parameters at
+# /openapi.json (#2512)
+# api.openapi = false
 
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
@@ -74,6 +82,7 @@ discourse.public_url = {discourse_public_url}
 discourse.api_key = {discourse_api_key}
 discourse.sso_secret = {discourse_sso_secret}
 discourse.allowed_sso_hosts = {discourse_allowed_sso_hosts}
+discourse.enabled = {discourse_enabled}
 discourse.category = {discourse_category}
 
 ui.url = {ui_url}

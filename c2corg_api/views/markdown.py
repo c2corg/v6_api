@@ -1,6 +1,10 @@
 from c2corg_api.markdown import parse_code
-from c2corg_api.markdown.img import IMG_ID_RE, make_image_url_resolver
-from c2corg_api.models.image import get_image_filenames
+from c2corg_api.markdown.img import (
+    IMG_ID_RE,
+    make_image_size_resolver,
+    make_image_url_resolver,
+)
+from c2corg_api.models.image import get_shown_images
 
 # locale properties that must not be cooked by markdown parser
 NOT_MARKDOWN_PROPERTY = {
@@ -27,32 +31,36 @@ def configure_image_url(settings):
 
 
 def cook(data):
-    image_url_resolver = _get_image_url_resolver(data)
+    image_url_resolver, image_size_resolver = _get_image_resolvers(data)
 
     result = {}
     for key in data:
         if key not in NOT_MARKDOWN_PROPERTY and data[key]:
-            result[key] = parse_code(data[key], image_url_resolver)
+            result[key] = parse_code(data[key], image_url_resolver, image_size_resolver)
         else:
             result[key] = data[key]
 
     return result
 
 
-def _get_image_url_resolver(data):
-    """Resolve the filenames of all images embedded in `data` in one query."""
-    # this lets the cooked HTML link them directly on the media server.
-    # Unknown images are left out: their <img> only get the c2c:url-proxy
-    # attribute. Merged images get the URL of the image they redirect to.
+def _get_image_resolvers(data):
+    """Resolve the images embedded in `data` in one query: URL and size."""
+    # this lets the cooked HTML link them directly on the media server, and
+    # give the size of their original. Unknown images are left out: their
+    # <img> only get the c2c:url-proxy attribute. Merged images get the URL
+    # and size of the image they redirect to.
     image_ids = set()
     for key, value in data.items():
         if key not in NOT_MARKDOWN_PROPERTY and isinstance(value, str):
             image_ids.update(int(i) for i in IMG_ID_RE.findall(value))
     image_ids = {i for i in image_ids if i <= _MAX_DOCUMENT_ID}
     if not image_ids:
-        return None
+        return None, None
 
-    if not _image_url:
-        return None
-
-    return make_image_url_resolver(_image_url, get_image_filenames(image_ids))
+    images = get_shown_images(image_ids)
+    sizes = {i: (width, height) for i, (_, width, height) in images.items()}
+    filenames = {i: filename for i, (filename, _, _) in images.items()}
+    url_resolver = (
+        make_image_url_resolver(_image_url, filenames) if _image_url else None
+    )
+    return url_resolver, make_image_size_resolver(sizes)

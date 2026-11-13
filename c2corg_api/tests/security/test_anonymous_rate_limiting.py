@@ -56,15 +56,20 @@ class DummyRegistry:
 
 
 class TestClientIp:
-    def test_uses_x_forwarded_for_when_present(self):
+    def test_ignores_x_forwarded_for(self):
         request = _Request()
+        request.remote_addr = '198.51.100.7'
         request.headers['X-Forwarded-For'] = '203.0.113.5, 10.0.0.1'
-        assert _client_ip(request) == '203.0.113.5'
+        assert _client_ip(request) == '198.51.100.7'
 
-    def test_falls_back_to_remote_addr(self):
+    def test_uses_remote_addr(self):
         request = _Request()
         request.remote_addr = '198.51.100.7'
         assert _client_ip(request) == '198.51.100.7'
+
+    def test_without_remote_addr(self):
+        request = _Request()
+        assert _client_ip(request) == 'unknown'
 
 
 class TestIsAnonymousRequestRateLimited:

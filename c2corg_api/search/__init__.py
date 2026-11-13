@@ -1,3 +1,4 @@
+import hashlib
 import re
 
 from elasticsearch import Elasticsearch
@@ -105,6 +106,10 @@ _BOOST_FUZZY = 0.2
 # edit away from dozens of others)
 _FUZZY_MIN_LENGTH = 5
 
+# shortest prefix indexed in the ngram fields (`min_gram` of the
+# `autocomplete_filter`, see the analysis settings in search/mapping.py)
+_NGRAM_MIN_LENGTH = 2
+
 
 def _title_fields(suffix, search_lang):
     """Return the `title_<lang>.<suffix>` field of every language.
@@ -120,6 +125,23 @@ def _title_fields(suffix, search_lang):
         f'title_{lang}.{suffix}' + ('^3' if search_lang and lang == search_lang else '')
         for lang in default_langs
     ]
+
+
+# sort of a full-text search: relevance first, then the id to break the ties
+# between documents with the same score, so that paging is stable
+SCORE_SORT = ({'_score': {'order': 'desc'}}, {'id': {'order': 'desc'}})
+
+
+def search_preference(search_term):
+    """Return the ES `preference` that sends a search to the same shard copies."""
+    # ES computes the scores per shard copy, and the primary and the replica of
+    # a shard can give the same document a slightly different score (their
+    # deleted documents differ). Without a preference, the pages of a search
+    # can hit different copies, see different orders and skip or repeat
+    # documents. One preference per search term keeps all the pages of a
+    # search on the same copies and still spreads the searches over the
+    # cluster. Hashed: a preference must not start with `_`.
+    return hashlib.sha1(search_term.encode(), usedforsecurity=False).hexdigest()
 
 
 def get_text_query_on_title(search_term, search_lang=None):
@@ -181,26 +203,30 @@ def get_text_query_on_title(search_term, search_lang=None):
         # the words but the last one must be complete. A word that is a stop
         # word in some language is ignored there (zero_terms_query='all'),
         # so "le vens" behaves like "vens".
-        should.append(
-            Bool(
-                must=[
-                    MultiMatch(
-                        query=' '.join(words[:-1]),
-                        fields=stemmed_fields,
-                        type='best_fields',
-                        operator='and',
-                        zero_terms_query='all',
-                    ),
-                    MultiMatch(
-                        query=words[-1],
-                        fields=ngram_fields,
-                        type='best_fields',
-                        zero_terms_query='none',
-                    ),
-                ],
-                boost=_BOOST_PREFIX,
+        #
+        # The ngram fields start at 2 letters: a last word of one letter
+        # ("mont b") cannot match anything there and would empty the result,
+        # so it is left out until the user types the next letter.
+        has_prefix = len(words[-1]) >= _NGRAM_MIN_LENGTH
+        must = [
+            MultiMatch(
+                query=' '.join(words[:-1]),
+                fields=stemmed_fields,
+                type='best_fields',
+                operator='and',
+                zero_terms_query='all' if has_prefix else 'none',
             )
-        )
+        ]
+        if has_prefix:
+            must.append(
+                MultiMatch(
+                    query=words[-1],
+                    fields=ngram_fields,
+                    type='best_fields',
+                    zero_terms_query='none',
+                )
+            )
+        should.append(Bool(must=must, boost=_BOOST_PREFIX))
     else:
         should.append(
             MultiMatch(

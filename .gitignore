@@ -5,8 +5,6 @@
 /test.ini
 /alembic.ini
 /c2corg_api/scripts/loadtests/loadtests.ini
-/apache/app-c2corg_api.wsgi
-/apache/wsgi.conf
 /MANIFEST
 *.pyc
 *.egg-info
@@ -21,6 +19,7 @@ config/docker
 .coverage
 coverage.xml
 /config/env.local
+/docker-compose.override.local.yml
 project.tar
 
 # Database dumps (raw production dumps must never be committed)

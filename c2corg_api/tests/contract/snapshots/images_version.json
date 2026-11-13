@@ -30,6 +30,11 @@
       "height": "int",
       "image_type": "str",
       "iso_speed": "null",
+      "license": {
+        "attribution_url": "str",
+        "id": "str",
+        "url": "str"
+      },
       "locales": [
         {
           "description": "null",

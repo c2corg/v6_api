@@ -1,9 +1,11 @@
 import datetime
 import json
+from dataclasses import dataclass
 
 import pytest
 from shapely.geometry import LineString, shape
 from shapely.geometry.point import Point
+from sqlalchemy import text
 
 from c2corg_api.models.area import Area
 from c2corg_api.models.area_association import AreaAssociation
@@ -25,1645 +27,1786 @@ from c2corg_api.models.route import (
 from c2corg_api.models.topo_map import TopoMap
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.tests import (
+    assert_coordinates_equal,
+    assert_error,
+    auth_headers,
+    errors_of,
+    get_locale,
+)
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.tests.views import scenarios
+from c2corg_api.tests.views.scenarios import DocType
+from c2corg_api.views.document import create_new_version
 from c2corg_api.views.route import (
     _find_starting_and_ending_points,
     _pt_rating,
     check_title_prefix,
 )
 
-
-class TestRouteRest(BaseDocumentTestRest):
-    def setUp(self):
-        self.set_prefix_and_model(
-            '/routes', ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale
-        )
-        BaseDocumentTestRest.setUp(self)
-        self._add_test_data()
-
-    def test_get_collection(self):
-        body = self.get_collection()
-        doc = body['documents'][0]
-        assert 'height_diff_access' not in doc
-
-    def test_get_collection_paginated(self):
-        self.app.get('/routes?offset=invalid', status=400)
-
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
-
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}), [self.route4.document_id], 4
-        )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
-            [self.route4.document_id, self.route3.document_id],
-            4,
-        )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
-            [self.route3.document_id, self.route2.document_id],
-            4,
-        )
-
-    def test_get_collection_lang(self):
-        self.get_collection_lang()
-
-    def test_get_collection_for_waypoint(self):
-        reset_search_index(self.session)
-
-        response = self.app.get(
-            self._prefix + '?w=' + str(self.waypoint.document_id), status=200
-        )
-
-        documents = response.json['documents']
-
-        assert response.json['total'] == 1
-        assert documents[0]['document_id'] == self.route.document_id
-
-    def test_get_collection_has_geom(self):
-        body = self.get_collection()
-        doc = body['documents'][3]
-        assert doc['geometry']['has_geom_detail'] is True
-
-    def test_get_collection_search(self):
-        reset_search_index(self.session)
-
-        body = self.get_collection_search({'act': 'skitouring'})
-        assert body.get('total') == 3
-        assert len(body.get('documents')) == 3
-
-        body = self.get_collection_search({'act': 'skitouring', 'limit': 2})
-        assert body.get('total') == 3
-        assert len(body.get('documents')) == 2
-
-        body = self.get_collection_search({'hdif': '700,900'})
-        assert body.get('total') == 2
-
-    def test_get(self):
-        body = self.get(self.route)
-        assert body.get('activities') == self.route.activities
-        self._assert_geometry(body)
-        assert 'climbing_outdoor_type' not in body
-        assert 'elevation_min' in body
-        assert body['glacier_gear'] == 'no'
-
-        locale_en = self.get_locale('en', body.get('locales'))
-        assert 'Main waypoint title' == locale_en.get('title_prefix')
-        assert 1 == locale_en.get('topic_id')
-
-        assert 'main_waypoint_id' in body
-        assert 'associations' in body
-        associations = body.get('associations')
-        assert 'waypoints' in associations
-        assert 'routes' in associations
-        assert 'recent_outings' in associations
-        assert 'images' in associations
-        assert 'articles' in associations
-        assert 'books' in associations
-
-        linked_waypoints = associations.get('waypoints')
-        assert 2 == len(linked_waypoints)
-        assert self.waypoint.document_id == linked_waypoints[0].get('document_id')
-        assert self.waypoint_tc.document_id == linked_waypoints[1].get('document_id')
-        # check waypoint data in listing
-        assert self.waypoint.locales[0].access_period == linked_waypoints[0].get(
-            'locales'
-        )[0].get('access_period')
-        assert self.waypoint_tc.public_transportation_rating == linked_waypoints[1].get(
-            'public_transportation_rating'
-        )
-        assert 'geometry' in linked_waypoints[0]
-        assert 'geom' in linked_waypoints[0].get('geometry')
-
-        linked_routes = associations.get('routes')
-        assert 1 == len(linked_routes)
-        assert self.route4.document_id == linked_routes[0].get('document_id')
-        # check route data in listing
-        assert self.route4.climbing_outdoor_type == linked_routes[0].get(
-            'climbing_outdoor_type'
-        )
-        # TODO with geometry now
-        # self.assertNotIn('geometry', linked_routes[0])
-
-        linked_articles = associations.get('articles')
-        assert 1 == len(linked_articles)
-        assert self.article1.document_id == linked_articles[0].get('document_id')
-
-        linked_books = associations.get('books')
-        assert 1 == len(linked_books)
-        assert self.book1.document_id == linked_books[0].get('document_id')
-
-        recent_outings = associations.get('recent_outings')
-        assert 1 == recent_outings['total']
-        # TODO documents are now in `documents` and not `outings`
-        assert 1 == len(recent_outings['documents'])
-        assert self.outing1.document_id == recent_outings['documents'][0].get(
-            'document_id'
-        )
-        # check outing data in listing
-        assert self.outing1.public_transport == recent_outings['documents'][0].get(
-            'public_transport'
-        )
-        assert 'type' in recent_outings['documents'][0]
-
-        assert 'maps' in body
-        topo_map = body.get('maps')[0]
-        assert topo_map.get('code') == '3232ET'
-        assert topo_map.get('locales')[0].get('title') == 'Belley'
-
-    def test_get_version(self):
-        self.get_version(self.route, self.route_version)
-
-    def test_get_version_without_activity(self):
-        """Tests that old route versions without activity include the fields
-        of all activities.
-        """
-        self.route_version.document_archive.activities = []
-        self.session.flush()
-        body = self.get_version(self.route, self.route_version)
-        locale = body['document']['locales'][0]
-        assert 'title' in locale
-
-    def test_get_cooked(self):
-        self.get_cooked(self.route)
-
-    def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.route)
-
-    def test_get_lang(self):
-        body = self.get_lang(self.route)
-
-        assert 'Mont Blanc from the air' == body.get('locales')[0].get('title')
-        assert 'Main waypoint title' == body.get('locales')[0].get('title_prefix')
-
-    def test_get_new_lang(self):
-        self.get_new_lang(self.route)
-
-    def test_get_404(self):
-        self.get_404()
-
-    def test_get_edit(self):
-        response = self.app.get(
-            self._prefix + '/' + str(self.route.document_id) + '?e=1', status=200
-        )
-        body = response.json
-
-        assert 'maps' in body
-        assert 'areas' not in body
-        assert 'associations' in body
-        associations = body['associations']
-        assert 'waypoints' in associations
-        assert 'routes' in associations
-        assert 'xreports' in associations
-        assert 'images' not in associations
-        assert 'users' not in associations
-
-    def test_get_caching(self):
-        self.get_caching(self.route)
-
-    def test_get_info(self):
-        body, locale = self.get_info(self.route, 'en')
-        assert locale.get('lang') == 'en'
-        assert locale.get('title_prefix') == self.locale_en.title_prefix
-
-    def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.route, 'es')
-        assert locale.get('lang') == 'fr'
-
-    def test_get_info_404(self):
-        self.get_info_404()
-
-    def test_post_error(self):
-        body = self.post_error({})
-        errors = body.get('errors')
-        assert len(errors) == 2
-        self.assertError(errors, 'activities', 'Required')
-        self.assertError(
-            errors, 'associations.waypoints', 'at least one waypoint required'
-        )
-
-    def test_post_empty_activities_and_associations_error(self):
-        body = self.post_error({'activities': []})
-        errors = body.get('errors')
-        assert len(errors) == 2
-        self.assertError(errors, 'activities', 'Shorter than minimum length 1')
-        self.assertError(
-            errors, 'associations.waypoints', 'at least one waypoint required'
-        )
-
-    def test_climing_indoor_waypoint_association(self):
-        body_post = {
-            'main_waypoint_id': self.waypoint_climbing_indoor.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": '
-                + '[[635956, 5723604], [635966, 5723644]]}',
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {
-                'waypoints': [
-                    {'document_id': self.waypoint_climbing_indoor.document_id}
-                ]
-            },
-        }
-        body = self.post_error(body_post)
-        errors = body.get('errors')
-        assert len(errors) == 3
-        assert (
-            errors[0].get('description')
-            == 'climbing_indoor waypoint cannot be linked to a route'
-        )
-        assert errors[0].get('name') == 'associations.climbing_indoor_waypoint'
-
-    def test_post_invalid_activity(self):
-        body_post = {
-            'activities': ['cooking'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": '
-                + '[[635956, 5723604], [635966, 5723644]]}',
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        body = self.post_error(body_post)
-        # the schema rejects the body, so the association checks also miss
-        # their data and add their own errors
-        self.assertError(
-            body.get('errors'),
-            'activities.0',
-            f'"cooking" is not one of {", ".join(activities)}',
-        )
-
-    def test_post_missing_title(self):
-        body_post = {
-            'activities': ['skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": '
-                + '[[635956, 5723604], [635966, 5723644]]}',
-            },
-            'locales': [{'lang': 'en'}],
-        }
-        self.post_missing_title(body_post)
-
-    def test_post_non_whitelisted_attribute(self):
-        body = {
-            'activities': ['hiking'],
-            'protected': True,
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": '
-                + '[[635956, 5723604], [635966, 5723644]]}',
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        self.post_non_whitelisted_attribute(body)
-
-    def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
-
-    def test_post_success(self):
-        body = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": '
-                + '[[635956, 5723604], [635966, 5723644]]}',
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        body, doc = self.post_success(body)
-        self._assert_geometry(body)
-        self._assert_default_geometry(body)
-
-        version = doc.versions[0]
-
-        archive_route = version.document_archive
-        assert archive_route.activities == ['hiking', 'skitouring']
-        assert archive_route.elevation_max == 1500
-        assert archive_route.durations == ['1']
-
-        archive_locale = version.document_locales_archive
-        assert archive_locale.lang == 'en'
-        assert archive_locale.title == 'Some nice loop'
-
-        archive_geometry = version.document_geometry_archive
-        assert archive_geometry.version == doc.geometry.version
-        assert archive_geometry.geom_detail is not None
-        assert archive_geometry.geom is not None
-
-        assert doc.main_waypoint_id == self.waypoint.document_id
-        assert body.get('main_waypoint_id') == self.waypoint.document_id
-        assert archive_route.main_waypoint_id == self.waypoint.document_id
-
-        assert self.waypoint.locales[0].title == doc.locales[0].title_prefix
-
-        # check that a link for intersecting areas is created
-        links = (
-            self.session.query(AreaAssociation)
-            .filter(AreaAssociation.document_id == doc.document_id)
-            .all()
-        )
-        assert len(links) == 1
-        assert links[0].area_id == self.area1.document_id
-
-        # check that a link to the main waypoint is created
-        association_main_wp = self.session.get(
-            Association, (self.waypoint.document_id, doc.document_id)
-        )
-        assert association_main_wp is not None
-
-        association_main_wp_log = (
-            self.session.query(AssociationLog)
-            .filter(AssociationLog.parent_document_id == self.waypoint.document_id)
-            .filter(AssociationLog.child_document_id == doc.document_id)
-            .first()
-        )
-        assert association_main_wp_log is not None
-
-    def test_post_success_3d(self):
-        """Tests that routes with 3D tracks can be created and read."""
-        body = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'geometry': {
-                'geom_detail': '{"type": "LineString", "coordinates": '
-                + '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}'
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-
-        _, doc = self.post_success(body)
-        response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
-        body = response.json
-
-        geometry = body['geometry']
-        geom = json.loads(geometry['geom'])
-        assert len(geom['coordinates']) == 2
-        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
-
-        geom_detail = json.loads(geometry['geom_detail'])
-        assert len(geom_detail['coordinates']) == 2
-        assert len(geom_detail['coordinates'][0]) == 3
-        self.assertCoodinateEquals(
-            geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0]
-        )
-        self.assertCoodinateEquals(
-            geom_detail['coordinates'][1], [635966.0, 5723644.0, 1210.0]
-        )
-
-    def test_post_wrong_geom_type(self):
-        body = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom_detail': '{"type": "Point", "coordinates": '
-                + '[635956, 5723604]}',
-            },
-            'locales': [
-                {
-                    'lang': 'en',
-                    'title': 'Some nice loop',
-                    'description': '...',
-                    'gear': 'shoes',
-                }
-            ],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        errors = self.post_wrong_geom_type(body)
-        assert (
-            errors[0]['description'] == 'Invalid geometry type. Expected: '
-            "['LINESTRING', 'MULTILINESTRING']. Got: POINT."
-        )
-
-    def test_post_corrupted_geojson_geom(self):
-        body = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom_detail': '{"type": "LineString", "coordinates": '
-                + '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}',
-            },
-            'locales': [
-                {
-                    'lang': 'en',
-                    'title': 'Some nice loop',
-                    'description': '...',
-                    'gear': 'shoes',
-                }
-            ],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        errors = self.post_wrong_geom_type(body)
-        assert (
-            errors[0]['description'] == 'Invalid geometry: {"type": '
-            '"LineString", "coordinates": '
-            '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}'
-        )
-
-        body = {
-            'activities': ['hiking', 'skitouring'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom': '{"type": "Point", "coordinates": [NaN, NaN]}',
-                'geom_detail': None,
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        errors = self.post_wrong_geom_type(body)
-        assert (
-            errors[0]['description']
-            == 'Invalid geometry: {"type": "Point", "coordinates": [NaN, NaN]}'
-        )
-
-    def test_post_success_3d_multiline(self):
-        """Tests that routes with 3D multiline tracks can be created and read."""
-        body = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'geometry': {
-                'geom_detail': '{"type": "MultiLineString", "coordinates": '
-                + '[[[635956, 5723604, 1200], [635966, 5723644, 1210]]]}'
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-
-        _, doc = self.post_success(body)
-        response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
-        body = response.json
-
-        geometry = body['geometry']
-        geom = json.loads(geometry['geom'])
-        assert len(geom['coordinates']) == 2
-        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
-
-        geom_detail = json.loads(geometry['geom_detail'])
-        assert len(geom_detail['coordinates']) == 1
-        assert len(geom_detail['coordinates'][0]) == 2
-        assert len(geom_detail['coordinates'][0][0]) == 3
-        self.assertCoodinateEquals(
-            geom_detail['coordinates'][0][0], [635956.0, 5723604.0, 1200.0]
-        )
-        self.assertCoodinateEquals(
-            geom_detail['coordinates'][0][1], [635966.0, 5723644.0, 1210.0]
-        )
-
-    def test_post_success_4d(self):
-        """Tests that routes with 4D tracks can be created and read."""
-        body = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'geometry': {
-                'geom_detail': '{"type": "LineString", "coordinates": '
-                + '[[635956, 5723604, 1200, 12345], '
-                '[635966, 5723644, 1210, 12346]]}'
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-
-        _, doc = self.post_success(body)
-        response = self.app.get(self._prefix + '/' + str(doc.document_id), status=200)
-        body = response.json
-
-        geometry = body['geometry']
-        geom = json.loads(geometry['geom'])
-        assert len(geom['coordinates']) == 2
-        self.assertCoodinateEquals(geom['coordinates'], [635961.0, 5723624.0])
-
-        geom_detail = json.loads(geometry['geom_detail'])
-        assert len(geom_detail['coordinates']) == 2
-        assert len(geom_detail['coordinates'][0]) == 4
-        self.assertCoodinateEquals(
-            geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0, 12345]
-        )
-        self.assertCoodinateEquals(
-            geom_detail['coordinates'][1], [635966.0, 5723644.0, 1210.0, 12346]
-        )
-
-    def test_post_default_geom_multi_line(self):
-        body = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'geometry': {
-                'id': 5678,
-                'version': 6789,
-                'geom_detail': '{"type": "MultiLineString", "coordinates": '
-                + '[[[635956, 5723604], [635966, 5723644]], '
-                '[[635966, 5723614], [635976, 5723654]]]}',
-            },
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        body, doc = self.post_success(body)
-        assert doc.geometry.geom is not None
-        assert doc.geometry.geom_detail is not None
-        self._assert_default_geometry(body)
-
-    def test_post_default_geom_from_main_wp(self):
-        body = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        body, doc = self.post_success(body)
-        assert doc.geometry.geom is not None
-        assert doc.geometry.geom_detail is None
-        self._assert_default_geometry(body, x=635956, y=5723604)
-
-    def test_post_default_geom_from_associated_wps(self):
-        body = {
-            'activities': ['hiking', 'skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            'associations': {'waypoints': [{'document_id': self.waypoint.document_id}]},
-        }
-        body, doc = self.post_success(body, skip_validation=True)
-        assert doc.geometry.geom is not None
-        assert doc.geometry.geom_detail is None
-        self._assert_default_geometry(body, x=635956, y=5723604)
-
-    def test_post_main_wp_without_association(self):
-        body_post = {
-            'main_waypoint_id': self.waypoint.document_id,
-            'activities': ['hiking', 'skitouring'],
-            'elevation_min': 700,
-            'elevation_max': 1500,
-            'height_diff_up': 800,
-            'height_diff_down': 800,
-            'durations': ['1'],
-            'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
-            # no association to the main waypoint
-            'associations': {
-                'waypoints': [{'document_id': self.waypoint2.document_id}]
-            },
-        }
-        body = self.post_error(body_post)
-        errors = body.get('errors')
-        assert len(errors) == 1
-        self.assertError(
-            errors, 'main_waypoint_id', 'no association to the main waypoint'
-        )
-
-    def test_put_wrong_document_id(self):
-        body = {
-            'document': {
-                'document_id': '9999999',
-                'version': self.route.version,
-                'activities': ['hiking'],
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'none',
-                        'version': self.locale_en.version,
-                    }
-                ],
-                'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
-                },
-            }
-        }
-        self.put_wrong_document_id(body)
-
-    def test_put_wrong_document_version(self):
-        body = {
-            'document': {
-                'document_id': self.route.document_id,
-                'version': -9999,
-                'activities': ['skitouring'],
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'none',
-                        'version': self.locale_en.version,
-                    }
-                ],
-                'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
-                },
-            }
-        }
-        self.put_wrong_version(body, self.route.document_id)
-
-    def test_put_wrong_locale_version(self):
-        body = {
-            'document': {
-                'document_id': self.route.document_id,
-                'version': self.route.version,
-                'activities': ['skitouring'],
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'none',
-                        'version': -9999,
-                    }
-                ],
-                'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
-                },
-            }
-        }
-        self.put_wrong_version(body, self.route.document_id)
-
-    def test_put_wrong_ids(self):
-        body = {
-            'document': {
-                'document_id': self.route.document_id,
-                'version': self.route.version,
-                'activities': ['skitouring'],
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'none',
-                        'version': self.locale_en.version,
-                    }
-                ],
-                'associations': {
-                    'waypoints': [{'document_id': self.waypoint.document_id}]
-                },
-            }
-        }
-        self.put_wrong_ids(body, self.route.document_id)
-
-    def test_put_no_document(self):
-        self.put_put_no_document(self.route.document_id)
-
-    def test_put_success_all(self):
-        body = {
-            'message': 'Update',
-            'document': {
-                'document_id': self.route.document_id,
-                'version': self.route.version,
-                'quality': quality_types[1],
-                'activities': ['skitouring'],
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'none',
-                        'version': self.locale_en.version,
-                    }
-                ],
-                'geometry': {
-                    'version': self.route.geometry.version,
-                    'geom_detail': '{"type": "LineString", "coordinates": '
-                    + '[[635956, 5723604], [635976, 5723654]]}',
-                },
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint.document_id},
-                        {'document_id': self.waypoint_tc.document_id},
-                    ]
-                },
-            },
-        }
-        (body, route) = self.put_success_all(body, self.route)
-        self._assert_default_geometry(body, x=635961, y=5723624)
-
-        assert route.elevation_max == 1600
-        locale_en = route.get_locale('en')
-        assert locale_en.description == '...'
-        assert locale_en.gear == 'none'
-
-        # version with lang 'en'
-        versions = route.versions
-        version_en = self.get_latest_version('en', versions)
-        archive_locale = version_en.document_locales_archive
-        assert archive_locale.title == 'Mont Blanc from the air'
-        assert archive_locale.gear == 'none'
-
-        archive_document_en = version_en.document_archive
-        assert archive_document_en.activities == ['skitouring']
-        assert archive_document_en.elevation_max == 1600
-
-        archive_geometry_en = version_en.document_geometry_archive
-        assert archive_geometry_en.version == 2
-
-        # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
-        archive_locale = version_fr.document_locales_archive
-        assert archive_locale.title == 'Mont Blanc du ciel'
-        assert archive_locale.gear == 'paraglider'
-
-    def test_put_success_figures_only(self):
-        body = {
-            'message': 'Changing figures',
-            'document': {
-                'document_id': self.route.document_id,
-                'version': self.route.version,
-                'quality': quality_types[1],
-                'activities': ['skitouring'],
-                'glacier_gear': 'no',
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'paraglider',
-                        'version': self.locale_en.version,
-                        'title_prefix': 'Should be ignored',
-                    }
-                ],
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint.document_id},
-                        {'document_id': self.waypoint_tc.document_id},
-                    ]
-                },
-            },
-        }
-        (body, route) = self.put_success_figures_only(body, self.route)
-
-        assert route.elevation_max == 1600
-
-    def test_put_success_new_track_with_default_geom(self):
-        """Test that a provided default geometry (`geom`) is used instead of
-        obtaining the geom from a track (`geom_detail`).
-        """
-        body = {
-            'message': 'Changing figures',
-            'document': {
-                'document_id': self.route.document_id,
-                'version': self.route.version,
-                'quality': quality_types[1],
-                'activities': ['skitouring'],
-                'glacier_gear': 'no',
-                'elevation_min': 700,
-                'elevation_max': 1600,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'paraglider',
-                        'version': self.locale_en.version,
-                        'title_prefix': 'Should be ignored',
-                    }
-                ],
-                'geometry': {
-                    'version': self.route.geometry.version,
-                    'geom_detail': '{"type": "LineString", "coordinates": '
-                    + '[[635956, 5723604], [635976, 5723654]]}',
-                    'geom': '{"type": "Point", "coordinates": [635000, 5723000]}',
-                },
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint.document_id},
-                        {'document_id': self.waypoint_tc.document_id},
-                    ]
-                },
-            },
-        }
-        (body, route) = self.put_success_figures_only(body, self.route)
-        self._assert_default_geometry(body, x=635000, y=5723000)
-
-    def test_put_success_main_wp_changed(self):
-        body = {
-            'message': 'Changing figures',
-            'document': {
-                'document_id': self.route.document_id,
-                'main_waypoint_id': self.waypoint2.document_id,
-                'version': self.route.version,
-                'quality': quality_types[1],
-                'activities': ['skitouring'],
-                'glacier_gear': 'no',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'paraglider',
-                        'version': self.locale_en.version,
-                    }
-                ],
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint2.document_id},
-                        {'document_id': self.waypoint_tc.document_id},
-                    ]
-                },
-            },
-        }
-        (body, route) = self.put_success_figures_only(
-            body, self.route, user='moderator'
-        )
-        # tests that the default geometry has not changed (main wp has changed
-        # but the route has a track)
-        self._assert_default_geometry(body)
-
-        assert route.main_waypoint_id == self.waypoint2.document_id
-        locale_en = route.get_locale('en')
-        assert locale_en.title_prefix == self.waypoint2.get_locale('en').title
-
-        # check that a link to the new main waypoint is created
-        association_main_wp = self.session.get(
-            Association, (self.waypoint2.document_id, route.document_id)
-        )
-        assert association_main_wp is not None
-
-        association_main_wp_log = (
-            self.session.query(AssociationLog)
-            .filter(AssociationLog.parent_document_id == self.waypoint2.document_id)
-            .filter(AssociationLog.child_document_id == route.document_id)
-            .first()
-        )
-        assert association_main_wp_log is not None
-
-    def test_put_success_lang_only(self):
-        body = {
-            'message': 'Changing lang',
-            'document': {
-                'document_id': self.route.document_id,
-                'version': self.route.version,
-                'quality': quality_types[1],
-                'activities': ['skitouring'],
-                'glacier_gear': 'no',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Mont Blanc from the air',
-                        'description': '...',
-                        'gear': 'none',
-                        'version': self.locale_en.version,
-                    }
-                ],
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint.document_id},
-                        {'document_id': self.waypoint_tc.document_id},
-                    ]
-                },
-            },
-        }
-        (body, route) = self.put_success_lang_only(body, self.route)
-
-        assert route.get_locale('en').gear == 'none'
-
-    def test_put_success_new_lang(self):
-        """Test updating a document by adding a new locale."""
-        body = {
-            'message': 'Adding lang',
-            'document': {
-                'document_id': self.route.document_id,
-                'version': self.route.version,
-                'quality': quality_types[1],
-                'activities': ['skitouring'],
-                'glacier_gear': 'no',
-                'elevation_min': 700,
-                'elevation_max': 1500,
-                'height_diff_up': 800,
-                'height_diff_down': 800,
-                'durations': ['1'],
-                'locales': [
-                    {
-                        'lang': 'es',
-                        'title': 'Mont Blanc del cielo',
-                        'description': '...',
-                        'gear': 'si',
-                    }
-                ],
-                'associations': {
-                    'waypoints': [
-                        {'document_id': self.waypoint.document_id},
-                        {'document_id': self.waypoint_tc.document_id},
-                    ]
-                },
-            },
-        }
-        (body, route) = self.put_success_new_lang(body, self.route)
-
-        assert route.get_locale('es').gear == 'si'
-
-    def test_history(self):
-        id = self.route.document_id
-        langs = ['fr', 'en']
-        for lang in langs:
-            body = self.app.get(f'/document/{id}/history/{lang}')
-            username = 'contributor'
-            user_id = self.global_userids[username]
-
-            title = body.json['title']
-            versions = body.json['versions']
-            assert len(versions) == 1
-            assert getattr(self, 'locale_' + lang).title == title
-            for r in versions:
-                assert r['name'] == 'Contributor'
-                assert 'username' not in r
-                assert r['user_id'] == user_id
-                assert 'written_at' in r
-                assert 'version_id' in r
-
-    def test_history_no_lang(self):
-        id = self.route.document_id
-        self.app.get(f'/document/{id}/history/es', status=404)
-
-    def test_history_no_doc(self):
-        self.app.get('/document/99999/history/es', status=404)
-
-    def _assert_geometry(self, body):
-        assert body.get('geometry') is not None
-        geometry = body.get('geometry')
-        assert geometry.get('version') is not None
-        assert geometry.get('geom_detail') is not None
-
-        geom = geometry.get('geom_detail')
-        line = shape(json.loads(geom))
-        assert isinstance(line, LineString)
-        assert line.coords[0][0] == pytest.approx(635956, abs=5e-8)
-        assert line.coords[0][1] == pytest.approx(5723604, abs=5e-8)
-        assert line.coords[1][0] == pytest.approx(635966, abs=5e-8)
-        assert line.coords[1][1] == pytest.approx(5723644, abs=5e-8)
-
-    def _assert_default_geometry(self, body, x=635961, y=5723624):
-        assert body.get('geometry') is not None
-        geometry = body.get('geometry')
-        assert geometry.get('version') is not None
-        assert geometry.get('geom') is not None
-
-        geom = geometry.get('geom')
-        point = shape(json.loads(geom))
-        assert isinstance(point, Point)
-        assert point.x == pytest.approx(x, abs=5e-8)
-        assert point.y == pytest.approx(y, abs=5e-8)
-
-    def test_update_prefix_title(self):
-        self.route.locales.append(
-            RouteLocale(
-                lang='es',
-                title='Mont Blanc del cielo',
-                description='...',
-                gear='paraglider',
-            )
-        )
-        self.route.main_waypoint_id = self.waypoint.document_id
-        self.session.flush()
-        self.session.refresh(self.route)
-        check_title_prefix(self.route, create=False)
-        self.session.expire_all()
-
-        route = self.session.get(Route, self.route.document_id)
-        locale_en = route.get_locale('en')
-        assert locale_en.version == 1
-        assert locale_en.title_prefix == self.waypoint.get_locale('en').title
-        locale_fr = route.get_locale('fr')
-        assert locale_fr.version == 1
-        assert locale_fr.title_prefix == self.waypoint.get_locale('fr').title
-        locale_es = route.get_locale('es')
-        assert locale_es.version == 1
-        assert locale_es.title_prefix == self.waypoint.get_locale('fr').title
-
-    def test_get_associations_history(self):
-        self._get_association_logs(self.route)
-
-    def _add_test_data(self):
-        self.route = Route(
-            activities=['skitouring'],
-            elevation_max=1500,
-            elevation_min=700,
-            height_diff_up=800,
-            height_diff_down=800,
-            durations='1',
-        )
-
-        self.locale_en = RouteLocale(
-            lang='en',
-            title='Mont Blanc from the air',
-            description='...',
-            gear='paraglider',
-            title_prefix='Main waypoint title',
-            document_topic=DocumentTopic(topic_id=1),
-        )
-
-        self.locale_fr = RouteLocale(
-            lang='fr', title='Mont Blanc du ciel', description='...', gear='paraglider'
-        )
-
-        self.route.locales.append(self.locale_en)
-        self.route.locales.append(self.locale_fr)
-
-        self.route.geometry = DocumentGeometry(
-            geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
-            geom='SRID=3857;POINT(635961 5723624)',
-        )
-
-        self.session.add(self.route)
-        self.session.flush()
-
-        user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.route, user_id)
-        self.route_version = (
-            self.session.query(DocumentVersion)
-            .filter(DocumentVersion.document_id == self.route.document_id)
-            .filter(DocumentVersion.lang == 'en')
-            .first()
-        )
-
-        self.article1 = Article(
-            categories=['site_info'], activities=['hiking'], article_type='collab'
-        )
-        self.session.add(self.article1)
-        self.session.flush()
-        self._add_association(
-            Association.create(
-                parent_document=self.route, child_document=self.article1
-            ),
-            user_id,
-        )
-
-        self.book1 = Book(activities=['hiking'], book_types=['biography'])
-        self.session.add(self.book1)
-        self.session.flush()
-        self._add_association(
-            Association.create(parent_document=self.book1, child_document=self.route),
-            user_id,
-        )
-
-        self.route2 = Route(
-            activities=['skitouring'],
-            elevation_max=1500,
-            elevation_min=700,
-            height_diff_up=800,
-            height_diff_down=800,
-            durations='1',
-            locales=[
-                RouteLocale(
-                    lang='en',
-                    title='Mont Blanc from the air',
-                    description='...',
-                    gear='paraglider',
-                ),
-                RouteLocale(
-                    lang='fr',
-                    title='Mont Blanc du ciel',
-                    description='...',
-                    gear='paraglider',
-                ),
-            ],
-        )
-        self.session.add(self.route2)
-        self.session.flush()
-        DocumentRest.create_new_version(self.route2, user_id)
-
-        self.route3 = Route(
-            activities=['skitouring'],
-            elevation_max=1500,
-            elevation_min=700,
-            height_diff_up=500,
-            height_diff_down=500,
-            durations='1',
-            locales=[
-                RouteLocale(
-                    lang='en',
-                    title='Mont Blanc from the air',
-                    description='...',
-                    gear='paraglider',
-                ),
-                RouteLocale(
-                    lang='fr',
-                    title='Mont Blanc du ciel',
-                    description='...',
-                    gear='paraglider',
-                ),
-            ],
-        )
-
-        self.route3.geometry = DocumentGeometry(geom='SRID=3857;POINT(0 0)')
-        self.session.add(self.route3)
-        self.session.flush()
-        DocumentRest.create_new_version(self.route3, user_id)
-
-        self.route4 = Route(
-            activities=['rock_climbing'],
-            elevation_max=1500,
-            elevation_min=700,
-            height_diff_up=500,
-            height_diff_down=500,
-            durations='1',
-            climbing_outdoor_type='single',
-        )
-        self.route4.locales.append(
+ROUTES = DocType('/routes', ROUTE_TYPE, Route, ArchiveRoute, ArchiveRouteLocale)
+
+
+@dataclass
+class Docs:
+    """The documents of the tests, built by `docs`."""
+
+    route: Route
+    locale_en: RouteLocale
+    locale_fr: RouteLocale
+    route_version: DocumentVersion
+    article1: Article
+    book1: Book
+    route2: Route
+    route3: Route
+    route4: Route
+    waypoint: Waypoint
+    waypoint2: Waypoint
+    waypoint_tc: Waypoint
+    waypoint_climbing_indoor: Waypoint
+    outing1: Outing
+    outing2: Outing
+    area1: Area
+    area2: Area
+
+
+@pytest.fixture(autouse=True)
+def docs(session, user_ids) -> Docs:
+    route = Route(
+        activities=['skitouring'],
+        elevation_max=1500,
+        elevation_min=700,
+        height_diff_up=800,
+        height_diff_down=800,
+        durations='1',
+    )
+
+    locale_en = RouteLocale(
+        lang='en',
+        title='Mont Blanc from the air',
+        description='...',
+        gear='paraglider',
+        title_prefix='Main waypoint title',
+        document_topic=DocumentTopic(topic_id=1),
+    )
+
+    locale_fr = RouteLocale(
+        lang='fr', title='Mont Blanc du ciel', description='...', gear='paraglider'
+    )
+
+    route.locales.append(locale_en)
+    route.locales.append(locale_fr)
+
+    route.geometry = DocumentGeometry(
+        geom_detail='SRID=3857;LINESTRING(635956 5723604, 635966 5723644)',
+        geom='SRID=3857;POINT(635961 5723624)',
+    )
+
+    session.add(route)
+    session.flush()
+
+    user_id = user_ids['contributor']
+    create_new_version(route, user_id)
+    route_version = (
+        session.query(DocumentVersion)
+        .filter(DocumentVersion.document_id == route.document_id)
+        .filter(DocumentVersion.lang == 'en')
+        .first()
+    )
+
+    article1 = Article(
+        categories=['site_info'], activities=['hiking'], article_type='collab'
+    )
+    session.add(article1)
+    session.flush()
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=route, child_document=article1),
+        user_id,
+    )
+
+    book1 = Book(activities=['hiking'], book_types=['biography'])
+    session.add(book1)
+    session.flush()
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=book1, child_document=route),
+        user_id,
+    )
+
+    route2 = Route(
+        activities=['skitouring'],
+        elevation_max=1500,
+        elevation_min=700,
+        height_diff_up=800,
+        height_diff_down=800,
+        durations='1',
+        locales=[
             RouteLocale(
                 lang='en',
                 title='Mont Blanc from the air',
                 description='...',
                 gear='paraglider',
-            )
-        )
-        self.route4.locales.append(
+            ),
             RouteLocale(
                 lang='fr',
                 title='Mont Blanc du ciel',
                 description='...',
                 gear='paraglider',
-            )
-        )
-        self.session.add(self.route4)
+            ),
+        ],
+    )
+    session.add(route2)
+    session.flush()
+    create_new_version(route2, user_id)
 
-        # waypoints
-        self.waypoint = Waypoint(
-            waypoint_type='climbing_outdoor',
-            elevation=4,
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-        )
-        self.waypoint.locales.append(
-            WaypointLocale(
+    route3 = Route(
+        activities=['skitouring'],
+        elevation_max=1500,
+        elevation_min=700,
+        height_diff_up=500,
+        height_diff_down=500,
+        durations='1',
+        locales=[
+            RouteLocale(
                 lang='en',
-                title='Mont Granier 1 (en)',
+                title='Mont Blanc from the air',
                 description='...',
-                access='yep',
-                access_period='yapa',
-            )
-        )
-        self.waypoint.locales.append(
-            WaypointLocale(
+                gear='paraglider',
+            ),
+            RouteLocale(
                 lang='fr',
-                title='Mont Granier 1 (fr)',
+                title='Mont Blanc du ciel',
                 description='...',
-                access='ouai',
-                access_period='yapa',
-            )
+                gear='paraglider',
+            ),
+        ],
+    )
+
+    route3.geometry = DocumentGeometry(geom='SRID=3857;POINT(0 0)')
+    session.add(route3)
+    session.flush()
+    create_new_version(route3, user_id)
+
+    route4 = Route(
+        activities=['rock_climbing'],
+        elevation_max=1500,
+        elevation_min=700,
+        height_diff_up=500,
+        height_diff_down=500,
+        durations='1',
+        climbing_outdoor_type='single',
+    )
+    route4.locales.append(
+        RouteLocale(
+            lang='en',
+            title='Mont Blanc from the air',
+            description='...',
+            gear='paraglider',
         )
-        self.session.add(self.waypoint)
-        self.waypoint2 = Waypoint(
-            waypoint_type='summit',
-            elevation=4,
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+    )
+    route4.locales.append(
+        RouteLocale(
+            lang='fr',
+            title='Mont Blanc du ciel',
+            description='...',
+            gear='paraglider',
         )
-        self.waypoint2.locales.append(
-            WaypointLocale(
-                lang='en', title='Mont Granier 2 (en)', description='...', access='yep'
-            )
+    )
+    session.add(route4)
+
+    # waypoints
+    waypoint = Waypoint(
+        waypoint_type='climbing_outdoor',
+        elevation=4,
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+    )
+    waypoint.locales.append(
+        WaypointLocale(
+            lang='en',
+            title='Mont Granier 1 (en)',
+            description='...',
+            access='yep',
+            access_period='yapa',
         )
-        self.session.add(self.waypoint2)
-        self.waypoint_tc = Waypoint(
+    )
+    waypoint.locales.append(
+        WaypointLocale(
+            lang='fr',
+            title='Mont Granier 1 (fr)',
+            description='...',
+            access='ouai',
+            access_period='yapa',
+        )
+    )
+    session.add(waypoint)
+    waypoint2 = Waypoint(
+        waypoint_type='summit',
+        elevation=4,
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+    )
+    waypoint2.locales.append(
+        WaypointLocale(
+            lang='en', title='Mont Granier 2 (en)', description='...', access='yep'
+        )
+    )
+    session.add(waypoint2)
+    waypoint_tc = Waypoint(
+        waypoint_type='access',
+        elevation=1776,
+        public_transportation_rating='poor service',
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(778846 5580167)'),
+    )
+    waypoint_tc.locales.append(
+        WaypointLocale(
+            lang='fr',
+            title='Roche écroulée',
+            description='...',
+            access='yep',
+            access_period='hiver',
+        )
+    )
+    session.add(waypoint_tc)
+    waypoint_climbing_indoor = Waypoint(
+        waypoint_type='climbing_indoor',
+        elevation=1,
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+    )
+    session.add(waypoint_climbing_indoor)
+    session.flush()
+
+    # associations
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=route, child_document=route4),
+        user_id,
+    )
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=route4, child_document=route),
+        user_id,
+    )
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=waypoint, child_document=route),
+        user_id,
+    )
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=waypoint_tc, child_document=route),
+        user_id,
+    )
+
+    # add a map
+    topo_map = TopoMap(
+        code='3232ET',
+        editor='IGN',
+        scale='25000',
+        locales=[DocumentLocale(lang='fr', title='Belley')],
+        geometry=DocumentGeometry(
+            geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))'  # noqa: E501
+        ),
+    )
+    session.add(topo_map)
+    session.flush()
+    session.add(TopoMapAssociation(document=route, topo_map=topo_map))
+
+    outing1 = Outing(
+        activities=['skitouring'],
+        date_start=datetime.date(2016, 1, 1),
+        date_end=datetime.date(2016, 1, 1),
+        public_transport=True,
+        locales=[
+            OutingLocale(lang='en', title='...', description='...', weather='sunny')
+        ],
+    )
+    session.add(outing1)
+    session.flush()
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=route, child_document=outing1),
+        user_id,
+    )
+
+    outing2 = Outing(
+        redirects_to=outing1.document_id,
+        activities=['skitouring'],
+        date_start=datetime.date(2016, 1, 1),
+        date_end=datetime.date(2016, 1, 1),
+        locales=[
+            OutingLocale(lang='en', title='...', description='...', weather='sunny')
+        ],
+    )
+    session.add(outing2)
+    session.flush()
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=route, child_document=outing2),
+        user_id,
+    )
+    session.flush()
+
+    # add areas
+    area1 = Area(
+        area_type='range',
+        geometry=DocumentGeometry(
+            geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))'  # noqa
+        ),
+    )
+    area2 = Area(area_type='range', locales=[DocumentLocale(lang='fr', title='France')])
+
+    session.add_all([area1, area2])
+    session.flush()
+    return Docs(
+        route=route,
+        locale_en=locale_en,
+        locale_fr=locale_fr,
+        route_version=route_version,
+        article1=article1,
+        book1=book1,
+        route2=route2,
+        route3=route3,
+        route4=route4,
+        waypoint=waypoint,
+        waypoint2=waypoint2,
+        waypoint_tc=waypoint_tc,
+        waypoint_climbing_indoor=waypoint_climbing_indoor,
+        outing1=outing1,
+        outing2=outing2,
+        area1=area1,
+        area2=area2,
+    )
+
+
+def test_get_collection(client, session):
+    body = scenarios.get_collection(client, session, ROUTES)
+    doc = body['documents'][0]
+    assert 'height_diff_access' not in doc
+
+
+def test_get_collection_paginated(client, session, docs):
+    client.get('/routes?offset=invalid', status=422)
+
+    scenarios.assert_results_equal(
+        scenarios.get_collection(client, session, ROUTES, {'offset': 0, 'limit': 0}),
+        [],
+        4,
+    )
+
+    scenarios.assert_results_equal(
+        scenarios.get_collection(client, session, ROUTES, {'offset': 0, 'limit': 1}),
+        [docs.route4.document_id],
+        4,
+    )
+    scenarios.assert_results_equal(
+        scenarios.get_collection(client, session, ROUTES, {'offset': 0, 'limit': 2}),
+        [docs.route4.document_id, docs.route3.document_id],
+        4,
+    )
+    scenarios.assert_results_equal(
+        scenarios.get_collection(client, session, ROUTES, {'offset': 1, 'limit': 2}),
+        [docs.route3.document_id, docs.route2.document_id],
+        4,
+    )
+
+
+def test_get_collection_lang(client):
+    scenarios.get_collection_lang(client, ROUTES)
+
+
+def test_get_collection_for_waypoint(client, session, docs):
+    reset_search_index(session)
+
+    response = client.get(
+        ROUTES.prefix + '?w=' + str(docs.waypoint.document_id), status=200
+    )
+
+    documents = response.json['documents']
+
+    assert response.json['total'] == 1
+    assert documents[0]['document_id'] == docs.route.document_id
+
+
+def test_get_collection_has_geom(client, session):
+    body = scenarios.get_collection(client, session, ROUTES)
+    doc = body['documents'][3]
+    assert doc['geometry']['has_geom_detail'] is True
+
+
+def test_get_collection_search(client, session):
+    reset_search_index(session)
+
+    body = scenarios.get_collection_search(client, ROUTES, {'act': 'skitouring'})
+    assert body.get('total') == 3
+    assert len(body.get('documents')) == 3
+
+    body = scenarios.get_collection_search(
+        client, ROUTES, {'act': 'skitouring', 'limit': 2}
+    )
+    assert body.get('total') == 3
+    assert len(body.get('documents')) == 2
+
+    body = scenarios.get_collection_search(client, ROUTES, {'hdif': '700,900'})
+    assert body.get('total') == 2
+
+
+def test_get(client, docs):
+    body = scenarios.get(client, ROUTES, docs.route, title=docs.locale_en.title)
+    assert body.get('activities') == docs.route.activities
+    _assert_geometry(body)
+    assert 'climbing_outdoor_type' not in body
+    assert 'elevation_min' in body
+    assert body['glacier_gear'] == 'no'
+
+    locale_en = get_locale(body.get('locales'), 'en')
+    assert 'Main waypoint title' == locale_en.get('title_prefix')
+    assert 1 == locale_en.get('topic_id')
+
+    assert 'main_waypoint_id' in body
+    assert 'associations' in body
+    associations = body.get('associations')
+    assert 'waypoints' in associations
+    assert 'routes' in associations
+    assert 'recent_outings' in associations
+    assert 'images' in associations
+    assert 'articles' in associations
+    assert 'books' in associations
+
+    linked_waypoints = associations.get('waypoints')
+    assert 2 == len(linked_waypoints)
+    assert docs.waypoint.document_id == linked_waypoints[0].get('document_id')
+    assert docs.waypoint_tc.document_id == linked_waypoints[1].get('document_id')
+    # check waypoint data in listing
+    assert docs.waypoint.locales[0].access_period == linked_waypoints[0].get('locales')[
+        0
+    ].get('access_period')
+    assert docs.waypoint_tc.public_transportation_rating == linked_waypoints[1].get(
+        'public_transportation_rating'
+    )
+    assert 'geometry' in linked_waypoints[0]
+    assert 'geom' in linked_waypoints[0].get('geometry')
+
+    linked_routes = associations.get('routes')
+    assert 1 == len(linked_routes)
+    assert docs.route4.document_id == linked_routes[0].get('document_id')
+    # check route data in listing
+    assert docs.route4.climbing_outdoor_type == linked_routes[0].get(
+        'climbing_outdoor_type'
+    )
+    # TODO with geometry now
+    # self.assertNotIn('geometry', linked_routes[0])
+
+    linked_articles = associations.get('articles')
+    assert 1 == len(linked_articles)
+    assert docs.article1.document_id == linked_articles[0].get('document_id')
+
+    linked_books = associations.get('books')
+    assert 1 == len(linked_books)
+    assert docs.book1.document_id == linked_books[0].get('document_id')
+
+    recent_outings = associations.get('recent_outings')
+    assert 1 == recent_outings['total']
+    # TODO documents are now in `documents` and not `outings`
+    assert 1 == len(recent_outings['documents'])
+    assert docs.outing1.document_id == recent_outings['documents'][0].get('document_id')
+    # check outing data in listing
+    assert docs.outing1.public_transport == recent_outings['documents'][0].get(
+        'public_transport'
+    )
+    assert 'type' in recent_outings['documents'][0]
+
+    # the licence of the route and of each associated document
+    lang = body['locales'][0]['lang']
+    assert body['license'] == {
+        'id': 'CC-BY-SA-3.0',
+        'url': 'https://creativecommons.org/licenses/by-sa/3.0/',
+        'attribution_url': (
+            f'http://localhost:6553/routes/history/{docs.route.document_id}/{lang}'
+        ),
+    }
+    assert linked_waypoints[0]['license']['id'] == 'CC-BY-SA-3.0'
+    assert linked_waypoints[0]['license']['attribution_url'].startswith(
+        f'http://localhost:6553/waypoints/history/{docs.waypoint.document_id}/'
+    )
+    assert linked_articles[0]['license']['id'] == 'CC-BY-SA-3.0'
+    assert recent_outings['documents'][0]['license']['id'] == 'CC-BY-NC-ND-3.0'
+
+    assert 'maps' in body
+    topo_map = body.get('maps')[0]
+    assert topo_map.get('code') == '3232ET'
+    assert topo_map.get('locales')[0].get('title') == 'Belley'
+    # no licence on the maps embedded in a document
+    assert 'license' not in topo_map
+
+
+def test_get_empty_geom_detail(client, session, docs):
+    # an empty geometry is answered like a missing one (#2526)
+    session.execute(
+        text(
+            'UPDATE guidebook.documents_geometries '
+            "SET geom_detail = ST_GeomFromText('MULTILINESTRING Z EMPTY', 3857) "
+            'WHERE document_id = :id'
+        ),
+        {'id': docs.route.document_id},
+    )
+    session.flush()
+    body = scenarios.get(client, ROUTES, docs.route, title=docs.locale_en.title)
+    assert body['geometry']['geom_detail'] is None
+
+
+def test_get_version(client, docs):
+    body = scenarios.get_version(client, ROUTES, docs.route, docs.route_version)
+    assert body['document']['license'] == {
+        'id': 'CC-BY-SA-3.0',
+        'url': 'https://creativecommons.org/licenses/by-sa/3.0/',
+        'attribution_url': (
+            f'http://localhost:6553/routes/history/{docs.route.document_id}/en'
+        ),
+    }
+
+
+def test_get_version_without_activity(client, session, docs):
+    """Tests that old route versions without activity include the fields
+    of all activities.
+    """
+    docs.route_version.document_archive.activities = []
+    session.flush()
+    body = scenarios.get_version(client, ROUTES, docs.route, docs.route_version)
+    locale = body['document']['locales'][0]
+    assert 'title' in locale
+
+
+def test_get_cooked(client, docs):
+    scenarios.get_cooked(client, ROUTES, docs.route)
+
+
+def test_get_cooked_with_defaulting(client, docs):
+    scenarios.get_cooked_with_defaulting(client, ROUTES, docs.route)
+
+
+def test_get_lang(client, docs):
+    body = scenarios.get_lang(client, ROUTES, docs.route)
+
+    assert 'Mont Blanc from the air' == body.get('locales')[0].get('title')
+    assert 'Main waypoint title' == body.get('locales')[0].get('title_prefix')
+
+
+def test_get_new_lang(client, docs):
+    scenarios.get_new_lang(client, ROUTES, docs.route)
+
+
+def test_get_404(client):
+    scenarios.get_404(client, ROUTES)
+
+
+def test_get_edit(client, docs):
+    response = client.get(
+        ROUTES.prefix + '/' + str(docs.route.document_id) + '?e=1', status=200
+    )
+    body = response.json
+
+    assert 'maps' in body
+    assert 'areas' not in body
+    assert 'associations' in body
+    associations = body['associations']
+    assert 'waypoints' in associations
+    assert 'routes' in associations
+    assert 'xreports' in associations
+    assert 'images' not in associations
+    assert 'users' not in associations
+
+
+def test_get_caching(client, docs):
+    scenarios.get_caching(client, ROUTES, docs.route)
+
+
+def test_get_info(client, docs):
+    body, locale = scenarios.get_info(client, ROUTES, docs.route, 'en')
+    assert locale.get('lang') == 'en'
+    assert locale.get('title_prefix') == docs.locale_en.title_prefix
+
+
+def test_get_info_best_lang(client, docs):
+    body, locale = scenarios.get_info(client, ROUTES, docs.route, 'es')
+    assert locale.get('lang') == 'fr'
+
+
+def test_get_info_404(client):
+    scenarios.get_info_404(client, ROUTES)
+
+
+def test_post_error(client):
+    # an invalid body: its errors alone, the rules of the API need a
+    # valid body
+    body = scenarios.post_error(client, ROUTES, {}, status=422)
+    errors = errors_of(body)
+    assert len(errors) == 1
+    assert_error(errors, 'activities', 'Field required')
+
+
+def test_post_empty_activities_and_associations_error(client):
+    body = scenarios.post_error(client, ROUTES, {'activities': []}, status=422)
+    errors = errors_of(body)
+    assert len(errors) == 1
+    assert_error(errors, 'activities', 'Shorter than minimum length 1')
+
+
+def test_post_without_waypoint(client):
+    # a valid body: the rules of the API, in its envelope (400)
+    body = scenarios.post_error(
+        client,
+        ROUTES,
+        {'activities': ['hiking'], 'locales': [{'lang': 'en', 'title': 'x'}]},
+    )
+    errors = errors_of(body)
+    assert len(errors) == 1
+    assert_error(errors, 'associations.waypoints', 'at least one waypoint required')
+
+
+def test_climing_indoor_waypoint_association(client, docs):
+    body_post = {
+        'main_waypoint_id': docs.waypoint_climbing_indoor.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom_detail': '{"type": "LineString", "coordinates": '
+            + '[[635956, 5723604], [635966, 5723644]]}',
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {
+            'waypoints': [{'document_id': docs.waypoint_climbing_indoor.document_id}]
+        },
+    }
+    body = scenarios.post_error(client, ROUTES, body_post)
+    errors = body.get('errors')
+    assert len(errors) == 3
+    assert (
+        errors[0].get('description')
+        == 'climbing_indoor waypoint cannot be linked to a route'
+    )
+    assert errors[0].get('name') == 'associations.climbing_indoor_waypoint'
+
+
+def test_post_invalid_activity(client, docs):
+    body_post = {
+        'activities': ['cooking'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom_detail': '{"type": "LineString", "coordinates": '
+            + '[[635956, 5723604], [635966, 5723644]]}',
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    body = scenarios.post_error(client, ROUTES, body_post, status=422)
+    # the schema rejects the body, so the association checks also miss
+    # their data and add their own errors
+    assert_error(
+        errors_of(body),
+        'activities.0',
+        f'"cooking" is not one of {", ".join(activities)}',
+    )
+
+
+def test_post_missing_title(client):
+    body_post = {
+        'activities': ['skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom_detail': '{"type": "LineString", "coordinates": '
+            + '[[635956, 5723604], [635966, 5723644]]}',
+        },
+        'locales': [{'lang': 'en'}],
+    }
+    scenarios.post_missing_title(client, ROUTES, body_post)
+
+
+def test_post_non_whitelisted_attribute(client, session, docs):
+    body = {
+        'activities': ['hiking'],
+        'protected': True,
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom_detail': '{"type": "LineString", "coordinates": '
+            + '[[635956, 5723604], [635966, 5723644]]}',
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    scenarios.post_non_whitelisted_attribute(client, session, ROUTES, body)
+
+
+def test_post_missing_content_type(client):
+    scenarios.post_missing_content_type(client, ROUTES, {})
+
+
+def test_post_success(client, session, docs):
+    body = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom_detail': '{"type": "LineString", "coordinates": '
+            + '[[635956, 5723604], [635966, 5723644]]}',
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    body, doc = scenarios.post_success(client, session, ROUTES, body)
+    _assert_geometry(body)
+    _assert_default_geometry(body)
+
+    version = doc.versions[0]
+
+    archive_route = version.document_archive
+    assert archive_route.activities == ['hiking', 'skitouring']
+    assert archive_route.elevation_max == 1500
+    assert archive_route.durations == ['1']
+
+    archive_locale = version.document_locales_archive
+    assert archive_locale.lang == 'en'
+    assert archive_locale.title == 'Some nice loop'
+
+    archive_geometry = version.document_geometry_archive
+    assert archive_geometry.version == doc.geometry.version
+    assert archive_geometry.geom_detail is not None
+    assert archive_geometry.geom is not None
+
+    assert doc.main_waypoint_id == docs.waypoint.document_id
+    assert body.get('main_waypoint_id') == docs.waypoint.document_id
+    assert archive_route.main_waypoint_id == docs.waypoint.document_id
+
+    assert docs.waypoint.locales[0].title == doc.locales[0].title_prefix
+
+    # check that a link for intersecting areas is created
+    links = (
+        session.query(AreaAssociation)
+        .filter(AreaAssociation.document_id == doc.document_id)
+        .all()
+    )
+    assert len(links) == 1
+    assert links[0].area_id == docs.area1.document_id
+
+    # check that a link to the main waypoint is created
+    association_main_wp = session.get(
+        Association, (docs.waypoint.document_id, doc.document_id)
+    )
+    assert association_main_wp is not None
+
+    association_main_wp_log = (
+        session.query(AssociationLog)
+        .filter(AssociationLog.parent_document_id == docs.waypoint.document_id)
+        .filter(AssociationLog.child_document_id == doc.document_id)
+        .first()
+    )
+    assert association_main_wp_log is not None
+
+
+def test_post_success_3d(client, session, docs):
+    """Tests that routes with 3D tracks can be created and read."""
+    body = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'geometry': {
+            'geom_detail': '{"type": "LineString", "coordinates": '
+            + '[[635956, 5723604, 1200], [635966, 5723644, 1210]]}'
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+
+    _, doc = scenarios.post_success(client, session, ROUTES, body)
+    response = client.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
+    body = response.json
+
+    geometry = body['geometry']
+    geom = json.loads(geometry['geom'])
+    assert len(geom['coordinates']) == 2
+    assert_coordinates_equal(geom['coordinates'], [635961.0, 5723624.0])
+
+    geom_detail = json.loads(geometry['geom_detail'])
+    assert len(geom_detail['coordinates']) == 2
+    assert len(geom_detail['coordinates'][0]) == 3
+    assert_coordinates_equal(
+        geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0]
+    )
+    assert_coordinates_equal(
+        geom_detail['coordinates'][1], [635966.0, 5723644.0, 1210.0]
+    )
+
+
+def test_post_wrong_geom_type(client, docs):
+    body = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom_detail': '{"type": "Point", "coordinates": ' + '[635956, 5723604]}',
+        },
+        'locales': [
+            {
+                'lang': 'en',
+                'title': 'Some nice loop',
+                'description': '...',
+                'gear': 'shoes',
+            }
+        ],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    errors = scenarios.post_wrong_geom_type(client, ROUTES, body, status=422)
+    assert (
+        errors[0]['description'] == 'Invalid geometry type. Expected: '
+        "['LINESTRING', 'MULTILINESTRING']. Got: POINT."
+    )
+
+
+def test_post_corrupted_geojson_geom(client, docs):
+    body = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom_detail': '{"type": "LineString", "coordinates": '
+            + '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}',
+        },
+        'locales': [
+            {
+                'lang': 'en',
+                'title': 'Some nice loop',
+                'description': '...',
+                'gear': 'shoes',
+            }
+        ],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    errors = scenarios.post_wrong_geom_type(client, ROUTES, body, status=422)
+    assert (
+        errors[0]['description'] == 'Invalid geometry: {"type": '
+        '"LineString", "coordinates": '
+        '[[[[[[635956, 5723604, 12345, 67890, 13579]]]]]]}'
+    )
+
+    body = {
+        'activities': ['hiking', 'skitouring'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom': '{"type": "Point", "coordinates": [NaN, NaN]}',
+            'geom_detail': None,
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    errors = scenarios.post_wrong_geom_type(client, ROUTES, body, status=422)
+    assert (
+        errors[0]['description']
+        == 'Invalid geometry: {"type": "Point", "coordinates": [NaN, NaN]}'
+    )
+
+
+def test_post_success_3d_multiline(client, session, docs):
+    """Tests that routes with 3D multiline tracks can be created and read."""
+    body = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'geometry': {
+            'geom_detail': '{"type": "MultiLineString", "coordinates": '
+            + '[[[635956, 5723604, 1200], [635966, 5723644, 1210]]]}'
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+
+    _, doc = scenarios.post_success(client, session, ROUTES, body)
+    response = client.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
+    body = response.json
+
+    geometry = body['geometry']
+    geom = json.loads(geometry['geom'])
+    assert len(geom['coordinates']) == 2
+    assert_coordinates_equal(geom['coordinates'], [635961.0, 5723624.0])
+
+    geom_detail = json.loads(geometry['geom_detail'])
+    assert len(geom_detail['coordinates']) == 1
+    assert len(geom_detail['coordinates'][0]) == 2
+    assert len(geom_detail['coordinates'][0][0]) == 3
+    assert_coordinates_equal(
+        geom_detail['coordinates'][0][0], [635956.0, 5723604.0, 1200.0]
+    )
+    assert_coordinates_equal(
+        geom_detail['coordinates'][0][1], [635966.0, 5723644.0, 1210.0]
+    )
+
+
+def test_post_success_4d(client, session, docs):
+    """Tests that routes with 4D tracks can be created and read."""
+    body = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'geometry': {
+            'geom_detail': '{"type": "LineString", "coordinates": '
+            + '[[635956, 5723604, 1200, 12345], '
+            '[635966, 5723644, 1210, 12346]]}'
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+
+    _, doc = scenarios.post_success(client, session, ROUTES, body)
+    response = client.get(ROUTES.prefix + '/' + str(doc.document_id), status=200)
+    body = response.json
+
+    geometry = body['geometry']
+    geom = json.loads(geometry['geom'])
+    assert len(geom['coordinates']) == 2
+    assert_coordinates_equal(geom['coordinates'], [635961.0, 5723624.0])
+
+    geom_detail = json.loads(geometry['geom_detail'])
+    assert len(geom_detail['coordinates']) == 2
+    assert len(geom_detail['coordinates'][0]) == 4
+    assert_coordinates_equal(
+        geom_detail['coordinates'][0], [635956.0, 5723604.0, 1200.0, 12345]
+    )
+    assert_coordinates_equal(
+        geom_detail['coordinates'][1], [635966.0, 5723644.0, 1210.0, 12346]
+    )
+
+
+def test_post_default_geom_multi_line(client, session, docs):
+    body = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'geometry': {
+            'id': 5678,
+            'version': 6789,
+            'geom_detail': '{"type": "MultiLineString", "coordinates": '
+            + '[[[635956, 5723604], [635966, 5723644]], '
+            '[[635966, 5723614], [635976, 5723654]]]}',
+        },
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    body, doc = scenarios.post_success(client, session, ROUTES, body)
+    assert doc.geometry.geom is not None
+    assert doc.geometry.geom_detail is not None
+    _assert_default_geometry(body)
+
+
+def test_post_default_geom_from_main_wp(client, session, docs):
+    body = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    body, doc = scenarios.post_success(client, session, ROUTES, body)
+    assert doc.geometry.geom is not None
+    assert doc.geometry.geom_detail is None
+    _assert_default_geometry(body, x=635956, y=5723604)
+
+
+def test_post_default_geom_from_associated_wps(client, session, docs):
+    body = {
+        'activities': ['hiking', 'skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+    }
+    body, doc = scenarios.post_success(
+        client, session, ROUTES, body, skip_validation=True
+    )
+    assert doc.geometry.geom is not None
+    assert doc.geometry.geom_detail is None
+    _assert_default_geometry(body, x=635956, y=5723604)
+
+
+def test_post_main_wp_without_association(client, docs):
+    body_post = {
+        'main_waypoint_id': docs.waypoint.document_id,
+        'activities': ['hiking', 'skitouring'],
+        'elevation_min': 700,
+        'elevation_max': 1500,
+        'height_diff_up': 800,
+        'height_diff_down': 800,
+        'durations': ['1'],
+        'locales': [{'lang': 'en', 'title': 'Some nice loop', 'gear': 'shoes'}],
+        # no association to the main waypoint
+        'associations': {'waypoints': [{'document_id': docs.waypoint2.document_id}]},
+    }
+    body = scenarios.post_error(client, ROUTES, body_post)
+    errors = body.get('errors')
+    assert len(errors) == 1
+    assert_error(errors, 'main_waypoint_id', 'no association to the main waypoint')
+
+
+def test_put_wrong_document_id(client, docs):
+    body = {
+        'document': {
+            'document_id': '9999999',
+            'version': docs.route.version,
+            'activities': ['hiking'],
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'none',
+                    'version': docs.locale_en.version,
+                }
+            ],
+            'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+        }
+    }
+    scenarios.put_wrong_document_id(client, ROUTES, body)
+
+
+def test_put_wrong_document_version(client, docs):
+    body = {
+        'document': {
+            'document_id': docs.route.document_id,
+            'version': -9999,
+            'activities': ['skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1600,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'none',
+                    'version': docs.locale_en.version,
+                }
+            ],
+            'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+        }
+    }
+    scenarios.put_wrong_version(client, ROUTES, body, docs.route.document_id)
+
+
+def test_put_wrong_locale_version(client, docs):
+    body = {
+        'document': {
+            'document_id': docs.route.document_id,
+            'version': docs.route.version,
+            'activities': ['skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1600,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'none',
+                    'version': -9999,
+                }
+            ],
+            'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+        }
+    }
+    scenarios.put_wrong_version(client, ROUTES, body, docs.route.document_id)
+
+
+def test_put_wrong_ids(client, docs):
+    body = {
+        'document': {
+            'document_id': docs.route.document_id,
+            'version': docs.route.version,
+            'activities': ['skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1600,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'none',
+                    'version': docs.locale_en.version,
+                }
+            ],
+            'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+        }
+    }
+    scenarios.put_wrong_ids(client, ROUTES, body, docs.route.document_id)
+
+
+def test_put_no_document(client, docs):
+    scenarios.put_no_document(client, ROUTES, docs.route.document_id)
+
+
+def test_put_success_all(client, session, docs):
+    body = {
+        'message': 'Update',
+        'document': {
+            'document_id': docs.route.document_id,
+            'version': docs.route.version,
+            'quality': quality_types[1],
+            'activities': ['skitouring'],
+            'elevation_min': 700,
+            'elevation_max': 1600,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'none',
+                    'version': docs.locale_en.version,
+                }
+            ],
+            'geometry': {
+                'version': docs.route.geometry.version,
+                'geom_detail': '{"type": "LineString", "coordinates": '
+                + '[[635956, 5723604], [635976, 5723654]]}',
+            },
+            'associations': {
+                'waypoints': [
+                    {'document_id': docs.waypoint.document_id},
+                    {'document_id': docs.waypoint_tc.document_id},
+                ]
+            },
+        },
+    }
+    (body, route) = scenarios.put_success_all(
+        client, session, ROUTES, body, docs.route, locale_fr=docs.locale_fr
+    )
+    _assert_default_geometry(body, x=635961, y=5723624)
+
+    assert route.elevation_max == 1600
+    locale_en = route.get_locale('en')
+    assert locale_en.description == '...'
+    assert locale_en.gear == 'none'
+
+    # version with lang 'en'
+    versions = route.versions
+    version_en = scenarios.get_latest_version('en', versions)
+    archive_locale = version_en.document_locales_archive
+    assert archive_locale.title == 'Mont Blanc from the air'
+    assert archive_locale.gear == 'none'
+
+    archive_document_en = version_en.document_archive
+    assert archive_document_en.activities == ['skitouring']
+    assert archive_document_en.elevation_max == 1600
+
+    archive_geometry_en = version_en.document_geometry_archive
+    assert archive_geometry_en.version == 2
+
+    # version with lang 'fr'
+    version_fr = scenarios.get_latest_version('fr', versions)
+    archive_locale = version_fr.document_locales_archive
+    assert archive_locale.title == 'Mont Blanc du ciel'
+    assert archive_locale.gear == 'paraglider'
+
+
+def test_put_success_figures_only(client, session, docs):
+    body = {
+        'message': 'Changing figures',
+        'document': {
+            'document_id': docs.route.document_id,
+            'version': docs.route.version,
+            'quality': quality_types[1],
+            'activities': ['skitouring'],
+            'glacier_gear': 'no',
+            'elevation_min': 700,
+            'elevation_max': 1600,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'paraglider',
+                    'version': docs.locale_en.version,
+                    'title_prefix': 'Should be ignored',
+                }
+            ],
+            'associations': {
+                'waypoints': [
+                    {'document_id': docs.waypoint.document_id},
+                    {'document_id': docs.waypoint_tc.document_id},
+                ]
+            },
+        },
+    }
+    (body, route) = scenarios.put_success_figures_only(
+        client, session, ROUTES, body, docs.route
+    )
+
+    assert route.elevation_max == 1600
+
+
+def test_put_success_new_track_with_default_geom(client, session, docs):
+    """Test that a provided default geometry (`geom`) is used instead of
+    obtaining the geom from a track (`geom_detail`).
+    """
+    body = {
+        'message': 'Changing figures',
+        'document': {
+            'document_id': docs.route.document_id,
+            'version': docs.route.version,
+            'quality': quality_types[1],
+            'activities': ['skitouring'],
+            'glacier_gear': 'no',
+            'elevation_min': 700,
+            'elevation_max': 1600,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'paraglider',
+                    'version': docs.locale_en.version,
+                    'title_prefix': 'Should be ignored',
+                }
+            ],
+            'geometry': {
+                'version': docs.route.geometry.version,
+                'geom_detail': '{"type": "LineString", "coordinates": '
+                + '[[635956, 5723604], [635976, 5723654]]}',
+                'geom': '{"type": "Point", "coordinates": [635000, 5723000]}',
+            },
+            'associations': {
+                'waypoints': [
+                    {'document_id': docs.waypoint.document_id},
+                    {'document_id': docs.waypoint_tc.document_id},
+                ]
+            },
+        },
+    }
+    (body, route) = scenarios.put_success_figures_only(
+        client, session, ROUTES, body, docs.route
+    )
+    _assert_default_geometry(body, x=635000, y=5723000)
+
+
+def test_put_success_main_wp_changed(client, session, docs):
+    body = {
+        'message': 'Changing figures',
+        'document': {
+            'document_id': docs.route.document_id,
+            'main_waypoint_id': docs.waypoint2.document_id,
+            'version': docs.route.version,
+            'quality': quality_types[1],
+            'activities': ['skitouring'],
+            'glacier_gear': 'no',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'paraglider',
+                    'version': docs.locale_en.version,
+                }
+            ],
+            'associations': {
+                'waypoints': [
+                    {'document_id': docs.waypoint2.document_id},
+                    {'document_id': docs.waypoint_tc.document_id},
+                ]
+            },
+        },
+    }
+    (body, route) = scenarios.put_success_figures_only(
+        client, session, ROUTES, body, docs.route, user='moderator'
+    )
+    # tests that the default geometry has not changed (main wp has changed
+    # but the route has a track)
+    _assert_default_geometry(body)
+
+    assert route.main_waypoint_id == docs.waypoint2.document_id
+    locale_en = route.get_locale('en')
+    assert locale_en.title_prefix == docs.waypoint2.get_locale('en').title
+
+    # check that a link to the new main waypoint is created
+    association_main_wp = session.get(
+        Association, (docs.waypoint2.document_id, route.document_id)
+    )
+    assert association_main_wp is not None
+
+    association_main_wp_log = (
+        session.query(AssociationLog)
+        .filter(AssociationLog.parent_document_id == docs.waypoint2.document_id)
+        .filter(AssociationLog.child_document_id == route.document_id)
+        .first()
+    )
+    assert association_main_wp_log is not None
+
+
+def test_put_success_lang_only(client, session, docs):
+    body = {
+        'message': 'Changing lang',
+        'document': {
+            'document_id': docs.route.document_id,
+            'version': docs.route.version,
+            'quality': quality_types[1],
+            'activities': ['skitouring'],
+            'glacier_gear': 'no',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Blanc from the air',
+                    'description': '...',
+                    'gear': 'none',
+                    'version': docs.locale_en.version,
+                }
+            ],
+            'associations': {
+                'waypoints': [
+                    {'document_id': docs.waypoint.document_id},
+                    {'document_id': docs.waypoint_tc.document_id},
+                ]
+            },
+        },
+    }
+    (body, route) = scenarios.put_success_lang_only(
+        client, session, ROUTES, body, docs.route
+    )
+
+    assert route.get_locale('en').gear == 'none'
+
+
+def test_put_success_new_lang(client, session, docs):
+    """Test updating a document by adding a new locale."""
+    body = {
+        'message': 'Adding lang',
+        'document': {
+            'document_id': docs.route.document_id,
+            'version': docs.route.version,
+            'quality': quality_types[1],
+            'activities': ['skitouring'],
+            'glacier_gear': 'no',
+            'elevation_min': 700,
+            'elevation_max': 1500,
+            'height_diff_up': 800,
+            'height_diff_down': 800,
+            'durations': ['1'],
+            'locales': [
+                {
+                    'lang': 'es',
+                    'title': 'Mont Blanc del cielo',
+                    'description': '...',
+                    'gear': 'si',
+                }
+            ],
+            'associations': {
+                'waypoints': [
+                    {'document_id': docs.waypoint.document_id},
+                    {'document_id': docs.waypoint_tc.document_id},
+                ]
+            },
+        },
+    }
+    (body, route) = scenarios.put_success_new_lang(
+        client, session, ROUTES, body, docs.route
+    )
+
+    assert route.get_locale('es').gear == 'si'
+
+
+def test_history(client, user_ids, docs):
+    id = docs.route.document_id
+    langs = ['fr', 'en']
+    for lang in langs:
+        body = client.get(f'/document/{id}/history/{lang}')
+        username = 'contributor'
+        user_id = user_ids[username]
+
+        title = body.json['title']
+        versions = body.json['versions']
+        assert len(versions) == 1
+        assert getattr(docs, 'locale_' + lang).title == title
+        for r in versions:
+            assert r['name'] == 'Contributor'
+            assert 'username' not in r
+            assert r['user_id'] == user_id
+            assert 'written_at' in r
+            assert 'version_id' in r
+
+
+def test_history_no_lang(client, docs):
+    id = docs.route.document_id
+    client.get(f'/document/{id}/history/es', status=404)
+
+
+def test_history_no_doc(client):
+    client.get('/document/99999/history/es', status=404)
+
+
+def _assert_geometry(body):
+    assert body.get('geometry') is not None
+    geometry = body.get('geometry')
+    assert geometry.get('version') is not None
+    assert geometry.get('geom_detail') is not None
+
+    geom = geometry.get('geom_detail')
+    line = shape(json.loads(geom))
+    assert isinstance(line, LineString)
+    assert line.coords[0][0] == pytest.approx(635956, abs=5e-8)
+    assert line.coords[0][1] == pytest.approx(5723604, abs=5e-8)
+    assert line.coords[1][0] == pytest.approx(635966, abs=5e-8)
+    assert line.coords[1][1] == pytest.approx(5723644, abs=5e-8)
+
+
+def _assert_default_geometry(body, x=635961, y=5723624):
+    assert body.get('geometry') is not None
+    geometry = body.get('geometry')
+    assert geometry.get('version') is not None
+    assert geometry.get('geom') is not None
+
+    geom = geometry.get('geom')
+    point = shape(json.loads(geom))
+    assert isinstance(point, Point)
+    assert point.x == pytest.approx(x, abs=5e-8)
+    assert point.y == pytest.approx(y, abs=5e-8)
+
+
+def test_update_prefix_title(session, docs):
+    docs.route.locales.append(
+        RouteLocale(
+            lang='es',
+            title='Mont Blanc del cielo',
+            description='...',
+            gear='paraglider',
+        )
+    )
+    docs.route.main_waypoint_id = docs.waypoint.document_id
+    session.flush()
+    session.refresh(docs.route)
+    check_title_prefix(docs.route, create=False)
+    session.expire_all()
+
+    route = session.get(Route, docs.route.document_id)
+    locale_en = route.get_locale('en')
+    assert locale_en.version == 1
+    assert locale_en.title_prefix == docs.waypoint.get_locale('en').title
+    locale_fr = route.get_locale('fr')
+    assert locale_fr.version == 1
+    assert locale_fr.title_prefix == docs.waypoint.get_locale('fr').title
+    locale_es = route.get_locale('es')
+    assert locale_es.version == 1
+    assert locale_es.title_prefix == docs.waypoint.get_locale('fr').title
+
+
+def test_get_associations_history(client, docs):
+    scenarios.get_association_logs(client, docs.route)
+
+
+def test_public_transportation_rating():
+    # Test case 1: Starting and ending waypoints with different ratings
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating='good service')
+    ]
+    ending_waypoints = [
+        Waypoint(document_id=2, public_transportation_rating='poor service')
+    ]
+    route_types = ['traverse']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types) == 'poor service'
+    )
+
+    # Test case 2: Starting and ending waypoints with the same ratings
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating='poor service')
+    ]
+    ending_waypoints = [
+        Waypoint(document_id=2, public_transportation_rating='poor service')
+    ]
+    route_types = ['raid']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types) == 'poor service'
+    )
+
+    # Test case 3: Starting and ending waypoints with missing ratings
+    starting_waypoints = [Waypoint(document_id=1, public_transportation_rating=None)]
+    ending_waypoints = [Waypoint(document_id=2, public_transportation_rating=None)]
+    route_types = ['traverse']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types)
+        == 'unknown service'
+    )
+
+    # Test case 4: No waypoints provided
+    starting_waypoints = []
+    ending_waypoints = []
+    route_types = []
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types)
+        == 'unknown service'
+    )
+
+    # Test case 5: Different route types with no service
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating='good service')
+    ]
+    ending_waypoints = [
+        Waypoint(document_id=2, public_transportation_rating='no service')
+    ]
+    route_types = ['expedition']
+    assert _pt_rating(starting_waypoints, ending_waypoints, route_types) == 'no service'
+
+    # Test case 6: Different route types with service
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating='good service')
+    ]
+    ending_waypoints = [
+        Waypoint(document_id=2, public_transportation_rating='poor service')
+    ]
+    route_types = ['traverse']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types) == 'poor service'
+    )
+
+    # Test case 7: Multiple starting and ending waypoints with ratings
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating='good service'),
+        Waypoint(document_id=2, public_transportation_rating='seasonal service'),
+        Waypoint(document_id=3, public_transportation_rating='poor service'),
+    ]
+    ending_waypoints = [
+        Waypoint(document_id=4, public_transportation_rating='nearby service'),
+        Waypoint(document_id=5, public_transportation_rating='no service'),
+        Waypoint(document_id=6, public_transportation_rating='good service'),
+    ]
+    route_types = ['traverse']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types) == 'good service'
+    )
+
+    # Test case 8: Multiple starting waypoints
+    # with ratings and no ending waypoints
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating='poor service'),
+        Waypoint(document_id=2, public_transportation_rating='nearby service'),
+        Waypoint(document_id=3, public_transportation_rating='good service'),
+    ]
+    ending_waypoints = []
+    route_types = ['traverse']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types)
+        == 'unknown service'
+    )
+
+    # Test case 9: No starting waypoints
+    # and multiple ending waypoints with ratings
+    starting_waypoints = []
+    ending_waypoints = [
+        Waypoint(document_id=4, public_transportation_rating='good service'),
+        Waypoint(document_id=5, public_transportation_rating='seasonal service'),
+        Waypoint(document_id=6, public_transportation_rating='poor service'),
+    ]
+    route_types = ['traverse']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types)
+        == 'unknown service'
+    )
+
+    # Test case 10: Multiple starting and ending waypoints with no ratings
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating=None),
+        Waypoint(document_id=2, public_transportation_rating=None),
+    ]
+    ending_waypoints = [
+        Waypoint(document_id=4, public_transportation_rating=None),
+        Waypoint(document_id=5, public_transportation_rating=None),
+    ]
+    route_types = ['traverse']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types)
+        == 'unknown service'
+    )
+
+    # Test case 11: Multiple starting and ending waypoints,
+    # some with ratings and some without
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating='poor service'),
+        Waypoint(document_id=2, public_transportation_rating=None),
+        Waypoint(document_id=3, public_transportation_rating='good service'),
+    ]
+    ending_waypoints = [
+        Waypoint(document_id=4, public_transportation_rating=None),
+        Waypoint(document_id=5, public_transportation_rating='good service'),
+        Waypoint(document_id=6, public_transportation_rating='no service'),
+    ]
+    route_types = ['traverse']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types) == 'good service'
+    )
+
+    # Test case 12: Multiple starting points
+    starting_waypoints = [
+        Waypoint(document_id=1, public_transportation_rating=None),
+        Waypoint(document_id=2, public_transportation_rating='seasonal service'),
+        Waypoint(document_id=3, public_transportation_rating='poor service'),
+    ]
+    ending_waypoints = []
+    route_types = ['loop']
+    assert (
+        _pt_rating(starting_waypoints, ending_waypoints, route_types)
+        == 'seasonal service'
+    )
+
+
+def test_find_starting_and_ending_points():
+    waypoints = [
+        Waypoint(
             waypoint_type='access',
-            elevation=1776,
-            public_transportation_rating='poor service',
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(778846 5580167)'),
-        )
-        self.waypoint_tc.locales.append(
-            WaypointLocale(
-                lang='fr',
-                title='Roche écroulée',
-                description='...',
-                access='yep',
-                access_period='hiver',
-            )
-        )
-        self.session.add(self.waypoint_tc)
-        self.waypoint_climbing_indoor = Waypoint(
-            waypoint_type='climbing_indoor',
-            elevation=1,
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-        )
-        self.session.add(self.waypoint_climbing_indoor)
-        self.session.flush()
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(659775 5694854)'),
+        ),
+        Waypoint(
+            waypoint_type='access',
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(659800 5694854)'),
+        ),
+        Waypoint(
+            waypoint_type='access',
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(659900 5694854)'),
+        ),
+        Waypoint(
+            waypoint_type='access',
+            geometry=DocumentGeometry(geom='SRID=3857;POINT(659950 5694854)'),
+        ),
+    ]
+    expected_start = 'SRID=3857;POINT(659775 5694854)'
 
-        # associations
-        self._add_association(
-            Association.create(parent_document=self.route, child_document=self.route4),
-            user_id,
-        )
-        self._add_association(
-            Association.create(parent_document=self.route4, child_document=self.route),
-            user_id,
-        )
-        self._add_association(
-            Association.create(
-                parent_document=self.waypoint, child_document=self.route
-            ),
-            user_id,
-        )
-        self._add_association(
-            Association.create(
-                parent_document=self.waypoint_tc, child_document=self.route
-            ),
-            user_id,
-        )
+    # Test case 1: crossings with multiple waypoints
+    route_types = ['traverse']
+    starts, ends = _find_starting_and_ending_points(waypoints, route_types)
+    assert starts[0].geometry.geom == expected_start
+    assert ends[0].geometry.geom == 'SRID=3857;POINT(659950 5694854)'
 
-        # add a map
-        topo_map = TopoMap(
-            code='3232ET',
-            editor='IGN',
-            scale='25000',
-            locales=[DocumentLocale(lang='fr', title='Belley')],
-            geometry=DocumentGeometry(
-                geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))'  # noqa: E501
-            ),
-        )
-        self.session.add(topo_map)
-        self.session.flush()
-        self.session.add(TopoMapAssociation(document=self.route, topo_map=topo_map))
+    # Test case 2: crossings with two waypoints
+    route_types = ['raid']
+    starts, ends = _find_starting_and_ending_points(
+        [waypoints[0], waypoints[1]], route_types
+    )
 
-        self.outing1 = Outing(
-            activities=['skitouring'],
-            date_start=datetime.date(2016, 1, 1),
-            date_end=datetime.date(2016, 1, 1),
-            public_transport=True,
-            locales=[
-                OutingLocale(lang='en', title='...', description='...', weather='sunny')
-            ],
-        )
-        self.session.add(self.outing1)
-        self.session.flush()
-        self._add_association(
-            Association.create(parent_document=self.route, child_document=self.outing1),
-            user_id,
-        )
+    assert starts[0].geometry.geom == expected_start
+    assert ends[0].geometry.geom == 'SRID=3857;POINT(659800 5694854)'
 
-        self.outing2 = Outing(
-            redirects_to=self.outing1.document_id,
-            activities=['skitouring'],
-            date_start=datetime.date(2016, 1, 1),
-            date_end=datetime.date(2016, 1, 1),
-            locales=[
-                OutingLocale(lang='en', title='...', description='...', weather='sunny')
-            ],
-        )
-        self.session.add(self.outing2)
-        self.session.flush()
-        self._add_association(
-            Association.create(parent_document=self.route, child_document=self.outing2),
-            user_id,
-        )
-        self.session.flush()
+    # Test case 3: loops
+    route_types = ['loop', 'traverse']
+    starts, ends = _find_starting_and_ending_points(waypoints, route_types)
+    assert starts == waypoints
+    assert ends == []
 
-        # add areas
-        self.area1 = Area(
-            area_type='range',
-            geometry=DocumentGeometry(
-                geom_detail='SRID=3857;POLYGON((635900 5723600, 635900 5723700, 636000 5723700, 636000 5723600, 635900 5723600))'  # noqa
-            ),
-        )
-        self.area2 = Area(
-            area_type='range', locales=[DocumentLocale(lang='fr', title='France')]
-        )
+    # Test case 4: single access other cases
+    route_types = ['some_other_route_type']
+    starts, ends = _find_starting_and_ending_points([waypoints[0]], route_types)
+    assert starts[0].geometry.geom == expected_start
+    assert ends == []  # No end point expected
 
-        self.session.add_all([self.area1, self.area2])
-        self.session.flush()
+    # Test case 5: multi waypoints other cases
+    route_types = ['some_other_route_type']
+    start, end = _find_starting_and_ending_points(
+        [waypoints[0], waypoints[1]], route_types
+    )
+    # No start or end points expected for multiple waypoints
+    assert start == []
+    assert end == []
 
-    def test_public_transportation_rating(self):
-        # Test case 1: Starting and ending waypoints with different ratings
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating='good service')
-        ]
-        ending_waypoints = [
-            Waypoint(document_id=2, public_transportation_rating='poor service')
-        ]
-        route_types = ['traverse']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'poor service'
-        )
 
-        # Test case 2: Starting and ending waypoints with the same ratings
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating='poor service')
-        ]
-        ending_waypoints = [
-            Waypoint(document_id=2, public_transportation_rating='poor service')
-        ]
-        route_types = ['raid']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'poor service'
-        )
+def test_update_all_routes(client, session, docs):
+    # Test case 1: collaborators cannot update all routes:
+    headers = auth_headers(username='contributor')
+    prefix = '/routes/update_public_transportation_rating'
+    client.post(prefix, headers=headers, status=403)
 
-        # Test case 3: Starting and ending waypoints with missing ratings
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating=None)
-        ]
-        ending_waypoints = [Waypoint(document_id=2, public_transportation_rating=None)]
-        route_types = ['traverse']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'unknown service'
-        )
+    # Test case 2: Moderators can, with waypoints_extrapolation
+    headers = auth_headers(username='moderator')
+    client.post(prefix, headers=headers, status=200)
+    session.flush()
+    session.refresh(docs.route)
+    assert docs.route.public_transportation_rating == 'poor service'
 
-        # Test case 4: No waypoints provided
-        starting_waypoints = []
-        ending_waypoints = []
-        route_types = []
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'unknown service'
-        )
-
-        # Test case 5: Different route types with no service
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating='good service')
-        ]
-        ending_waypoints = [
-            Waypoint(document_id=2, public_transportation_rating='no service')
-        ]
-        route_types = ['expedition']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'no service'
-        )
-
-        # Test case 6: Different route types with service
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating='good service')
-        ]
-        ending_waypoints = [
-            Waypoint(document_id=2, public_transportation_rating='poor service')
-        ]
-        route_types = ['traverse']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'poor service'
-        )
-
-        # Test case 7: Multiple starting and ending waypoints with ratings
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating='good service'),
-            Waypoint(document_id=2, public_transportation_rating='seasonal service'),
-            Waypoint(document_id=3, public_transportation_rating='poor service'),
-        ]
-        ending_waypoints = [
-            Waypoint(document_id=4, public_transportation_rating='nearby service'),
-            Waypoint(document_id=5, public_transportation_rating='no service'),
-            Waypoint(document_id=6, public_transportation_rating='good service'),
-        ]
-        route_types = ['traverse']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'good service'
-        )
-
-        # Test case 8: Multiple starting waypoints
-        # with ratings and no ending waypoints
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating='poor service'),
-            Waypoint(document_id=2, public_transportation_rating='nearby service'),
-            Waypoint(document_id=3, public_transportation_rating='good service'),
-        ]
-        ending_waypoints = []
-        route_types = ['traverse']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'unknown service'
-        )
-
-        # Test case 9: No starting waypoints
-        # and multiple ending waypoints with ratings
-        starting_waypoints = []
-        ending_waypoints = [
-            Waypoint(document_id=4, public_transportation_rating='good service'),
-            Waypoint(document_id=5, public_transportation_rating='seasonal service'),
-            Waypoint(document_id=6, public_transportation_rating='poor service'),
-        ]
-        route_types = ['traverse']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'unknown service'
-        )
-
-        # Test case 10: Multiple starting and ending waypoints with no ratings
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating=None),
-            Waypoint(document_id=2, public_transportation_rating=None),
-        ]
-        ending_waypoints = [
-            Waypoint(document_id=4, public_transportation_rating=None),
-            Waypoint(document_id=5, public_transportation_rating=None),
-        ]
-        route_types = ['traverse']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'unknown service'
-        )
-
-        # Test case 11: Multiple starting and ending waypoints,
-        # some with ratings and some without
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating='poor service'),
-            Waypoint(document_id=2, public_transportation_rating=None),
-            Waypoint(document_id=3, public_transportation_rating='good service'),
-        ]
-        ending_waypoints = [
-            Waypoint(document_id=4, public_transportation_rating=None),
-            Waypoint(document_id=5, public_transportation_rating='good service'),
-            Waypoint(document_id=6, public_transportation_rating='no service'),
-        ]
-        route_types = ['traverse']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'good service'
-        )
-
-        # Test case 12: Multiple starting points
-        starting_waypoints = [
-            Waypoint(document_id=1, public_transportation_rating=None),
-            Waypoint(document_id=2, public_transportation_rating='seasonal service'),
-            Waypoint(document_id=3, public_transportation_rating='poor service'),
-        ]
-        ending_waypoints = []
-        route_types = ['loop']
-        assert (
-            _pt_rating(starting_waypoints, ending_waypoints, route_types)
-            == 'seasonal service'
-        )
-
-    def test_find_starting_and_ending_points(self):
-        waypoints = [
-            Waypoint(
-                waypoint_type='access',
-                geometry=DocumentGeometry(geom='SRID=3857;POINT(659775 5694854)'),
-            ),
-            Waypoint(
-                waypoint_type='access',
-                geometry=DocumentGeometry(geom='SRID=3857;POINT(659800 5694854)'),
-            ),
-            Waypoint(
-                waypoint_type='access',
-                geometry=DocumentGeometry(geom='SRID=3857;POINT(659900 5694854)'),
-            ),
-            Waypoint(
-                waypoint_type='access',
-                geometry=DocumentGeometry(geom='SRID=3857;POINT(659950 5694854)'),
-            ),
-        ]
-        expected_start = 'SRID=3857;POINT(659775 5694854)'
-
-        # Test case 1: crossings with multiple waypoints
-        route_types = ['traverse']
-        starts, ends = _find_starting_and_ending_points(waypoints, route_types)
-        assert starts[0].geometry.geom == expected_start
-        assert ends[0].geometry.geom == 'SRID=3857;POINT(659950 5694854)'
-
-        # Test case 2: crossings with two waypoints
-        route_types = ['raid']
-        starts, ends = _find_starting_and_ending_points(
-            [waypoints[0], waypoints[1]], route_types
-        )
-
-        assert starts[0].geometry.geom == expected_start
-        assert ends[0].geometry.geom == 'SRID=3857;POINT(659800 5694854)'
-
-        # Test case 3: loops
-        route_types = ['loop', 'traverse']
-        starts, ends = _find_starting_and_ending_points(waypoints, route_types)
-        assert starts == waypoints
-        assert ends == []
-
-        # Test case 4: single access other cases
-        route_types = ['some_other_route_type']
-        starts, ends = _find_starting_and_ending_points([waypoints[0]], route_types)
-        assert starts[0].geometry.geom == expected_start
-        assert ends == []  # No end point expected
-
-        # Test case 5: multi waypoints other cases
-        route_types = ['some_other_route_type']
-        start, end = _find_starting_and_ending_points(
-            [waypoints[0], waypoints[1]], route_types
-        )
-        # No start or end points expected for multiple waypoints
-        assert start == []
-        assert end == []
-
-    def test_update_all_routes(self):
-        # Test case 1: collaborators cannot update all routes:
-        headers = self.add_authorization_header(username='contributor')
-        prefix = '/routes/update_public_transportation_rating'
-        self.app.get(prefix, headers=headers, status=403)
-
-        # Test case 2: Moderators can, with waypoints_extrapolation
-        headers = self.add_authorization_header(username='moderator')
-        self.app.get(prefix, headers=headers, status=200)
-        self.session.flush()
-        self.session.refresh(self.route)
-        assert self.route.public_transportation_rating == 'poor service'
-
-        # Test case 3: Moderators can, without waypoints_extrapolation
-        self.route.route_types = ['traverse']
-        self.session.flush()
-        self.app.get(
-            prefix + '?waypoint_extrapolation=false', headers=headers, status=200
-        )
-        self.session.flush()
-        self.session.refresh(self.route)
-        assert self.route.public_transportation_rating == 'unknown service'
+    # Test case 3: Moderators can, without waypoints_extrapolation
+    docs.route.route_types = ['traverse']
+    session.flush()
+    client.post(prefix + '?waypoint_extrapolation=false', headers=headers, status=200)
+    session.flush()
+    session.refresh(docs.route)
+    assert docs.route.public_transportation_rating == 'unknown service'

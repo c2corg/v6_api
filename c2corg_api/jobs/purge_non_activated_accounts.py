@@ -1,9 +1,10 @@
 import logging
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import and_
 
+from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import Purpose, User
@@ -12,14 +13,17 @@ from c2corg_api.models.user_profile import UserProfile
 log = logging.getLogger(__name__)
 
 
-def purge_account(test_session=None):
+def purge_account():
     now = datetime.now(UTC)
-    session = sessionmaker()() if not test_session else test_session
 
-    def delete(cls, attr, ids):
-        session.query(cls).filter(attr.in_(ids)).delete(synchronize_session=False)
+    # A plain session on the engine configured on DBSession by
+    # c2corg_api/scripts/jobs/scheduler.py: DBSession itself cannot be committed
+    # outside of the transaction manager, and `Session()` alone has no bind.
+    with Session(DBSession.get_bind()) as session:
 
-    try:
+        def delete(cls, attr, ids):
+            session.query(cls).filter(attr.in_(ids)).delete(synchronize_session=False)
+
         ids = (
             session.query(User.id)
             .filter(
@@ -41,6 +45,3 @@ def purge_account(test_session=None):
             delete(UserProfile, UserProfile.document_id, ids)
             delete(DocumentLocale, DocumentLocale.document_id, ids)
             session.commit()
-    finally:
-        if not test_session:
-            session.close()

@@ -22,7 +22,17 @@ DEFAULT_FIELDS = [
 
 DEFAULT_REQUIRED = ['locales', 'image_type']
 
-LISTING_FIELDS = ['locales.title', 'geometry.geom', 'filename', 'author']
+# width and height of the original image: the UI keeps the space of the
+# thumbnails while they load (galleries, associations)
+LISTING_FIELDS = [
+    'locales.title',
+    'geometry.geom',
+    'filename',
+    'author',
+    'image_type',
+    'width',
+    'height',
+]
 
 fields_image = {
     'fields': DEFAULT_FIELDS,

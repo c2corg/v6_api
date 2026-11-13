@@ -1,14 +1,13 @@
 """Read the settings and the logging configuration of the `.ini` files."""
-# As pyramid.paster did for the scripts: the settings are those of the
-# [app:main] section (with `use = config:common.ini`), read by PasteDeploy,
-# which also loads the application for gunicorn (`--paste`).
+# The settings are those of the [app:main] section, as PasteDeploy read them:
+# `use = config:<file>` takes the [app:main] section of another file first
+# (common.ini), the values of the file itself win; `%(here)s` and
+# `%(__file__)s` are the directory and the path of the file.
 
 import logging
 import logging.config
 import os
-from configparser import ConfigParser
-
-from paste.deploy import appconfig
+from configparser import BasicInterpolation, ConfigParser
 
 TRUTHY = frozenset({'t', 'true', 'y', 'yes', 'on', '1'})
 
@@ -22,13 +21,35 @@ def _defaults(path, options=None):
     }
 
 
+APP_SECTION = 'app:main'
+
+
 def get_appsettings(config_uri, options=None):
     """Return the settings of the application of an `.ini` file."""
-    path = os.path.abspath(config_uri)
-    conf = appconfig(
-        f'config:{path}', name='main', global_conf=_defaults(path, options)
-    )
-    return dict(conf.local_conf)
+    # the options (`a=b` on the command line of the scripts) are variables
+    # the file can use, not settings
+    return _app_settings(os.path.abspath(config_uri), options, ())
+
+
+def _app_settings(path, options, seen):
+    if path in seen:
+        raise ValueError(f'{path}: `use = config:` loops back to this file')
+    defaults = _defaults(path, options)
+    parser = ConfigParser(defaults=defaults, interpolation=BasicInterpolation())
+    if not parser.read(path):
+        raise FileNotFoundError(path)
+    if not parser.has_section(APP_SECTION):
+        raise ValueError(f'{path}: no [{APP_SECTION}] section')
+    section = parser[APP_SECTION]
+    settings = {}
+    use = section.get('use', '')
+    if use.startswith('config:'):
+        base = os.path.join(os.path.dirname(path), use.removeprefix('config:'))
+        settings.update(_app_settings(base, options, (*seen, path)))
+    for name in parser.options(APP_SECTION):
+        if name != 'use' and name not in defaults:
+            settings[name] = section[name]
+    return settings
 
 
 def setup_logging(config_uri):

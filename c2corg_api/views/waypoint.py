@@ -34,16 +34,19 @@ from c2corg_api.search.advanced_search import (
     get_all_filtered_docs,
     get_filtered_docs_page,
 )
-from c2corg_api.views import restricted_json_view, to_json_dict
+from c2corg_api.views import to_json_dict
 from c2corg_api.views.document import (
     LIMIT_DEFAULT,
     NUM_RECENT_OUTINGS,
-    DocumentRest,
+    collection_get,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
+    read_document,
 )
 from c2corg_api.views.document_associations import get_first_column
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_listings import get_documents_for_ids
 from c2corg_api.views.document_schemas import (
     outing_documents_config,
@@ -51,18 +54,12 @@ from c2corg_api.views.document_schemas import (
     waypoint_documents_config,
     waypoint_schema_adaptor,
 )
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import write
 from c2corg_api.views.route import set_route_title_prefix, update_pt_rating
 from c2corg_api.views.validation import (
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 log = logging.getLogger(__name__)
@@ -84,128 +81,79 @@ validate_associations_update = functools.partial(
 )
 
 
-@resource(collection_path='/waypoints', path='/waypoints/{id}')
-class WaypointRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        """Get a list of documents, optionally matching search filters.
+@write(
+    validators=[
+        body_validator(WaypointCreateSchema),
+        validate_waypoint_create,
+        validate_associations_create,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def create_waypoint(request):
+    """
+    Create a new document.
 
-        If no search filters are given, the documents are directly queried from the
-        database. If not, ElasticSearch is used to find the documents that match the
-        filters.
+    Request:
+        `POST` `/waypoints`
 
-        Request:
-            `GET`
-            `/waypoints/?[q=...][&pl=...][&offset=...][&limit=...][filters]*`
+    Request body:
+        {
+            "geometry": {
+                "geom": "{"type": "Point", "coordinates": ...}",
+                "geom_detail": "{"type": "Point", "coordinates": ...}"
+            },
+            ...
+            "locales": [
+                {"lang": "en", "title": "...", ...}
+            ],
+            "associations": {
+                "routes": [
+                    {"document_id": ...}
+                ]
+            }
+        }
 
-        Parameters:
-            `q=...` (optional)
-            A search word.
+    Response:
+        {
+            "document_id": ...
+        }
 
-            `bbox=xmin,ymin,xmax,ymax` (optional)
-            A search bbox in EPSG:3857.
-
-            `pl=...` (optional)
-            When set only the given locale will be included (if available).
-            Otherwise all locales will be returned.
-
-            `offset=...` (optional)
-            The offset to navigate through the result pages (default: 0).
-
-            `limit=...` (optional)
-            How many results should be returned per document type
-            (default: 30). The maximum is 100.
-
-        Search filters:
-        An arbitrary number of search filters can be added, for example
-        `/waypoints?wtyp=summit&walt=4500,5000` gets all summits with a height
-        between 4500 and 5000. The available filter parameters are listed
-        below.
-
-        Generic search filters:
-            `l=v1[,v2]*` (enum)
-            available_locales
-
-            `a=a1[,a2]*` (area ids)
-            areas
-
-            `qa=v1[,v2]*` (enum)
-            quality
-
-        Waypoint search filters:
-        All waypoint query fields are listed in
-        :class:`c2corg_api.search.mappings.waypoint_mapping.SearchWaypoint`.
-
-        The following filter types are used:
-
-            enums: `key=v1[,v2]*`
-            One or more enum values can be given.
-
-            boolean: `key=(1|0|true|false|True|False)`
-
-            range: `key=[min][,max]`
-            For numbers ranges can be given with a min value and a max value.
-
-            date range: `key=from[,to]`
-            Dates must be given as `yyyy-mm-dd`, e.g `2016-12-31`. If only one
-            date is given, from and to are both set to that date.
-        """
-        return self._collection_get(WAYPOINT_TYPE, waypoint_documents_config)
-
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        """
-        Get a single document.
-
-        Request:
-            `GET` `/waypoints/{document_id}?[l=...][&e=1]`
-
-        Parameters:
-            `l=...` (optional)
-            Document locale. Get the document in the given language. If not
-             provided, all document locales are returned.
-
-            `e=1` (optional)
-            Get the document for editing. Only the information needed for
-            editing the document is included in the response.
-
-            `cook=...` (optional)
-            Get the document for viewing in a lang. Response may contains
-            another lang if requested one does not exists
+    """
+    return create_document(request, waypoint_schema)
 
 
-        """
-        return self._get(
-            waypoint_documents_config,
-            waypoint_schema,
-            adapt_schema=waypoint_schema_adaptor,
-            include_maps=True,
-            set_custom_associations=set_custom_associations,
-        )
+@write(
+    validators=[
+        body_validator(WaypointUpdateSchema),
+        validate_id,
+        validate_waypoint_update,
+        validate_associations_update,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def update_waypoint(request):
+    """
+    Update a document.
 
-    @restricted_json_view(
-        validators=[
-            body_validator(WaypointCreateSchema),
-            validate_waypoint_create,
-            validate_associations_create,
-        ],
-    )
-    def collection_post(self):
-        """
-        Create a new document.
+    Request:
+        `PUT` `/waypoints/{document_id}`
 
-        Request:
-            `POST` `/waypoints`
-
-        Request body:
-            {
+    Request body:
+        {
+            "message": "...",
+            "document": {
+                "document_id": ...,
+                "version": ...,
                 "geometry": {
+                    "version": ...,
                     "geom": "{"type": "Point", "coordinates": ...}",
                     "geom_detail": "{"type": "Point", "coordinates": ...}"
                 },
                 ...
                 "locales": [
-                    {"lang": "en", "title": "...", ...}
+                    {"version": ..., "lang": "en", "title": "...", ...}
                 ],
                 "associations": {
                     "routes": [
@@ -213,69 +161,124 @@ class WaypointRest(DocumentRest):
                     ]
                 }
             }
+        }
 
-        Response:
-            {
-                "document_id": ...
-            }
-
-        """
-        return self._collection_post(waypoint_schema)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(WaypointUpdateSchema),
-            validate_id,
-            validate_waypoint_update,
-            validate_associations_update,
-        ],
+        Notes:
+        - The version number of the document, of each provided locale and
+          of the geometry has to be given. If the versions do not match
+          the current ones, `409 Conflict` is returned.
+        - The geometry can be left out. In this case the geometry will not
+          be changed.
+        - Only the locales provided in the request will be update. If no
+          locale is given, no locale will be changed.
+        - Associations can be updated, by giving a list of document ids
+          for the different association types. If no list is provided for
+          an association type, these associations are not changed.
+          For example when updating a route, association to other routes
+          and waypoints can be provided. If only waypoint associations are
+          given, the route associations will not be changed.
+    """
+    return put_document(
+        request, Waypoint, waypoint_schema, after_update=update_linked_routes
     )
-    def put(self):
-        """
-        Update a document.
 
-        Request:
-            `PUT` `/waypoints/{document_id}`
 
-        Request body:
-            {
-                "message": "...",
-                "document": {
-                    "document_id": ...,
-                    "version": ...,
-                    "geometry": {
-                        "version": ...,
-                        "geom": "{"type": "Point", "coordinates": ...}",
-                        "geom_detail": "{"type": "Point", "coordinates": ...}"
-                    },
-                    ...
-                    "locales": [
-                        {"version": ..., "lang": "en", "title": "...", ...}
-                    ],
-                    "associations": {
-                        "routes": [
-                            {"document_id": ...}
-                        ]
-                    }
-                }
-            }
+def list_waypoints(request):
+    """Get a list of documents, optionally matching search filters.
 
-            Notes:
-            - The version number of the document, of each provided locale and
-              of the geometry has to be given. If the versions do not match
-              the current ones, `409 Conflict` is returned.
-            - The geometry can be left out. In this case the geometry will not
-              be changed.
-            - Only the locales provided in the request will be update. If no
-              locale is given, no locale will be changed.
-            - Associations can be updated, by giving a list of document ids
-              for the different association types. If no list is provided for
-              an association type, these associations are not changed.
-              For example when updating a route, association to other routes
-              and waypoints can be provided. If only waypoint associations are
-              given, the route associations will not be changed.
-        """
-        return self._put(Waypoint, waypoint_schema, after_update=update_linked_routes)
+    If no search filters are given, the documents are directly queried from the
+    database. If not, ElasticSearch is used to find the documents that match the
+    filters.
+
+    Request:
+        `GET`
+        `/waypoints/?[q=...][&pl=...][&offset=...][&limit=...][filters]*`
+
+    Parameters:
+        `q=...` (optional)
+        A search word.
+
+        `bbox=xmin,ymin,xmax,ymax` (optional)
+        A search bbox in EPSG:3857.
+
+        `pl=...` (optional)
+        When set only the given locale will be included (if available).
+        Otherwise all locales will be returned.
+
+        `offset=...` (optional)
+        The offset to navigate through the result pages (default: 0).
+
+        `limit=...` (optional)
+        How many results should be returned per document type
+        (default: 30). The maximum is 100.
+
+    Search filters:
+    An arbitrary number of search filters can be added, for example
+    `/waypoints?wtyp=summit&walt=4500,5000` gets all summits with a height
+    between 4500 and 5000. The available filter parameters are listed
+    below.
+
+    Generic search filters:
+        `l=v1[,v2]*` (enum)
+        available_locales
+
+        `a=a1[,a2]*` (area ids)
+        areas
+
+        `qa=v1[,v2]*` (enum)
+        quality
+
+    Waypoint search filters:
+    All waypoint query fields are listed in
+    :class:`c2corg_api.search.mappings.waypoint_mapping.SearchWaypoint`.
+
+    The following filter types are used:
+
+        enums: `key=v1[,v2]*`
+        One or more enum values can be given.
+
+        boolean: `key=(1|0|true|false|True|False)`
+
+        range: `key=[min][,max]`
+        For numbers ranges can be given with a min value and a max value.
+
+        date range: `key=from[,to]`
+        Dates must be given as `yyyy-mm-dd`, e.g `2016-12-31`. If only one
+        date is given, from and to are both set to that date.
+    """
+    return collection_get(request, WAYPOINT_TYPE, waypoint_documents_config)
+
+
+def get_waypoint(request):
+    """
+    Get a single document.
+
+    Request:
+        `GET` `/waypoints/{document_id}?[l=...][&e=1]`
+
+    Parameters:
+        `l=...` (optional)
+        Document locale. Get the document in the given language. If not
+         provided, all document locales are returned.
+
+        `e=1` (optional)
+        Get the document for editing. Only the information needed for
+        editing the document is included in the response.
+
+        `cook=...` (optional)
+        Get the document for viewing in a lang. Response may contains
+        another lang if requested one does not exists
+
+
+    """
+    return read_document(
+        request,
+        waypoint_documents_config,
+        waypoint_schema,
+        adapt_schema=waypoint_schema_adaptor,
+        include_maps=True,
+        set_custom_associations=set_custom_associations,
+    )
 
 
 def set_custom_associations(waypoint, lang):
@@ -419,87 +422,72 @@ def _get_select_children(waypoint):
     ).cte('select_all_waypoints')
 
 
-@resource(path='/waypoints/{id}/{lang}/{version_id}')
-class WaypointVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveWaypoint,
-            WAYPOINT_TYPE,
-            ArchiveWaypointLocale,
-            waypoint_schema,
-            waypoint_schema_adaptor,
-        )
+def get_waypoint_version(request):
+    return document_version(
+        request,
+        ArchiveWaypoint,
+        WAYPOINT_TYPE,
+        ArchiveWaypointLocale,
+        waypoint_schema,
+        waypoint_schema_adaptor,
+    )
 
 
-@resource(path='/waypoints/{id}/{lang}/info')
-class WaypointInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(waypoint_documents_config)
+def get_waypoint_info(request):
+    return document_info(request, waypoint_documents_config)
 
 
-@resource(path='/reachablewaypoints')
-class ReachableWaypointRest(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
+def list_reachable_waypoints(request):
+    """Return the reachable waypoints and their total.
 
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def get(self):
-        """Return the reachable waypoints and their total.
+    Returns a list of object {documents: Waypoint[], total: Integer} ->
+    documents: waypoints reachable within offset and limit
+    total: number of documents returned by query,
+    without offset and limit.
+    """
+    validated = request.validated
 
-        Returns a list of object {documents: Waypoint[], total: Integer} ->
-        documents: waypoints reachable within offset and limit
-        total: number of documents returned by query,
-        without offset and limit.
-        """
-        validated = self.request.validated
+    meta_params = {
+        'offset': validated.get('offset', 0),
+        'limit': validated.get('limit', LIMIT_DEFAULT),
+        'lang': validated.get('lang'),
+    }
 
-        meta_params = {
-            'offset': validated.get('offset', 0),
-            'limit': validated.get('limit', LIMIT_DEFAULT),
-            'lang': validated.get('lang'),
-        }
+    query, count = build_reachable_waypoints_query(request.GET, meta_params, page=True)
 
-        query, count = build_reachable_waypoints_query(
-            self.request.GET, meta_params, page=True
-        )
+    # the query is the page already
+    results = [] if query is None else query.all()
 
-        # the query is the page already
-        results = [] if query is None else query.all()
+    areas_id = set()
+    for _wp, areas in results:
+        if areas is None:
+            continue
+        for area in areas:
+            area_id = area.get('document_id')
+            if area_id is not None:
+                areas_id.add(area_id)
 
-        areas_id = set()
-        for _wp, areas in results:
-            if areas is None:
-                continue
-            for area in areas:
-                area_id = area.get('document_id')
-                if area_id is not None:
-                    areas_id.add(area_id)
+    areas_objects = DBSession.query(Area).filter(Area.document_id.in_(areas_id)).all()
 
-        areas_objects = (
-            DBSession.query(Area).filter(Area.document_id.in_(areas_id)).all()
-        )
+    areas_map = {area.document_id: area for area in areas_objects}
 
-        areas_map = {area.document_id: area for area in areas_objects}
+    waypoints = []
+    for wp, areas in results:
+        json_areas = []
+        if areas is None:
+            areas = []
 
-        waypoints = []
-        for wp, areas in results:
-            json_areas = []
-            if areas is None:
-                areas = []
+        for area in areas:
+            area_obj = areas_map.get(area.get('document_id'))
+            if area_obj:
+                json_areas.append(to_json_dict(area_obj, area_listing_schema))
 
-            for area in areas:
-                area_obj = areas_map.get(area.get('document_id'))
-                if area_obj:
-                    json_areas.append(to_json_dict(area_obj, area_listing_schema))
+        # assign JSON areas to the waypoint
+        wp.areas = json_areas
+        wp_dict = to_json_dict(wp, waypoint_schema, True)
+        waypoints.append(wp_dict)
 
-            # assign JSON areas to the waypoint
-            wp.areas = json_areas
-            wp_dict = to_json_dict(wp, waypoint_schema, True)
-            waypoints.append(wp_dict)
-
-        return {'documents': waypoints, 'total': count}
+    return {'documents': waypoints, 'total': count}
 
 
 def update_linked_routes(waypoint, update_types, user_id):

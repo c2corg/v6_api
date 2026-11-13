@@ -17,27 +17,24 @@ from c2corg_api.schemas.xreport import (
     xreport_schema,
     xreport_without_personal_schema,
 )
-from c2corg_api.views import restricted_json_view, set_private_cache_header
 from c2corg_api.views import set_creator as set_creator_on_documents
+from c2corg_api.views import set_private_cache_header
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
+    create_document,
     make_validator_create,
     make_validator_update,
+    put_document,
+    read_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import xreport_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
-from c2corg_api.views.resource import resource, view
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     is_associated_user,
     validate_associations,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 validate_xreport_create = make_validator_create(fields_xreport.get('required'))
@@ -50,56 +47,61 @@ validate_associations_update = functools.partial(
 )
 
 
-@resource(collection_path='/xreports', path='/xreports/{id}')
-class XreportRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(XREPORT_TYPE, xreport_documents_config)
+@write(
+    validators=[
+        body_validator(XreportCreateSchema),
+        validate_xreport_create,
+        validate_associations_create,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def create_xreport(request):
+    return create_document(request, xreport_schema, allow_anonymous=True)
 
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        set_private_cache_header(self.request)
-        if not _has_permission(self.request, self.request.validated['id']):
-            # only moderators and the author of a xreport can access the full
-            # xreport (including personal information)
-            return self._get(
-                xreport_documents_config,
-                xreport_without_personal_schema,
-                clazz_locale=XreportLocale,
-                set_custom_fields=set_author,
-            )
 
-        return self._get(
+@write(
+    validators=[
+        body_validator(XreportUpdateSchema),
+        validate_id,
+        validate_xreport_update,
+        validate_associations_update,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def update_xreport(request):
+    if not _has_permission(request, request.validated['id']):
+        raise HTTPForbidden('No permission to change this xreport')
+
+    return put_document(request, Xreport, xreport_schema)
+
+
+def list_xreports(request):
+    return collection_get(request, XREPORT_TYPE, xreport_documents_config)
+
+
+def get_xreport(request):
+    set_private_cache_header(request)
+    if not _has_permission(request, request.validated['id']):
+        # only moderators and the author of a xreport can access the full
+        # xreport (including personal information)
+        return read_document(
+            request,
             xreport_documents_config,
-            xreport_schema,
+            xreport_without_personal_schema,
             clazz_locale=XreportLocale,
-            custom_cache_key='private',
             set_custom_fields=set_author,
         )
 
-    @restricted_json_view(
-        validators=[
-            body_validator(XreportCreateSchema),
-            validate_xreport_create,
-            validate_associations_create,
-        ],
+    return read_document(
+        request,
+        xreport_documents_config,
+        xreport_schema,
+        clazz_locale=XreportLocale,
+        custom_cache_key='private',
+        set_custom_fields=set_author,
     )
-    def collection_post(self):
-        return self._collection_post(xreport_schema, allow_anonymous=True)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(XreportUpdateSchema),
-            validate_id,
-            validate_xreport_update,
-            validate_associations_update,
-        ],
-    )
-    def put(self):
-        if not _has_permission(self.request, self.request.validated['id']):
-            raise HTTPForbidden('No permission to change this xreport')
-
-        return self._put(Xreport, xreport_schema)
 
 
 def _has_permission(request, xreport_id):
@@ -125,23 +127,18 @@ def _has_permission(request, xreport_id):
     return False
 
 
-@resource(path='/xreports/{id}/{lang}/{version_id}')
-class XreportVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveXreport,
-            XREPORT_TYPE,
-            ArchiveXreportLocale,
-            xreport_without_personal_schema,
-        )
+def get_xreport_version(request):
+    return document_version(
+        request,
+        ArchiveXreport,
+        XREPORT_TYPE,
+        ArchiveXreportLocale,
+        xreport_without_personal_schema,
+    )
 
 
-@resource(path='/xreports/{id}/{lang}/info')
-class XreportInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(xreport_documents_config)
+def get_xreport_info(request):
+    return document_info(request, xreport_documents_config)
 
 
 def set_author(xreport):
