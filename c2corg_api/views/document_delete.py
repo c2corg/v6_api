@@ -432,11 +432,23 @@ def _remove_versions(document_id):
     DBSession.query(DocumentVersion).filter(
         DocumentVersion.document_id == document_id
     ).delete()
-    DBSession.execute(
-        HistoryMetaData.__table__.delete().where(
-            HistoryMetaData.id.in_(history_metadata_ids)
+    _remove_unused_history_metadata(history_metadata_ids)
+
+
+def _remove_unused_history_metadata(history_metadata_ids):
+    """Remove the history metadata entries no version refers to any more."""
+    # an entry may be shared with the versions of other documents (documents
+    # changed in one changeset, as the migration from v5 did): those stay
+    if history_metadata_ids:
+        DBSession.execute(
+            HistoryMetaData.__table__.delete()
+            .where(HistoryMetaData.id.in_(history_metadata_ids))
+            .where(
+                ~exists().where(
+                    DocumentVersion.history_metadata_id == HistoryMetaData.id
+                )
+            )
         )
-    )
 
 
 def _remove_locale_versions(document_id, lang):
@@ -468,12 +480,7 @@ def _remove_locale_versions(document_id, lang):
         DocumentVersion.document_id == document_id
     ).filter(DocumentVersion.lang == lang).delete()
 
-    if len(history_metadata_ids):
-        DBSession.execute(
-            HistoryMetaData.__table__.delete().where(
-                HistoryMetaData.id.in_(history_metadata_ids)
-            )
-        )
+    _remove_unused_history_metadata(history_metadata_ids)
 
 
 def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
