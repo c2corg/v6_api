@@ -60,7 +60,10 @@ fi
 # Only on a fresh database: initialize_c2corg_api_db is not idempotent (it inserts the default langs).
 # Not "|| true": a failure here leaves an empty database, and the API then fails on every request.
 if psql -d "${DBNAME}" -tAc "SELECT 1 FROM alembic.alembic_version" > /dev/null 2>&1; then
-  echo "  Dev database already initialized"
+  # The image of the dev database is at the alembic revision of the code it was published with: bring it to
+  # the one of this checkout (it does nothing when it is already there).
+  echo "  Dev database already initialized, migrating it to the latest revision"
+  alembic upgrade head
 else
   initialize_c2corg_api_db development.ini
 fi
