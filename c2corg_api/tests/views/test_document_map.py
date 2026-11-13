@@ -630,6 +630,64 @@ def routes(session):
     reset_search_index(session)
 
 
+def test_outings_tracks_recent_when_there_are_too_many(client, tracks):
+    # too many tracks for the limit: the most recent ones, not an empty answer
+    with patch('c2corg_api.views.document_map.TRACKS_LIMIT_MAX', 1):
+        body = client.get(f'/outings/map/tracks?bbox={BBOX}&recent=2', status=200).json
+
+    assert body['truncated']
+    assert [o['title'] for o in body['documents']] == ['Long hike', 'Ski tour']
+    assert [o['date_end'] for o in body['documents']] == ['2016-01-04', '2016-01-02']
+    assert 'geom_detail' in body['documents'][0]['geometry']
+
+
+def test_outings_tracks_recent_when_there_are_few(client, tracks):
+    body = client.get(f'/outings/map/tracks?bbox={BBOX}&recent=10', status=200).json
+
+    assert not body['truncated']
+    assert [o['title'] for o in body['documents']] == [
+        'Long hike',
+        'Ski tour',
+        'Hike 1',
+    ]
+
+
+def test_outings_tracks_recent_with_filters(client, tracks):
+    # the filters are those of the search: of the hikes, the most recent one
+    url = f'/outings/map/tracks?bbox={BBOX}&act=hiking&recent=1'
+    body = client.get(url, status=200).json
+
+    assert body['truncated']
+    assert [o['title'] for o in body['documents']] == ['Long hike']
+
+
+def test_outings_tracks_recent_with_filters_over_the_cap(client, tracks):
+    # a broad filter: the candidates of the database are filtered by the search index
+    with patch('c2corg_api.views.document_map.TRACKS_CANDIDATES_MAX', 1):
+        url = f'/outings/map/tracks?bbox={BBOX}&act=hiking&recent=2'
+        body = client.get(url, status=200).json
+
+    assert [o['title'] for o in body['documents']] in (['Long hike'], ['Hike 1'])
+
+
+@pytest.mark.parametrize('recent', ['0', '101', 'abc', '1.5', '-1', '²', ''])
+def test_invalid_recent(client, recent):
+    response = client.get(
+        f'/outings/map/tracks?bbox={BBOX}&recent={recent}', status=400
+    )
+
+    assert 'recent' in _error_names(response)
+
+
+def test_routes_tracks_recent(client, routes):
+    # the routes have no date: the last created first
+    body = client.get(f'/routes/map/tracks?bbox={BBOX}&recent=1', status=200).json
+
+    assert body['truncated']
+    assert len(body['documents']) == 1
+    assert body['documents'][0]['title'] == 'Ski route'
+
+
 def test_routes_heatmap(client, routes):
     response = client.get(f'/routes/map/heatmap?bbox={BBOX}', status=200)
 
