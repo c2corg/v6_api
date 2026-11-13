@@ -342,5 +342,11 @@ class TestRead:
         response = client.get(self.PREFIX + '/count', headers=headers, status=200)
         assert response.json == {'open': 1}
 
+        # a moderator of the forum only
         headers = auth_headers(username='contributor')
+        response = client.get(self.PREFIX + '/count', headers=headers, status=200)
+        assert response.json == {'open': 1}
+
+        # neither of the topoguide nor of the forum
+        headers = auth_headers(username='contributor3')
         client.get(self.PREFIX + '/count', headers=headers, status=403)

@@ -223,14 +223,15 @@ def removals(request: Request, user: User):
 
 
 def removals_count(request: Request, user: User):
-    """Return the number of removal requests not done yet."""
+    """Return the number of removal requests not done yet (for the moderators)."""
+    # the permission is checked by the view, as for the list
     return _not_cached(
         serve_read(
             request,
             user,
             [],
             read_removal_requests_count,
-            permission='moderator',
+            permission='authenticated',
             content_types=JSON,
         )
     )
@@ -247,7 +248,9 @@ for _endpoint in (
 ):
     _endpoint.permission = 'authenticated'
 removals.permission = 'authenticated'
-for _endpoint in (blocked_users, is_blocked, removals_count):
+# the view checks the role: a moderator of the forum is not always one of the topoguide
+removals_count.permission = 'authenticated'
+for _endpoint in (blocked_users, is_blocked):
     _endpoint.permission = 'moderator'
 for _endpoint in (
     account,

@@ -206,7 +206,10 @@ def read_removal_requests_count(request):
     Example response:
 
         {'open': 2}
+
+    Like the list, it is for the moderators of the topoguide and of the forum.
     """
+    _check_moderator(request)
     count = (
         DBSession.query(func.count(AccountRemovalRequest.id))
         .filter(AccountRemovalRequest.done_at.is_(None))
