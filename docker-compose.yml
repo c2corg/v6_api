@@ -1,4 +1,5 @@
-# Companion services for the manual setup (HOWTO-DEV.md, "Option 2").
+# Companion services for the manual setup (HOWTO-DEV.md, "Option 2"). Works with Docker and with
+# rootless Podman (`podman compose`, or `make DOCKER_COMPOSE="podman compose" ...`).
 # Ports are published on 127.0.0.1 only: the dev passwords below are not secrets.
 services:
   postgresql:

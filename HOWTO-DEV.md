@@ -86,7 +86,7 @@ For more details, see [`.devcontainer/README.md`](.devcontainer/README.md).
 
 - A computer running Linux or Windows (on Windows, take a look at [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install), it will make your developer life easier). Maybe MacOs can work, but it was not tested.
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13 or newer, which installs the right Python version (3.15) and all dependencies for you
-- A docker environment with docker compose plugin (either [docker desktop](https://www.docker.com/products/docker-desktop/) or a manual installation)
+- A container engine with Compose: [Docker](https://docs.docker.com/engine/install/) with the compose plugin (or Docker Desktop), or rootless [Podman](https://podman.io/) (see [Rootless Podman](#rootless-podman) below)
 - A development IDE is not mandatory, but highly recommended (pycharm, vscode...)
 - If you have GNU make installed, you can use it to run all the commands below to initialize and run your development environment (run `make help` to see what can be done) instead of running them "by hand". In short, after `cp config/env.local.sample config/env.local`: `make bootstrap`, then `make serve`.
 
@@ -174,6 +174,21 @@ es_index_fingerprint store development.ini
 - To start again from a fresh database and index: `docker compose down -v` (removes the volumes `postgres18_data` and
   `es_data`), `docker compose pull`, then the steps above. If you used the former setup (PostGIS 16 and the 2018
   Elasticsearch image), its volume `postgres_data` is no longer used and can be removed.
+
+### Rootless Podman
+
+The `docker-compose.yml` works with rootless Podman (4.x or newer). Enable the user socket once, then use
+`podman compose` (which runs `docker-compose` v2 or `podman-compose`) wherever this manual says `docker compose`:
+
+```shell
+systemctl --user enable --now podman.socket
+podman compose up -d
+# the make targets which call compose:
+make DOCKER_COMPOSE="podman compose" bootstrap   # or: export DOCKER_COMPOSE="podman compose"
+```
+
+If `podman compose` picks a broken provider, choose it explicitly, e.g.
+`export PODMAN_COMPOSE_PROVIDER=/usr/local/bin/docker-compose`.
 
 ## Running the API
 
