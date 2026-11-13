@@ -15,7 +15,8 @@ endif
 
 SRC_DIRS = c2corg_api es_migration
 
-DOCKER_COMPOSE = docker compose
+# Override for rootless Podman: make DOCKER_COMPOSE="podman compose" <target> (or export DOCKER_COMPOSE)
+DOCKER_COMPOSE ?= docker compose
 DOCKER_EXEC = $(DOCKER_COMPOSE) exec
 DB_EXEC = $(DOCKER_EXEC) -u postgres -T postgresql
 
