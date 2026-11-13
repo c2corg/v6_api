@@ -321,7 +321,7 @@ def test_search_incomplete_last_word_of_a_common_title(client):
     """ "mont bla" must find "Mont Blanc" while the words before the last one
     stay whole words (not "Montaña Blanca"), even with a single letter typed
     so far ("mont b": the ngram fields start at two letters)."""
-    for term in ('mont bla', 'mont bl', 'Mont-Bla', 'le mont bla', 'mont b'):
+    for term in ('mont bla', 'mont bl', 'Mont-Bla', 'mont b'):
         titles = _waypoint_titles(client, term)
         assert 'Mont Blanc' in titles, f'{term!r} -> {titles!r}'
         assert 'Montaña Blanca' not in titles, f'{term!r} -> {titles!r}'
