@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>camptocamp.org architecture</title>
+<style>
+  :root { --bg: #f7f7f5; --fg: #1d1d1b; --muted: #5f5f5a; --card: #fff; --line: #deded8; --accent: #c0392b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --fg: #ececea; --muted: #a3a39d; --card: #20201f; --line: #353533; --accent: #e8735f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 .25rem; }
+  p.lead { color: var(--muted); margin: 0 0 2rem; }
+  h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 2rem 0 .75rem; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  a.card { display: block; height: 100%; padding: 16px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; color: inherit; text-decoration: none; }
+  a.card:hover { border-color: var(--accent); }
+  a.card strong { display: block; margin-bottom: 4px; }
+  a.card span { color: var(--muted); font-size: .92rem; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .85rem; }
+  code { font-size: .9em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>camptocamp.org architecture</h1>
+  <p class="lead">Interactive diagrams of the infrastructure and applications behind camptocamp.org.</p>
+
+  <h2>Infrastructure</h2>
+  <ul>
+    <li><a class="card" href="architecture/preprod-infra.html"><strong>Preprod (v7 fleet)</strong><span>The on-demand preprod on Exoscale: VMs, containers, buckets, and what it borrows from production.</span></a></li>
+    <li><a class="card" href="architecture/legacy-prod-infra.html"><strong>Production (legacy fleet)</strong><span>The fleet serving production today, VM by VM, until the v7 cutover.</span></a></li>
+  </ul>
+
+  <h2>Applications</h2>
+  <ul>
+    <li><a class="card" href="architecture/frontend.html"><strong>Frontend (c2c_ui)</strong><span>The single-page app, the services it calls and how it is built and served.</span></a></li>
+    <li><a class="card" href="architecture/backend.html"><strong>Backend (v6_api)</strong><span>The API, its modules, databases, workers and integrations.</span></a></li>
+    <li><a class="card" href="architecture/images.html"><strong>Images (c2c_images)</strong><span>How a photo goes from upload to the media buckets and back to the browser.</span></a></li>
+    <li><a class="card" href="architecture/tracker.html"><strong>Tracker (c2c_tracking)</strong><span>Connections to activity providers: OAuth, webhooks, imports.</span></a></li>
+  </ul>
+
+  <h2>Development</h2>
+  <ul>
+    <li><a class="card" href="architecture/local-dev.html"><strong>Local development</strong><span>Running v6_api, c2c_ui and the optional services on a workstation.</span></a></li>
+    <li><a class="card" href="architecture/ci-cd.html"><strong>CI/CD</strong><span>From a commit to preprod and production: checks, images, version pins and deploys.</span></a></li>
+  </ul>
+
+  <footer>Generated with <a href="https://archify.si">Archify</a>. Sources: <code>docs/architecture/src/*.json</code> in <a href="https://github.com/c2corg/v6_api">c2corg/v6_api</a>.</footer>
+</main>
+</body>
+</html>

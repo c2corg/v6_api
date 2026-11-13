@@ -154,6 +154,18 @@ fill_es_index development.ini
 
 The indices are named `<elasticsearch_index>_<document type>` (e.g. `c2corg_w` for the waypoints). Their settings and mappings are the JSON files of `c2corg_api/search/es_mappings`. To re-create them, run `python -m c2corg_api.scripts.es.create_index development.ini` (it deletes the existing ones), then `fill_es_index` again. If Elasticsearch has authentication enabled, set `elasticsearch_scheme`, `elasticsearch_user` and `elasticsearch_passwd` in `config/env.local`.
 
+- Rebuild all the indices without interrupting the search (production)
+
+```shell
+reindex_es production.ini
+```
+
+New timestamped indices (`<elasticsearch_index>_<type>_<timestamp>`) are built
+next to the live ones, then the names of the document types (`c2corg_w`...) are
+switched to them as aliases, atomically. They must be aliases: the first time,
+if they are still real indices, run once with `--replace-index` (short search
+gap, once). `--keep-old` keeps the previous indices instead of deleting them.
+
 ## Running the API
 
 - Make sure the postgres redis and elasticsearch docker containers are running

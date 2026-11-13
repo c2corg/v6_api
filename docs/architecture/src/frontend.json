@@ -1,0 +1,758 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "camptocamp.org frontend (c2c_ui 7.50)",
+    "output": "frontend.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/c2corg/c2c_ui.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "a5658c9bae547befbbeeeeaa4e264f743fb96cca"
+    }
+  },
+  "components": [
+    {
+      "id": "ci",
+      "type": "backend",
+      "label": "GitHub Actions CI",
+      "sublabel": "lint, test, build, image test",
+      "pos": [
+        40,
+        64
+      ],
+      "size": [
+        150,
+        70
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "line": 48,
+          "end_line": 62
+        }
+      ]
+    },
+    {
+      "id": "dockerhub",
+      "type": "cloud",
+      "label": "Docker Hub",
+      "sublabel": "c2corg/c2c_ui (master, tags)",
+      "pos": [
+        260,
+        64
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "line": 63,
+          "end_line": 85
+        }
+      ]
+    },
+    {
+      "id": "ghpages",
+      "type": "cloud",
+      "label": "GitHub Pages previews",
+      "sublabel": "c2c_ui/<branch>, hash router",
+      "pos": [
+        520,
+        64
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "line": 98,
+          "end_line": 106
+        },
+        {
+          "path": "vite.config.ts",
+          "line": 118,
+          "end_line": 129
+        },
+        {
+          "path": ".github/workflows/gh-pages-cleanup.yml",
+          "line": 1,
+          "end_line": 5
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "Tracker OAuth",
+      "sublabel": "Strava, Polar, Suunto, Coros…",
+      "pos": [
+        770,
+        64
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/views/user/TrackersView.vue",
+          "line": 121,
+          "end_line": 128
+        },
+        {
+          "path": "src/js/trackers-oauth-relay.ts",
+          "line": 1,
+          "end_line": 27
+        }
+      ]
+    },
+    {
+      "id": "tiles",
+      "type": "external",
+      "label": "Map tile providers",
+      "sublabel": "IGN, swisstopo, ICGC, OS, ESRI",
+      "pos": [
+        1010,
+        64
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/components/map/map-layers.ts",
+          "line": 223,
+          "end_line": 358
+        }
+      ]
+    },
+    {
+      "id": "visitor",
+      "type": "external",
+      "label": "Visitor browser",
+      "sublabel": "via HAProxy (PROXY)",
+      "pos": [
+        40,
+        214
+      ],
+      "size": [
+        150,
+        70
+      ],
+      "sources": [
+        {
+          "path": "Dockerfile",
+          "line": 22,
+          "end_line": 25
+        }
+      ]
+    },
+    {
+      "id": "static",
+      "type": "frontend",
+      "label": "OpenResty static",
+      "sublabel": "index.html, assets, config.js",
+      "pos": [
+        260,
+        214
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "tag": "C2C_* runtime config",
+      "sources": [
+        {
+          "path": "Dockerfile",
+          "line": 1,
+          "end_line": 27
+        },
+        {
+          "path": "docker/nginx.conf",
+          "line": 137,
+          "end_line": 195
+        },
+        {
+          "path": "docker/runtime-config.sh",
+          "line": 1,
+          "end_line": 16
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "type": "frontend",
+      "label": "main.ts + router",
+      "sublabel": "Vue 3, Pinia, plugins",
+      "pos": [
+        520,
+        214
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/main.ts",
+          "line": 1,
+          "end_line": 57
+        },
+        {
+          "path": "src/js/vue-plugins/router.ts",
+          "line": 58,
+          "end_line": 163
+        },
+        {
+          "path": "src/js/config.ts",
+          "line": 1,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "views",
+      "type": "frontend",
+      "label": "Views",
+      "sublabel": "documents, wiki edit, user",
+      "pos": [
+        770,
+        214
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/js/vue-plugins/router.ts",
+          "line": 58,
+          "end_line": 156
+        },
+        {
+          "path": "src/views/user/TrackersView.vue",
+          "line": 85,
+          "end_line": 128
+        }
+      ]
+    },
+    {
+      "id": "components",
+      "type": "frontend",
+      "label": "Components",
+      "sublabel": "OlMap, uploader, tracking",
+      "pos": [
+        1010,
+        214
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/components/map/map-layers.ts",
+          "line": 223,
+          "end_line": 320
+        },
+        {
+          "path": "src/components/tracking/TrackingDeviceActivities.vue",
+          "line": 33,
+          "end_line": 60
+        },
+        {
+          "path": "src/components/images-uploader/README.md",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "crawler",
+      "type": "external",
+      "label": "Preview crawlers",
+      "sublabel": "no JavaScript",
+      "pos": [
+        40,
+        364
+      ],
+      "size": [
+        150,
+        70
+      ],
+      "sources": [
+        {
+          "path": "docker/lua/c2c_head.lua",
+          "line": 1,
+          "end_line": 8
+        }
+      ]
+    },
+    {
+      "id": "headlua",
+      "type": "frontend",
+      "label": "c2c_head.lua",
+      "sublabel": "OG tags, JSON-LD per doc",
+      "pos": [
+        260,
+        364
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "docker/lua/c2c_head.lua",
+          "line": 1,
+          "end_line": 30
+        },
+        {
+          "path": "docker/nginx.conf",
+          "line": 152,
+          "end_line": 175
+        },
+        {
+          "path": "docker/start.sh",
+          "line": 4,
+          "end_line": 15
+        }
+      ]
+    },
+    {
+      "id": "stores",
+      "type": "frontend",
+      "label": "Pinia stores",
+      "sublabel": "user, forum notifs, language",
+      "pos": [
+        770,
+        364
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/stores/user.ts",
+          "line": 1,
+          "end_line": 160
+        },
+        {
+          "path": "src/stores/forum-notifications.ts",
+          "line": 1,
+          "end_line": 25
+        }
+      ]
+    },
+    {
+      "id": "clients",
+      "type": "frontend",
+      "label": "Service clients",
+      "sublabel": "c2c, Forum, Tracking, URLs",
+      "pos": [
+        1010,
+        364
+      ],
+      "size": [
+        180,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/js/apis/c2c/index.ts",
+          "line": 18,
+          "end_line": 30
+        },
+        {
+          "path": "src/js/apis/tracking-service.ts",
+          "line": 28,
+          "end_line": 38
+        },
+        {
+          "path": "src/js/image-urls.ts",
+          "line": 82,
+          "end_line": 128
+        }
+      ]
+    },
+    {
+      "id": "extapis",
+      "type": "external",
+      "label": "Public geo APIs",
+      "sublabel": "Photon, biodiv-sports, geo.admin",
+      "pos": [
+        1010,
+        544
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/js/apis/photon.ts",
+          "line": 8,
+          "end_line": 31
+        },
+        {
+          "path": "src/js/apis/biodivsports-service.ts",
+          "line": 5,
+          "end_line": 9
+        },
+        {
+          "path": "src/js/apis/respectercestproteger-service.ts",
+          "line": 7,
+          "end_line": 11
+        }
+      ]
+    },
+    {
+      "id": "tracking",
+      "type": "backend",
+      "label": "tracking",
+      "sublabel": "c2c_tracking: device sync",
+      "pos": [
+        1300,
+        214
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/js/apis/tracking-service.ts",
+          "line": 28,
+          "end_line": 74
+        }
+      ]
+    },
+    {
+      "id": "forum",
+      "type": "backend",
+      "label": "forum (Discourse)",
+      "sublabel": "topics, MessageBus",
+      "pos": [
+        1300,
+        334
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/js/apis/forum.ts",
+          "line": 63,
+          "end_line": 70
+        },
+        {
+          "path": "src/stores/forum-notifications.ts",
+          "line": 1,
+          "end_line": 25
+        }
+      ]
+    },
+    {
+      "id": "images",
+      "type": "backend",
+      "label": "images service",
+      "sublabel": "POST /upload",
+      "pos": [
+        1300,
+        454
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/js/apis/c2c/index.ts",
+          "line": 127,
+          "end_line": 146
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "type": "cloud",
+      "label": "media (SOS bucket)",
+      "sublabel": "AVIF + JPEG thumbnails",
+      "pos": [
+        1300,
+        574
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/js/image-urls.ts",
+          "line": 82,
+          "end_line": 128
+        },
+        {
+          "path": "vite.config.ts",
+          "line": 38,
+          "end_line": 48
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "v6_api",
+      "sublabel": "docs, users, Navitia proxy",
+      "pos": [
+        1300,
+        694
+      ],
+      "size": [
+        180,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/js/apis/c2c/index.ts",
+          "line": 18,
+          "end_line": 30
+        },
+        {
+          "path": "src/js/apis/navitia-service.ts",
+          "line": 41,
+          "end_line": 47
+        },
+        {
+          "path": "src/js/apis/itinevert-service.ts",
+          "line": 196,
+          "end_line": 205
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Build & deploy (GitHub)",
+      "wraps": [
+        "ci",
+        "dockerhub",
+        "ghpages"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "c2c_ui container (OpenResty)",
+      "wraps": [
+        "static",
+        "headlua"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Browser SPA (Vue 3, Vite 8)",
+      "wraps": [
+        "entry",
+        "views",
+        "components",
+        "stores",
+        "clients"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "camptocamp.org backends",
+      "wraps": [
+        "tracking",
+        "forum",
+        "images",
+        "media",
+        "api"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ci-push",
+      "from": "ci",
+      "to": "dockerhub",
+      "label": "push"
+    },
+    {
+      "id": "ci-pages",
+      "from": "ci",
+      "to": "ghpages",
+      "label": "branch preview",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "top"
+    },
+    {
+      "id": "image-pull",
+      "from": "dockerhub",
+      "to": "static",
+      "label": "deployed image",
+      "variant": "dashed"
+    },
+    {
+      "id": "visit",
+      "from": "visitor",
+      "to": "static",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "boot",
+      "from": "static",
+      "to": "entry",
+      "label": "loads JS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "route",
+      "from": "entry",
+      "to": "views",
+      "label": "routes",
+      "variant": "emphasis"
+    },
+    {
+      "id": "compose",
+      "from": "views",
+      "to": "components",
+      "label": "uses",
+      "variant": "emphasis"
+    },
+    {
+      "id": "crawl",
+      "from": "crawler",
+      "to": "headlua",
+      "label": "GET page"
+    },
+    {
+      "id": "oauth",
+      "from": "views",
+      "to": "providers",
+      "label": "OAuth redirect",
+      "variant": "security"
+    },
+    {
+      "id": "tile-fetch",
+      "from": "components",
+      "to": "tiles",
+      "label": "WMTS / XYZ"
+    },
+    {
+      "id": "state",
+      "from": "views",
+      "to": "stores",
+      "label": "state"
+    },
+    {
+      "id": "store-calls",
+      "from": "stores",
+      "to": "clients",
+      "label": "calls"
+    },
+    {
+      "id": "fetch",
+      "from": "components",
+      "to": "clients",
+      "label": "fetch"
+    },
+    {
+      "id": "geo",
+      "from": "clients",
+      "to": "extapis",
+      "label": "geocode, areas"
+    },
+    {
+      "id": "to-tracking",
+      "from": "clients",
+      "to": "tracking",
+      "label": "JWT"
+    },
+    {
+      "id": "to-forum",
+      "from": "clients",
+      "to": "forum",
+      "label": "cookie"
+    },
+    {
+      "id": "to-images",
+      "from": "clients",
+      "to": "images",
+      "label": "upload"
+    },
+    {
+      "id": "to-media",
+      "from": "clients",
+      "to": "media",
+      "label": "img src"
+    },
+    {
+      "id": "to-api",
+      "from": "clients",
+      "to": "api",
+      "label": "REST, JWT",
+      "variant": "emphasis"
+    },
+    {
+      "id": "head-api",
+      "from": "headlua",
+      "to": "api",
+      "label": "document JSON (server side)",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Serving",
+      "items": [
+        "One image for every environment: runtime-config.sh writes config.js from C2C_* variables",
+        "Link-preview crawlers get title, Open Graph and JSON-LD from c2c_head.lua; the app replaces them on mount",
+        "Per-request CSP nonce on index.html; hashed assets cached 1 year"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Recent changes (Sep–Nov 2026)",
+      "items": [
+        "Vite 8 (Rolldown), Lightning CSS, Bulma as plain CSS with design tokens (no Sass)",
+        "AVIF thumbnails for uploads from 2026-11-07; HEIC upload with server preview",
+        "Remember-me sessions renewed before expiry, one tab at a time",
+        "Unread forum notifications via Discourse MessageBus, polling fallback",
+        "Tracking: invite to link a device after a GPS upload, prefill outings from device activities",
+        "Justified image rows; routes proposed from an outing's GPS track"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Previews & trackers",
+      "items": [
+        "PR previews on GitHub Pages wait for a maintainer's approval and are removed when the PR closes",
+        "Preprod and previews connect trackers through the production OAuth return URL (trackers-oauth-relay.ts)"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Not on master",
+      "items": [
+        "No service worker / offline mode (preview branches only)",
+        "Outings heatmap overlay is API-side; no UI on master yet",
+        "Ad script (admysports) and Google Analytics are loaded after load / GDPR consent"
+      ]
+    }
+  ]
+}

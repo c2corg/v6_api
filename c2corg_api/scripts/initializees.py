@@ -66,11 +66,20 @@ def setup_es():
         )
         sys.exit(0)
 
-    settings = _load('settings')
     for doc_type in search_documents:
         name = index_name(doc_type)
-        client.indices.create(index=name, settings=settings, mappings=_load(doc_type))
+        create_type_index(client, name, doc_type)
         print(f'Index "{name}" created')
+
+
+def create_type_index(client, name, doc_type, extra_settings=None):
+    """Create the index `name` with the settings and the mapping of a document type.
+
+    `extra_settings` are added to the analyzers (`index_management` uses them to
+    tune an index for the initial import).
+    """
+    settings = {**_load('settings'), **(extra_settings or {})}
+    client.indices.create(index=name, settings=settings, mappings=_load(doc_type))
 
 
 def drop_index(silent=True):
