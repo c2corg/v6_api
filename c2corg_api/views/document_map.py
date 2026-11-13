@@ -333,6 +333,29 @@ def _cacheable(request):
     request.response.headers['Vary'] = 'Origin'
 
 
+def _too_many(count=None, capped=False):
+    """Return the answer of a box that has too many tracks: no track, and how many.
+
+    `count` is the number of tracks of the box, counted by their boxes (see
+    `get_track_ids`) and for the filters of the request: a little more than
+    the tracks that cross the box. `count_capped` says that there are more of
+    them than the candidates that are looked at (`TRACKS_CANDIDATES_MAX`).
+    It is left out when it is not known: many candidates, to be filtered by
+    the search index.
+    """
+    answer = {'documents': [], 'truncated': True}
+    if count is not None:
+        answer['count'] = count
+        answer['count_capped'] = capped
+    return answer
+
+
+def _count_tracks(model, bbox, document_ids):
+    """Return `(count, capped)`: the tracks of the box, up to the candidates."""
+    found = get_track_ids(model, bbox, TRACKS_CANDIDATES_MAX, document_ids=document_ids)
+    return min(len(found), TRACKS_CANDIDATES_MAX), len(found) > TRACKS_CANDIDATES_MAX
+
+
 def get_tracks_response(doc_type, model, locale_model, request):
     _cacheable(request)
     params = _search_params(request)
@@ -364,13 +387,18 @@ def get_tracks_response(doc_type, model, locale_model, request):
     # `tracks_limit() + 1` ids.
     needs_filter = bool(params) and not filtered
     cap = TRACKS_CANDIDATES_MAX if needs_filter else tracks_limit()
+    given_ids = document_ids
     document_ids = get_track_ids(model, bbox, cap, document_ids=document_ids)
     if len(document_ids) > cap:
-        return {'documents': [], 'truncated': True}
+        if needs_filter:
+            # the candidates are yet to be filtered: how many there are is not known
+            return _too_many()
+        # a little more work, for the ones that look at a busy place: how many
+        return _too_many(*_count_tracks(model, bbox, given_ids))
     if needs_filter and document_ids:
         document_ids = _filtered_ids(doc_type, params, document_ids)
     if len(document_ids) > tracks_limit():
-        return {'documents': [], 'truncated': True}
+        return _too_many(len(document_ids))
 
     return _tracks_answer(doc_type, model, locale_model, document_ids, bbox, lang)
 
@@ -425,12 +453,17 @@ def _recent_tracks_response(doc_type, model, locale_model, request, params):
     # ones first, up to a limit) are filtered, then sorted again.
     cap = TRACKS_CANDIDATES_MAX if needs_filter else recent
     ids = get_track_ids(model, bbox, cap, document_ids, most_recent=True)
+    count = capped = None
     if needs_filter:
-        ids = get_most_recent_ids(
-            model, _filtered_ids(doc_type, params, ids), recent + 1
-        )
+        filtered = _filtered_ids(doc_type, params, ids)
+        # the candidates are all there, or only the most recent ones
+        if len(ids) <= cap:
+            count, capped = len(filtered), False
+        ids = get_most_recent_ids(model, filtered, recent + 1)
     truncated = len(ids) > recent
-    return _tracks_answer(
+    if truncated and not needs_filter:
+        count, capped = _count_tracks(model, bbox, document_ids)
+    answer = _tracks_answer(
         doc_type,
         model,
         locale_model,
@@ -439,6 +472,10 @@ def _recent_tracks_response(doc_type, model, locale_model, request, params):
         request.validated.get('lang'),
         truncated,
     )
+    if truncated and count is not None:
+        answer['count'] = count
+        answer['count_capped'] = capped
+    return answer
 
 
 def get_heatmap_response(doc_type, request):
@@ -480,6 +517,10 @@ def get_heatmap_response(doc_type, request):
 #   If more than `tracks_limit()` tracks cross the bbox, an empty,
 #   `"truncated": true` response is returned instead of a silently
 #   incomplete list: the frontend can ask the heatmap of the same bbox.
+#   It says how many there are, when it knows: `"count"` (counted by the boxes
+#   of the tracks, a little more than those that cross the bbox) and
+#   `"count_capped"` (there are more than `TRACKS_CANDIDATES_MAX`). With
+#   `recent=N`, the N most recent ones instead of an empty list.
 
 
 def tracks_limit():
