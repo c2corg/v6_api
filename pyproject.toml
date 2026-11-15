@@ -50,7 +50,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff==0.17.3",
+    "ruff==0.17.4",
     "pre-commit==4.7.0",
     # the client of FastAPI's TestClient, for the tests
     "httpx2==2.16.0",
