@@ -22,7 +22,7 @@ dependencies = [
     "dogpile.cache==1.5.0",
     "elasticsearch==2.4.1",
     "elasticsearch_dsl==2.2.0",
-    "geoalchemy2==0.20.0",
+    "geoalchemy2==0.21.0",
     "geojson==3.3.0",
     "geomet==1.1.0",
     "kombu==5.7.0",
