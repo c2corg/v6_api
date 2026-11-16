@@ -445,6 +445,8 @@ def test_migration(db_connection, outing):
             assert not column['nullable']
             # the counter of the existing outings is enabled
             values = db_connection.execute(
-                sa.text(f'SELECT DISTINCT disable_view_count FROM guidebook.{table}')
+                sa.select(sa.column('disable_view_count'))
+                .distinct()
+                .select_from(sa.table(table, schema='guidebook'))
             ).scalars()
             assert set(values) == {False}

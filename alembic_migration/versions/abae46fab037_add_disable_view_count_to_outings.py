@@ -1,4 +1,4 @@
-"""Add disable view count to outings
+"""Add disable view count to outings.
 
 Revision ID: abae46fab037
 Revises: 2d710311ac56
@@ -6,9 +6,8 @@ Create Date: 2024-01-19 08:05:11.433263
 
 """
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'abae46fab037'
