@@ -417,3 +417,19 @@ def test_versions_after_restore(client, session, docs):  # noqa: F811
     assert session.get(HistoryMetaData, last.history_metadata_id).comment == 'Restored'
     assert last.document_archive_id == previous.document_archive_id
     assert last.document_locales_archive_id == previous.document_locales_archive_id
+
+
+def test_delete_without_keeping(client, session, settings, queue_config, docs):  # noqa: F811
+    from types import SimpleNamespace
+
+    from c2corg_api.views.document_delete import _delete as delete
+
+    # as a script deletes: no user, nothing kept
+    document_id = docs.article1.document_id
+    request = SimpleNamespace(
+        registry=SimpleNamespace(settings=settings, queue_config=queue_config)
+    )
+    delete(request, document_id, 'c', keep=False)
+
+    assert not _exists(session, document_id)
+    assert _entry(session, document_id) is None

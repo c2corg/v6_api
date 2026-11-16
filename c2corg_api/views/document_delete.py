@@ -254,9 +254,11 @@ def validate_requestor(request, **kwargs):
     )
 
 
-def _delete(request, document_id, document_type):
-    # kept a while, to be restored by a moderator (see views.document_trash)
-    keep_deleted_document(request, document_id, document_type)
+def _delete(request, document_id, document_type, keep=True):
+    # kept a while, to be restored by a moderator (see views.document_trash),
+    # unless the deletion must leave nothing (e.g. the erasure of an account)
+    if keep:
+        keep_deleted_document(request, document_id, document_type)
 
     if document_type == IMAGE_TYPE:
         # Files are actually removed only if the transaction succeeds
