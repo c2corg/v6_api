@@ -33,6 +33,15 @@ from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.cache_version import update_cache_version_full
 from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.common.document_types import (
+    ARTICLE_TYPE,
+    BOOK_TYPE,
+    IMAGE_TYPE,
+    OUTING_TYPE,
+    ROUTE_TYPE,
+    USERPROFILE_TYPE,
+    XREPORT_TYPE,
+)
 from c2corg_api.models.deleted_document import RETENTION, DeletedDocument
 from c2corg_api.models.document import (
     ArchiveDocument,
@@ -47,7 +56,6 @@ from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
-from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.route import ArchiveRoute
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
@@ -509,70 +517,233 @@ def _restore_image_files(request, tables):
         raise HTTPInternalServerError('Restoring the image files failed') from e
 
 
+# the fields shown with a deleted document, by type
+KEY_FIELDS = {
+    OUTING_TYPE: ('date_start', 'date_end', 'activities'),
+    ROUTE_TYPE: ('activities', 'elevation_max'),
+    WAYPOINT_TYPE: ('waypoint_type', 'elevation'),
+    ARTICLE_TYPE: ('article_type', 'activities'),
+    BOOK_TYPE: ('book_types', 'author'),
+    XREPORT_TYPE: ('date', 'event_type', 'event_activity'),
+    IMAGE_TYPE: ('image_type', 'date_time', 'activities'),
+}
+
+
 def list_entries(offset, limit):
     """Return the deleted documents that can be restored, the last deleted first."""
-    query = (
-        DBSession.query(DeletedDocument, User.name, User.forum_username)
-        .outerjoin(User, User.id == DeletedDocument.deleted_by)
-        .filter(
-            DeletedDocument.restored_at.is_(None),
-            DeletedDocument.deleted_at >= expired_before(),
-        )
+    query = DBSession.query(DeletedDocument).filter(
+        DeletedDocument.restored_at.is_(None),
+        DeletedDocument.deleted_at >= expired_before(),
     )
     total = query.count()
-    rows = (
+    entries = (
         query.order_by(DeletedDocument.deleted_at.desc(), DeletedDocument.id.desc())
         .offset(offset)
         .limit(limit)
         .all()
     )
+    histories = {entry.id: _history(entry) for entry in entries}
+    users = _users(
+        user_id
+        for entry in entries
+        for user_id in (entry.deleted_by, histories[entry.id]['author_id'])
+    )
     return {
         'total': total,
-        'documents': [_entry_summary(*row) for row in rows],
+        'documents': [
+            _entry_summary(entry, histories[entry.id], users) for entry in entries
+        ],
     }
 
 
-def _entry_summary(entry, name, forum_username):
+def _entry_summary(entry, history, users):
     return {
         'id': entry.id,
         'document_id': entry.document_id,
         'document_type': entry.document_type,
         'lang': entry.lang,
         'title': entry.title,
+        # who wrote the document (the locale when a locale was deleted), when
+        'author': _user(users, history['author_id']),
+        'created_at': history['created_at'],
+        'fields': _key_fields(entry),
         'deleted_at': entry.deleted_at.isoformat(),
+        'deleted_by': _user(users, entry.deleted_by),
         'expires_at': (entry.deleted_at + RETENTION).isoformat(),
         'restored_at': entry.restored_at.isoformat() if entry.restored_at else None,
-        'deleted_by': None
-        if entry.deleted_by is None
-        else {
-            'user_id': entry.deleted_by,
-            'name': name,
-            'forum_username': forum_username,
-        },
     }
+
+
+def _rows(entry, model):
+    return entry.snapshot['tables'].get(model.__table__.fullname, [])
+
+
+def _history(entry):
+    """Return the versions of the deleted document or locale, from the kept rows."""
+    version_rows = [
+        row
+        for row in _rows(entry, DocumentVersion)
+        if row['document_id'] == entry.document_id
+        and (entry.lang is None or row['lang'] == entry.lang)
+    ]
+    ids = {row['history_metadata_id'] for row in version_rows}
+    changes = sorted(
+        (
+            (datetime.fromisoformat(row['written_at']), row['user_id'])
+            for row in _rows(entry, HistoryMetaData)
+            if row['id'] in ids
+        ),
+        key=lambda change: change[0],
+    )
+    first, last = (changes[0], changes[-1]) if changes else ((None, None),) * 2
+    return {
+        'author_id': first[1],
+        'created_at': first[0].isoformat() if first[0] else None,
+        'last_edited_by_id': last[1],
+        'last_edited_at': last[0].isoformat() if last[0] else None,
+        'versions': len(changes),
+        'contributor_ids': sorted({user_id for _, user_id in changes}),
+    }
+
+
+def _key_fields(entry):
+    names = KEY_FIELDS.get(entry.document_type, ())
+    if entry.lang is not None:
+        # a deleted locale: the fields of the document, still there
+        document = DBSession.get(Document, entry.document_id)
+        return {name: _json_value(getattr(document, name, None)) for name in names}
+    clazz = _models(entry.document_type)[0]
+    row = next(
+        (r for r in _rows(entry, clazz) if r['document_id'] == entry.document_id),
+        {},
+    )
+    return {name: _kept_value(row.get(name)) for name in names}
+
+
+def _json_value(value):
+    if hasattr(value, 'isoformat'):
+        return value.isoformat()
+    return value
+
+
+def _kept_value(value):
+    # the arrays are kept in the text form of PostgreSQL: {a,b}
+    if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
+        return [item for item in value[1:-1].split(',') if item]
+    return value
+
+
+def _users(ids):
+    """Return the users of the given ids, by id."""
+    ids = {user_id for user_id in ids if user_id is not None}
+    if not ids:
+        return {}
+    rows = DBSession.query(User.id, User.name, User.forum_username).filter(
+        User.id.in_(ids)
+    )
+    return {
+        user_id: {'user_id': user_id, 'name': name, 'forum_username': forum_username}
+        for user_id, name, forum_username in rows
+    }
+
+
+def _user(users, user_id):
+    if user_id is None:
+        return None
+    # a user removed since: only the id
+    return users.get(
+        user_id, {'user_id': user_id, 'name': None, 'forum_username': None}
+    )
 
 
 def entry_details(entry):
-    """Describe a deleted document: its summary, locales and the rows kept."""
-    user = DBSession.get(User, entry.deleted_by) if entry.deleted_by else None
-    details = _entry_summary(
-        entry, user.name if user else None, user.forum_username if user else None
+    """Describe a deleted document: its summary, history, links and the rows kept."""
+    history = _history(entry)
+    associations = _associations(entry)
+    users = _users(
+        [entry.deleted_by, history['author_id'], history['last_edited_by_id']]
+        + history['contributor_ids']
     )
-    tables = entry.snapshot['tables']
-    details['locales'] = [
-        {'lang': row['lang'], 'title': row['title']}
-        for row in tables.get(DocumentLocale.__table__.fullname, [])
+    details = _entry_summary(entry, history, users)
+    locale_rows = [
+        row
+        for row in _rows(entry, DocumentLocale)
         if row['document_id'] == entry.document_id
+    ]
+    details['locales'] = [
+        {'lang': row['lang'], 'title': row['title']} for row in locale_rows
+    ]
+    details['last_edited_by'] = _user(users, history['last_edited_by_id'])
+    details['last_edited_at'] = history['last_edited_at']
+    details['versions'] = history['versions']
+    details['contributors'] = [
+        _user(users, user_id) for user_id in history['contributor_ids']
+    ]
+    details['associations'] = associations
+    # the comments stay in the forum: their topics, by language
+    langs = {row['id']: row['lang'] for row in locale_rows}
+    details['topics'] = [
+        {'lang': langs[row['document_locale_id']], 'topic_id': row['topic_id']}
+        for row in _rows(entry, DocumentTopic)
+        if row['document_locale_id'] in langs
     ]
     details['merged_document_ids'] = sorted(
         row['document_id']
-        for row in tables.get(Document.__table__.fullname, [])
+        for row in _rows(entry, Document)
         if row['document_id'] != entry.document_id
     )
     details['rows'] = {
-        name.split('.', 1)[1]: len(rows) for name, rows in sorted(tables.items())
+        name.split('.', 1)[1]: len(rows)
+        for name, rows in sorted(entry.snapshot['tables'].items())
     }
     return details
+
+
+def _associations(entry):
+    """Return the documents the deleted document was linked to, as they are now."""
+    linked = {}
+    for row in _rows(entry, Association):
+        if row['parent_document_id'] == entry.document_id:
+            linked[row['child_document_id']] = row['child_document_type']
+        elif row['child_document_id'] == entry.document_id:
+            linked[row['parent_document_id']] = row['parent_document_type']
+    if not linked:
+        return []
+    existing = set(
+        DBSession.execute(
+            select(Document.document_id).where(Document.document_id.in_(linked))
+        ).scalars()
+    )
+    titles = {}
+    for document_id, lang, title in DBSession.query(
+        DocumentLocale.document_id, DocumentLocale.lang, DocumentLocale.title
+    ).filter(DocumentLocale.document_id.in_(existing)):
+        titles.setdefault(document_id, {})[lang] = title
+    users = _users(
+        document_id
+        for document_id, document_type in linked.items()
+        if document_type == USERPROFILE_TYPE
+    )
+    result = []
+    for document_id, document_type in sorted(linked.items()):
+        if document_type == USERPROFILE_TYPE:
+            # the title of a user profile is the name of the user
+            title = users.get(document_id, {}).get('name')
+        else:
+            by_lang = titles.get(document_id, {})
+            title = next(
+                (by_lang[lang] for lang in default_langs if lang in by_lang), None
+            )
+        result.append(
+            {
+                'document_id': document_id,
+                'document_type': document_type,
+                'title': title,
+                # linked to a document deleted since: no title
+                'exists': document_id in existing,
+            }
+        )
+    return result
 
 
 # the views (routes in web.document_actions), for the moderators
@@ -616,3 +787,79 @@ def restore_deleted_document(request):
          'skipped': {'associations': 1}, 'missing_files': []}
     """
     return restore(request, get_entry(request.validated['id']))
+
+
+def forget_user(user_id, target_user_id):
+    """Remove or rewrite the deleted documents keeping a user being removed."""
+    # Called when an account is merged into another, which removes it
+    # (scripts/users/merge.py, the account removal requests): the deleted
+    # documents only this user wrote are removed with the account; in the
+    # others, the user becomes the target user, as in the tables of the
+    # documents, so that they can still be restored. Returns (removed,
+    # rewritten).
+    removed = rewritten = 0
+    for entry in DBSession.query(DeletedDocument).all():
+        if user_id not in _kept_user_ids(entry):
+            continue
+        if _history(entry)['contributor_ids'] == [user_id]:
+            DBSession.delete(entry)
+            removed += 1
+            continue
+        snapshot = json.loads(json.dumps(entry.snapshot))
+        _replace_user(snapshot['tables'], user_id, target_user_id)
+        entry.snapshot = snapshot
+        rewritten += 1
+    DBSession.flush()
+    return removed, rewritten
+
+
+# the columns of the kept rows holding a user id
+_USER_COLUMNS = {
+    HistoryMetaData.__table__.fullname: ('user_id',),
+    AssociationLog.__table__.fullname: ('user_id',),
+    DocumentTag.__table__.fullname: ('user_id',),
+    DocumentTagLog.__table__.fullname: ('user_id',),
+    DocumentChange.__table__.fullname: ('user_id',),
+}
+
+
+def _kept_user_ids(entry):
+    tables = entry.snapshot['tables']
+    ids = {
+        row[column]
+        for name, columns in _USER_COLUMNS.items()
+        for row in tables.get(name, [])
+        for column in columns
+    }
+    for row in tables.get(DocumentChange.__table__.fullname, []):
+        ids.update(int(i) for i in _kept_value(row['user_ids']) or [])
+    for name in (Association.__table__.fullname, AssociationLog.__table__.fullname):
+        for row in tables.get(name, []):
+            for side in ('parent', 'child'):
+                if row[f'{side}_document_type'] == USERPROFILE_TYPE:
+                    ids.add(row[f'{side}_document_id'])
+    return ids
+
+
+def _replace_user(tables, user_id, target_user_id):
+    for name, columns in _USER_COLUMNS.items():
+        for row in tables.get(name, []):
+            for column in columns:
+                if row[column] == user_id:
+                    row[column] = target_user_id
+    for row in tables.get(DocumentChange.__table__.fullname, []):
+        ids = [int(i) for i in _kept_value(row['user_ids']) or []]
+        if user_id in ids:
+            ids = list(
+                dict.fromkeys(target_user_id if i == user_id else i for i in ids)
+            )
+            row['user_ids'] = '{' + ','.join(str(i) for i in ids) + '}'
+    # the user profile of the user (outing participants...)
+    for name in (Association.__table__.fullname, AssociationLog.__table__.fullname):
+        for row in tables.get(name, []):
+            for side in ('parent', 'child'):
+                if (
+                    row[f'{side}_document_type'] == USERPROFILE_TYPE
+                    and row[f'{side}_document_id'] == user_id
+                ):
+                    row[f'{side}_document_id'] = target_user_id

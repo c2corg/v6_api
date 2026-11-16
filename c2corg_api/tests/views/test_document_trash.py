@@ -28,6 +28,7 @@ from c2corg_api.tests.views.test_document_delete import (  # noqa: F401
     docs,
 )
 from c2corg_api.views.document import update_version
+from c2corg_api.views.document_trash import forget_user
 
 # the tables a deletion and a restoring change besides the documents
 NOT_COMPARED = {
@@ -253,10 +254,24 @@ def test_restore_skips_the_associations_of_deleted_documents(
 ):
     _add_association(session, user_ids, docs.book1, docs.article1)
     session.flush()
+    book_id = docs.book1.document_id
     _delete(client, docs.article1.document_id)
-    _delete(client, docs.book1.document_id)
+    _delete(client, book_id)
 
-    body = _restore(client, _entry(session, docs.article1.document_id).id).json
+    entry_id = _entry(session, docs.article1.document_id).id
+
+    details = client.get(
+        f'/documents/deleted/{entry_id}', headers=_moderator(), status=200
+    ).json
+    book = next(a for a in details['associations'] if a['document_id'] == book_id)
+    assert book == {
+        'document_id': book_id,
+        'document_type': 'b',
+        'title': None,
+        'exists': False,
+    }
+
+    body = _restore(client, entry_id).json
 
     assert body['skipped'] == {'associations': 1, 'association_log': 1}
 
@@ -302,6 +317,8 @@ def test_restore_requires_moderator(client, session, docs):  # noqa: F811
 
 
 def test_list_and_details(client, session, docs):  # noqa: F811
+    route1_id = docs.route1.document_id
+    route1_title = docs.route1.locales[0].title
     _delete(client, docs.article1.document_id)
     _delete(client, docs.waypoint3.document_id, 'fr')
     _delete(client, docs.outing1.document_id)
@@ -316,8 +333,17 @@ def test_list_and_details(client, session, docs):  # noqa: F811
     assert outing['document_type'] == 'o'
     assert outing['lang'] is None
     assert outing['deleted_by']['forum_username'] == 'moderator'
+    assert outing['author']['forum_username'] == 'contributor'
+    assert outing['created_at'] is not None
+    assert outing['fields'] == {
+        'date_start': '2016-01-01',
+        'date_end': '2016-01-01',
+        'activities': ['skitouring'],
+    }
     assert locale['lang'] == 'fr'
     assert locale['title'] == 'Mont Granier'
+    # a deleted locale: the fields of the document, still there
+    assert locale['fields'] == {'waypoint_type': 'summit', 'elevation': 3}
 
     page = client.get(
         '/documents/deleted?offset=1&limit=1', headers=_moderator(), status=200
@@ -332,6 +358,18 @@ def test_list_and_details(client, session, docs):  # noqa: F811
         {'lang': row.lang, 'title': row.title} for row in docs.outing1.locales
     ]
     assert details['rows']['documents'] == 2
+    assert details['versions'] == 1
+    assert details['last_edited_by']['forum_username'] == 'contributor'
+    assert [u['forum_username'] for u in details['contributors']] == ['contributor']
+    route = next(a for a in details['associations'] if a['document_type'] == 'r')
+    assert route == {
+        'document_id': route1_id,
+        'document_type': 'r',
+        'title': route1_title,
+        'exists': True,
+    }
+    assert {a['document_type'] for a in details['associations']} == {'r', 'i'}
+    assert details['topics'] == [{'lang': 'en', 'topic_id': 6}]
 
 
 @all_requests
@@ -432,4 +470,61 @@ def test_delete_without_keeping(client, session, settings, queue_config, docs): 
     delete(request, document_id, 'c', keep=False)
 
     assert not _exists(session, document_id)
+    assert _entry(session, document_id) is None
+
+
+def test_forget_user_alone(client, session, user_ids, docs):  # noqa: F811
+    # a document only this user wrote: removed with the account
+    document_id = docs.outing1.document_id
+    _delete(client, document_id)
+
+    assert forget_user(user_ids['contributor'], user_ids['moderator']) == (1, 0)
+
+    assert _entry(session, document_id) is None
+
+
+def test_forget_user_with_others(client, session, user_ids, docs):  # noqa: F811
+    # also written by another user: the user becomes the target user, the
+    # document can still be restored
+    contributor, moderator = user_ids['contributor'], user_ids['moderator']
+    docs.article1.locales[0].title = 'Edited'
+    session.flush()
+    update_version(docs.article1, moderator, 'edit', [UpdateType.LANG], ['en'])
+    document_id = docs.article1.document_id
+    _delete(client, document_id)
+
+    assert forget_user(contributor, user_ids['contributor2']) == (0, 1)
+
+    session.expire_all()
+    entry = _entry(session, document_id)
+    authors = {
+        row['user_id'] for row in entry.snapshot['tables']['guidebook.history_metadata']
+    }
+    assert authors == {user_ids['contributor2'], moderator}
+    _restore(client, entry.id)
+    history = session.query(HistoryMetaData.user_id).join(
+        DocumentVersion, DocumentVersion.history_metadata_id == HistoryMetaData.id
+    )
+    assert contributor not in {
+        user_id
+        for (user_id,) in history.filter(DocumentVersion.document_id == document_id)
+    }
+
+
+def test_forget_user_others_untouched(client, session, user_ids, docs):  # noqa: F811
+    _delete(client, docs.outing1.document_id)
+
+    assert forget_user(user_ids['moderator'], user_ids['contributor']) == (0, 0)
+
+    assert _entry(session, docs.outing1.document_id) is not None
+
+
+def test_merge_user_accounts(client, session, user_ids, queue_config, docs):  # noqa: F811
+    from c2corg_api.scripts.users.merge import merge_user_accounts
+
+    document_id = docs.outing1.document_id
+    _delete(client, document_id)
+
+    merge_user_accounts(user_ids['contributor'], user_ids['contributor2'], queue_config)
+
     assert _entry(session, document_id) is None
