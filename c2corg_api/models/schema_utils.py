@@ -4,7 +4,6 @@ default_fields_doc = [
     'document_id',
     'version',
     'waypoint_type',
-    'disable_view_count',
     'view_count',
 ]
 default_fields_locale = ['version', 'lang']

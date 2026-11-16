@@ -162,11 +162,6 @@ def update_document(
         if document.type != MAP_TYPE and UpdateType.GEOM in update_types:
             update_maps_for_document(document, reset=True)
 
-        if UpdateType.DISABLE_VIEW_COUNT in update_types:
-            update_disable_view_count_for_document(
-                document_in.document_id, document_in.disable_view_count
-            )
-
         if after_update:
             after_update(document, update_types, user_id=user_id)
 
@@ -792,13 +787,6 @@ def document_in_lang(
     )
     doc_dict['license'] = get_license(document.type, doc_dict)
     return doc_dict
-
-
-def update_disable_view_count_for_document(document_id, disable_view_count):
-    """Update document disable_view_count value."""
-    DBSession.query(Document).filter(Document.document_id == document_id).update(
-        {'disable_view_count': disable_view_count}
-    )
 
 
 def set_associations(document, lang, editing_view):

@@ -147,7 +147,14 @@ def create_outing(request):
     set_default_geom = functools.partial(
         set_default_geometry, request.validated['associations']['routes']
     )
-    return create_document(request, outing_schema, before_add=set_default_geom)
+
+    def before_add(outing, user_id):
+        if outing.disable_view_count is None:
+            # not given: the counter is shown
+            outing.disable_view_count = False
+        set_default_geom(outing, user_id)
+
+    return create_document(request, outing_schema, before_add=before_add)
 
 
 @write(
@@ -167,9 +174,23 @@ def update_outing(request):
         # moderators can change every outing, but a normal user can only
         # change an outing that they are associated to
         raise HTTPForbidden('No permission to change this outing')
-    return put_document(
-        request, Outing, outing_schema, before_update=update_default_geometry
-    )
+    return put_document(request, Outing, outing_schema, before_update=before_update)
+
+
+def before_update(outing, outing_in):
+    keep_disable_view_count(outing, outing_in)
+    update_default_geometry(outing, outing_in)
+
+
+def keep_disable_view_count(outing, outing_in):
+    """Keep the setting of the views counter when an update does not give it.
+
+    Only the users of the outing and the moderators get the setting with the
+    outing (see `views.document_schemas.adapt_get_outing_response`): a client
+    which did not get it sends no value or null, which does not change it.
+    """
+    if outing_in.disable_view_count is None:
+        outing_in.disable_view_count = outing.disable_view_count
 
 
 def list_outings(request):

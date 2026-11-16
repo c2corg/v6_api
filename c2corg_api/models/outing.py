@@ -64,6 +64,11 @@ class _OutingMixin:
 
     disable_comments = Column(Boolean)
 
+    # the views of the outing are only shown to its users (see `view_count`)
+    disable_view_count = Column(
+        Boolean, nullable=False, default=False, server_default='false'
+    )
+
     hiking_rating = Column(enums.hiking_rating)
 
     ski_rating = Column(enums.ski_rating)
@@ -116,6 +121,7 @@ attributes = [
     'snow_quality',
     'snow_quantity',
     'disable_comments',
+    'disable_view_count',
     'hiking_rating',
     'ski_rating',
     'labande_global_rating',

@@ -15,7 +15,7 @@ from c2corg_api.models.common import document_types
 from c2corg_api.models.common.attributes import quality_types
 from c2corg_api.models.utils import copy_attributes, extend_dict, wkb_to_shape
 
-UpdateType = enum.Enum('UpdateType', 'FIGURES LANG GEOM DISABLE_VIEW_COUNT')
+UpdateType = enum.Enum('UpdateType', 'FIGURES LANG GEOM')
 
 DOCUMENT_TYPE = document_types.DOCUMENT_TYPE
 
@@ -64,7 +64,6 @@ class Document(Base, _DocumentMixin):
     __tablename__ = 'documents'
     document_id = Column(Integer, primary_key=True)
     view_count = Column(Integer, nullable=False, server_default='0')
-    disable_view_count = Column(Boolean, nullable=False, server_default='false')
 
     locales = relationship('DocumentLocale')
     geometry = relationship('DocumentGeometry', uselist=False)
@@ -128,7 +127,6 @@ class Document(Base, _DocumentMixin):
             'document': self.version,
             'locales': {locale.lang: locale.version for locale in self.locales},
             'geometry': self.geometry.version if self.geometry else None,
-            'disable_view_count': self.disable_view_count,
         }
 
     def get_update_type(self, old_versions):
@@ -148,9 +146,6 @@ class Document(Base, _DocumentMixin):
             if self.geometry
             else old_versions['geometry'] is None
         )
-        disable_view_count_equal = (
-            self.disable_view_count == old_versions['disable_view_count']
-        )
 
         changed_langs = []
         locale_versions = old_versions['locales']
@@ -168,8 +163,6 @@ class Document(Base, _DocumentMixin):
             update_types.append(UpdateType.GEOM)
         if changed_langs:
             update_types.append(UpdateType.LANG)
-        if disable_view_count_equal:
-            update_types.append(UpdateType.DISABLE_VIEW_COUNT)
 
         return (update_types, changed_langs)
 
