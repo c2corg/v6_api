@@ -1,4 +1,4 @@
-"""add view count to document
+"""Add view count to document.
 
 Revision ID: 2d710311ac56
 Revises: b3d5f8a1c9e2
@@ -6,9 +6,8 @@ Create Date: 2024-01-08 13:28:50.090334
 
 """
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '2d710311ac56'
