@@ -20,7 +20,7 @@ from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
 from c2corg_api.web.handlers import serve_read, typed_values
-from c2corg_api.web.params import Id, Limit, Offset
+from c2corg_api.web.params import DocType, Id, Limit, Offset, day, natural
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 Moderator = Annotated[None, Depends(permission_check('moderator'))]
@@ -68,9 +68,36 @@ def deleted_documents(
     limit: Annotated[
         Limit | None, Query(description='How many: 30 by default, 100 at most.')
     ] = None,
+    type: Annotated[
+        DocType | None, Query(description='Only the documents of this type.')
+    ] = None,
+    author: Annotated[
+        natural('author') | None,
+        Query(description='Only the documents written by this user.'),
+    ] = None,
+    deleted_by: Annotated[
+        natural('deleted_by') | None,
+        Query(description='Only the documents deleted by this user.'),
+    ] = None,
+    deleted_since: Annotated[
+        day('deleted_since') | None,
+        Query(description='Only the documents deleted this day or after.'),
+    ] = None,
+    deleted_until: Annotated[
+        day('deleted_until') | None,
+        Query(description='Only the documents deleted this day or before.'),
+    ] = None,
 ):
     """Return the deleted documents a moderator can restore, the last first."""
-    validated = {'offset': offset, 'limit': limit}
+    validated = {
+        'offset': offset,
+        'limit': limit,
+        'type': type,
+        'author': author,
+        'deleted_by': deleted_by,
+        'deleted_since': deleted_since,
+        'deleted_until': deleted_until,
+    }
     return serve_read(request, user, [typed_values(validated)], read_deleted_documents)
 
 

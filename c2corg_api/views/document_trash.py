@@ -12,7 +12,7 @@
 # read as arrays from PostgreSQL 10).
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from itertools import batched
 
 from geoalchemy2 import Geometry
@@ -184,16 +184,16 @@ def keep_deleted_locale(request, document_id, document_type, lang):
 
 
 def _add_entry(request, snapshot, document_id, document_type, lang):
-    DBSession.add(
-        DeletedDocument(
-            document_id=document_id,
-            document_type=document_type,
-            lang=lang,
-            title=_title(snapshot, document_id, lang),
-            deleted_by=request.authenticated_userid,
-            snapshot=snapshot.as_json(),
-        )
+    entry = DeletedDocument(
+        document_id=document_id,
+        document_type=document_type,
+        lang=lang,
+        title=_title(snapshot, document_id, lang),
+        deleted_by=request.authenticated_userid,
+        snapshot=snapshot.as_json(),
     )
+    entry.author_id = _history(entry)['author_id']
+    DBSession.add(entry)
 
 
 def _title(snapshot, document_id, lang):
@@ -529,12 +529,33 @@ KEY_FIELDS = {
 }
 
 
-def list_entries(offset, limit):
+def list_entries(
+    offset,
+    limit,
+    document_type=None,
+    author_id=None,
+    deleted_by=None,
+    deleted_since=None,
+    deleted_until=None,
+):
     """Return the deleted documents that can be restored, the last deleted first."""
+    # deleted_since and deleted_until are days, both included
     query = DBSession.query(DeletedDocument).filter(
         DeletedDocument.restored_at.is_(None),
         DeletedDocument.deleted_at >= expired_before(),
     )
+    if document_type is not None:
+        query = query.filter(DeletedDocument.document_type == document_type)
+    if author_id is not None:
+        query = query.filter(DeletedDocument.author_id == author_id)
+    if deleted_by is not None:
+        query = query.filter(DeletedDocument.deleted_by == deleted_by)
+    if deleted_since is not None:
+        query = query.filter(DeletedDocument.deleted_at >= _start_of(deleted_since))
+    if deleted_until is not None:
+        query = query.filter(
+            DeletedDocument.deleted_at < _start_of(deleted_until + timedelta(days=1))
+        )
     total = query.count()
     entries = (
         query.order_by(DeletedDocument.deleted_at.desc(), DeletedDocument.id.desc())
@@ -554,6 +575,10 @@ def list_entries(offset, limit):
             _entry_summary(entry, histories[entry.id], users) for entry in entries
         ],
     }
+
+
+def _start_of(day):
+    return datetime(day.year, day.month, day.day, tzinfo=UTC)
 
 
 def _entry_summary(entry, history, users):
@@ -757,10 +782,20 @@ def read_deleted_documents(request):
 
     Request:
         `GET` `/documents/deleted?offset=0&limit=30`
+
+        Filters: `type` (`o`...), `author` and `deleted_by` (user ids),
+        `deleted_since` and `deleted_until` (days, YYYY-MM-DD, included).
     """
-    offset = request.validated.get('offset', 0)
-    limit = min(request.validated.get('limit', LIMIT_DEFAULT), LIMIT_MAX)
-    return list_entries(offset, limit)
+    validated = request.validated
+    return list_entries(
+        validated.get('offset') or 0,
+        min(validated.get('limit') or LIMIT_DEFAULT, LIMIT_MAX),
+        document_type=validated.get('type'),
+        author_id=validated.get('author'),
+        deleted_by=validated.get('deleted_by'),
+        deleted_since=validated.get('deleted_since'),
+        deleted_until=validated.get('deleted_until'),
+    )
 
 
 def read_deleted_document(request):
@@ -808,6 +843,7 @@ def forget_user(user_id, target_user_id):
         snapshot = json.loads(json.dumps(entry.snapshot))
         _replace_user(snapshot['tables'], user_id, target_user_id)
         entry.snapshot = snapshot
+        entry.author_id = _history(entry)['author_id']
         rewritten += 1
     DBSession.flush()
     return removed, rewritten

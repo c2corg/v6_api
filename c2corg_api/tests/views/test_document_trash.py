@@ -372,6 +372,42 @@ def test_list_and_details(client, session, docs):  # noqa: F811
     assert details['topics'] == [{'lang': 'en', 'topic_id': 6}]
 
 
+def test_list_filters(client, session, user_ids, docs):  # noqa: F811
+    _delete(client, docs.article1.document_id)
+    _delete(client, docs.waypoint3.document_id, 'fr')
+    _delete(client, docs.outing1.document_id)
+    contributor, moderator = user_ids['contributor'], user_ids['moderator']
+    # deleted before
+    _entry(session, docs.article1.document_id).deleted_at = datetime.datetime(
+        2026, 11, 2, 12, tzinfo=datetime.UTC
+    )
+    session.flush()
+    today = datetime.datetime.now(datetime.UTC).date()
+
+    def listed(query):
+        body = client.get(
+            '/documents/deleted?' + query, headers=_moderator(), status=200
+        ).json
+        assert body['total'] == len(body['documents'])
+        return [(d['document_id'], d['lang']) for d in body['documents']]
+
+    assert _entry(session, docs.outing1.document_id).author_id == contributor
+    assert listed('type=o') == [(docs.outing1.document_id, None)]
+    assert listed(f'author={contributor}&type=w') == [
+        (docs.waypoint3.document_id, 'fr')
+    ]
+    assert listed(f'deleted_by={contributor}') == []
+    assert len(listed(f'deleted_by={moderator}')) == 3
+    assert listed('deleted_since=2026-11-01&deleted_until=2026-11-02') == [
+        (docs.article1.document_id, None)
+    ]
+    assert len(listed(f'deleted_since={today}')) == 2
+    assert listed('deleted_until=2026-11-01') == []
+
+    for query in ('type=q', 'author=me', 'deleted_since=yesterday'):
+        client.get('/documents/deleted?' + query, headers=_moderator(), status=422)
+
+
 @all_requests
 def _image_service(url, request):
     _image_service.calls.append((request.url, request.body))
@@ -501,6 +537,7 @@ def test_forget_user_with_others(client, session, user_ids, docs):  # noqa: F811
         row['user_id'] for row in entry.snapshot['tables']['guidebook.history_metadata']
     }
     assert authors == {user_ids['contributor2'], moderator}
+    assert entry.author_id == user_ids['contributor2']
     _restore(client, entry.id)
     history = session.query(HistoryMetaData.user_id).join(
         DocumentVersion, DocumentVersion.history_metadata_id == HistoryMetaData.id

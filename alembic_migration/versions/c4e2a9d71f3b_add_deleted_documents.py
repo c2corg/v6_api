@@ -32,11 +32,13 @@ def upgrade():
             nullable=False,
         ),
         sa.Column('deleted_by', sa.Integer(), nullable=True),
+        sa.Column('author_id', sa.Integer(), nullable=True),
         sa.Column('restored_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('restored_by', sa.Integer(), nullable=True),
         sa.Column('snapshot', JSONB(), nullable=False),
         sa.ForeignKeyConstraint(['lang'], ['guidebook.langs.lang']),
         sa.ForeignKeyConstraint(['deleted_by'], ['users.user.id'], ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['author_id'], ['users.user.id'], ondelete='SET NULL'),
         sa.ForeignKeyConstraint(
             ['restored_by'], ['users.user.id'], ondelete='SET NULL'
         ),

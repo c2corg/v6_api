@@ -46,6 +46,12 @@ class DeletedDocument(Base):
         Integer, ForeignKey(users_schema + '.user.id', ondelete='SET NULL')
     )
 
+    # who wrote the document (the locale when a locale was deleted), the
+    # author of its first version: to filter the list of the moderators
+    author_id = Column(
+        Integer, ForeignKey(users_schema + '.user.id', ondelete='SET NULL')
+    )
+
     restored_at = Column(DateTime(timezone=True))
 
     restored_by = Column(
