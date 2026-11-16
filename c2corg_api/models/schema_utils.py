@@ -1,11 +1,6 @@
 """Field lists of the listing schemas (see `ModelSchema.restrict`)."""
 
-default_fields_doc = [
-    'document_id',
-    'version',
-    'waypoint_type',
-    'view_count',
-]
+default_fields_doc = ['document_id', 'version', 'waypoint_type']
 default_fields_locale = ['version', 'lang']
 default_fields_geometry = ['version']
 

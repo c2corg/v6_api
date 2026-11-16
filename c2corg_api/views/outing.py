@@ -2,8 +2,10 @@ import functools
 from datetime import UTC, datetime, timedelta
 
 from c2corg_api.httpexceptions import HTTPForbidden
+from c2corg_api.models import DBSession
 from c2corg_api.models.common.attributes import activities
 from c2corg_api.models.common.fields_outing import fields_outing
+from c2corg_api.models.document import Document
 from c2corg_api.models.outing import (
     OUTING_TYPE,
     ArchiveOuting,
@@ -19,6 +21,7 @@ from c2corg_api.schemas.outing import (
 )
 from c2corg_api.views import (
     set_default_geom_from_associations,
+    set_private_cache_header,
 )
 from c2corg_api.views.document import (
     collection_get,
@@ -30,7 +33,6 @@ from c2corg_api.views.document import (
 )
 from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import (
-    adapt_get_outing_response,
     outing_documents_config,
     outing_schema_adaptor,
 )
@@ -38,6 +40,7 @@ from c2corg_api.views.document_version import document_version
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     has_permission_for_outing,
+    is_outing_user,
     validate_associations,
     validate_id,
 )
@@ -186,8 +189,8 @@ def keep_disable_view_count(outing, outing_in):
     """Keep the setting of the views counter when an update does not give it.
 
     Only the users of the outing and the moderators get the setting with the
-    outing (see `views.document_schemas.adapt_get_outing_response`): a client
-    which did not get it sends no value or null, which does not change it.
+    outing (see `add_view_count`): a client which did not get it sends no
+    value or null, which does not change it.
     """
     if outing_in.disable_view_count is None:
         outing_in.disable_view_count = outing.disable_view_count
@@ -203,8 +206,49 @@ def get_outing(request):
         outing_documents_config,
         outing_schema,
         adapt_schema=outing_schema_adaptor,
-        adapt_response=adapt_get_outing_response,
+        adapt_response=add_view_count,
     )
+
+
+def add_view_count(request, outing):
+    """Add the views of an outing to its (cached) document, for this reader.
+
+    `view_count` is read from the database, it is not cached with the
+    document: it changes without a new version, and is not shown to everyone.
+    It is null when the counter is disabled (`disable_view_count`), except
+    for the users of the outing. `disable_view_count` is only given to the
+    users of the outing and to the moderators (who may change it).
+
+    Return the document and the suffix of its etag.
+    """
+    if 'redirects_to' in outing:
+        return outing, ''
+
+    outing = dict(outing)
+    outing_id = request.validated['id']
+    is_user = is_outing_user(request.authenticated_userid, outing_id)
+    may_change = is_user or request.has_permission('moderator')
+    disabled = outing.get('disable_view_count')
+
+    if disabled and not is_user:
+        view_count = None
+    else:
+        view_count = (
+            DBSession.query(Document.view_count)
+            .filter(Document.document_id == outing_id)
+            .scalar()
+        )
+    outing['view_count'] = view_count
+    if not may_change:
+        outing['disable_view_count'] = None
+
+    # the answer depends on who reads it
+    request.response.headers['Vary'] = 'Authorization'
+    if may_change:
+        set_private_cache_header(request)
+
+    seen = 'x' if view_count is None else view_count
+    return outing, f'v{seen}{"e" if may_change else ""}'
 
 
 def get_outing_info(request):

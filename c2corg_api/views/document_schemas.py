@@ -39,7 +39,7 @@ from c2corg_api.schemas.article import article_listing_schema
 from c2corg_api.schemas.book import book_listing_schema
 from c2corg_api.schemas.coverage import coverage_listing_schema
 from c2corg_api.schemas.image import image_listing_schema
-from c2corg_api.schemas.outing import outing_collection_schema, outing_schema
+from c2corg_api.schemas.outing import outing_schema
 from c2corg_api.schemas.route import route_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.schemas.user_profile import user_profile_listing_schema
@@ -125,9 +125,7 @@ class GetDocumentsConfig:
         return self.fields_geometry
 
 
-def make_schema_adaptor(
-    adapt_schema_for_type, type_field, field_list_type, schema=None
-):
+def make_schema_adaptor(adapt_schema_for_type, type_field, field_list_type):
     """Return a function adapting a base schema to a document type.
 
     Returns a function which adapts a base schema to a specific document
@@ -137,10 +135,7 @@ def make_schema_adaptor(
     """
 
     def adapt_schema(_base_schema, document):
-        args = [getattr(document, type_field), field_list_type]
-        if schema:
-            args.append(schema)
-        return adapt_schema_for_type(*args)
+        return adapt_schema_for_type(getattr(document, type_field), field_list_type)
 
     return adapt_schema
 
@@ -205,7 +200,7 @@ image_documents_config = GetDocumentsConfig(
 # outings
 
 
-def adapt_outing_schema_for_activities(activities, field_list_type, schema):
+def adapt_outing_schema_for_activities(activities, field_list_type):
     """Get the schema for a set of activities.
 
     `field_list_type` should be either "fields" or "listing".
@@ -217,17 +212,14 @@ def adapt_outing_schema_for_activities(activities, field_list_type, schema):
         activities = attributes.activities
 
     fields = get_all_fields(fields_outing, activities, field_list_type)
-    return schema.restrict(fields)
+    return outing_schema.restrict(fields)
 
 
 outing_schema_adaptor = make_schema_adaptor(
-    adapt_outing_schema_for_activities, 'activities', 'fields', schema=outing_schema
+    adapt_outing_schema_for_activities, 'activities', 'fields'
 )
 outing_listing_schema_adaptor = make_schema_adaptor(
-    adapt_outing_schema_for_activities,
-    'activities',
-    'listing',
-    schema=outing_collection_schema,
+    adapt_outing_schema_for_activities, 'activities', 'listing'
 )
 
 outing_documents_config = GetDocumentsConfig(
@@ -239,20 +231,6 @@ outing_documents_config = GetDocumentsConfig(
     set_custom_fields=set_author,
     include_img_count=True,
 )
-
-
-def adapt_get_outing_response(outing_response, user_id):
-    """Hide the views from the users not associated to the outing, if disabled."""
-    is_user_in_doc = any(
-        user['document_id'] == user_id
-        for user in outing_response['associations']['users']
-    )
-    if not is_user_in_doc:
-        disable_view_count = outing_response.get('disable_view_count')
-        if disable_view_count:
-            outing_response['view_count'] = None
-        outing_response['disable_view_count'] = None
-    return outing_response
 
 
 # xreports

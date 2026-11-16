@@ -54,6 +54,7 @@ class OutingSchema(DocumentSchema):
     snow_quality: OneOf(a.condition_ratings) = None
     snow_quantity: OneOf(a.condition_ratings) = None
     disable_comments: Bool = None
+    # null or missing in an update: unchanged (see `views.outing`)
     disable_view_count: Bool = None
     hiking_rating: OneOf(a.hiking_ratings) = None
     ski_rating: OneOf(a.ski_ratings) = None
@@ -73,28 +74,12 @@ class OutingSchema(DocumentSchema):
 OutingCreateSchema = create_schema(OutingSchema, AssociationsSchema)
 OutingUpdateSchema = update_schema(OutingCreateSchema)
 
-outing_children = document_children(
-    locale_schema=OutingLocaleSchema,
-    locale_model=OutingLocale,
-    geometry=OutingGeometrySchema,
-)
-
-# the views of an outing are read, never written
 outing_schema = ModelSchema(
     Outing,
     OutingSchema,
-    outing_children,
-    fields=[*OutingSchema.model_fields, 'view_count'],
-)
-
-# the listings have neither the views nor their setting
-outing_collection_schema = ModelSchema(
-    Outing,
-    OutingSchema,
-    outing_children,
-    fields=[
-        name
-        for name in OutingSchema.model_fields
-        if name not in ('view_count', 'disable_view_count')
-    ],
+    document_children(
+        locale_schema=OutingLocaleSchema,
+        locale_model=OutingLocale,
+        geometry=OutingGeometrySchema,
+    ),
 )

@@ -705,9 +705,6 @@ def read_document(
             cook_locale=cook,
         )
 
-    response = None
-    user_id = request.authenticated_userid
-
     if not editing_view:
         cache_key = get_cache_key(
             id,
@@ -720,18 +717,24 @@ def read_document(
             # an existing document, read (not edited) by someone
             count_view(request, id)
 
-            # set and check the etag: if the etag value provided in the
-            # request equals the current etag, return 'NotModified'
-            etag_cache(request, cache_key)
-            response = get_or_create(cache, cache_key, create_response)
+            if adapt_response is None:
+                # set and check the etag: if the etag value provided in the
+                # request equals the current etag, return 'NotModified'
+                etag_cache(request, cache_key)
+                return get_or_create(cache, cache_key, create_response)
 
-    if response is None:
-        # don't cache if requesting a document for editing
-        response = create_response()
+            # the cached document, completed for this reader: the etag also
+            # depends on what was added
+            response, etag = adapt_response(
+                request, get_or_create(cache, cache_key, create_response)
+            )
+            etag_cache(request, f'{cache_key}-{etag}')
+            return response
 
-    if adapt_response:
-        return adapt_response(response, user_id)
-
+    # don't cache if requesting a document for editing
+    response = create_response()
+    if adapt_response is not None:
+        response, _ = adapt_response(request, response)
     return response
 
 

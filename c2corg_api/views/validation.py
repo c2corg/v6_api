@@ -519,7 +519,13 @@ def has_permission_for_outing(request, outing_id):
         # moderators can change everything
         return True
 
-    user_id = request.authenticated_userid
+    return is_outing_user(request.authenticated_userid, outing_id)
+
+
+def is_outing_user(user_id, outing_id):
+    """Check if the user with the given id is associated to an outing."""
+    if user_id is None:
+        return False
     return DBSession.query(
         exists().where(
             and_(

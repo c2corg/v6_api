@@ -24,6 +24,7 @@
       "date_end": "str",
       "date_start": "str",
       "disable_comments": "null",
+      "disable_view_count": "bool",
       "document_id": "int",
       "elevation_access": "null",
       "elevation_max": "int",
