@@ -45,8 +45,11 @@ redis.db_jobs = {redis_db_jobs}
 # queue configuration
 redis.exchange = {redis_exchange}
 redis.queue_es_sync = {redis_queue_es}
-redis.queue_documents_views_sync = {redis_queue_documents_views}
 redis.queue_pool = 20
+
+# the counters of the views of the documents, in the queue database, until
+# the background job adds them to the database
+redis.documents_views_key = {redis_documents_views_key}
 
 # cache configuration
 redis.cache_key_prefix = {redis_cache_key_prefix}

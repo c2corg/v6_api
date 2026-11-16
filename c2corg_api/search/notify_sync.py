@@ -1,10 +1,10 @@
 import logging
 
+from kombu.pools import producers
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 
 from c2corg_api.models import DBSession
-from c2corg_api.queues.queues_service import publish
 
 log = logging.getLogger(__name__)
 
@@ -18,8 +18,32 @@ def notify_es_syncer(queue_config):
     """
 
     def push_notification():
-        log.info('Notifying ElasticSearch syncer')
-        publish(queue_config, 'please sync')
+        def on_revive(channel):
+            """Try to re-create the Redis queue on connection errors."""
+            try:
+                # try to unbind the queue: it may already be gone
+                channel.queue_unbind(
+                    queue_config.queue.name, exchange=queue_config.exchange.name
+                )
+            except Exception:
+                log.debug('Unbinding the ES sync queue failed', exc_info=True)
+
+            # the re-create the queue
+            channel.queue_bind(
+                queue_config.queue.name, exchange=queue_config.exchange.name
+            )
+
+        with producers[queue_config.connection].acquire(
+            block=True, timeout=3
+        ) as producer:
+            log.info('Notifying ElasticSearch syncer')
+            producer.publish(
+                'please sync',
+                exchange=queue_config.exchange,
+                declare=[queue_config.exchange, queue_config.queue],
+                retry=True,
+                retry_policy={'max_retries': 3, 'on_revive': on_revive},
+            )
 
     run_on_successful_transaction(push_notification)
 

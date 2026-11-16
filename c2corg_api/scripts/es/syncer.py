@@ -7,9 +7,8 @@ from sqlalchemy import engine_from_config
 from sqlalchemy.orm import sessionmaker
 
 from c2corg_api.config import get_appsettings, parse_vars, setup_logging
-from c2corg_api.queues.queues_service import get_queue_config
 from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import configure_es_from_config
+from c2corg_api.search import configure_es_from_config, get_queue_config
 
 log = logging.getLogger('c2corg_api_syncer')
 
@@ -80,7 +79,7 @@ def main(argv=sys.argv):
     Session = sessionmaker()  # noqa
     Session.configure(bind=engine)
     configure_es_from_config(settings)
-    queue_config = get_queue_config(settings, settings['redis.queue_es_sync'])
+    queue_config = get_queue_config(settings)
     batch_size = int(settings.get('elasticsearch.batch_size.syncer', 1000))
 
     with queue_config.connection:

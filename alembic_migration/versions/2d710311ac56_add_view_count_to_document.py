@@ -5,6 +5,7 @@ Revises: b3d5f8a1c9e2
 Create Date: 2024-01-08 13:28:50.090334
 
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -15,6 +16,7 @@ down_revision = 'b3d5f8a1c9e2'
 branch_labels = None
 depends_on = None
 
+
 def upgrade():
     op.add_column(
         'documents',
@@ -24,7 +26,9 @@ def upgrade():
             nullable=False,
             server_default='0',
         ),
-        schema='guidebook')
+        schema='guidebook',
+    )
+
 
 def downgrade():
     op.drop_column('documents', 'view_count', schema='guidebook')

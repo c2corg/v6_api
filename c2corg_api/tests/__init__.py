@@ -51,7 +51,7 @@ def _isolate_worker(settings):
         'redis.cache_key_prefix',
         'redis.exchange',
         'redis.queue_es_sync',
-        'redis.queue_documents_views_sync',
+        'redis.documents_views_key',
     ):
         settings[key] = f'{settings[key]}_{worker}'
 

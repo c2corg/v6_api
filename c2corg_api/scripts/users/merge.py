@@ -28,7 +28,7 @@ from c2corg_api.models.user_profile import (
     ArchiveUserProfile,
     UserProfile,
 )
-from c2corg_api.queues.queues_service import get_queue_config
+from c2corg_api.search import get_queue_config
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.document_delete import (
     remove_from_cache,
@@ -74,7 +74,7 @@ def main(argv=sys.argv):
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
 
-    queue_config = get_queue_config(settings, settings['redis.queue_es_sync'])
+    queue_config = get_queue_config(settings)
 
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)

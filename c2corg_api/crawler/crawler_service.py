@@ -33,10 +33,17 @@ bot_pattern = (
     r'memorybot|AdvBot|MegaIndex|SemanticScholarBot|ltx71|nerdybot|'
     r'xovibot|BUbiNG|Qwantify|archive.org_bot|Applebot|TweetmemeBot|'
     r'crawler4j|findxbot|SemrushBot|yoozBot|lipperhey|y!j-asr|'
-    r'Domain Re-Animator Bot|AddThis)'
+    r'Domain Re-Animator Bot|AddThis|'
+    # generic words, and HTTP clients of scripts
+    r'spider|crawl|headless|python-requests|go-http-client)'
 )
 
 
+_BOT_REGEX = re.compile(bot_pattern, re.IGNORECASE)
+
+
 def is_crawler(user_agent):
-    bot_regex = re.compile(bot_pattern, re.IGNORECASE)
-    return bot_regex.search(user_agent)
+    """Whether a User-Agent is a bot's, or none (browsers always send one)."""
+    if not user_agent:
+        return True
+    return _BOT_REGEX.search(user_agent) is not None

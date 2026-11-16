@@ -13,7 +13,6 @@ from c2corg_api.caching import (
     cache_listing_total,
     get_or_create,
 )
-from c2corg_api.crawler.crawler_service import is_crawler
 from c2corg_api.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -48,12 +47,12 @@ from c2corg_api.models.feed import (
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.topo_map_association import get_maps, update_maps_for_document
-from c2corg_api.queues.queues_service import publish
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
 from c2corg_api.search import search_documents as search_mappings
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.view_count import count_view
 from c2corg_api.views import etag_cache, set_best_locale, to_json_dict
 from c2corg_api.views.document_listings import (
     add_load_for_locales,
@@ -706,8 +705,6 @@ def read_document(
         )
 
     if not editing_view:
-        increment_document_view_count(request, id)
-
         cache_key = get_cache_key(
             id,
             lang,
@@ -716,6 +713,9 @@ def read_document(
         )
 
         if cache_key:
+            # an existing document, read (not edited) by someone
+            count_view(request, id)
+
             # set and check the etag: if the etag value provided in the
             # request equals the current etag, return 'NotModified'
             etag_cache(request, cache_key)
@@ -797,10 +797,3 @@ def set_areas(document, lang):
     """Set the areas of a document."""
     areas = get_areas(document, lang)
     document.areas = [to_json_dict(m, area_listing_schema) for m in areas]
-
-
-def increment_document_view_count(request, doc_id):
-    is_bot = request.is_robot
-    user_agent = request.headers.get('User-Agent', '')
-    if not (is_bot or is_crawler(user_agent)):
-        publish(request.registry.documents_views_queue_config, doc_id)
