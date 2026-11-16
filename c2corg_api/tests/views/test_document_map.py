@@ -414,6 +414,37 @@ def test_outings_tracks_truncated(client, tracks):
 
     assert body['truncated']
     assert body['documents'] == []
+    # how many there are: the three tracks of the box
+    assert (body['count'], body['count_capped']) == (3, False)
+
+
+def test_outings_tracks_truncated_count_for_the_filters(client, tracks):
+    # the filters of the request: two of the three outings are hikes
+    with patch('c2corg_api.views.document_map.TRACKS_LIMIT_MAX', 1):
+        url = f'/outings/map/tracks?bbox={BBOX}&act=hiking'
+        body = client.get(url, status=200).json
+
+    assert body['truncated']
+    assert (body['count'], body['count_capped']) == (2, False)
+
+
+def test_outings_tracks_truncated_count_is_capped(client, tracks):
+    # more than the candidates that are looked at
+    with (
+        patch('c2corg_api.views.document_map.TRACKS_LIMIT_MAX', 1),
+        patch('c2corg_api.views.document_map.TRACKS_CANDIDATES_MAX', 2),
+    ):
+        body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+
+    assert body['truncated']
+    assert (body['count'], body['count_capped']) == (2, True)
+
+
+def test_outings_tracks_not_truncated_has_no_count(client, tracks):
+    body = client.get(f'/outings/map/tracks?bbox={BBOX}', status=200).json
+
+    assert not body['truncated']
+    assert 'count' not in body
 
 
 def test_outings_tracks_truncated_by_candidates(client, tracks):
@@ -424,6 +455,8 @@ def test_outings_tracks_truncated_by_candidates(client, tracks):
 
     assert body['truncated']
     assert body['documents'] == []
+    # the candidates are yet to be filtered: not known
+    assert 'count' not in body
 
 
 def test_outings_tracks_with_selective_filters_beat_the_cap(client, tracks):
@@ -636,6 +669,7 @@ def test_outings_tracks_recent_when_there_are_too_many(client, tracks):
         body = client.get(f'/outings/map/tracks?bbox={BBOX}&recent=2', status=200).json
 
     assert body['truncated']
+    assert (body['count'], body['count_capped']) == (3, False)
     assert [o['title'] for o in body['documents']] == ['Long hike', 'Ski tour']
     assert [o['date_end'] for o in body['documents']] == ['2016-01-04', '2016-01-02']
     assert 'geom_detail' in body['documents'][0]['geometry']
@@ -645,6 +679,7 @@ def test_outings_tracks_recent_when_there_are_few(client, tracks):
     body = client.get(f'/outings/map/tracks?bbox={BBOX}&recent=10', status=200).json
 
     assert not body['truncated']
+    assert 'count' not in body
     assert [o['title'] for o in body['documents']] == [
         'Long hike',
         'Ski tour',
@@ -659,6 +694,8 @@ def test_outings_tracks_recent_with_filters(client, tracks):
 
     assert body['truncated']
     assert [o['title'] for o in body['documents']] == ['Long hike']
+    # the hikes of the box
+    assert (body['count'], body['count_capped']) == (2, False)
 
 
 def test_outings_tracks_recent_with_filters_over_the_cap(client, tracks):
