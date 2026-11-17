@@ -5,10 +5,12 @@ moderator of the topoguide and by one of the forum, its date is past, and a
 delay has elapsed since its last validation (to leave time to cancel a
 validation made by mistake).
 
-The script only lists the requests to process, unless `--execute` is given:
+The script only lists the requests to process, with what would be removed,
+unless `--execute` is given. `--id` limits it to some requests:
 
     python -m c2corg_api.scripts.users.process_removals
-    python -m c2corg_api.scripts.users.process_removals --execute
+    python -m c2corg_api.scripts.users.process_removals --id 12
+    python -m c2corg_api.scripts.users.process_removals --id 12 --execute
 
 For each request:
 - spam: the documents the user alone contributed to (outings, reports,
@@ -75,11 +77,11 @@ log = logging.getLogger(__name__)
 PURGED_TYPES = [OUTING_TYPE, XREPORT_TYPE, ARTICLE_TYPE, IMAGE_TYPE]
 
 
-def find_ready_requests(now, grace_hours=DEFAULT_GRACE_HOURS):
+def find_ready_requests(now, grace_hours=DEFAULT_GRACE_HOURS, ids=None):
     """Return the requests validated by both sides, which can be processed."""
     today = now.date()
     limit = now - datetime.timedelta(hours=grace_hours)
-    requests = (
+    query = (
         DBSession.query(AccountRemovalRequest)
         .filter(
             AccountRemovalRequest.done_at.is_(None),
@@ -91,9 +93,10 @@ def find_ready_requests(now, grace_hours=DEFAULT_GRACE_HOURS):
             AccountRemovalRequest.forum_validated_at <= limit,
         )
         .order_by(AccountRemovalRequest.id)
-        .all()
     )
-    return requests
+    if ids is not None:
+        query = query.filter(AccountRemovalRequest.id.in_(ids))
+    return query.all()
 
 
 def find_purged_documents(user_id):
@@ -235,7 +238,58 @@ def describe(removal):
     )
 
 
-def main(argv=sys.argv):
+def _forum_account(client, removal):
+    """Describe the forum account to remove; only reads the forum."""
+    try:
+        forum_id = client.get_userid(removal.user_id)
+    except Exception as e:
+        if _is_not_found(e):
+            return 'none (already removed, or never logged in to the forum)'
+        return f'could not be checked ({e})'
+    if forum_id is None:
+        return 'could not be checked (the forum is disabled)'
+    return f'forum id {forum_id}'
+
+
+def _forum_target(client, removal):
+    """Describe the forum account to merge into; only reads the forum."""
+    try:
+        target = client.get_forum_user(removal.target_forum_id)
+    except Exception as e:
+        return f'forum id {removal.target_forum_id}, could not be checked ({e})'
+    if not target:
+        return f'forum id {removal.target_forum_id}, could not be checked'
+    return f'forum id {removal.target_forum_id} ({target["username"]})'
+
+
+def preview(client, removal):
+    """Return the lines telling what processing a request would remove."""
+    lines = [describe(removal)]
+    if DBSession.get(User, removal.user_id) is None:
+        lines.append(f'  topoguide account {removal.user_id}: does not exist anymore')
+    target = DBSession.get(User, removal.target_user_id)
+    if target is None:
+        lines.append(
+            f'  target account {removal.target_user_id}: DOES NOT EXIST, '
+            'the request will fail'
+        )
+    else:
+        lines.append(f'  topoguide account merged into {target.id} ({target.name})')
+    lines.append(f'  forum account: {_forum_account(client, removal)}')
+    if removal.reason == REASON_SPAM:
+        lines.append('  forum account deleted with its posts')
+        documents = find_purged_documents(removal.user_id)
+        lines.append(f'  {len(documents)} document(s) deleted for good:')
+        lines.extend(
+            f'    {document_id} ({document_type})'
+            for document_id, document_type in documents
+        )
+    else:
+        lines.append(f'  forum account merged into {_forum_target(client, removal)}')
+    return lines
+
+
+def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     parser.add_argument(
         '--execute',
@@ -248,7 +302,18 @@ def main(argv=sys.argv):
         default=DEFAULT_GRACE_HOURS,
         help='Delay between the last validation and the removal',
     )
-    args = parser.parse_args(argv[1:])
+    parser.add_argument(
+        '--id',
+        type=int,
+        action='append',
+        dest='ids',
+        help='Only this request (can be repeated)',
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=sys.argv):
+    args = parse_args(argv[1:])
 
     settings_file = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), '../../../production.ini'
@@ -261,22 +326,31 @@ def main(argv=sys.argv):
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
-    if args.execute and not get_discourse_client(settings).enabled:
+    sys.exit(run(args, settings, queue_config))
+
+
+def run(args, settings, queue_config):
+    """List (or process with --execute) the ready requests; return the exit code."""
+    client = get_discourse_client(settings)
+    if args.execute and not client.enabled:
         print('The forum is disabled (discourse.enabled): nothing can be removed.')
-        sys.exit(1)
+        return 1
 
     now = datetime.datetime.now(datetime.UTC)
-    removals = find_ready_requests(now, args.grace_hours)
+    removals = find_ready_requests(now, args.grace_hours, args.ids)
+    for removal_id in sorted(set(args.ids or []) - {r.id for r in removals}):
+        print(f'The request #{removal_id} is not ready (or does not exist).')
     if not removals:
         print('No removal to process.')
-        return
+        return 0
 
     failed = 0
     for removal in removals:
         removal_id = removal.id
-        print(describe(removal))
         if not args.execute:
+            print('\n'.join(preview(client, removal)))
             continue
+        print(describe(removal))
         try:
             if process_removal(removal_id, settings, queue_config, args.grace_hours):
                 print(f'SUCCESS: request #{removal_id} done')
@@ -294,8 +368,7 @@ def main(argv=sys.argv):
 
     if not args.execute:
         print('Nothing done: use --execute to remove these accounts.')
-    if failed:
-        sys.exit(1)
+    return 1 if failed else 0
 
 
 if __name__ == '__main__':
