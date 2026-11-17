@@ -1,4 +1,4 @@
-# Companion services for the manual setup (HOWTO-DEV.md, "Option 2"). Works with Docker and with
+# Companion services for the manual setup (HOWTO-MANUAL-DEV.md, not the dev container). Works with Docker and with
 # rootless Podman (`podman compose`, or `make DOCKER_COMPOSE="podman compose" ...`).
 # Ports are published on 127.0.0.1 only: the dev passwords below are not secrets.
 services:
@@ -36,6 +36,8 @@ services:
     # together with the database image, same tag). The data is in /esdata, a volume which starts from the
     # content of the image. `make init-elastic` rebuilds the index if the indexing code changed since.
     image: ghcr.io/c2corg/c2corg-dev-es:latest
+    # Skip the image's old gosu binary, which fails under amd64 emulation on Apple Silicon.
+    user: elasticsearch
     ports:
       - "127.0.0.1:9200:9200"
     command: elasticsearch -Des.path.data=/esdata -Des.index.number_of_replicas=0 -Des.script.inline=true

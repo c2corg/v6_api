@@ -41,4 +41,4 @@ Setting up the target
 Quick comparisons
 -----------------
 
-`scripts/loadtest.py` (standard library only) replays a mix of reads with a few threads, to compare two versions of the API on a development machine (see HOWTO-DEV).
+`scripts/loadtest.py` (standard library only) replays a mix of reads with a few threads, to compare two versions of the API on a development machine (see the "Load test" section of the main README).

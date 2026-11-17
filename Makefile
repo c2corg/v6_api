@@ -5,12 +5,13 @@ TEMPLATE_FILES = $(TEMPLATE_FILES_IN:.in=)
 
 ENV_FILES = config/env.default config/env.dev
 
-ifdef CONFIG
-	ENV_FILES += $(CONFIG)
-endif
-
 ifneq ($(wildcard config/env.local),)
 	ENV_FILES += config/env.local
+endif
+
+# Last, so that it wins over env.local (e.g. the container hostnames of the dev container)
+ifdef CONFIG
+	ENV_FILES += $(CONFIG)
 endif
 
 SRC_DIRS = c2corg_api es_migration
@@ -118,17 +119,25 @@ init-test-database:
 # Same logic as .devcontainer/setup.sh: create the index with its mappings (without them the search silently
 # finds nothing), keep the index of the image ghcr.io/c2corg/c2corg-dev-es if it was built by the indexing code
 # of this checkout, otherwise rebuild it from the database (about 5 minutes).
-ES_INDEX_URL = http://localhost:9200/c2corg
+ES_INDEX_URL ?= http://localhost:9200/c2corg
 init-elastic:
 		$(UV_RUN) initialize_c2corg_api_es development.ini
-		@count=$$(curl -s "$(ES_INDEX_URL)/_count" | sed -n 's/.*"count":\([0-9]*\).*/\1/p'); \
-		if [ "$${count:-0}" -gt 0 ] && $(UV_RUN) es_index_fingerprint check development.ini; then \
+		@set -e; \
+		count=$$(curl -fsS "$(ES_INDEX_URL)/_count" | $(UV_RUN) python -c "import json, sys; print(json.load(sys.stdin)['count'])"); \
+		if [ "$$count" -gt 0 ] && $(UV_RUN) es_index_fingerprint check development.ini; then \
 			echo "The index contains $$count documents and is up to date"; \
 		else \
 			echo "Rebuilding the index with the current indexing code"; \
-			curl -s -X DELETE "$(ES_INDEX_URL)" > /dev/null; \
-			$(UV_RUN) initialize_c2corg_api_es development.ini && \
-			$(UV_RUN) fill_es_index development.ini && \
+			curl -fsS -X DELETE "$(ES_INDEX_URL)" > /dev/null; \
+			$(UV_RUN) initialize_c2corg_api_es development.ini; \
+			for attempt in 1 2 3; do \
+				$(UV_RUN) fill_es_index development.ini && break; \
+				if [ "$$attempt" = 3 ]; then \
+					echo "fill_es_index failed 3 times" >&2; exit 1; \
+				fi; \
+				echo "fill_es_index failed (attempt $$attempt), retrying in 10s..." >&2; \
+				sleep 10; \
+			done; \
 			$(UV_RUN) es_index_fingerprint store development.ini; \
 		fi
 
