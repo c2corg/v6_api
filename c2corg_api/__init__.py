@@ -10,6 +10,7 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
 from c2corg_api.search import configure_es_from_config, get_queue_config
+from c2corg_api.view_count import ViewCounter
 from c2corg_api.views import configure_cors_policy
 
 log = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ def create_app(settings):
     registry = Registry(
         settings,
         queue_config=get_queue_config(settings),
+        view_counter=ViewCounter.from_settings(settings),
         feed_admin_user_account_id=_account_id(settings, 'feed.admin_user_account'),
         anonymous_user_id=_account_id(settings, 'guidebook.anonymous_user_account'),
     )

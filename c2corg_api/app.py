@@ -40,7 +40,8 @@ class Registry:
 
     def __init__(self, settings, **attributes):
         self.settings = settings
-        # queue_config, feed_admin_user_account_id, anonymous_user_id
+        # queue_config, view_counter, feed_admin_user_account_id,
+        # anonymous_user_id
         for name, value in attributes.items():
             setattr(self, name, value)
 
