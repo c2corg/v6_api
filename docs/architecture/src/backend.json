@@ -1,0 +1,630 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "v6_api backend: modules and processes",
+    "output": "backend.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/c2corg/v6_api/",
+      "provider": "github",
+      "revision": "d095735abb1da90cb9dd34f38843b75fbc8df879"
+    }
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "Browser / c2c_ui",
+      "sublabel": "web and mobile clients",
+      "pos": [
+        400,
+        40
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "tracking",
+      "type": "external",
+      "label": "c2c_tracking",
+      "sublabel": "shares the API's JWTs",
+      "pos": [
+        40,
+        130
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/views/user.py",
+          "line": 591,
+          "end_line": 597,
+          "label": "read_token"
+        }
+      ]
+    },
+    {
+      "id": "sngm",
+      "type": "external",
+      "label": "SNGM (pro-montagne)",
+      "sublabel": "SSO partner service",
+      "pos": [
+        40,
+        250
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/views/sso.py",
+          "line": 54,
+          "end_line": 60,
+          "label": "sso_sync_validator"
+        }
+      ]
+    },
+    {
+      "id": "haproxy",
+      "type": "cloud",
+      "label": "HAProxy + Varnish",
+      "sublabel": "api.camptocamp.org",
+      "pos": [
+        400,
+        180
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "gunicorn",
+      "type": "backend",
+      "label": "gunicorn",
+      "sublabel": "UvicornWorker x3 · asgi:app",
+      "tag": "api0..2",
+      "pos": [
+        400,
+        320
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 39,
+          "end_line": 41,
+          "label": "CMD gunicorn"
+        },
+        {
+          "path": "c2corg_api/asgi.py",
+          "line": 1,
+          "end_line": 19
+        }
+      ]
+    },
+    {
+      "id": "fastapi",
+      "type": "backend",
+      "label": "FastAPI app (web/)",
+      "sublabel": "CORS → token → routes",
+      "pos": [
+        400,
+        460
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/app.py",
+          "line": 70,
+          "end_line": 108,
+          "label": "create_fastapi_app"
+        },
+        {
+          "path": "c2corg_api/__init__.py",
+          "line": 17,
+          "end_line": 50,
+          "label": "create_app"
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "type": "security",
+      "label": "auth & roles",
+      "sublabel": "JWT HS256 · token hashes",
+      "pos": [
+        760,
+        460
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/web/auth.py",
+          "line": 65,
+          "end_line": 102,
+          "label": "TokenValidationMiddleware"
+        },
+        {
+          "path": "c2corg_api/security/roles.py",
+          "line": 33,
+          "end_line": 59,
+          "label": "hash_token, is_valid_token"
+        }
+      ]
+    },
+    {
+      "id": "views",
+      "type": "backend",
+      "label": "views/",
+      "sublabel": "documents · users · map · search",
+      "pos": [
+        400,
+        600
+      ],
+      "size": [
+        170,
+        150
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/web/handlers.py",
+          "line": 50,
+          "end_line": 63,
+          "label": "serve_read / serve_write"
+        },
+        {
+          "path": "c2corg_api/views/document_map.py",
+          "line": 403,
+          "end_line": 432,
+          "label": "map overlays"
+        },
+        {
+          "path": "c2corg_api/caching.py",
+          "line": 21,
+          "end_line": 38,
+          "label": "dogpile regions"
+        }
+      ]
+    },
+    {
+      "id": "models",
+      "type": "backend",
+      "label": "models/",
+      "sublabel": "SQLAlchemy 2.1 · GeoAlchemy2",
+      "pos": [
+        400,
+        800
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/models/__init__.py",
+          "line": 9,
+          "end_line": 32
+        },
+        {
+          "path": "c2corg_api/__init__.py",
+          "line": 94,
+          "end_line": 100,
+          "label": "waypoint save hook"
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL + PostGIS",
+      "sublabel": "guidebook · users · sympa",
+      "pos": [
+        400,
+        940
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/models/__init__.py",
+          "line": 9,
+          "end_line": 11,
+          "label": "schemas"
+        }
+      ]
+    },
+    {
+      "id": "es",
+      "type": "database",
+      "label": "Elasticsearch",
+      "sublabel": "client 2.4 · ES 8 on a branch",
+      "pos": [
+        1000,
+        460
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/search/__init__.py",
+          "line": 43,
+          "end_line": 62
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis",
+      "sublabel": "cache · queue · jobs · rate",
+      "pos": [
+        760,
+        643
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/caching.py",
+          "line": 57,
+          "end_line": 93
+        },
+        {
+          "path": "c2corg_api/search/__init__.py",
+          "line": 64,
+          "end_line": 77,
+          "label": "ES sync queue"
+        }
+      ]
+    },
+    {
+      "id": "syncer",
+      "type": "backend",
+      "label": "syncer",
+      "sublabel": "kombu consumer → ES",
+      "tag": "workers VM",
+      "pos": [
+        1000,
+        643
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/scripts/es/syncer.py",
+          "line": 16,
+          "end_line": 58
+        },
+        {
+          "path": "c2corg_api/scripts/es/sync.py",
+          "line": 42,
+          "end_line": 72,
+          "label": "sync_es"
+        }
+      ]
+    },
+    {
+      "id": "scheduler",
+      "type": "backend",
+      "label": "scheduler",
+      "sublabel": "APScheduler purge jobs",
+      "tag": "workers VM",
+      "pos": [
+        760,
+        800
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 17,
+          "end_line": 44
+        },
+        {
+          "path": "c2corg_api/jobs/purge_expired_tokens.py",
+          "line": 19,
+          "end_line": 30
+        }
+      ]
+    },
+    {
+      "id": "smtp",
+      "type": "external",
+      "label": "SMTP relay",
+      "sublabel": "account emails",
+      "pos": [
+        40,
+        560
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/emails/email_service.py",
+          "line": 53,
+          "end_line": 70
+        }
+      ]
+    },
+    {
+      "id": "images",
+      "type": "external",
+      "label": "c2c_images service",
+      "sublabel": "upload, resize, S3",
+      "pos": [
+        40,
+        640
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/views/image.py",
+          "line": 150,
+          "end_line": 200
+        }
+      ]
+    },
+    {
+      "id": "discourse",
+      "type": "external",
+      "label": "Discourse forum",
+      "sublabel": "SSO · comment topics",
+      "pos": [
+        40,
+        720
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/security/discourse_client.py",
+          "line": 233,
+          "end_line": 250,
+          "label": "discourse.enabled"
+        }
+      ]
+    },
+    {
+      "id": "navitia",
+      "type": "external",
+      "label": "Navitia",
+      "sublabel": "public transport stops",
+      "pos": [
+        40,
+        804
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/__init__.py",
+          "line": 167,
+          "end_line": 180
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Outside the API",
+      "wraps": [
+        "tracking",
+        "sngm",
+        "smtp",
+        "images",
+        "discourse",
+        "navitia"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "c-https",
+      "from": "client",
+      "to": "haproxy",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-token",
+      "from": "tracking",
+      "to": "haproxy",
+      "label": "GET /users/token",
+      "variant": "security"
+    },
+    {
+      "id": "c-sso",
+      "from": "sngm",
+      "to": "haproxy",
+      "label": "POST /sso_sync",
+      "variant": "security"
+    },
+    {
+      "id": "c-lb",
+      "from": "haproxy",
+      "to": "gunicorn",
+      "label": ":8080",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-asgi",
+      "from": "gunicorn",
+      "to": "fastapi",
+      "label": "ASGI",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-auth",
+      "from": "fastapi",
+      "to": "security",
+      "label": "verify JWT",
+      "variant": "security"
+    },
+    {
+      "id": "c-handlers",
+      "from": "fastapi",
+      "to": "views",
+      "label": "handlers",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-orm",
+      "from": "views",
+      "to": "models",
+      "label": "ORM",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-sql",
+      "from": "models",
+      "to": "pg",
+      "label": "SQL",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-search",
+      "from": "views",
+      "to": "es",
+      "label": "search",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-redis",
+      "from": "views",
+      "to": "redis",
+      "label": "cache, notify"
+    },
+    {
+      "id": "c-queue",
+      "from": "redis",
+      "to": "syncer",
+      "label": "queue",
+      "variant": "dashed"
+    },
+    {
+      "id": "c-index",
+      "from": "syncer",
+      "to": "es",
+      "label": "bulk index"
+    },
+    {
+      "id": "c-changed",
+      "from": "syncer",
+      "to": "pg",
+      "label": "changed docs",
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "c-purge",
+      "from": "scheduler",
+      "to": "pg",
+      "label": "purge"
+    },
+    {
+      "id": "c-mail",
+      "from": "views",
+      "to": "smtp",
+      "label": "emails"
+    },
+    {
+      "id": "c-img",
+      "from": "views",
+      "to": "images",
+      "label": "publish"
+    },
+    {
+      "id": "c-forum",
+      "from": "views",
+      "to": "discourse",
+      "label": "SSO, topics"
+    },
+    {
+      "id": "c-navitia",
+      "from": "models",
+      "to": "navitia",
+      "label": "on save"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Request path",
+      "items": [
+        "FastAPI replaced Pyramid (#2365): web/ routes call the unchanged views/ logic",
+        "gunicorn runs uvicorn workers; each worker serves server.threads requests at once",
+        "Reads go through dogpile caches in Redis; writes notify the syncer after commit",
+        "Searches query ES for ids, then load the documents from PostgreSQL"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Recent changes (since Sept 2026)",
+      "items": [
+        "Map overlays /outings/map/heatmap and /map/tracks (on master, after v6.33.1); TRACKS_OVERLAY_ENABLED and TRACKS_OVERLAY_MAX_TRACKS",
+        "GET /users/token lets c2c_tracking check that a token was not revoked",
+        "Tokens and SSO keys stored as SHA-256 hashes",
+        "discourse.enabled = false runs the API without a forum (preprod)",
+        "Route suggestions from a GPS track, /users/partners, forum comment topics renamed and watched",
+        "The syncer reads only the changed documents; Python 3.15 and uv"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Elasticsearch",
+      "items": [
+        "master still uses the elasticsearch 2.4 client",
+        "The ES 8 client is PR #2550, run on preprod as the es8-preprod image tag",
+        "The API reaches ES through HAProxy :9200"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Not drawn",
+      "items": [
+        "alembic migrations and initialize_c2corg_api_es / fill_es_index, run by hand",
+        "reCAPTCHA check on registration; Navitia journeys proxied by views/navitia.py (job state in Redis)",
+        "Anonymous rate limiting in Redis; the scheduler also logs expired users out of the forum"
+      ]
+    }
+  ]
+}

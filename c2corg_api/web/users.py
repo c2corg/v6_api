@@ -35,6 +35,7 @@ from c2corg_api.views.user_follow import (
     read_following_user,
 )
 from c2corg_api.views.user_mailinglists import read_mailinglists
+from c2corg_api.views.user_partners import read_partners
 from c2corg_api.views.user_preferences import (
     read_preferences,
 )
@@ -84,6 +85,7 @@ def include(app):
         ('/users/mailinglists', mailinglists),
         ('/users/following', following),
         ('/users/following-user/{id:int}', is_following_user),
+        ('/users/partners', partners),
         ('/users/blocked', blocked_users),
         ('/users/blocked/{id:int}', is_blocked),
         ('/users/removals', removals),
@@ -172,6 +174,15 @@ def following(
     return serve_read(request, user, [], read_following)
 
 
+def partners(
+    request: Request,
+    user: User,
+    _: _checks('authenticated', JSON),
+):
+    """Return the users of the recent outings of the authenticated user."""
+    return serve_read(request, user, [], read_partners)
+
+
 def is_following_user(
     request: Request,
     user: User,
@@ -245,6 +256,7 @@ for _endpoint in (
     mailinglists,
     following,
     is_following_user,
+    partners,
 ):
     _endpoint.permission = 'authenticated'
 removals.permission = 'authenticated'
@@ -259,6 +271,7 @@ for _endpoint in (
     mailinglists,
     following,
     is_following_user,
+    partners,
     blocked_users,
     is_blocked,
     removals,

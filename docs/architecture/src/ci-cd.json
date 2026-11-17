@@ -1,0 +1,431 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "CI/CD: from a commit to preprod and production",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "ci-cd.html",
+    "repository": {
+      "url": "https://github.com/c2corg/v6_api",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "d095735abb1da90cb9dd34f38843b75fbc8df879"
+    }
+  },
+  "lanes": [
+    {
+      "id": "api",
+      "label": "v6_api"
+    },
+    {
+      "id": "ui",
+      "label": "c2c_ui"
+    },
+    {
+      "id": "svc",
+      "label": "c2c_images · c2c_tracking"
+    },
+    {
+      "id": "infra",
+      "label": "v6-docker-compose (infra)"
+    },
+    {
+      "id": "legacy",
+      "label": "Legacy production fleet"
+    },
+    {
+      "id": "v7",
+      "label": "v7 fleet (preprod today)"
+    }
+  ],
+  "phases": [
+    {
+      "id": "p_change",
+      "label": "Trigger",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "p_ci",
+      "label": "GitHub Actions checks",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    },
+    {
+      "id": "p_publish",
+      "label": "Publish + pin version",
+      "fromCol": 3,
+      "toCol": 3
+    },
+    {
+      "id": "p_deploy",
+      "label": "Deploy from the bastion",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "t_api",
+    "api_test",
+    "api_img",
+    "ghcr",
+    "bump",
+    "leg_deploy",
+    "prod"
+  ],
+  "nodes": [
+    {
+      "id": "t_api",
+      "lane": "api",
+      "col": 0,
+      "type": "external",
+      "icon": "person",
+      "label": "PR, master, tag"
+    },
+    {
+      "id": "t_ui",
+      "lane": "ui",
+      "col": 0,
+      "type": "external",
+      "icon": "person",
+      "label": "PR, master, tag"
+    },
+    {
+      "id": "t_svc",
+      "lane": "svc",
+      "col": 0,
+      "type": "external",
+      "icon": "person",
+      "label": "PR, main, tag"
+    },
+    {
+      "id": "t_infra",
+      "lane": "infra",
+      "col": 0,
+      "type": "external",
+      "icon": "person",
+      "label": "PR, main"
+    },
+    {
+      "id": "api_test",
+      "lane": "api",
+      "col": 1,
+      "type": "backend",
+      "label": "audit + test",
+      "sublabel": "uv audit, ruff, pytest",
+      "tag": "PG 9.6 and latest, ES 2.4",
+      "sources": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "line": 21,
+          "end_line": 32,
+          "label": "audit job"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "line": 33,
+          "end_line": 138,
+          "label": "test matrix"
+        }
+      ]
+    },
+    {
+      "id": "api_img",
+      "lane": "api",
+      "col": 2,
+      "type": "backend",
+      "label": "Docker job",
+      "sublabel": "master and tags only",
+      "tag": "classic manifest",
+      "sources": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "line": 140,
+          "end_line": 186,
+          "label": "Docker job"
+        }
+      ]
+    },
+    {
+      "id": "ghcr",
+      "lane": "api",
+      "col": 3,
+      "type": "cloud",
+      "label": "GHCR",
+      "sublabel": "ghcr.io/c2corg/v6_api",
+      "sources": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "line": 161,
+          "label": "image name"
+        }
+      ]
+    },
+    {
+      "id": "ui_test",
+      "lane": "ui",
+      "col": 1,
+      "type": "frontend",
+      "label": "lint, test, build",
+      "sublabel": "npm ci, vitest, vite build",
+      "tag": "tag = package.json version"
+    },
+    {
+      "id": "ui_img",
+      "lane": "ui",
+      "col": 2,
+      "type": "frontend",
+      "label": "OpenResty image test",
+      "sublabel": "Lua head-tag specs + smoke"
+    },
+    {
+      "id": "hub",
+      "lane": "svc",
+      "col": 3,
+      "type": "cloud",
+      "label": "Docker Hub",
+      "sublabel": "c2corg/c2c_ui, c2c_images, c2c_tracking"
+    },
+    {
+      "id": "preview",
+      "lane": "ui",
+      "col": 3,
+      "type": "frontend",
+      "label": "Pages preview",
+      "sublabel": "c2corg.github.io/c2c_ui/<branch>"
+    },
+    {
+      "id": "svc_test",
+      "lane": "svc",
+      "col": 1,
+      "type": "backend",
+      "label": "lint + tests",
+      "sublabel": "against a local S3 server (+ PG)"
+    },
+    {
+      "id": "svc_img",
+      "lane": "svc",
+      "col": 2,
+      "type": "backend",
+      "label": "image check",
+      "sublabel": "smoke test, manifest check"
+    },
+    {
+      "id": "infra_ci",
+      "lane": "infra",
+      "col": 1,
+      "type": "security",
+      "label": "infra CI",
+      "sublabel": "terraform validate, ansible-lint",
+      "tag": "haproxy -c, betterleaks"
+    },
+    {
+      "id": "bump",
+      "lane": "infra",
+      "col": 3,
+      "type": "backend",
+      "label": "Version bump commit",
+      "sublabel": "API_VERSION, image tags"
+    },
+    {
+      "id": "leg_deploy",
+      "lane": "legacy",
+      "col": 4,
+      "type": "backend",
+      "label": "docker-compose pull, up",
+      "sublabel": "one VM at a time",
+      "tag": "Docker 1.12 client"
+    },
+    {
+      "id": "prod",
+      "lane": "legacy",
+      "col": 5,
+      "type": "cloud",
+      "label": "Production",
+      "sublabel": "api0..2, ui0/1, images0/1, workers"
+    },
+    {
+      "id": "v7_deploy",
+      "lane": "v7",
+      "col": 4,
+      "type": "backend",
+      "label": "ansible deploy.yml",
+      "sublabel": "--limit preprod",
+      "tag": "site.yml for a full run"
+    },
+    {
+      "id": "preprod",
+      "lane": "v7",
+      "col": 5,
+      "type": "cloud",
+      "label": "Preprod",
+      "sublabel": "preprod-app, preprod-data"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_t_api",
+      "from": "t_api",
+      "to": "api_test",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_t_ui",
+      "from": "t_ui",
+      "to": "ui_test"
+    },
+    {
+      "id": "e_t_svc",
+      "from": "t_svc",
+      "to": "svc_test"
+    },
+    {
+      "id": "e_t_infra",
+      "from": "t_infra",
+      "to": "infra_ci"
+    },
+    {
+      "id": "e_api_img",
+      "from": "api_test",
+      "to": "api_img",
+      "label": "tests pass",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_api_push",
+      "from": "api_img",
+      "to": "ghcr",
+      "label": "push",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_ui_img",
+      "from": "ui_test",
+      "to": "ui_img"
+    },
+    {
+      "id": "e_ui_push",
+      "from": "ui_img",
+      "to": "hub",
+      "label": "master / tag"
+    },
+    {
+      "id": "e_ui_preview",
+      "from": "ui_img",
+      "to": "preview",
+      "label": "PR, after approval",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "e_svc_img",
+      "from": "svc_test",
+      "to": "svc_img"
+    },
+    {
+      "id": "e_svc_push",
+      "from": "svc_img",
+      "to": "hub",
+      "label": "main / tag"
+    },
+    {
+      "id": "e_infra_bump",
+      "from": "infra_ci",
+      "to": "bump",
+      "label": "checks the PR"
+    },
+    {
+      "id": "e_ghcr_bump",
+      "from": "ghcr",
+      "to": "bump",
+      "label": "pick the tag",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_bump_leg",
+      "from": "bump",
+      "to": "leg_deploy",
+      "label": "pull on the bastion",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_leg_prod",
+      "from": "leg_deploy",
+      "to": "prod",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_bump_v7",
+      "from": "bump",
+      "to": "v7_deploy",
+      "label": "same commit"
+    },
+    {
+      "id": "e_v7_preprod",
+      "from": "v7_deploy",
+      "to": "preprod"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Releases",
+      "items": [
+        "c2c_ui: npm version (major|minor|patch), then push with --follow-tags; CI refuses a tag that differs from package.json",
+        "Every repository creates its GitHub release from the vX.Y.Z tag, with generated notes",
+        "Images are tagged by docker/metadata-action with the branch or tag name",
+        "Architecture docs: v6_api docs/ is served by GitHub Pages straight from master (no workflow)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Why the classic manifest",
+      "items": [
+        "The legacy hosts run Docker 1.12, which cannot pull an OCI index",
+        "So every image is pushed with provenance: false and oci-mediatypes=false",
+        "c2c_images and c2c_tracking check the published manifest after the push"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "PR previews",
+      "items": [
+        "Each c2c_ui branch is built for GitHub Pages; a PR preview waits for a maintainer in the pr-preview environment",
+        "gh-pages-cleanup.yml removes the folder when the PR is merged or closed",
+        "Previews are never deployed for forks or Dependabot"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Deploying",
+      "items": [
+        "Legacy: edit server-list.env (API_VERSION, also used by the workers) or the compose image tag, source it, then pull and up -d per VM with HAProxy draining",
+        "API with a schema change: alembic upgrade head from api0 before recreating containers",
+        "v7: ansible-playbook deploy.yml redeploys api, images, workers, ui and tracking; site.yml also does hardening, databases, certificates and monitoring",
+        "Preview of a v6_api branch on preprod: -e preprod_api_version=<tag>, e.g. es8-preprod"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Bots and scheduled jobs",
+      "items": [
+        "Dependabot in every repository: weekly for the apps, monthly for infra (actions, Docker, compose, Terraform)",
+        "Transifex: c2c_ui pushes its strings from master; c2c_ui and c2c_tracking pull translations every 6 h as a PR",
+        "c2c_ui: browserslist update PR twice a month; Conventional Commit PR titles enforced",
+        "CodeQL on v6_api, c2c_ui, c2c_images and c2c_tracking"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Not drawn",
+      "items": [
+        "Codacy coverage upload and the coverage comment on tracking PRs",
+        "infra CI also renders every host's .env and validates each v7 composition",
+        "The legacy procedure in the wikis still names compose0; the bastion has replaced it"
+      ]
+    }
+  ]
+}

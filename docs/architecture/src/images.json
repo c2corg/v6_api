@@ -1,0 +1,374 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Images: upload, publish, display and delete",
+    "output": "images.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/c2corg/c2c_images",
+      "provider": "github",
+      "revision": "54bf08aa7366634f9724032138deecfbd9c4f657"
+    }
+  },
+  "participants": [
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "Browser",
+      "sublabel": "c2c_ui image uploader"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "v6_api",
+      "sublabel": "image documents"
+    },
+    {
+      "id": "haproxy",
+      "type": "security",
+      "label": "HAProxy + Varnish",
+      "sublabel": "haproxy0 / haproxy1"
+    },
+    {
+      "id": "images",
+      "type": "backend",
+      "label": "c2c_images",
+      "sublabel": "images0 / images1 · sharp",
+      "sources": [
+        {
+          "path": "src/http/routes.ts",
+          "line": 80,
+          "end_line": 226,
+          "label": "POST /upload"
+        },
+        {
+          "path": "src/http/routes.ts",
+          "line": 228,
+          "end_line": 298,
+          "label": "POST /publish, /delete"
+        },
+        {
+          "path": "src/image/thumbnails.ts",
+          "line": 1,
+          "end_line": 91,
+          "label": "BI/MI/SI, AVIF"
+        }
+      ]
+    },
+    {
+      "id": "incoming",
+      "type": "database",
+      "label": "c2corg-incoming",
+      "sublabel": "SOS bucket, unpublished",
+      "sources": [
+        {
+          "path": "src/storage/storage.ts",
+          "line": 313,
+          "end_line": 330,
+          "label": "incoming storage"
+        },
+        {
+          "path": "src/server.ts",
+          "line": 57,
+          "end_line": 73,
+          "label": "24 h expiry"
+        }
+      ]
+    },
+    {
+      "id": "active",
+      "type": "database",
+      "label": "c2corg-active",
+      "sublabel": "SOS bucket, published",
+      "sources": [
+        {
+          "path": "src/storage/storage.ts",
+          "line": 237,
+          "end_line": 286,
+          "label": "move incoming → active"
+        },
+        {
+          "path": "src/storage/storage.ts",
+          "line": 203,
+          "end_line": 230,
+          "label": "delete"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 450,
+      "label": "1 · Upload: the UI talks to c2c_images directly"
+    },
+    {
+      "from": 458,
+      "to": 722,
+      "label": "2 · Save: the API publishes what it stores"
+    },
+    {
+      "from": 732,
+      "to": 1005,
+      "label": "3 · Display: media.camptocamp.org"
+    },
+    {
+      "from": 1013,
+      "to": 1240,
+      "label": "4 · Delete and expiry"
+    }
+  ],
+  "messages": [
+    {
+      "id": "upload",
+      "from": "ui",
+      "to": "haproxy",
+      "y": 180,
+      "label": "POST images.camptocamp.org/upload",
+      "variant": "emphasis",
+      "note": "Before sending, a Worker reduces the photo to 3072 px on its long side (panoramas: 2048 px short side, 16 MP), JPEG 0.9. One upload at a time."
+    },
+    {
+      "id": "upload-forward",
+      "from": "haproxy",
+      "to": "images",
+      "y": 250,
+      "label": "Varnish buffers the body → round robin",
+      "variant": "default",
+      "note": "maxconn 2 per instance; client address in X-Forwarded-For."
+    },
+    {
+      "id": "store-incoming",
+      "from": "images",
+      "to": "incoming",
+      "y": 320,
+      "label": "PUT original + SI/MI/BI (JPEG/PNG)",
+      "variant": "emphasis",
+      "note": "Checks the format: HEIC → JPEG, WebP/AVIF/TIFF/GIF → JPEG/PNG, SVG sanitized; ≤ 100 MP (HEIC 50). Renamed <timestamp>_<random>.<ext>."
+    },
+    {
+      "id": "upload-answer",
+      "from": "images",
+      "to": "ui",
+      "y": 390,
+      "label": "200 {filename, width, height, size}",
+      "variant": "return"
+    },
+    {
+      "id": "avif-async",
+      "from": "images",
+      "to": "incoming",
+      "y": 416,
+      "label": "PUT SI/MI/BI .avif, after the answer",
+      "variant": "dashed",
+      "note": "GENERATE_AVIF: quality 55 (drawings 80), effort 3."
+    },
+    {
+      "id": "create-docs",
+      "from": "ui",
+      "to": "api",
+      "y": 470,
+      "label": "POST /images/list",
+      "variant": "emphasis",
+      "note": "One image document per file, with its filename and associations (outing, route...)."
+    },
+    {
+      "id": "publish",
+      "from": "api",
+      "to": "images",
+      "y": 530,
+      "label": "POST /publish {secret, filename}",
+      "variant": "security",
+      "note": "Through haproxy:8081 (internal_images), inside the request: a non-200 answer gives a 500 and nothing is saved. Also when an update changes the filename."
+    },
+    {
+      "id": "move-active",
+      "from": "images",
+      "to": "active",
+      "y": 605,
+      "label": "move original + all thumbnails",
+      "variant": "emphasis",
+      "note": "Incoming → active. An AVIF not rendered yet is moved 20 s later (THUMBNAILS_PUBLISH_DELAY)."
+    },
+    {
+      "id": "publish-ok",
+      "from": "images",
+      "to": "api",
+      "y": 670,
+      "label": "200 {success}",
+      "variant": "return"
+    },
+    {
+      "id": "docs-created",
+      "from": "api",
+      "to": "ui",
+      "y": 698,
+      "label": "{images: [document_id...]}",
+      "variant": "return"
+    },
+    {
+      "id": "get-media",
+      "from": "ui",
+      "to": "haproxy",
+      "y": 750,
+      "label": "GET media.camptocamp.org/c2corg-active/<name>MI.avif",
+      "variant": "emphasis",
+      "note": "<picture>: AVIF for images uploaded after modernThumbnailsTimestamp, else (or on error) the JPEG/PNG thumbnail."
+    },
+    {
+      "id": "get-s3",
+      "from": "haproxy",
+      "to": "active",
+      "y": 815,
+      "label": "anonymous GET (backend s3)",
+      "variant": "security",
+      "note": "Anonymous reads of the bucket are only accepted from the HAProxies."
+    },
+    {
+      "id": "media-answer",
+      "from": "active",
+      "to": "ui",
+      "y": 885,
+      "label": "image, Cache-Control: public, max-age=3600",
+      "variant": "return"
+    },
+    {
+      "id": "proxy",
+      "from": "ui",
+      "to": "api",
+      "y": 914,
+      "label": "GET /images/proxy/{id}?size=MI&extension=avif",
+      "variant": "default",
+      "note": "When only the document id is known; follows merged images to their target."
+    },
+    {
+      "id": "proxy-redirect",
+      "from": "api",
+      "to": "ui",
+      "y": 980,
+      "label": "302 → media URL",
+      "variant": "return"
+    },
+    {
+      "id": "delete",
+      "from": "api",
+      "to": "images",
+      "y": 1030,
+      "label": "POST /delete {secret, filenames[]}",
+      "variant": "security",
+      "note": "After commit, when an image document is deleted or merged: every filename of its archives. A failure is only logged."
+    },
+    {
+      "id": "delete-active",
+      "from": "images",
+      "to": "active",
+      "y": 1100,
+      "label": "DELETE each original + thumbnails",
+      "variant": "default",
+      "note": "Versioned bucket: only a delete marker, recoverable for 30 days."
+    },
+    {
+      "id": "expire-incoming",
+      "from": "images",
+      "to": "incoming",
+      "y": 1172,
+      "label": "expire unpublished files after 24 h",
+      "variant": "dashed",
+      "note": "A lifecycle rule of the bucket, created at startup if missing; else an hourly sweep by the service."
+    }
+  ],
+  "activations": [
+    {
+      "participant": "ui",
+      "from": 175,
+      "to": 704,
+      "type": "frontend"
+    },
+    {
+      "participant": "haproxy",
+      "from": 180,
+      "to": 256,
+      "type": "security"
+    },
+    {
+      "participant": "images",
+      "from": 250,
+      "to": 422,
+      "type": "backend"
+    },
+    {
+      "participant": "api",
+      "from": 470,
+      "to": 704,
+      "type": "backend"
+    },
+    {
+      "participant": "images",
+      "from": 530,
+      "to": 676,
+      "type": "backend"
+    },
+    {
+      "participant": "haproxy",
+      "from": 750,
+      "to": 821,
+      "type": "security"
+    },
+    {
+      "participant": "api",
+      "from": 914,
+      "to": 986,
+      "type": "backend"
+    },
+    {
+      "participant": "images",
+      "from": 1030,
+      "to": 1178,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Files of one image",
+      "items": [
+        "Original, at most 3072 px long side (panoramas 2048 px short side, 16 MP)",
+        "BI 1500×1500 and MI 400×400 fit inside; SI 200×200 cropped",
+        "Thumbnails in JPEG (mozjpeg 82) or PNG, plus AVIF; SVG originals get JPEG thumbnails",
+        "Keys: <timestamp>_<random>.jpg, <...>MI.jpg, <...>MI.avif"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Protection of c2corg-active",
+      "items": [
+        "Only copy of every published image",
+        "Versioning: a delete or an overwrite keeps the previous version for 30 days",
+        "The bucket policy forbids purging versions or turning the protection off",
+        "Anonymous reads restricted to the HAProxies: the public goes through media.camptocamp.org"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Recent changes (November 2026)",
+      "items": [
+        "c2c_images (TypeScript, sharp) replaced v6_images (Python, ImageMagick)",
+        "AVIF thumbnails; HEIC, WebP, AVIF, TIFF and GIF uploads converted",
+        "Originals reduced to the limits, in the UI and again by the service",
+        "Incoming files expire after 24 h; c2corg-active versioned and read only through HAProxy"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Not drawn",
+      "items": [
+        "Preprod: c2corg-preprod-incoming/-active; a missing file redirects to production's media",
+        "POST /rotate exists but the API does not call it: the UI rotates and uploads again",
+        "Scripts: AVIF backfill and re-rendering of published originals",
+        "Metrics c2corg_images_* scraped by Alloy"
+      ]
+    }
+  ]
+}

@@ -166,6 +166,31 @@ def docs(session) -> Docs:
             ],
         )
     )
+    # a short title next to many titles starting with the same letters: the
+    # whole word must rank above the longer words it is a prefix of
+    # (regression fixtures, see test_search_exact_word_ranks_first)
+    for title in (
+        'Vens',
+        'Venise',
+        'Ventoux',
+        'Col du Vent',
+        'Vendôme',
+        'Vers le ciel',
+        'Pointe de la Vélière',
+        'Pointe du Creux Noir',
+    ):
+        session.add(
+            Waypoint(
+                waypoint_type='summit',
+                elevation=2000,
+                geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+                locales=[
+                    WaypointLocale(
+                        lang='fr', title=title, description='...', summary='...'
+                    )
+                ],
+            )
+        )
     book1 = Book(
         activities=['hiking'],
         book_types=['biography'],
@@ -261,6 +286,50 @@ def test_search_multiword_any_order(client):
     )
     titles = [doc['locales'][0]['title'] for doc in routes['documents']]
     assert 'Pic de Gerri : arête Noris - Gerri' not in titles
+
+
+def _waypoint_titles(client, term):
+    response = client.get(PREFIX + '?q=' + quote(term) + '&t=w', status=200)
+    waypoints = response.json['waypoints']
+    return [doc['locales'][0]['title'] for doc in waypoints['documents']]
+
+
+def test_search_exact_word_ranks_first(client):
+    """A whole word must rank above the longer words and the typo
+    neighbours that merely start like it (regression test: with
+    edge-ngrams and fuzziness only, "Vens" was ranked behind "Venise",
+    "Vent", ... see get_text_query_on_title)."""
+    for term in ('Vens', 'vens', 'le Vens', 'le vens'):
+        titles = _waypoint_titles(client, term)
+        assert titles and titles[0] == 'Vens', f'{term!r} -> {titles!r}'
+
+
+def test_search_single_word_matches_title_with_several_words(client):
+    for term in ('Vélière', 'veliere', 'le veliere', 'Pointe de la Vélière'):
+        titles = _waypoint_titles(client, term)
+        assert 'Pointe de la Vélière' in titles, f'{term!r} -> {titles!r}'
+
+
+def test_search_last_word_can_be_incomplete(client):
+    """As-you-type: the last word may be a prefix, with several words."""
+    for term in ('creux no', 'Creux Noir', 'pointe creux no'):
+        titles = _waypoint_titles(client, term)
+        assert 'Pointe du Creux Noir' in titles, f'{term!r} -> {titles!r}'
+
+
+def test_search_incomplete_last_word_of_a_common_title(client):
+    """ "mont bla" must find "Mont Blanc" while the words before the last one
+    stay whole words (not "Montaña Blanca"), even with a single letter typed
+    so far ("mont b": the ngram fields start at two letters)."""
+    for term in ('mont bla', 'mont bl', 'Mont-Bla', 'mont b'):
+        titles = _waypoint_titles(client, term)
+        assert 'Mont Blanc' in titles, f'{term!r} -> {titles!r}'
+        assert 'Montaña Blanca' not in titles, f'{term!r} -> {titles!r}'
+
+
+def test_search_typo_is_still_tolerated_but_ranked_last(client):
+    """A one-letter typo on a long word still finds the document."""
+    assert 'Venise' in _waypoint_titles(client, 'Venoise')
 
 
 def test_search_by_article_title(client, docs):

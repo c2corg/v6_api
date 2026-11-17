@@ -1,8 +1,10 @@
 import datetime
 from dataclasses import dataclass
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
+from pydiscourse.exceptions import DiscourseClientError
+from requests import Response
 from requests.exceptions import ConnectionError
 
 from c2corg_api.models.association import Association
@@ -10,15 +12,25 @@ from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.common.document_types import OUTING_TYPE
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.feed import update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_api.models.user_profile import USERPROFILE_TYPE
+from c2corg_api.models.route import Route, RouteLocale
+from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.xreport import Xreport, XreportLocale
 from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
     set_discourse_client,
 )
-from c2corg_api.tests import post_json_with_contributor
+from c2corg_api.tests import auth_headers, post_json_with_contributor, send_json
+from c2corg_api.views.document import create_new_version
+from c2corg_api.views.forum import (
+    TITLE_MAX_LENGTH,
+    first_post_content,
+    topic_tags,
+    topic_title,
+)
 
 
 @dataclass
@@ -78,6 +90,8 @@ def docs(session, user_ids) -> Docs:
     )
     session.add(outing)
     session.flush()
+    create_new_version(waypoint_with_topic, user_ids['contributor'])
+    update_feed_document_create(waypoint_with_topic, user_ids['contributor'])
 
     for user_id in (
         user_ids['contributor'],
@@ -113,6 +127,17 @@ def test_post_document_not_exists(client, docs):
     )
     errors = json.get('errors')
     assert 'Document not found' == errors[0].get('description')
+
+
+def test_post_profile(client, user_ids):
+    """A profile has no comments: no topic is created for it."""
+    json = post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': user_ids['contributor'], 'lang': 'fr'},
+        status=400,
+    )
+    assert 'No comments for a profile' == json['errors'][0]['description']
 
 
 def test_post_topic_exists(client, docs):
@@ -182,30 +207,385 @@ def test_post_without_title(create_post_mock, client, docs):
         status=200,
     )
     create_post_mock.assert_called_with(
-        '<a href="{}">{}</a>'.format(
+        'Comments: Image · <a href="{}">{}</a>'.format(
             referer, f'/images/{locale.document_id}/{locale.lang}'
         ),
-        title=f'{locale.document_id}_{locale.lang}',
+        title=f'Image ({locale.document_id})',
         category_id='Commentaires',
+        tags=['en', 'image'],
     )
 
 
-@patch(
-    'pydiscourse.client.DiscourseClient._post',
-    side_effect=[{'topic_id': 10}, {}, {}],
-)
-def test_post_invite_participants(_post_mock, client, docs):
-    """Test outing participants are invited in the topic"""
+@patch('pydiscourse.client.DiscourseClient.create_post')
+def test_post_title_refused(create_post_mock, client, session, docs):
+    """Add the id when Discourse refuses the title, then fall back on it alone."""
+    response = Response()
+    response.status_code = 422
+    create_post_mock.side_effect = [
+        DiscourseClientError('Title has already been used', response=response),
+        DiscourseClientError('Title seems unclear', response=response),
+        {'topic_id': 10},
+    ]
+    locale = docs.locale_en
+    post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': docs.waypoint.document_id, 'lang': 'en'},
+        status=200,
+    )
+    titles = [c.kwargs['title'] for c in create_post_mock.call_args_list]
+    assert titles == [
+        'Mont Granier',
+        f'Mont Granier ({locale.document_id})',
+        f'{locale.document_id}_en',
+    ]
+    tags = {tuple(c.kwargs['tags']) for c in create_post_mock.call_args_list}
+    assert tags == {('en', 'point-de-passage')}
+    session.expire(locale)
+    assert 10 == locale.topic_id
+
+
+@patch('pydiscourse.client.DiscourseClient.create_post')
+def test_post_discourse_client_error(create_post_mock, client, docs):
+    """Only a refused title (422) is retried, not any client error."""
+    response = Response()
+    response.status_code = 403
+    create_post_mock.side_effect = DiscourseClientError('Forbidden', response=response)
+    post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': docs.waypoint.document_id, 'lang': 'en'},
+        status=500,
+    )
+    assert create_post_mock.call_count == 1
+
+
+def test_topic_title_outing():
+    outing = Outing(document_id=1966268, date_start=datetime.date(2026, 11, 2))
+    locale = OutingLocale(
+        document_id=1966268, lang='fr', title='Mont Blanc par les Grands Mulets'
+    )
+    assert (
+        topic_title(outing, locale) == 'Mont Blanc par les Grands Mulets · 2026-11-02'
+    )
+    assert (
+        topic_title(outing, locale, with_id=True)
+        == 'Mont Blanc par les Grands Mulets · 2026-11-02 (1966268)'
+    )
+    assert topic_tags(outing, locale) == ['fr', 'sortie']
+
+
+def test_topic_title_profile():
+    """A profile has no type label nor title: its topic keeps the former title."""
+    profile = UserProfile(document_id=269315)
+    locale = DocumentLocale(document_id=269315, lang='fr', title='')
+    assert topic_title(profile, locale) == '269315_fr'
+
+
+def test_topic_title_route():
+    route = Route(document_id=56789)
+    locale = RouteLocale(
+        document_id=56789,
+        lang='fr',
+        title='Voie des Cristalliers',
+        title_prefix='Mont Blanc',
+    )
+    assert topic_title(route, locale) == 'Mont Blanc : Voie des Cristalliers'
+    assert topic_tags(route, locale) == ['fr', 'itineraire']
+
+
+def test_topic_title_waypoint():
+    """A waypoint topic is tagged with the language and point-de-passage."""
+    hut = Waypoint(document_id=123, waypoint_type='hut')
+    locale = WaypointLocale(document_id=123, lang='de', title='Goûterhütte')
+    assert topic_title(hut, locale) == 'Goûterhütte'
+    assert topic_tags(hut, locale) == ['de', 'point-de-passage']
+
+
+def test_topic_title_without_title():
+    """A document without title is named by its type, with its id."""
+    image = Image(document_id=123456)
+    locale = DocumentLocale(document_id=123456, lang='fr', title='')
+    assert topic_title(image, locale) == 'Image (123456)'
+    assert topic_tags(image, locale) == ['fr', 'image']
+
+
+def test_topic_title_xreport():
+    xreport = Xreport(document_id=1965903, date=datetime.date(2026, 8, 14))
+    locale = XreportLocale(document_id=1965903, lang='en', title='Crevasse fall')
+    assert topic_title(xreport, locale) == 'Crevasse fall · 2026-08-14'
+    assert topic_tags(xreport, locale) == ['en', 'accident']
+
+
+def test_topic_title_shouting():
+    route = Route(document_id=1)
+    locale = RouteLocale(
+        document_id=1, lang='fr', title='VOIE NORMALE', title_prefix='MONT BLANC'
+    )
+    assert topic_title(route, locale) == 'Mont blanc : Voie normale'
+
+
+def test_topic_title_too_long():
+    """Only the title of the document is shortened."""
+    outing = Outing(document_id=1966268, date_start=datetime.date(2026, 11, 2))
+    locale = OutingLocale(document_id=1966268, lang='fr', title='x' * 300)
+    title = topic_title(outing, locale)
+    assert len(title) == TITLE_MAX_LENGTH
+    assert title.endswith('x… · 2026-11-02')
+    title = topic_title(outing, locale, with_id=True)
+    assert len(title) == TITLE_MAX_LENGTH
+    assert title.endswith('x… · 2026-11-02 (1966268)')
+
+
+@patch('pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10})
+@patch('c2corg_api.security.discourse_client.APIDiscourseClient.watch_topic')
+def test_post_participants_watch(watch_topic_mock, create_post_mock, client, docs):
+    """The participants of an outing watch its new topic, without invitation."""
     post_json_with_contributor(
         client,
         '/forum/topics',
         {'document_id': docs.outing.document_id, 'lang': 'en'},
         status=200,
     )
-    _post_mock.assert_has_calls(
-        [
-            call('/t/10/invite.json', user='contributor'),
-            call('/t/10/invite.json', user='contributor2'),
-        ],
-        any_order=True,
+    watch_topic_mock.assert_has_calls(
+        [call('contributor', 10), call('contributor2', 10)], any_order=True
+    )
+    assert watch_topic_mock.call_count == 2
+
+
+@patch('pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10})
+@patch(
+    'c2corg_api.security.discourse_client.APIDiscourseClient.watch_topic',
+    side_effect=[ConnectionError(), {}],
+)
+def test_post_participant_watch_failure(
+    watch_topic_mock, create_post_mock, client, docs
+):
+    """A participant the forum refuses does not stop the others, nor the topic."""
+    json = post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': docs.outing.document_id, 'lang': 'en'},
+        status=200,
+    )
+    assert json['topic_id'] == 10
+    assert watch_topic_mock.call_count == 2
+
+
+def _put_as_moderator(client, url, document):
+    """PUT a document update as the moderator."""
+    body = {'message': 'Update', 'document': document}
+    headers = auth_headers(username='moderator')
+    return send_json(client, 'put', url, body, headers=headers, status=200)
+
+
+@dataclass
+class ForumMock:
+    """The mocked calls that update a topic in Discourse."""
+
+    update_topic: MagicMock
+    update_post: MagicMock
+
+
+@pytest.fixture
+def forum():
+    """Mock the updates of the topics in Discourse, run as soon as committed."""
+    first_post = {'post_stream': {'posts': [{'id': 50, 'post_number': 1}]}}
+    with (
+        patch('c2corg_api.views.forum.in_background', side_effect=lambda op: op()),
+        patch('pydiscourse.client.DiscourseClient.update_topic') as update_topic,
+        patch('pydiscourse.client.DiscourseClient.update_post') as update_post,
+        patch(
+            'pydiscourse.client.DiscourseClient.topic_posts', return_value=first_post
+        ),
+    ):
+        yield ForumMock(update_topic=update_topic, update_post=update_post)
+
+
+def test_put_renames_topic(client, docs, forum):
+    """The topic follows the title and the type of the document."""
+    waypoint = docs.waypoint_with_topic
+    locale = docs.locale_en_with_topic
+    _put_as_moderator(
+        client,
+        f'/waypoints/{waypoint.document_id}',
+        {
+            'document_id': waypoint.document_id,
+            'version': waypoint.version,
+            'waypoint_type': 'lake',
+            'elevation': 2203,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Granier lake',
+                    'description': '...',
+                    'version': locale.version,
+                }
+            ],
+        },
+    )
+    forum.update_topic.assert_called_once_with('/t/-/1.json', title='Granier lake')
+    forum.update_post.assert_called_once_with(
+        50,
+        'Comments: Lake · <a href="https://www.camptocamp.org/waypoints/'
+        f'{waypoint.document_id}/en">Granier lake</a>',
+    )
+
+
+def test_put_profile_with_topic(client, session, user_ids, forum):
+    """A profile with a comment topic can be changed: its topic keeps its title."""
+    profile = session.get(UserProfile, user_ids['contributor'])
+    locale = profile.get_locale('fr')
+    locale.document_topic = DocumentTopic(topic_id=3)
+    session.flush()
+    send_json(
+        client,
+        'put',
+        f'/profiles/{profile.document_id}',
+        {
+            'message': 'Update',
+            'document': {
+                'document_id': profile.document_id,
+                'version': profile.version,
+                'categories': ['amateur'],
+                'locales': [
+                    {'lang': 'fr', 'description': 'Moi !', 'version': locale.version}
+                ],
+            },
+        },
+        headers=auth_headers(username='contributor'),
+    )
+    forum.update_topic.assert_not_called()
+
+
+def test_put_keeps_topic(client, docs, forum):
+    """An update that leaves the title as it is does not call the forum."""
+    waypoint = docs.waypoint_with_topic
+    locale = docs.locale_en_with_topic
+    _put_as_moderator(
+        client,
+        f'/waypoints/{waypoint.document_id}',
+        {
+            'document_id': waypoint.document_id,
+            'version': waypoint.version,
+            'waypoint_type': 'summit',
+            'elevation': 2500,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Mont Granier',
+                    'description': 'another description',
+                    'version': locale.version,
+                }
+            ],
+        },
+    )
+    forum.update_topic.assert_not_called()
+    forum.update_post.assert_not_called()
+
+
+def test_put_renames_route_topic(client, session, user_ids, docs, forum):
+    """A new main waypoint changes the title prefix of the route, and the topic."""
+    route = Route(activities=['skitouring'], elevation_max=2203)
+    route.locales.append(
+        RouteLocale(
+            lang='en', title='North face', document_topic=DocumentTopic(topic_id=2)
+        )
+    )
+    session.add(route)
+    session.flush()
+    create_new_version(route, user_ids['contributor'])
+    update_feed_document_create(route, user_ids['contributor'])
+    _put_as_moderator(
+        client,
+        f'/routes/{route.document_id}',
+        {
+            'document_id': route.document_id,
+            'version': route.version,
+            'activities': ['skitouring'],
+            'elevation_max': 2203,
+            'main_waypoint_id': docs.waypoint.document_id,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'North face',
+                    'version': route.locales[0].version,
+                }
+            ],
+            'associations': {'waypoints': [{'document_id': docs.waypoint.document_id}]},
+        },
+    )
+    forum.update_post.assert_called_once()
+    forum.update_topic.assert_called_once_with(
+        '/t/-/2.json',
+        title='Mont Granier : North face',
+    )
+
+
+def test_put_rename_failure(client, docs, forum):
+    """The edit is saved even when the forum cannot rename the topic."""
+    forum.update_topic.side_effect = ConnectionError()
+    waypoint = docs.waypoint_with_topic
+    locale = docs.locale_en_with_topic
+    _put_as_moderator(
+        client,
+        f'/waypoints/{waypoint.document_id}',
+        {
+            'document_id': waypoint.document_id,
+            'version': waypoint.version,
+            'waypoint_type': 'summit',
+            'elevation': 2203,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Granier',
+                    'description': '...',
+                    'version': locale.version,
+                }
+            ],
+        },
+    )
+    assert forum.update_topic.call_count == 1
+
+
+def test_put_rename_duplicate(client, docs, forum):
+    """A title Discourse refuses on rename (a duplicate) is retried with the id."""
+    response = Response()
+    response.status_code = 422
+    forum.update_topic.side_effect = [
+        DiscourseClientError('Title has already been used', response=response),
+        {},
+    ]
+    waypoint = docs.waypoint_with_topic
+    locale = docs.locale_en_with_topic
+    _put_as_moderator(
+        client,
+        f'/waypoints/{waypoint.document_id}',
+        {
+            'document_id': waypoint.document_id,
+            'version': waypoint.version,
+            'waypoint_type': 'summit',
+            'elevation': 2203,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Granier',
+                    'description': '...',
+                    'version': locale.version,
+                }
+            ],
+        },
+    )
+    titles = [c.kwargs['title'] for c in forum.update_topic.call_args_list]
+    assert titles == ['Granier', f'Granier ({waypoint.document_id})']
+
+
+def test_first_post_content_outing():
+    """The first post links the document, with the date of an outing."""
+    outing = Outing(document_id=1966268, date_start=datetime.date(2026, 11, 2))
+    locale = OutingLocale(document_id=1966268, lang='fr', title='Mont Blanc <3')
+    assert first_post_content(outing, locale) == (
+        'Commentaires : Sortie · '
+        '<a href="https://www.camptocamp.org/outings/1966268/fr">Mont Blanc &lt;3</a>'
+        ' · 2026-11-02'
     )

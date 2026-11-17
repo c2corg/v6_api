@@ -16,7 +16,13 @@ from elasticsearch_dsl.query import (
 from pyproj import Transformer
 
 from c2corg_api.models.outing import OUTING_TYPE
-from c2corg_api.search import create_search, get_text_query_on_title, search_documents
+from c2corg_api.search import (
+    SCORE_SORT,
+    create_search,
+    get_text_query_on_title,
+    search_documents,
+    search_preference,
+)
 from c2corg_api.search.mapping_types import reserved_query_fields
 
 log = logging.getLogger(__name__)
@@ -32,7 +38,7 @@ def build_query(url_params, meta_params, doc_type):
     if search_term:
         search = search.query(
             get_text_query_on_title(search_term, meta_params.get('lang'))
-        )
+        ).params(preference=search_preference(search_term))
 
     search_model = search_documents[doc_type]
     for param in url_params:
@@ -52,9 +58,12 @@ def build_query(url_params, meta_params, doc_type):
     if url_params.get('sort'):
         keys_to_sort = url_params.get('sort').split(',')
         search = search.sort(*keys_to_sort)
-    elif not search_term:
-        # if a search term is given, the documents are sorted by a relevance
-        # score. if not explicitly sort by id/date.
+    elif search_term:
+        # sort by relevance score. Many documents share a title and so a
+        # score: the id breaks the ties, otherwise their order changes
+        # between requests and paging skips or repeats documents.
+        search = search.sort(*SCORE_SORT)
+    else:
         if doc_type == OUTING_TYPE:
             search = search.sort(
                 {'date_end': {'order': 'desc'}}, {'id': {'order': 'desc'}}
@@ -367,7 +376,8 @@ def create_number_range_filter(field, query_term):
 def create_bbox_filter(query_term):
     query_terms = query_term.split(',')
     bbox3857 = list(map(parse_num, query_terms))
-    if len(bbox3857) != 4 or not all(bbox3857):
+    # a 0 is a coordinate (the Greenwich meridian is x = 0), not a missing one
+    if len(bbox3857) != 4 or any(value is None for value in bbox3857):
         return None
 
     # transform the bbox from 3857 to 4326

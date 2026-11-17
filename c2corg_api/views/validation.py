@@ -1,4 +1,5 @@
 import functools
+import math
 import urllib
 
 from dateutil import parser as datetime_parser
@@ -186,6 +187,57 @@ def validate_token_pagination(request, **kwargs):
     """Validate token pagination parameters (limit and token) for feed."""
     check_get_for_integer_property(request, 'limit', False)
     validate_token(request)
+
+
+# half of the width of the world in EPSG:3857 (meters)
+WORLD_EXTENT_3857 = 20037508.342789244
+
+
+def validate_bbox(request, **kwargs):
+    """Check and parse a required `bbox=xmin,ymin,xmax,ymax` query parameter.
+
+    The bbox is in EPSG:3857, stored into `request.validated['bbox']` as a
+    4-tuple of floats, cut to the extent of the world of this projection (a
+    map zoomed out far shows more of it, and it cannot be reprojected).
+
+    This is distinct from `create_bbox_filter` in
+    `c2corg_api.search.search_filters`, which parses the same shape of
+    parameter for an Elasticsearch bounding-box filter and reprojects it
+    to EPSG:4326 in the process. Views that query PostGIS directly want
+    the bbox to stay in EPSG:3857, matching the SRID of the geometry
+    columns.
+    """
+    bbox_param = request.GET.get('bbox')
+    if not bbox_param:
+        request.errors.add('querystring', 'bbox', 'bbox is missing')
+        return
+
+    values = bbox_param.split(',')
+    if len(values) != 4:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    try:
+        xmin, ymin, xmax, ymax = (float(v) for v in values)
+    except ValueError:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    if not all(math.isfinite(value) for value in (xmin, ymin, xmax, ymax)):
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    xmin, xmax = (
+        max(min(value, WORLD_EXTENT_3857), -WORLD_EXTENT_3857) for value in (xmin, xmax)
+    )
+    ymin, ymax = (
+        max(min(value, WORLD_EXTENT_3857), -WORLD_EXTENT_3857) for value in (ymin, ymax)
+    )
+    if xmin >= xmax or ymin >= ymax:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    request.validated['bbox'] = (xmin, ymin, xmax, ymax)
 
 
 def validate_simple_token_pagination(request, **kwargs):

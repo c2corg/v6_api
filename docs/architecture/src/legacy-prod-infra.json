@@ -1,0 +1,651 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Legacy Production Fleet (current prod on Exoscale, being replaced by v7)",
+    "output": "legacy-prod-infra.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "git@github.com:c2corg/v6-docker-compose.git",
+      "provider": "github",
+      "link_mode": "local-only",
+      "revision": "30ac4aeaac154926fb69bc0a7a123420d1aebb3a"
+    }
+  },
+  "components": [
+    {
+      "id": "users",
+      "type": "external",
+      "label": "Visitors, apps, bots",
+      "sublabel": "*.camptocamp.org",
+      "pos": [
+        30,
+        330
+      ],
+      "size": [
+        130,
+        64
+      ],
+      "sources": [
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 45,
+          "end_line": 66,
+          "label": "public frontend, host ACLs"
+        }
+      ]
+    },
+    {
+      "id": "haproxy",
+      "type": "security",
+      "label": "haproxy0 / haproxy1",
+      "sublabel": "HAProxy 2.0 + Varnish",
+      "tag": "2 public IPs in DNS",
+      "pos": [
+        200,
+        130
+      ],
+      "size": [
+        160,
+        584
+      ],
+      "sources": [
+        {
+          "path": "composition/production/haproxy0/docker-compose.yml",
+          "line": 8,
+          "end_line": 60,
+          "label": "haproxy, varnish, exporter"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 201,
+          "end_line": 223,
+          "label": "use_backend by host"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 232,
+          "end_line": 248,
+          "label": "internal :9200 :8080 :8081"
+        }
+      ]
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "ui0 / ui1",
+      "sublabel": "c2c_ui v7.50.0 · sticky by IP",
+      "pos": [
+        500,
+        130
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/ui0/docker-compose.yml",
+          "line": 1,
+          "end_line": 19,
+          "label": "ui image, head API URL"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 251,
+          "end_line": 275,
+          "label": "backend ui, balance source"
+        }
+      ]
+    },
+    {
+      "id": "tracking",
+      "type": "backend",
+      "label": "tracking (on ui1)",
+      "sublabel": "c2c_tracking v3.2.0 · Redis, S3",
+      "pos": [
+        500,
+        230
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/tracking/docker-compose.yml",
+          "line": 1,
+          "end_line": 65,
+          "label": "tracking service"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 277,
+          "end_line": 284,
+          "label": "backend tracking → ui1"
+        }
+      ]
+    },
+    {
+      "id": "forum",
+      "type": "backend",
+      "label": "Discourse VM",
+      "sublabel": "discourse_docker, own PG/Redis",
+      "pos": [
+        500,
+        330
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "discourse/README.md",
+          "line": 8,
+          "end_line": 17,
+          "label": "what runs"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 333,
+          "end_line": 356,
+          "label": "forum + forum_beta backends"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "api0 / api1 / api2",
+      "sublabel": "v6_api v6.33.1 · gunicorn",
+      "pos": [
+        500,
+        430
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/api0/docker-compose.yml",
+          "line": 4,
+          "end_line": 121,
+          "label": "api service (api1/2 symlink it)"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 287,
+          "end_line": 309,
+          "label": "backend api, maxconn 7"
+        },
+        {
+          "path": "server-list.env",
+          "line": 43,
+          "end_line": 44,
+          "label": "API_VERSION"
+        }
+      ]
+    },
+    {
+      "id": "images",
+      "type": "backend",
+      "label": "images0 / images1",
+      "sublabel": "c2c_images v2.8.0 · resize, AVIF",
+      "pos": [
+        500,
+        530
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/images0/docker-compose.yml",
+          "line": 4,
+          "end_line": 35,
+          "label": "images service, buckets"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 311,
+          "end_line": 326,
+          "label": "backend images"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 225,
+          "end_line": 230,
+          "label": "Varnish → images"
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "redis-spof",
+      "sublabel": "Redis 5 · single node",
+      "pos": [
+        820,
+        430
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/redis-spof/docker-compose.yml",
+          "line": 8,
+          "end_line": 22,
+          "label": "redis 5"
+        }
+      ]
+    },
+    {
+      "id": "pg_main",
+      "type": "database",
+      "label": "postgresql-main",
+      "sublabel": "PostgreSQL 9.6 / PostGIS 2.3",
+      "pos": [
+        820,
+        330
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/postgresql-main/docker-compose.yml",
+          "line": 8,
+          "end_line": 17,
+          "label": "postgresql service"
+        },
+        {
+          "path": "MIGRATION_PLAN.md",
+          "line": 21,
+          "end_line": 21,
+          "label": "9.6 / 2.3 → 18 / 3.6"
+        }
+      ]
+    },
+    {
+      "id": "es",
+      "type": "database",
+      "label": "elasticsearch0..2",
+      "sublabel": "ES 2.4 · 3-node cluster",
+      "pos": [
+        820,
+        530
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/elasticsearch0/docker-compose.yml",
+          "line": 8,
+          "end_line": 45,
+          "label": "ES node, unicast cluster"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 395,
+          "end_line": 400,
+          "label": "backend elasticsearch"
+        }
+      ]
+    },
+    {
+      "id": "pg_backup",
+      "type": "database",
+      "label": "postgresql-backup",
+      "sublabel": "replica + daily dumps",
+      "pos": [
+        1080,
+        330
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/postgresql-backup/docker-compose.yml",
+          "line": 8,
+          "end_line": 16,
+          "label": "replica + /var/backups/pgsql"
+        },
+        {
+          "path": "images/production/c2corg_pgsql_backup/init-replication.sh",
+          "line": 1,
+          "end_line": 8,
+          "label": "pg_basebackup"
+        },
+        {
+          "path": "images/production/c2corg_pgsql_backup/pgsql-backup.sh",
+          "line": 13,
+          "end_line": 23,
+          "label": "dumps to tar"
+        }
+      ]
+    },
+    {
+      "id": "workers",
+      "type": "backend",
+      "label": "workers",
+      "sublabel": "syncer · scheduler · certbot",
+      "pos": [
+        1080,
+        530
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/workers/docker-compose.yml",
+          "line": 8,
+          "end_line": 50,
+          "label": "syncer, scheduler, certbot"
+        }
+      ]
+    },
+    {
+      "id": "sos",
+      "type": "cloud",
+      "label": "Exoscale SOS (ch-dk-2)",
+      "sublabel": "images, terrain, tracking",
+      "pos": [
+        500,
+        650
+      ],
+      "size": [
+        220,
+        64
+      ],
+      "sources": [
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 328,
+          "end_line": 331,
+          "label": "backend s3"
+        },
+        {
+          "path": "images/production/c2corg_haproxy/haproxy.cfg",
+          "line": 143,
+          "end_line": 158,
+          "label": "terrain c2corg-dem rules"
+        },
+        {
+          "path": "IMAGES_BUCKET_PROTECTION.md",
+          "line": 1,
+          "end_line": 30,
+          "label": "versioning, HAProxy-only reads"
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "Activity providers",
+      "sublabel": "Strava, Garmin, Polar, Coros…",
+      "pos": [
+        1070,
+        30
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/production/tracking/docker-compose.yml",
+          "line": 10,
+          "end_line": 18,
+          "label": "external APIs"
+        }
+      ]
+    },
+    {
+      "id": "admins",
+      "type": "external",
+      "label": "Admins",
+      "sublabel": "SSH",
+      "pos": [
+        30,
+        530
+      ],
+      "size": [
+        130,
+        64
+      ],
+      "sources": [
+        {
+          "path": "BASTION_BOOTSTRAP.md",
+          "line": 1,
+          "end_line": 20,
+          "label": "everything runs from the bastion"
+        }
+      ]
+    },
+    {
+      "id": "bastion",
+      "type": "security",
+      "label": "bastion",
+      "sublabel": "was docker-compose0",
+      "pos": [
+        30,
+        650
+      ],
+      "size": [
+        130,
+        64
+      ],
+      "sources": [
+        {
+          "path": "DOCKER_COMPOSE0_REPLACEMENT.md",
+          "line": 1,
+          "end_line": 15,
+          "label": "bastion takes over"
+        },
+        {
+          "path": "composition/production/update-envs.sh",
+          "line": 1,
+          "end_line": 46,
+          "label": "DOCKER_HOST per VM"
+        },
+        {
+          "path": "composition/production/workers/update-cert.sh",
+          "line": 1,
+          "end_line": 70,
+          "label": "weekly cert deploy"
+        }
+      ]
+    },
+    {
+      "id": "prometheus",
+      "type": "backend",
+      "label": "prometheus (infra VM)",
+      "sublabel": "scrapes exporters on each VM",
+      "pos": [
+        820,
+        680
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "composition/infrastructure/prometheus/docker-compose.yml",
+          "line": 8,
+          "end_line": 50,
+          "label": "prometheus service"
+        },
+        {
+          "path": "images/infrastructure/c2corg_prometheus/prometheus.yml",
+          "line": 1,
+          "end_line": 120,
+          "label": "scrape jobs"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "users",
+      "to": "haproxy",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "from": "haproxy",
+      "to": "ui",
+      "label": "www.",
+      "variant": "emphasis"
+    },
+    {
+      "from": "haproxy",
+      "to": "tracking",
+      "label": "tracking."
+    },
+    {
+      "from": "haproxy",
+      "to": "forum",
+      "label": "forum. PROXY"
+    },
+    {
+      "from": "haproxy",
+      "to": "api",
+      "label": "api.",
+      "variant": "emphasis"
+    },
+    {
+      "from": "haproxy",
+      "to": "images",
+      "label": "images. → Varnish"
+    },
+    {
+      "from": "haproxy",
+      "to": "sos",
+      "label": "media. (active, dem)"
+    },
+    {
+      "from": "tracking",
+      "to": "providers",
+      "label": "OAuth, webhooks, activity sync"
+    },
+    {
+      "from": "tracking",
+      "to": "pg_main",
+      "label": "schema tracking"
+    },
+    {
+      "from": "api",
+      "to": "redis",
+      "label": "cache"
+    },
+    {
+      "from": "api",
+      "to": "pg_main",
+      "label": "SQL",
+      "variant": "emphasis"
+    },
+    {
+      "from": "api",
+      "to": "es",
+      "label": "search :9200"
+    },
+    {
+      "from": "api",
+      "to": "images",
+      "label": "via HAProxy :8081"
+    },
+    {
+      "from": "api",
+      "to": "forum",
+      "label": "DiscourseConnect SSO"
+    },
+    {
+      "from": "images",
+      "to": "sos",
+      "label": "incoming → active"
+    },
+    {
+      "from": "pg_main",
+      "to": "pg_backup",
+      "label": "WAL stream",
+      "variant": "dashed"
+    },
+    {
+      "from": "workers",
+      "to": "es",
+      "label": "index"
+    },
+    {
+      "from": "workers",
+      "to": "pg_main",
+      "label": "jobs"
+    },
+    {
+      "from": "admins",
+      "to": "bastion",
+      "label": "SSH",
+      "variant": "security"
+    },
+    {
+      "from": "bastion",
+      "to": "haproxy",
+      "label": "remote Docker, cert copy",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "How traffic is routed",
+      "items": [
+        "www → ui0/ui1 (sticky by client IP so one deploy never mixes two builds); tracking. → ui1",
+        "api → api0..2 round robin, 7 connections per server; per-IP 429 limits, scanner and bot denies before routing",
+        "images. → Varnish → images0/1; media. → SOS bucket c2corg-active, and /c2corg-dem/ terrain tiles (range GETs from camptocamp.org origins only)",
+        "Internal frontends on the HAProxies: :9200 Elasticsearch, :8080 API (UI head tags), :8081 images, allowed only from the Exoscale zone"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "How admins operate it",
+      "items": [
+        "All VMs: Exoscale ch-dk-2, public IPs, one security group production whose members trust each other on every port; Docker 1.12, Debian 8 to 10",
+        "One compose folder per VM in composition/production/, each .env sets DOCKER_HOST to that VM's remote Docker daemon (plaintext, protected only by the security group)",
+        "API_VERSION lives once in server-list.env and drives api0..2 plus syncer and scheduler",
+        "certbot on workers renews the certificate; the bastion copies it into both HAProxy images every week",
+        "forum-beta (old Discourse VM) is still routed for verification, to be deleted"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Recent hardening (Nov 2026)",
+      "items": [
+        "c2corg-active: versioning, 30-day recovery window, deletes of versions denied, anonymous reads only from the HAProxies",
+        "c2corg-dem: CORS and HAProxy-only reads, served by HAProxy for the 3D map",
+        "collectd removed from the UI VMs; Grafana Cloud (free tier) set up outside this repository"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "What replaces it (v7 fleet)",
+      "items": [
+        "Terraform + Ansible from the bastion, VPC, elastic IP, Debian 13",
+        "PostgreSQL 18 + WAL-G, ES 8.19, Redis 8, HAProxy 3.4; Prometheus replaced by Grafana Cloud + Alloy",
+        "See the v7 / preprod diagram; this fleet is switched off after the cutover"
+      ]
+    }
+  ]
+}

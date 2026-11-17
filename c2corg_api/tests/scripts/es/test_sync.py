@@ -3,26 +3,30 @@ from dataclasses import dataclass
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy import event
 
 from c2corg_api.models import es_sync
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
-from c2corg_api.models.es_sync import ESDeletedLocale
+from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.scripts.es.sync import (
+    SYNC_OVERLAP,
     create_search_documents,
     get_changed_documents,
     get_changed_documents_for_associations,
     get_changed_routes_and_outings_wr,
     get_changed_users,
     get_deleted_locale_documents,
+    get_documents,
     get_documents_per_type,
     sync_deleted_documents,
     sync_documents,
+    sync_es,
 )
 from c2corg_api.tests import global_userids
 from c2corg_api.views.document import create_new_version
@@ -249,6 +253,34 @@ def test_get_deleted_locale_documents(session, docs):
     assert 'w' == changed_documents[0][1]
 
 
+def test_get_documents_reads_only_the_given_ids(db_connection, session, docs):
+    statements = []
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    # a chunk size of 1: one query per document
+    ids = {docs.waypoint2.document_id, docs.waypoint1.document_id}
+    event.listen(db_connection, 'before_cursor_execute', record)
+    try:
+        found = list(get_documents(session, 'w', 1, ids))
+    finally:
+        event.remove(db_connection, 'before_cursor_execute', record)
+
+    # no window over the whole documents table, as for fill_index
+    assert not [s for s in statements if 'row_number' in s]
+    assert [doc.document_id for doc in found] == sorted(ids)
+
+
+def test_get_documents_all(session, docs):
+    found = list(get_documents(session, 'w', 1, ignore_redirects=True))
+
+    found_ids = [doc.document_id for doc in found]
+    assert docs.waypoint1.document_id in found_ids
+    assert docs.waypoint2.document_id in found_ids
+    assert docs.waypoint3.document_id not in found_ids
+
+
 def test_get_documents_per_type():
     changed_documents = [(1, 'r'), (2, 'w'), (3, 'r'), (4, 'r'), (4, 'r')]
     docs_per_type = get_documents_per_type(changed_documents)
@@ -354,6 +386,32 @@ def test_sync_deleted_documents(mock, session, docs):
 
     outing_doc = _get_by_id(search_documents, docs.outing1.document_id)
     assert outing_doc['_op_type'] == 'delete'
+
+
+@pytest.mark.parametrize(
+    ('age', 'synced'),
+    [
+        (datetime.timedelta(minutes=1), True),
+        (SYNC_OVERLAP + datetime.timedelta(minutes=1), False),
+    ],
+)
+@patch('c2corg_api.scripts.es.sync.ElasticBatch')
+def test_sync_es_reads_late_commits(mock, session, docs, age, synced):
+    """Sync a change committed after the last sync with an older timestamp."""
+    # a deletion whose transaction started before the last sync and committed
+    # after it: its `deleted_at` is older than `last_update`
+    search_documents = []
+    mock.side_effect = _create_mock_match(search_documents)
+    last_update, _ = es_sync.get_status(session)
+    session.add(
+        ESDeletedDocument(document_id=987654, type='w', deleted_at=last_update - age)
+    )
+    session.flush()
+
+    sync_es(session)
+
+    deleted = _get_by_id(search_documents, 987654)
+    assert (deleted is not None and deleted['_op_type'] == 'delete') is synced
 
 
 def _get_by_id(search_documents, document_id):

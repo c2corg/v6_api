@@ -1,6 +1,12 @@
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 
+from c2corg_api import caching
+from c2corg_api.caching import (
+    LISTING_TOTAL_EXPIRATION,
+    cache_listing_total,
+    get_or_create,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import AssociationLog
 from c2corg_api.models.document import Document, DocumentLocale
@@ -63,7 +69,17 @@ def read_association_history(request):
     if user_id:
         query = query.filter(AssociationLog.user_id == user_id)
 
-    count = query.count()
+    if document_id or user_id:
+        count = query.count()
+    else:
+        # counting all the association changes reads the whole table: cache
+        # it for a few minutes, as the total of the document listings
+        count = get_or_create(
+            cache_listing_total,
+            f'association_log-{caching.CACHE_VERSION}',
+            query.count,
+            expiration_time=LISTING_TOTAL_EXPIRATION,
+        )
 
     query = query.order_by(AssociationLog.id.desc()).limit(limit).offset(offset).all()
 

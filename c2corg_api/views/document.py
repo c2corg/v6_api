@@ -5,9 +5,12 @@ from sqlalchemy.orm import contains_eager, joinedload, load_only, with_polymorph
 from sqlalchemy.orm.exc import StaleDataError
 
 import c2corg_api.views.document_associations as doc_associations
+from c2corg_api import caching
 from c2corg_api.caching import (
+    LISTING_TOTAL_EXPIRATION,
     cache_document_cooked,
     cache_document_detail,
+    cache_listing_total,
     get_or_create,
 )
 from c2corg_api.httpexceptions import (
@@ -55,6 +58,7 @@ from c2corg_api.views.document_listings import (
     add_load_for_profiles,
     get_documents,
 )
+from c2corg_api.views.forum import rename_topics, topic_texts
 from c2corg_api.views.license import get_license
 from c2corg_api.views.validation import (
     association_permission_checker,
@@ -119,6 +123,9 @@ def update_document(
     if before_update:
         before_update(document, document_in)
 
+    # the comment topics are titled from the document: updated if it changes
+    old_topic_texts = topic_texts(document)
+
     # update the document with the input document
     document.update(document_in)
 
@@ -156,6 +163,8 @@ def update_document(
 
         if after_update:
             after_update(document, update_types, user_id=user_id)
+
+        rename_topics(request, document, old_topic_texts)
 
         update_cache_version(document)
 
@@ -246,6 +255,29 @@ def update_version(document, user_id, comment, update_types, changed_langs):
     DBSession.add(archive)
     DBSession.add(meta_data)
     DBSession.add_all(locale_versions)
+    DBSession.flush()
+
+
+def add_unchanged_version(document, user_id, comment, langs):
+    """Add a version of the given locales, the document unchanged (e.g. restored)."""
+    # the version points to the current archives, as the versions of the
+    # locales that an update leaves unchanged
+    meta_data = HistoryMetaData(comment=comment, user_id=user_id)
+    archive = _get_document_archive(document, [])
+    geometry_archive = _get_geometry_archive(document, [])
+    versions = [
+        DocumentVersion(
+            document_id=document.document_id,
+            lang=lang,
+            document_archive=archive,
+            document_geometry_archive=geometry_archive,
+            document_locales_archive=_get_locale_archive(document.get_locale(lang), []),
+            history_metadata=meta_data,
+        )
+        for lang in langs
+    ]
+    DBSession.add(meta_data)
+    DBSession.add_all(versions)
     DBSession.flush()
 
 
@@ -616,13 +648,17 @@ def collection_get(request, doc_type, documents_config):
         )
     else:
         # if no search parameters, directly load documents from the db
-        search_documents = partial(search_documents_paginated, meta_params)
+        search_documents = partial(search_documents_paginated, meta_params, doc_type)
 
     return get_documents(documents_config, meta_params, search_documents)
 
 
-def search_documents_paginated(meta_params, base_query, base_total_query):
+def search_documents_paginated(meta_params, doc_type, base_query, base_total_query):
     """Return a batch of document ids with the given `offset` and `limit`."""
+    # The total of a listing without search parameters only depends on the
+    # document type. Counting reads the whole table (about 1 s for the
+    # images, asked by every home page), so it is cached for a few minutes:
+    # a slightly stale total only changes the number of pages.
     offset = meta_params['offset']
     limit = meta_params['limit']
     documents = (
@@ -633,7 +669,12 @@ def search_documents_paginated(meta_params, base_query, base_total_query):
         .limit(limit)
         .all()
     )
-    total = base_total_query.count()
+    total = get_or_create(
+        cache_listing_total,
+        f'{doc_type}-{caching.CACHE_VERSION}',
+        base_total_query.count,
+        expiration_time=LISTING_TOTAL_EXPIRATION,
+    )
 
     document_ids = [doc.document_id for doc in documents]
 

@@ -13,6 +13,10 @@ def validate_markdowns(request, **kwargs):
         request.errors.add('body', '', 'Should be a JSON object')
 
 
+# A POST, though it changes nothing: the markdowns of a whole locale (tens of
+# KB for a route description) do not fit in a URL. As a POST, it counts in
+# the write quota of an authenticated user (security.rate_limiting): one per
+# preview in the editor.
 @write(validators=[validate_markdowns], json=False)
 def cook_markdown(request):
     """Thi service is a stateless service that returns HTML values.

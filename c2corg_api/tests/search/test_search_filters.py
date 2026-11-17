@@ -9,7 +9,12 @@ from elasticsearch_dsl.query import (
     Terms,
 )
 
-from c2corg_api.search import create_search, get_text_query_on_title
+from c2corg_api.search import (
+    SCORE_SORT,
+    create_search,
+    get_text_query_on_title,
+    search_preference,
+)
 from c2corg_api.search.mappings.image_mapping import SearchImage
 from c2corg_api.search.mappings.outing_mapping import SearchOuting
 from c2corg_api.search.mappings.route_mapping import SearchRoute
@@ -28,6 +33,7 @@ def test_build_query():
     expected_query = (
         create_search('w')
         .query(get_text_query_on_title('search word'))
+        .sort(*SCORE_SORT)
         .filter(Term(available_locales='fr'))
         .filter(Terms(areas=[1234, 4567]))
         .filter(Range(elevation={'gte': 1500}))
@@ -35,6 +41,21 @@ def test_build_query():
         .extra(from_=0, size=10)
     )
     assert_query_equal(query, expected_query)
+
+
+def test_build_query_preference():
+    """Send every page of a full-text search to the same shard copies."""
+    meta_params = {'limit': 10, 'offset': 0}
+    page1 = build_query({'q': 'dry-tooling'}, meta_params, 'w')
+    page2 = build_query({'q': 'dry-tooling'}, {'limit': 10, 'offset': 10}, 'w')
+    other = build_query({'q': 'mont blanc'}, meta_params, 'w')
+    no_term = build_query({'walt': '1500'}, meta_params, 'w')
+
+    assert page1._params['preference'] == search_preference('dry-tooling')
+    assert page1._params['preference'] == page2._params['preference']
+    assert other._params['preference'] != page1._params['preference']
+    assert not page1._params['preference'].startswith('_')
+    assert 'preference' not in no_term._params
 
 
 def test_build_query_bbox():
@@ -48,6 +69,7 @@ def test_build_query_bbox():
     expected_query = (
         create_search('w')
         .query(get_text_query_on_title('search word'))
+        .sort(*SCORE_SORT)
         .filter(Range(elevation={'gte': 1500}))
         .filter(
             GeoBoundingBox(
@@ -73,6 +95,7 @@ def test_build_query_limit_offset():
     expected_query = (
         create_search('w')
         .query(get_text_query_on_title('search word'))
+        .sort(*SCORE_SORT)
         .fields([])
         .extra(from_=40, size=20)
     )
@@ -356,6 +379,16 @@ def test_create_filter_date():
     assert create_filter('idate', '2016-01-01,2016-01-03', SearchImage) == Range(
         date_time={'gte': '2016-01-01', 'lte': '2016-01-03'}
     )
+
+
+def test_create_bbox_filter_with_a_zero_coordinate():
+    # the Greenwich meridian is x = 0, the equator y = 0: they are not missing
+    assert create_bbox_filter('0,5000000,100000,5100000') is not None
+    assert create_bbox_filter('-100000,0,100000,100000') is not None
+    assert create_bbox_filter('0,0,100000,100000') is not None
+    # a missing or invalid one still is
+    assert create_bbox_filter('0,5000000,100000') is None
+    assert create_bbox_filter('0,5000000,100000,abc') is None
 
 
 def test_create_bbox_filter():

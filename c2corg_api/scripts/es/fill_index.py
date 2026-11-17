@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 from datetime import UTC, datetime, timedelta
+from typing import NamedTuple
 
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm.session import sessionmaker
@@ -47,9 +48,24 @@ def main(argv=sys.argv):
         fill_index(session, batch_size)
 
 
-def fill_index(session, batch_size=1000):
+class FillResult(NamedTuple):
+    # number of documents sent to ElasticSearch
+    count: int
+    # database time taken before reading the documents: everything modified
+    # since then has to be replayed by the syncer
+    sync_date: datetime
+
+
+def fill_index(session, batch_size=1000, index_name=None, mark_updated=True):
+    """Index every document.
+
+    By default the configured index is filled in place. `index_name` targets
+    another index (see `reindex.py`). `mark_updated=False` leaves the sync
+    status untouched, the caller then has to call `es_sync.mark_as_updated`
+    with the returned `sync_date` once the index is actually in use.
+    """
     client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
+    index_name = index_name or elasticsearch_config['index']
 
     status = {'start_time': datetime.now(UTC), 'last_progress_update': None}
 
@@ -84,10 +100,12 @@ def fill_index(session, batch_size=1000):
                 count += 1
                 progress(count, total)
 
-    es_sync.mark_as_updated(session, date_now)
+    if mark_updated:
+        es_sync.mark_as_updated(session, date_now)
 
     duration = datetime.now(UTC) - status['start_time']
     print(f'Done (duration: {duration})')
+    return FillResult(count, date_now)
 
 
 if __name__ == '__main__':

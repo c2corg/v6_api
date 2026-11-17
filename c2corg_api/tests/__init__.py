@@ -477,3 +477,20 @@ def reset_cache_key():
         f'{cache_version}-{int(time.time())}-{randint(0, 10**9)}'
     )
     caching_common.cache_status = caching_common.CacheStatus()
+
+
+def encode_polyline(points):
+    """Encode (lon, lat) points as ol/format/Polyline does, precision 5."""
+    chunks = []
+    previous = (0, 0)
+    for lon, lat in points:
+        current = (round(lat * 1e5), round(lon * 1e5))
+        for value, before in zip(current, previous, strict=True):
+            value = (value - before) << 1
+            value = ~value if value < 0 else value
+            while value >= 0x20:
+                chunks.append(chr((0x20 | (value & 0x1F)) + 63))
+                value >>= 5
+            chunks.append(chr(value + 63))
+        previous = current
+    return ''.join(chunks)

@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Local development environment (v6_api, c2c_ui, optional services)",
+    "output": "local-dev.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/c2corg/v6_api",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "d095735abb1da90cb9dd34f38843b75fbc8df879"
+    }
+  },
+  "components": [
+    { "id": "dev", "type": "external", "label": "Developer", "sublabel": "browser · VS Code", "icon": "person", "pos": [40, 200], "size": [130, 70] },
+    { "id": "remote", "type": "cloud", "label": "Remote backends", "sublabel": "demov6 media · images · forum", "tag": "default of 'localhost'", "pos": [60, 40], "size": [200, 64] },
+    { "id": "e2e", "type": "frontend", "label": "Playwright e2e", "sublabel": "npm run e2e · UI on :6553", "pos": [280, 40], "size": [170, 64] },
+    { "id": "vite", "type": "frontend", "label": "c2c_ui dev server", "sublabel": "npm run serve · Vite 8 :8080", "tag": "BUILD_ENV=local", "pos": [230, 200], "size": [180, 70] },
+    {
+      "id": "api", "type": "backend", "label": "v6_api (FastAPI)", "sublabel": "make serve · uvicorn :6543", "tag": "Python 3.15 · uv",
+      "pos": [500, 200], "size": [210, 70],
+      "sources": [
+        { "path": "Makefile", "line": 72, "end_line": 73, "label": "make serve" },
+        { "path": "config/env.dev", "line": 1, "end_line": 25, "label": "dev settings" },
+        { "path": "HOWTO-DEV.md", "line": 154, "end_line": 180, "label": "running the API" }
+      ]
+    },
+    {
+      "id": "redis", "type": "messagebus", "label": "Redis 7.2", "sublabel": ":6379 · queue db 6, cache db 7",
+      "pos": [680, 40], "size": [180, 64],
+      "sources": [
+        { "path": ".devcontainer/docker-compose.yml", "line": 63, "end_line": 69, "label": "dev container" },
+        { "path": "docker-compose.yml", "line": 29, "end_line": 32, "label": "manual setup" },
+        { "path": "config/env.dev", "line": 18, "end_line": 20 }
+      ]
+    },
+    {
+      "id": "syncer", "type": "backend", "label": "ES syncer", "sublabel": "make run-syncer",
+      "pos": [800, 200], "size": [170, 70],
+      "sources": [ { "path": "Makefile", "line": 115, "end_line": 116 } ]
+    },
+    {
+      "id": "pg", "type": "database", "label": "PostgreSQL + PostGIS", "sublabel": ":5432 · c2corg, c2corg_tests",
+      "pos": [510, 370], "size": [190, 64],
+      "sources": [
+        { "path": ".devcontainer/docker-compose.yml", "line": 27, "end_line": 47, "label": "dev container: PG 18" },
+        { "path": "docker-compose.yml", "line": 2, "end_line": 14, "label": "manual: PostGIS 16" }
+      ]
+    },
+    {
+      "id": "es", "type": "database", "label": "Elasticsearch 2.4", "sublabel": ":9200 · index c2corg",
+      "pos": [800, 370], "size": [170, 64],
+      "sources": [
+        { "path": ".devcontainer/docker-compose.yml", "line": 49, "end_line": 61, "label": "dev container" },
+        { "path": "docker-compose.yml", "line": 16, "end_line": 27, "label": "manual: 2018 image" },
+        { "path": ".devcontainer/setup.sh", "line": 93, "end_line": 124, "label": "index check / rebuild" }
+      ]
+    },
+    {
+      "id": "scheduler", "type": "backend", "label": "Job scheduler", "sublabel": "make run-background-jobs",
+      "pos": [470, 540], "size": [170, 64],
+      "sources": [ { "path": "Makefile", "line": 118, "end_line": 119 } ]
+    },
+    {
+      "id": "ghcr", "type": "cloud", "label": "ghcr.io dev images", "sublabel": "c2corg-dev-db · c2corg-dev-es",
+      "tag": "anonymized extract",
+      "pos": [660, 700], "size": [200, 64],
+      "sources": [ { "path": "scripts/dev-database/README.md", "line": 1, "end_line": 29 } ]
+    },
+    { "id": "images", "type": "backend", "label": "c2c_images", "sublabel": "optional · local folders", "pos": [100, 370], "size": [160, 64] },
+    { "id": "tracking", "type": "backend", "label": "c2c_tracking", "sublabel": "optional · start:dev", "pos": [280, 370], "size": [150, 64] },
+    { "id": "trackdb", "type": "database", "label": "tracking PostgreSQL", "sublabel": "docker-compose.psql.yml", "pos": [270, 540], "size": [170, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "v6_api stack: dev container, or uv venv + docker compose", "wraps": ["api", "redis", "syncer", "pg", "es", "scheduler"] }
+  ],
+  "connections": [
+    { "id": "dev-opens-ui", "from": "dev", "to": "vite", "label": "opens", "variant": "emphasis" },
+    { "id": "ui-calls-api", "from": "vite", "to": "api", "label": "REST :6543", "variant": "emphasis" },
+    { "id": "ui-remote", "from": "vite", "to": "remote", "label": "media · upload · forum", "variant": "dashed" },
+    { "id": "e2e-fixtures", "from": "e2e", "to": "api", "label": "login · fixtures" },
+    { "id": "api-sql", "from": "api", "to": "pg", "label": "SQL", "variant": "emphasis" },
+    { "id": "api-queue", "from": "api", "to": "redis", "label": "enqueue · cache" },
+    { "id": "queue-syncer", "from": "redis", "to": "syncer", "label": "consume" },
+    { "id": "syncer-index", "from": "syncer", "to": "es", "label": "index" },
+    { "id": "api-search", "from": "api", "to": "es", "label": "search" },
+    { "id": "scheduler-purge", "from": "scheduler", "to": "pg", "label": "purge" },
+    { "id": "devdb-image", "from": "ghcr", "to": "pg", "label": "dev-db image", "variant": "dashed" },
+    { "id": "deves-image", "from": "ghcr", "to": "es", "label": "dev-es image", "variant": "dashed" },
+    { "id": "ui-images", "from": "vite", "to": "images", "label": "upload", "variant": "dashed" },
+    { "id": "ui-tracking", "from": "vite", "to": "tracking", "label": "trackers", "variant": "dashed" },
+    { "id": "tracking-db", "from": "tracking", "to": "trackdb", "label": "SQL" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Two ways to run v6_api",
+      "items": [
+        "Dev container (recommended): VS Code 'Reopen in Container'; setup.sh runs uv sync, writes the .ini files, initializes a fresh database and keeps the prebuilt index when its fingerprint matches the indexing code (else rebuilds it, about 5 min)",
+        "Manual: make bootstrap (start, install, load-env, init-database, init-test-database, init-elastic), then make serve, make run-syncer and make run-background-jobs in three terminals",
+        "Check: http://localhost:6543/health · tests: make test (pytest -n 4, one database per worker)"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Dev data",
+      "items": [
+        "c2corg-dev-db: PostgreSQL 18 + PostGIS restoring a ~110 MB anonymized extract of production on first start, already at the latest alembic revision; test accounts moderator, user, blocked, unvalidated",
+        "c2corg-dev-es: Elasticsearch 2.4 with the index of that database, published with the same tag",
+        "Only the dev container uses this pair on master: the root docker-compose.yml still starts an empty PostGIS 16 database (filled by make init-database) next to the 2018 anonymized ES image"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "c2c_ui against the local API",
+      "items": [
+        "npm run serve starts on the production backend: pick 'localhost' in the backend selector of the navbar (C2C_API_URL overrides http://localhost:6543)",
+        "Media, image upload and forum of 'localhost' default to demov6 (C2C_MEDIA_URL, C2C_IMAGE_BACKEND_URL, C2C_FORUM_URL)",
+        "CORS: config/env.dev only allows http://localhost:6553, the e2e port; add http://localhost:8080 to cors_allowed_origins in config/env.local for npm run serve",
+        "e2e: the test user is created by e2e/create-user.py, run in the v6_api environment"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Optional services",
+      "items": [
+        "No Discourse locally: discourse_enabled=false, comments answer 503",
+        "c2c_images: STORAGE_BACKEND=local; it listens on 8080 like Vite, so set SERVICE_PORT; S3 tests use an in-memory Scality server on :9000",
+        "c2c_tracking (Node 26+): its compose PostgreSQL also publishes 5432, so move one of them; it needs the API's JWT secret, and provider webhooks need a public URL (ngrok)"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Docs that disagree with the code",
+      "items": [
+        "wiki.api 'Development environment on Linux' still lists Python 3.4 and PostgreSQL 9.4; HOWTO-DEV.md is the reference",
+        "wiki.api 'Dev databases' still gives the logins of the 2018 dump",
+        "wiki.ui 'Build environment' still names vue.config.js and the demo API as the default of npm run serve"
+      ]
+    }
+  ]
+}

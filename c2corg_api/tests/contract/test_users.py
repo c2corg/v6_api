@@ -263,6 +263,7 @@ USER_READS = [
     ('/users/mailinglists', 'authenticated', False),
     ('/users/following', 'authenticated', True),
     ('/users/following-user/{id}', 'authenticated', True),
+    ('/users/partners', 'authenticated', True),
     ('/users/blocked', 'moderator', True),
     ('/users/blocked/{id}', 'moderator', True),
 ]
