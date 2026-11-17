@@ -69,6 +69,7 @@ def body_for(user_id, **kwargs):
     body = {
         'user_id': user_id,
         'reason': 'anonymization',
+        'user_request_date': future(0),
         'executable_after': future(),
     }
     body.update(kwargs)
@@ -204,6 +205,38 @@ class TestCreate:
         body = body_for(user_id, forum_url='javascript:alert(1)')
         post(client, self.PREFIX, body, 'moderator', status=422)
 
+    def test_user_request_date(self, client, user_ids):
+        user_id = user_ids['contributor']
+
+        # an anonymization needs when the user asked for it
+        body = body_for(user_id, user_request_date=None)
+        post(client, self.PREFIX, body, 'moderator', status=400)
+        # not in the future
+        body = body_for(
+            user_id, user_request_date=future(1), executable_after=future(9)
+        )
+        post(client, self.PREFIX, body, 'moderator', status=400)
+        # done 7 days after it at the earliest
+        body = body_for(
+            user_id, user_request_date=future(-3), executable_after=future(3)
+        )
+        post(client, self.PREFIX, body, 'moderator', status=400)
+        body = body_for(
+            user_id, user_request_date=future(-3), executable_after=future(4)
+        )
+        removal = post(client, self.PREFIX, body, 'moderator').json
+        assert removal['user_request_date'] == future(-3)
+
+    def test_spam_without_user_request(self, client, user_ids):
+        body = body_for(
+            user_ids['contributor'],
+            reason='spam',
+            user_request_date=None,
+            executable_after=future(0),
+        )
+        removal = post(client, self.PREFIX, body, 'moderator').json
+        assert removal['user_request_date'] is None
+
     def test_forum_down(self, client, user_ids, discourse):
         # whether the account is a moderator of the forum cannot be checked
         discourse.is_moderator = Mock(side_effect=Exception('down'))
@@ -299,17 +332,21 @@ class TestUnvalidate:
         body = {'side': 'topoguide'}
         post(client, url(request_id, 'validate'), body, 'contributor2')
 
-        # the discussion is required
-        post(client, url(request_id, 'unvalidate'), body, 'contributor2', status=422)
-
-        body['forum_url'] = 'https://forum.camptocamp.org/t/2'
+        # the discussion of the request is the same
         removal = post(client, url(request_id, 'unvalidate'), body, 'contributor2').json
         assert removal['topoguide_validated_by'] is None
-        assert removal['forum_url'] == 'https://forum.camptocamp.org/t/2'
+        assert removal['forum_url'] == 'https://f.org/1'
         assert removal['status'] == 'in_progress'
-        # the previous discussion stays in the history
+
+        # a new one can be given: the previous one stays in the history
+        post(client, url(request_id, 'validate'), body, 'contributor2')
+        body['forum_url'] = 'https://forum.camptocamp.org/t/2'
+        removal = post(client, url(request_id, 'unvalidate'), body, 'contributor2').json
+        assert removal['forum_url'] == 'https://forum.camptocamp.org/t/2'
         assert [e.get('forum_url') for e in removal['history']] == [
             'https://f.org/1',
+            None,
+            None,
             None,
             'https://forum.camptocamp.org/t/2',
         ]
@@ -352,10 +389,7 @@ class TestUpdateAndCancel:
     def test_cancel(self, client, session, user_ids):
         request_id = create(client, user_ids)
 
-        # why: a discussion
-        post(client, url(request_id, 'cancel'), {}, 'contributor3', status=422)
-        body = {'forum_url': 'https://forum.camptocamp.org/t/4'}
-        removal = post(client, url(request_id, 'cancel'), body, 'contributor3').json
+        removal = post(client, url(request_id, 'cancel'), {}, 'contributor3').json
 
         # kept, cancelled
         assert removal['status'] == 'cancelled'
@@ -367,7 +401,7 @@ class TestUpdateAndCancel:
             'cancel': False,
         }
         assert session.get(AccountRemovalRequest, request_id) is not None
-        post(client, url(request_id, 'cancel'), body, 'contributor3', status=400)
+        post(client, url(request_id, 'cancel'), {}, 'contributor3', status=400)
 
         # a new request is possible again
         create(client, user_ids)

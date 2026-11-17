@@ -29,6 +29,9 @@ SIDE_TOPOGUIDE = 'topoguide'
 SIDE_FORUM = 'forum'
 SIDES = [SIDE_TOPOGUIDE, SIDE_FORUM]
 
+# an anonymization is done at least this many days after the user asked for it
+ANONYMIZATION_DELAY_DAYS = 7
+
 # delay between the last validation and the removal, to leave time to cancel a
 # validation made by mistake
 DEFAULT_GRACE_HOURS = 24
@@ -75,6 +78,8 @@ class AccountRemovalRequest(Base):
     user_forum_username = Column(String(25), nullable=False)
 
     reason = Column(String(20), nullable=False)
+    # when the user asked for it (anonymization, merge of their own accounts)
+    user_request_date = Column(Date)
     # the account can not be removed before this date
     executable_after = Column(Date, nullable=False)
 

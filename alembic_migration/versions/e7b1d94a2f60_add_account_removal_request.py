@@ -26,6 +26,7 @@ def upgrade():
         sa.Column('user_name', sa.String(length=200), nullable=False),
         sa.Column('user_forum_username', sa.String(length=25), nullable=False),
         sa.Column('reason', sa.String(length=20), nullable=False),
+        sa.Column('user_request_date', sa.Date(), nullable=True),
         sa.Column('executable_after', sa.Date(), nullable=False),
         sa.Column('target_user_id', sa.Integer(), nullable=False),
         sa.Column('target_forum_id', sa.Integer(), nullable=False),

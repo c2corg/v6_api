@@ -28,6 +28,8 @@ from c2corg_api.models.account_removal import (
     ACTION_UNVALIDATE,
     ACTION_UPDATE,
     ACTION_VALIDATE,
+    ANONYMIZATION_DELAY_DAYS,
+    REASON_ANONYMIZATION,
     REASON_MERGE,
     REASONS,
     SIDE_FORUM,
@@ -70,6 +72,8 @@ ForumUrl = Str(500, checks=[_http_url])
 class CreateRemovalSchema(Schema):
     user_id: Int
     reason: OneOf(REASONS)
+    # when the user asked for it: required for an anonymization
+    user_request_date: Date = None
     executable_after: Date
     # an anonymization or a spam goes to the closed account: optional then
     target_user_id: Int = None
@@ -84,13 +88,18 @@ class ValidateRemovalSchema(Schema):
 
 class UnvalidateRemovalSchema(Schema):
     side: OneOf(SIDES)
-    # the discussion in which the validation is questioned
-    forum_url: ForumUrl
+    # the discussion of the request, if it changes
+    forum_url: ForumUrl = None
 
 
 class ForumUrlSchema(Schema):
-    # the discussion of the request (update), or why it is cancelled (cancel)
+    # the discussion of the request
     forum_url: ForumUrl
+
+
+class CancelRemovalSchema(Schema):
+    # the discussion of the request, if it changes
+    forum_url: ForumUrl = None
 
 
 def _closed_accounts(settings):
@@ -252,6 +261,7 @@ def _serialize_all(removals, roles, user_id):
             'user_name': removal.user_name,
             'user_forum_username': removal.user_forum_username,
             'reason': removal.reason,
+            'user_request_date': iso(removal.user_request_date),
             'executable_after': iso(removal.executable_after),
             'target_user_id': removal.target_user_id,
             'target_forum_id': removal.target_forum_id,
@@ -398,6 +408,23 @@ def _targets(request, validated, user_id):
     return target_user_id, target_forum_id
 
 
+def _check_user_request_date(validated, today):
+    user_request_date = validated.get('user_request_date')
+    if user_request_date is None:
+        if validated['reason'] == REASON_ANONYMIZATION:
+            raise HTTPBadRequest('When the user asked for it is missing')
+        return
+    if user_request_date > today:
+        raise HTTPBadRequest('The user cannot have asked for it in the future')
+    if validated['reason'] == REASON_ANONYMIZATION:
+        earliest = user_request_date + datetime.timedelta(days=ANONYMIZATION_DELAY_DAYS)
+        if validated['executable_after'] < earliest:
+            raise HTTPBadRequest(
+                f'An anonymization is done {ANONYMIZATION_DELAY_DAYS} days after '
+                f'the request of the user at the earliest: {earliest.isoformat()}'
+            )
+
+
 @write(
     validators=[body_validator(CreateRemovalSchema)],
     permission='authenticated',
@@ -413,7 +440,8 @@ def create_removal_request(request):
         {
             'user_id': @user_id@,
             'reason': 'anonymization' | 'merge' | 'spam',
-            'executable_after': '2026-12-01',
+            'user_request_date': '2026-11-20',  # anonymization: required
+            'executable_after': '2026-12-01',   # 7 days later at least
             'target_user_id': @user_id@,      # merge only
             'forum_url': 'https://forum...'   # optional
         }
@@ -431,8 +459,10 @@ def create_removal_request(request):
     # neither of the topoguide nor of the forum: the forum check is strict
     if user.moderator or _is_forum_moderator(request, user_id, strict=True):
         raise HTTPBadRequest('A moderator account cannot be removed')
-    if validated['executable_after'] < datetime.datetime.now(datetime.UTC).date():
+    today = datetime.datetime.now(datetime.UTC).date()
+    if validated['executable_after'] < today:
         raise HTTPBadRequest('The date of the removal cannot be in the past')
+    _check_user_request_date(validated, today)
     target_user_id, target_forum_id = _targets(request, validated, user_id)
 
     if _open_requests().filter(AccountRemovalRequest.user_id == user_id).count():
@@ -453,6 +483,7 @@ def create_removal_request(request):
         user_name=user.name,
         user_forum_username=user.forum_username,
         reason=validated['reason'],
+        user_request_date=validated.get('user_request_date'),
         executable_after=validated['executable_after'],
         target_user_id=target_user_id,
         target_forum_id=target_forum_id,
@@ -517,14 +548,14 @@ def validate_removal_request(request):
 def unvalidate_removal_request(request):
     """Cancel the validation of a side of a removal request.
 
-    The moderator gives the forum discussion in which the cancellation is
-    explained. The previous discussions stay in the history.
+    The discussion of the request is the place to say why; a new forum_url
+    can be given, the previous ones stay in the history.
 
     Request:
         `POST` `/users/removals/{id}/unvalidate`
 
     Request body:
-        {'side': 'topoguide' | 'forum', 'forum_url': '...'}
+        {'side': 'topoguide' | 'forum', 'forum_url': '...'}  # forum_url optional
     """
     side = request.validated['side']
     _check_side(request, side)
@@ -536,13 +567,14 @@ def unvalidate_removal_request(request):
 
     setattr(removal, f'{side}_validated_by', None)
     setattr(removal, f'{side}_validated_at', None)
-    removal.forum_url = request.validated['forum_url']
+    if request.validated.get('forum_url'):
+        removal.forum_url = request.validated['forum_url']
     _log(
         removal,
         ACTION_UNVALIDATE,
         request.authenticated_userid,
         side=side,
-        forum_url=removal.forum_url,
+        forum_url=request.validated.get('forum_url'),
     )
     return _answer(request, removal)
 
@@ -577,21 +609,21 @@ def update_removal_request(request):
 
 
 @write(
-    validators=[validate_id, body_validator(ForumUrlSchema)],
+    validators=[validate_id, body_validator(CancelRemovalSchema)],
     permission='authenticated',
     json=True,
 )
 def cancel_removal_request(request):
     """Cancel a removal request, which is not done yet.
 
-    The moderator gives the forum discussion in which the cancellation is
-    explained. The request is kept, cancelled; a new one can be made.
+    The discussion of the request is the place to say why; a new forum_url can
+    be given. The request is kept, cancelled; a new one can be made.
 
     Request:
         `POST` `/users/removals/{id}/cancel`
 
     Request body:
-        {'forum_url': '...'}
+        {'forum_url': '...'}  # optional
     """
     roles = _check_moderator(request)
     removal = _get_request(request.validated['id'])
@@ -600,6 +632,7 @@ def cancel_removal_request(request):
     user_id = request.authenticated_userid
     removal.cancelled_by = user_id
     removal.cancelled_at = func.now()
-    removal.forum_url = request.validated['forum_url']
-    _log(removal, ACTION_CANCEL, user_id, forum_url=removal.forum_url)
+    if request.validated.get('forum_url'):
+        removal.forum_url = request.validated['forum_url']
+    _log(removal, ACTION_CANCEL, user_id, forum_url=request.validated.get('forum_url'))
     return _answer(request, removal, roles)
