@@ -23,6 +23,16 @@ Each request is locked while it is processed, and checked again once locked: a
 validation cancelled meanwhile stops it, and two runs at once never process the
 same request. Nothing is done when the forum is disabled (`discourse.enabled`):
 its account would stay.
+
+To check on a test forum before the first run in production:
+- the forum account is found again by its external id when the request is
+  processed (forum_id is only kept as a record): if the user logs in between
+  the forum merge and a re-run, SSO creates a new forum account, merged then;
+- Discourse merges the accounts in a background job: the answer of the merge
+  does not prove it is finished;
+- Discourse refuses to delete a user whose posts are older than its
+  `delete_user_max_post_age` setting: a spam request then fails on every run,
+  until the account is handled in the forum by hand.
 """
 
 import argparse
