@@ -79,6 +79,8 @@ class TokenValidationMiddleware(BaseHTTPMiddleware):
 class CurrentUser:
     id: int
     is_moderator: bool
+    # a bot account (User.robot): its reads are not counted as views
+    is_robot: bool = False
 
 
 def _claims(request):
@@ -109,7 +111,10 @@ def current_user(request: Request):
     except TypeError, ValueError:
         return None
     with request_session() as session:
-        is_moderator = (
-            session.query(User).filter(User.id == user_id, User.moderator).count() > 0
+        flags = (
+            session.query(User.moderator, User.robot).filter(User.id == user_id).first()
         )
-    return CurrentUser(user_id, is_moderator)
+    is_moderator, is_robot = (
+        (bool(flags[0]), bool(flags[1])) if flags else (False, False)
+    )
+    return CurrentUser(user_id, is_moderator, is_robot)

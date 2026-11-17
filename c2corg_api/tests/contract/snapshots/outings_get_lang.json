@@ -142,6 +142,7 @@
     "date_end": "str",
     "date_start": "str",
     "disable_comments": "null",
+    "disable_view_count": "null",
     "document_id": "int",
     "elevation_access": "null",
     "elevation_max": "int",
@@ -187,13 +188,15 @@
     "public_transport": "null",
     "quality": "str",
     "type": "str",
-    "version": "int"
+    "version": "int",
+    "view_count": "int"
   },
   "headers": {
     "Access-Control-Allow-Origin": "http://localhost:6553",
     "Access-Control-Expose-Headers": "Content-Type",
     "Content-Type": "application/json",
-    "ETag": "<etag>"
+    "ETag": "<etag>",
+    "Vary": "Authorization"
   },
   "status": 200
 }

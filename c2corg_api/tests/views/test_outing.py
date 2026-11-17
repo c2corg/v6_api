@@ -544,7 +544,9 @@ def test_get_404(client, docs):
 
 
 def test_get_caching(client, docs):
-    scenarios.get_caching(client, OUTINGS, docs.outing)
+    scenarios.get_caching(
+        client, OUTINGS, docs.outing, added=('view_count', 'disable_view_count')
+    )
 
 
 def test_get_info(client, docs):

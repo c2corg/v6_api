@@ -54,6 +54,8 @@ class OutingSchema(DocumentSchema):
     snow_quality: OneOf(a.condition_ratings) = None
     snow_quantity: OneOf(a.condition_ratings) = None
     disable_comments: Bool = None
+    # null or missing in an update: unchanged (see `views.outing`)
+    disable_view_count: Bool = None
     hiking_rating: OneOf(a.hiking_ratings) = None
     ski_rating: OneOf(a.ski_ratings) = None
     labande_global_rating: OneOf(a.global_ratings) = None

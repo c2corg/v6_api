@@ -52,6 +52,7 @@ from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
 from c2corg_api.search import search_documents as search_mappings
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.view_count import count_view
 from c2corg_api.views import etag_cache, set_best_locale, to_json_dict
 from c2corg_api.views.document_listings import (
     add_load_for_locales,
@@ -669,6 +670,7 @@ def read_document(
     set_custom_associations=None,
     set_custom_fields=None,
     custom_cache_key=None,
+    adapt_response=None,
 ):
     """Return a document in a language, cached, with its associations."""
     id = request.validated['id']
@@ -712,14 +714,28 @@ def read_document(
         )
 
         if cache_key:
-            # set and check the etag: if the etag value provided in the
-            # request equals the current etag, return 'NotModified'
-            etag_cache(request, cache_key)
+            # an existing document, read (not edited) by someone
+            count_view(request, id)
 
-            return get_or_create(cache, cache_key, create_response)
+            if adapt_response is None:
+                # set and check the etag: if the etag value provided in the
+                # request equals the current etag, return 'NotModified'
+                etag_cache(request, cache_key)
+                return get_or_create(cache, cache_key, create_response)
+
+            # the cached document, completed for this reader: the etag also
+            # depends on what was added
+            response, etag = adapt_response(
+                request, get_or_create(cache, cache_key, create_response)
+            )
+            etag_cache(request, f'{cache_key}-{etag}')
+            return response
 
     # don't cache if requesting a document for editing
-    return create_response()
+    response = create_response()
+    if adapt_response is not None:
+        response, _ = adapt_response(request, response)
+    return response
 
 
 def document_in_lang(

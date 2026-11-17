@@ -159,8 +159,11 @@ def get(client, doc_type, reference, user=None, title=None, ignore_checks=False)
     return body
 
 
-def get_caching(client, doc_type, reference, user=None):
-    """Check that the answer for a document is cached, by document type."""
+def get_caching(client, doc_type, reference, user=None, added=()):
+    """Check that the answer for a document is cached, by document type.
+
+    `added`: the fields added to the cached document for each reader.
+    """
     headers = _user_headers(user)
 
     url = f'{doc_type.prefix}/{reference.document_id!s}'
@@ -182,6 +185,8 @@ def get_caching(client, doc_type, reference, user=None):
 
     response = client.get(url, headers=headers, status=200)
     body = response.json
+    for name in added:
+        body.pop(name)
     assert body == fake_cache_value
 
     # check that cache handles document types

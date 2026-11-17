@@ -31,6 +31,7 @@ DEFAULT_FIELDS = [
     'condition_rating',
     'hut_status',
     'disable_comments',
+    'disable_view_count',
     'quality',
 ]
 DEFAULT_REQUIRED = ['locales', 'locales.title', 'activities', 'date_start', 'date_end']
