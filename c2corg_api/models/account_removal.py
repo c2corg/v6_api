@@ -42,6 +42,22 @@ ACTION_VALIDATE = 'validate'
 ACTION_UNVALIDATE = 'unvalidate'
 ACTION_UPDATE = 'update'
 ACTION_CANCEL = 'cancel'
+# by the script, with what it removed
+ACTION_DONE = 'done'
+
+
+def log_action(removal, action, user_id, **details):
+    """Add an action to the history of a request."""
+    # a new list: JSONB changes made in place are not seen; None before insert
+    removal.history = [
+        *(removal.history or []),
+        {
+            'action': action,
+            'by': user_id,
+            'at': datetime.datetime.now(datetime.UTC).isoformat(),
+            **details,
+        },
+    ]
 
 
 class AccountRemovalRequest(Base):

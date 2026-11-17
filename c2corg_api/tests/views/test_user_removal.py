@@ -456,6 +456,7 @@ class TestRead:
         # the open ones first
         assert ids('') == [open_id, cancelled_id]
         assert ids('?status=in_progress') == [open_id]
+        assert ids('?status=open') == [open_id]
         assert ids('?status=cancelled') == [cancelled_id]
         assert ids('?status=validated') == []
         assert ids('?offset=1&limit=1') == [cancelled_id]

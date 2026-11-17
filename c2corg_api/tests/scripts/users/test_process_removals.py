@@ -242,6 +242,26 @@ class TestProcessRemoval:
         assert session.get(User, user_ids['contributor2']) is not None
         # the contributions are kept, given to the target
         assert session.get(Document, outing.document_id) is not None
+        done = removal.history[-1]
+        assert done['action'] == 'done'
+        assert done['by'] is None
+        assert done['forum'] == 'merged'
+        assert done['topoguide'] == 'merged'
+        assert 'documents' not in done
+
+    def test_already_removed(
+        self, session, user_ids, queue_config, settings, discourse
+    ):
+        # a previous run removed the forum account then failed
+        discourse.merge_user.side_effect = _NotFound()
+        removal = make_removal(session, user_ids)
+
+        assert process_removal(removal.id, settings, queue_config) is True
+
+        session.expire_all()
+        assert removal.done_at is not None
+        assert removal.history[-1]['forum'] == 'not_found'
+        assert removal.history[-1]['topoguide'] == 'merged'
 
     def test_forum_error(self, session, user_ids, queue_config, settings, discourse):
         discourse.merge_user.side_effect = Exception('forum down')
@@ -317,6 +337,10 @@ class TestProcessRemoval:
         assert removal.done_at is not None
         assert session.get(Document, spam_id) is None
         assert session.get(Document, shared_id) is not None
+        done = removal.history[-1]
+        assert done['action'] == 'done'
+        assert done['forum'] == 'deleted'
+        assert done['documents'] == [spam_id]
         assert session.get(User, source_id) is None
         # deleted for good, its comment topic closed and unlisted
         assert session.query(DeletedDocument).count() == 0

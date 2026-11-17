@@ -40,6 +40,7 @@ from c2corg_api.models.account_removal import (
     STATUS_IN_PROGRESS,
     STATUS_VALIDATED,
     AccountRemovalRequest,
+    log_action,
 )
 from c2corg_api.models.user import User
 from c2corg_api.schemas.base import Schema, body_validator
@@ -49,6 +50,9 @@ from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id
 
 log = logging.getLogger(__name__)
+
+# the requests still to process: in progress or validated (a filter of the list)
+STATUS_OPEN = 'open'
 
 # The accounts the anonymized and spam accounts are merged into ("Compte
 # fermé"), in the topoguide and in the forum; settings for the tests.
@@ -177,19 +181,6 @@ def _check_open(removal):
         raise HTTPBadRequest('The request has been cancelled')
 
 
-def _log(removal, action, user_id, **details):
-    # a new list: JSONB changes made in place are not seen; None before insert
-    removal.history = [
-        *(removal.history or []),
-        {
-            'action': action,
-            'by': user_id,
-            'at': datetime.datetime.now(datetime.UTC).isoformat(),
-            **details,
-        },
-    ]
-
-
 def _other(side):
     return SIDE_FORUM if side == SIDE_TOPOGUIDE else SIDE_TOPOGUIDE
 
@@ -306,7 +297,7 @@ def read_removal_requests(request):
     """Get the removal requests, the open ones first, then the newest.
 
     Request:
-        `GET` `/users/removals?status=in_progress&offset=0&limit=30`
+        `GET` `/users/removals?status=open&offset=0&limit=30`
 
     Example response:
 
@@ -325,6 +316,8 @@ def read_removal_requests(request):
         query = query.filter(AccountRemovalRequest.done_at.is_not(None))
     elif status == STATUS_CANCELLED:
         query = query.filter(AccountRemovalRequest.cancelled_at.is_not(None))
+    elif status == STATUS_OPEN:
+        query = _open_requests()
     elif status in (STATUS_IN_PROGRESS, STATUS_VALIDATED):
         both = AccountRemovalRequest.topoguide_validated_by.is_not(
             None
@@ -490,7 +483,7 @@ def create_removal_request(request):
         forum_url=validated.get('forum_url'),
         requested_by=request.authenticated_userid,
     )
-    _log(
+    log_action(
         removal,
         ACTION_CREATE,
         request.authenticated_userid,
@@ -536,7 +529,7 @@ def validate_removal_request(request):
 
     setattr(removal, f'{side}_validated_by', user_id)
     setattr(removal, f'{side}_validated_at', func.now())
-    _log(removal, ACTION_VALIDATE, user_id, side=side)
+    log_action(removal, ACTION_VALIDATE, user_id, side=side)
     return _answer(request, removal)
 
 
@@ -569,7 +562,7 @@ def unvalidate_removal_request(request):
     setattr(removal, f'{side}_validated_at', None)
     if request.validated.get('forum_url'):
         removal.forum_url = request.validated['forum_url']
-    _log(
+    log_action(
         removal,
         ACTION_UNVALIDATE,
         request.authenticated_userid,
@@ -599,7 +592,7 @@ def update_removal_request(request):
         raise HTTPBadRequest('Only a request in progress can be changed')
 
     removal.forum_url = request.validated['forum_url']
-    _log(
+    log_action(
         removal,
         ACTION_UPDATE,
         request.authenticated_userid,
@@ -634,5 +627,7 @@ def cancel_removal_request(request):
     removal.cancelled_at = func.now()
     if request.validated.get('forum_url'):
         removal.forum_url = request.validated['forum_url']
-    _log(removal, ACTION_CANCEL, user_id, forum_url=request.validated.get('forum_url'))
+    log_action(
+        removal, ACTION_CANCEL, user_id, forum_url=request.validated.get('forum_url')
+    )
     return _answer(request, removal, roles)

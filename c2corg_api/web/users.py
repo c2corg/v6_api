@@ -221,8 +221,11 @@ def removals(
     request: Request,
     user: User,
     status: Annotated[
-        Literal['in_progress', 'validated', 'done', 'cancelled'] | None,
-        Query(description='Only the requests of this status.'),
+        Literal['open', 'in_progress', 'validated', 'done', 'cancelled'] | None,
+        Query(
+            description='Only the requests of this status; open: in progress '
+            'or validated, not done nor cancelled.'
+        ),
     ] = None,
     offset: Annotated[
         Offset | None, Query(description='The first request, from 0.')

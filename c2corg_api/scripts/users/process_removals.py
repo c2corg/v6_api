@@ -51,10 +51,12 @@ from sqlalchemy.sql.expression import and_, exists
 from c2corg_api.config import get_appsettings
 from c2corg_api.models import DBSession, commit_or_rollback
 from c2corg_api.models.account_removal import (
+    ACTION_DONE,
     DEFAULT_GRACE_HOURS,
     REASON_SPAM,
     AccountRemovalRequest,
     is_ready,
+    log_action,
 )
 from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.document import Document, DocumentLocale
@@ -132,7 +134,10 @@ def find_purged_documents(user_id):
 
 
 def purge_contributions(user_id, settings, queue_config):
-    """Delete the documents only this user contributed to; return their topics."""
+    """Delete the documents only this user contributed to.
+
+    Return the ids of the documents and of their comment topics.
+    """
     # `_delete` is the deletion of the views: it only reads the registry. Not
     # kept to be restored (keep=False): the spam goes for good, and the request
     # has no user.
@@ -149,7 +154,7 @@ def purge_contributions(user_id, settings, queue_config):
     for document_id, document_type in documents:
         print(f'Deleting the document {document_id} ({document_type})...')
         _delete(request, document_id, document_type, keep=False)
-    return topic_ids
+    return [d for d, _ in documents], topic_ids
 
 
 def _is_not_found(error):
@@ -158,19 +163,21 @@ def _is_not_found(error):
 
 
 def _remove_forum_account(client, removal):
-    """Merge (or delete for a spammer) the account of the forum."""
+    """Merge (or delete for a spammer) the account of the forum; say which."""
     try:
         if removal.reason == REASON_SPAM:
             print('Deleting the forum account and its posts...')
             client.delete_user(removal.user_id, delete_posts=True)
-        else:
-            print('Merging the forum account...')
-            client.merge_user(removal.user_id, removal.target_forum_id)
+            return 'deleted'
+        print('Merging the forum account...')
+        client.merge_user(removal.user_id, removal.target_forum_id)
+        return 'merged'
     except Exception as e:
         # already removed by a previous run, which failed afterwards
         if not _is_not_found(e):
             raise
         print('The forum account does not exist anymore.')
+        return 'not_found'
 
 
 class ForumDisabledError(Exception):
@@ -217,13 +224,20 @@ def process_removal(
         # the forum first: if a later step fails, the transaction is rolled
         # back and the next run does it again (the forum account is then
         # already gone, see _remove_forum_account)
-        _remove_forum_account(client, removal)
+        forum = _remove_forum_account(client, removal)
 
+        # what was removed, kept in the history of the request
+        details = {'forum': forum, 'topoguide': 'not_found'}
         if DBSession.get(User, user_id) is not None:
             if removal.reason == REASON_SPAM:
-                topic_ids = purge_contributions(user_id, settings, queue_config)
+                document_ids, topic_ids = purge_contributions(
+                    user_id, settings, queue_config
+                )
+                details['documents'] = document_ids
             merge_user_accounts(user_id, removal.target_user_id, queue_config)
+            details['topoguide'] = 'merged'
         removal.done_at = datetime.datetime.now(datetime.UTC)
+        log_action(removal, ACTION_DONE, None, **details)
 
     # the comment topics of the purged documents, once it is all saved
     set_topics_hidden(client, topic_ids, True)
