@@ -185,7 +185,9 @@ make lint     # ruff check + ruff format --check, as in CI
 make audit    # known vulnerabilities of the locked dependencies (exceptions: AUDIT_IGNORE in the Makefile)
 ```
 
-A git pre-commit hook runs ruff before each commit (installed by the setup).
+A git pre-commit hook runs ruff before each commit (installed by the setup). It uses the Python of the
+app container: commit from the dev container (VS Code does), or install `pre-commit` on the host too
+(`uv tool install pre-commit` or `brew install pre-commit`) to commit from a host terminal.
 
 ### Other
 
