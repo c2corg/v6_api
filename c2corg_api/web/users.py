@@ -3,7 +3,7 @@
 # document routes do (#2365).
 
 from email.utils import formatdate
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, Path, Query, Request
 from fastapi.responses import JSONResponse, Response
@@ -47,7 +47,7 @@ from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
 from c2corg_api.web.handlers import serve_read, typed_values
-from c2corg_api.web.params import Id, Lang
+from c2corg_api.web.params import Id, Lang, Limit, Offset
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
@@ -217,15 +217,29 @@ def is_blocked(
     return serve_read(request, user, [typed_values(validated)], read_blocked_user)
 
 
-def removals(request: Request, user: User):
+def removals(
+    request: Request,
+    user: User,
+    status: Annotated[
+        Literal['in_progress', 'validated', 'done', 'cancelled'] | None,
+        Query(description='Only the requests of this status.'),
+    ] = None,
+    offset: Annotated[
+        Offset | None, Query(description='The first request, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many: 30 by default, 100 at most.')
+    ] = None,
+):
     """Return the removal requests of the user accounts (for the moderators)."""
     # the permission is checked by the view: a moderator of the forum is not
     # necessarily one of the topoguide
+    validated = {'status': status, 'offset': offset, 'limit': limit}
     return _not_cached(
         serve_read(
             request,
             user,
-            [],
+            [typed_values(validated)],
             read_removal_requests,
             permission='authenticated',
             content_types=JSON,

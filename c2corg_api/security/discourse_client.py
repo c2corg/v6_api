@@ -1,12 +1,14 @@
 import hashlib
 import hmac
 import logging
+import time
 import urllib.error
 from base64 import b64decode, b64encode
 from urllib.parse import parse_qs, urlparse
 
 import requests
 from pydiscourse.client import DiscourseClient
+from pydiscourse.exceptions import DiscourseClientError
 
 from c2corg_api.httpexceptions import HTTPBadRequest
 
@@ -15,6 +17,10 @@ log = logging.getLogger(__name__)
 
 # Discourse's notification level of a topic that notifies each new post
 WATCHING = 3
+
+# How long the answer of is_moderator is kept: each call is a request to the
+# admin API, whose rate is limited for the whole site (SSO sync, topics...).
+MODERATOR_CACHE_SECONDS = 60
 
 
 class APIDiscourseClient:
@@ -40,6 +46,8 @@ class APIDiscourseClient:
         } | {host.strip() for host in extra_hosts.split(',') if host.strip()}
 
         self.discourse_userid_cache = {}
+        # user id: (time.monotonic() of the answer, is a moderator)
+        self.moderator_cache = {}
 
         self.client = DiscourseClient(
             self.discourse_base_url,
@@ -84,8 +92,23 @@ class APIDiscourseClient:
 
     def is_moderator(self, userid):
         """Tell whether a user is a moderator (or an admin) of the forum."""
-        discourse_user = self.client.by_external_id(userid)
-        return bool(discourse_user.get('moderator') or discourse_user.get('admin'))
+        # a user without a forum account (404) is not one; any other error
+        # (the forum is down) is raised, the caller decides
+        now = time.monotonic()
+        cached = self.moderator_cache.get(userid)
+        if cached is not None and now - cached[0] < MODERATOR_CACHE_SECONDS:
+            return cached[1]
+        try:
+            discourse_user = self.client.by_external_id(userid)
+            moderator = bool(
+                discourse_user.get('moderator') or discourse_user.get('admin')
+            )
+        except DiscourseClientError as e:
+            if e.response is None or e.response.status_code != 404:
+                raise
+            moderator = False
+        self.moderator_cache[userid] = (now, moderator)
+        return moderator
 
     def get_forum_user(self, discourse_userid):
         """Return the forum account (a dict with its username...) of a forum id."""

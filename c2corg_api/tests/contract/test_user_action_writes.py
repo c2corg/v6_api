@@ -96,3 +96,72 @@ class TestPreferencesAndMailinglistsWrites:
                 status=400,
             )
         check_snapshot('users_mailinglists_unknown', response)
+
+
+REMOVAL_ROUTES = [
+    ('GET', '/users/removals'),
+    ('GET', '/users/removals/count'),
+    ('POST', '/users/removals'),
+    ('PUT', '/users/removals/{id}'),
+    ('POST', '/users/removals/{id}/validate'),
+    ('POST', '/users/removals/{id}/unvalidate'),
+    ('POST', '/users/removals/{id}/cancel'),
+]
+
+
+@contract(*REMOVAL_ROUTES)
+@patch(
+    'c2corg_api.security.discourse_client.APIDiscourseClient.is_moderator',
+    return_value=False,
+)
+def test_removals_reserved_to_the_moderators(_, browser):
+    # neither a moderator of the topoguide, nor of the forum
+    for method, path in REMOVAL_ROUTES:
+        url = path.replace('{id}', '1')
+        body = {
+            'user_id': 1,
+            'reason': 'spam',
+            'executable_after': '2100-01-01',
+            'side': 'forum',
+            'forum_url': 'https://forum.camptocamp.org/t/1',
+        }
+        if method == 'GET':
+            response = browser.get(url, user='contributor', status=403)
+        else:
+            response = browser.request(
+                method, url, body, user='contributor', status=403
+            )
+        check_snapshot('removals_not_moderator', response)
+
+
+@contract(('GET', '/users/removals'), ('GET', '/users/removals/count'))
+@patch(
+    'c2corg_api.security.discourse_client.APIDiscourseClient.is_moderator',
+    return_value=False,
+)
+def test_removals(_, browser):
+    response = browser.get('/users/removals', user='moderator')
+    check_snapshot('removals', response)
+    response = browser.get('/users/removals/count', user='moderator')
+    check_snapshot('removals_count', response)
+
+
+@contract(
+    ('PUT', '/users/removals/{id}'),
+    ('POST', '/users/removals/{id}/validate'),
+    ('POST', '/users/removals/{id}/cancel'),
+)
+@patch(
+    'c2corg_api.security.discourse_client.APIDiscourseClient.is_moderator',
+    return_value=False,
+)
+def test_removal_unknown(_, browser):
+    url = '/users/removals/9999999'
+    body = {'forum_url': 'https://forum.camptocamp.org/t/1'}
+    response = browser.request('PUT', url, body, user='moderator', status=404)
+    check_snapshot('removals_unknown', response)
+    response = browser.post(f'{url}/cancel', body, user='moderator', status=404)
+    check_snapshot('removals_unknown', response)
+    body = {'side': 'topoguide'}
+    response = browser.post(f'{url}/validate', body, user='moderator', status=404)
+    check_snapshot('removals_unknown', response)

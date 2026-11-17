@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
 
 import pytest
+from pydiscourse.exceptions import DiscourseError
 
 from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.security.discourse_client import (
@@ -70,6 +71,51 @@ class TestAPIDiscourseClient:
         assert url == 'http://discourse.test/t/10/notifications.json'
         assert request.call_args.kwargs['data'] == {'notification_level': 3}
         assert request.call_args.kwargs['headers']['Api-Username'] == 'contributor'
+
+
+def _error_response(status_code):
+    """Build an error response from the Discourse API."""
+    response = MagicMock(ok=False, status_code=status_code, reason='error')
+    response.json.side_effect = ValueError
+    return response
+
+
+class TestIsModerator:
+    """The forum role of a user, asked to the admin API (account removals)."""
+
+    @patch('pydiscourse.client.requests.request')
+    def test_moderator_cached(self, request):
+        """Ask once: each call is a request to the rate-limited admin API."""
+        request.return_value = _ok_response({'user': {'id': 42, 'moderator': True}})
+        client = APIDiscourseClient(SETTINGS)
+
+        assert client.is_moderator(5) is True
+        assert client.is_moderator(5) is True
+        assert request.call_count == 1
+
+    @patch('pydiscourse.client.requests.request')
+    def test_admin(self, request):
+        request.return_value = _ok_response(
+            {'user': {'id': 42, 'moderator': False, 'admin': True}}
+        )
+        assert APIDiscourseClient(SETTINGS).is_moderator(5) is True
+
+    @patch('pydiscourse.client.requests.request')
+    def test_no_forum_account(self, request):
+        """A user without a forum account is not a moderator of it."""
+        request.return_value = _error_response(404)
+        assert APIDiscourseClient(SETTINGS).is_moderator(5) is False
+
+    @patch('pydiscourse.client.requests.request')
+    def test_forum_down(self, request):
+        """Any other error is raised: the caller refuses or ignores it."""
+        request.return_value = _error_response(502)
+        client = APIDiscourseClient(SETTINGS)
+        with pytest.raises(DiscourseError):
+            client.is_moderator(5)
+        # not cached: asked again next time
+        request.return_value = _ok_response({'user': {'id': 42, 'moderator': True}})
+        assert client.is_moderator(5) is True
 
 
 class TestDisabledDiscourseClient:
