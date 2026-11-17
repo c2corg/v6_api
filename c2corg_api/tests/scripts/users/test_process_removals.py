@@ -4,10 +4,13 @@ from unittest.mock import Mock
 import pytest
 
 from c2corg_api.models.account_removal import AccountRemovalRequest
+from c2corg_api.models.deleted_document import DeletedDocument
 from c2corg_api.models.document import Document, DocumentGeometry
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.user import User
 from c2corg_api.scripts.users.process_removals import (
+    ForumDisabledError,
     find_purged_documents,
     find_ready_requests,
     process_removal,
@@ -102,6 +105,10 @@ class TestFindReadyRequests:
         make_removal(session, user_ids, done_at=NOW)
         assert find_ready_requests(NOW) == []
 
+    def test_cancelled(self, session, user_ids):
+        make_removal(session, user_ids, cancelled_at=NOW, cancelled_by=1)
+        assert find_ready_requests(NOW) == []
+
 
 class TestProcessRemoval:
     def test_merge(self, session, user_ids, queue_config, settings, discourse):
@@ -129,9 +136,45 @@ class TestProcessRemoval:
         assert removal.done_at is None
         assert session.get(User, user_ids['contributor']) is not None
 
+    def test_forum_disabled(self, session, user_ids, queue_config, settings, discourse):
+        # the forum account would stay: nothing is done
+        discourse.enabled = False
+        removal = make_removal(session, user_ids)
+
+        with pytest.raises(ForumDisabledError):
+            process_removal(removal.id, settings, queue_config)
+
+        discourse.merge_user.assert_not_called()
+        session.expire_all()
+        assert removal.done_at is None
+        assert session.get(User, user_ids['contributor']) is not None
+
+    @pytest.mark.parametrize(
+        'change',
+        [
+            # a validation cancelled after the list of the ready requests
+            {'forum_validated_by': None, 'forum_validated_at': None},
+            {'cancelled_by': 1, 'cancelled_at': NOW},
+            {'done_at': NOW},
+        ],
+    )
+    def test_not_ready_anymore(
+        self, session, user_ids, queue_config, settings, discourse, change
+    ):
+        removal = make_removal(session, user_ids)
+        for name, value in change.items():
+            setattr(removal, name, value)
+        session.flush()
+
+        assert process_removal(removal.id, settings, queue_config) is False
+
+        discourse.merge_user.assert_not_called()
+        assert session.get(User, user_ids['contributor']) is not None
+
     def test_spam(self, session, user_ids, queue_config, settings, discourse):
         source_id = user_ids['contributor']
         spam = make_outing(session, source_id)
+        spam.locales[0].document_topic = DocumentTopic(topic_id=77)
         spam_id = spam.document_id
         shared = make_outing(session, source_id)
         shared_id = shared.document_id
@@ -156,3 +199,10 @@ class TestProcessRemoval:
         assert session.get(Document, spam_id) is None
         assert session.get(Document, shared_id) is not None
         assert session.get(User, source_id) is None
+        # deleted for good, its comment topic closed and unlisted
+        assert session.query(DeletedDocument).count() == 0
+        status = discourse.client.update_topic_status
+        assert status.call_args_list == [
+            ((77, 'closed', True),),
+            ((77, 'visible', False),),
+        ]

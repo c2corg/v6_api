@@ -1,3 +1,5 @@
+import datetime
+
 from sqlalchemy import (
     Column,
     Date,
@@ -7,6 +9,7 @@ from sqlalchemy import (
     String,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import Base, users_schema
@@ -19,10 +22,23 @@ REASONS = [REASON_ANONYMIZATION, REASON_MERGE, REASON_SPAM]
 STATUS_IN_PROGRESS = 'in_progress'
 STATUS_VALIDATED = 'validated'
 STATUS_DONE = 'done'
+STATUS_CANCELLED = 'cancelled'
+STATUSES = [STATUS_IN_PROGRESS, STATUS_VALIDATED, STATUS_DONE, STATUS_CANCELLED]
 
 SIDE_TOPOGUIDE = 'topoguide'
 SIDE_FORUM = 'forum'
 SIDES = [SIDE_TOPOGUIDE, SIDE_FORUM]
+
+# delay between the last validation and the removal, to leave time to cancel a
+# validation made by mistake
+DEFAULT_GRACE_HOURS = 24
+
+# the actions kept in the history of a request
+ACTION_CREATE = 'create'
+ACTION_VALIDATE = 'validate'
+ACTION_UNVALIDATE = 'unvalidate'
+ACTION_UPDATE = 'update'
+ACTION_CANCEL = 'cancel'
 
 
 class AccountRemovalRequest(Base):
@@ -44,7 +60,7 @@ class AccountRemovalRequest(Base):
             'account_removal_request_open_user_id_idx',
             'user_id',
             unique=True,
-            postgresql_where=text('done_at IS NULL'),
+            postgresql_where=text('done_at IS NULL AND cancelled_at IS NULL'),
         ),
         {'schema': users_schema},
     )
@@ -83,13 +99,43 @@ class AccountRemovalRequest(Base):
 
     done_at = Column(DateTime(timezone=True))
 
+    # a cancelled request is kept, with who cancelled it and why (history)
+    cancelled_by = Column(Integer)
+    cancelled_at = Column(DateTime(timezone=True))
+
+    # what was done to the request, oldest first: {action, by, at, side?,
+    # forum_url?}; the forum discussions given at each step are kept there
+    history = Column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+
     @property
     def status(self):
         if self.done_at is not None:
             return STATUS_DONE
+        if self.cancelled_at is not None:
+            return STATUS_CANCELLED
         if (
             self.topoguide_validated_by is not None
             and self.forum_validated_by is not None
         ):
             return STATUS_VALIDATED
         return STATUS_IN_PROGRESS
+
+    def ready_at(self, grace_hours=DEFAULT_GRACE_HOURS):
+        """Return when a validated request can be processed, else None."""
+        if self.status != STATUS_VALIDATED:
+            return None
+        day = self.executable_after
+        grace = datetime.timedelta(hours=grace_hours)
+        return max(
+            datetime.datetime(day.year, day.month, day.day, tzinfo=datetime.UTC),
+            self.topoguide_validated_at + grace,
+            self.forum_validated_at + grace,
+        )
+
+
+def is_ready(removal, now, grace_hours=DEFAULT_GRACE_HOURS):
+    """Tell whether a request can be processed now."""
+    ready_at = removal.ready_at(grace_hours)
+    return ready_at is not None and ready_at <= now

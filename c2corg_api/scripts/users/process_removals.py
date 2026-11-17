@@ -12,11 +12,17 @@ The script only lists the requests to process, unless `--execute` is given:
 
 For each request:
 - spam: the documents the user alone contributed to (outings, reports,
-  articles and images) are deleted, as well as the account of the forum with its
-  posts;
+  articles and images) are deleted for good (not kept to be restored), their
+  comment topics closed and unlisted, and the account of the forum is deleted
+  with its posts;
 - else: the account of the forum is merged into the target one;
 - then the account of the topoguide is merged into the target one, as with
   scripts/users/merge.py.
+
+Each request is locked while it is processed, and checked again once locked: a
+validation cancelled meanwhile stops it, and two runs at once never process the
+same request. Nothing is done when the forum is disabled (`discourse.enabled`):
+its account would stay.
 """
 
 import argparse
@@ -27,14 +33,21 @@ import sys
 from types import SimpleNamespace
 
 from sqlalchemy import engine_from_config
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql.expression import and_, exists
 
 from c2corg_api.config import get_appsettings
 from c2corg_api.models import DBSession, commit_or_rollback
-from c2corg_api.models.account_removal import REASON_SPAM, AccountRemovalRequest
+from c2corg_api.models.account_removal import (
+    DEFAULT_GRACE_HOURS,
+    REASON_SPAM,
+    AccountRemovalRequest,
+    is_ready,
+)
 from c2corg_api.models.article import ARTICLE_TYPE
-from c2corg_api.models.document import Document
+from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.user import User
@@ -43,15 +56,13 @@ from c2corg_api.scripts.users.merge import merge_user_accounts
 from c2corg_api.search import get_queue_config
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.views.document_delete import _delete
+from c2corg_api.views.forum import set_topics_hidden
 
 log = logging.getLogger(__name__)
 
 # the documents that may be deleted with a spammer: the types a user creates
 # alone (a waypoint or a route is also used by the other contributors)
 PURGED_TYPES = [OUTING_TYPE, XREPORT_TYPE, ARTICLE_TYPE, IMAGE_TYPE]
-
-# delay between the last validation and the removal
-DEFAULT_GRACE_HOURS = 24
 
 
 def find_ready_requests(now, grace_hours=DEFAULT_GRACE_HOURS):
@@ -62,6 +73,7 @@ def find_ready_requests(now, grace_hours=DEFAULT_GRACE_HOURS):
         DBSession.query(AccountRemovalRequest)
         .filter(
             AccountRemovalRequest.done_at.is_(None),
+            AccountRemovalRequest.cancelled_at.is_(None),
             AccountRemovalRequest.topoguide_validated_by.is_not(None),
             AccountRemovalRequest.forum_validated_by.is_not(None),
             AccountRemovalRequest.executable_after <= today,
@@ -107,16 +119,24 @@ def find_purged_documents(user_id):
 
 
 def purge_contributions(user_id, settings, queue_config):
-    """Delete the documents only this user contributed to."""
-    # `_delete` is the deletion of the views: it only reads the registry
+    """Delete the documents only this user contributed to; return their topics."""
+    # `_delete` is the deletion of the views: it only reads the registry. Not
+    # kept to be restored (keep=False): the spam goes for good, and the request
+    # has no user.
     request = SimpleNamespace(
         registry=SimpleNamespace(settings=settings, queue_config=queue_config)
     )
     documents = find_purged_documents(user_id)
+    topic_ids = [
+        topic_id
+        for (topic_id,) in DBSession.query(DocumentTopic.topic_id)
+        .join(DocumentLocale, DocumentLocale.id == DocumentTopic.document_locale_id)
+        .filter(DocumentLocale.document_id.in_([d for d, _ in documents]))
+    ]
     for document_id, document_type in documents:
         print(f'Deleting the document {document_id} ({document_type})...')
-        _delete(request, document_id, document_type)
-    return len(documents)
+        _delete(request, document_id, document_type, keep=False)
+    return topic_ids
 
 
 def _is_not_found(error):
@@ -140,29 +160,61 @@ def _remove_forum_account(client, removal):
         print('The forum account does not exist anymore.')
 
 
-def process_removal(removal_id, settings, queue_config):
-    """Remove the account of a request."""
-    removal = DBSession.get(AccountRemovalRequest, removal_id)
-    user_id = removal.user_id
-    if DBSession.get(User, user_id) is None:
-        # merged by hand since the request
-        print(f'The account {user_id} does not exist anymore.')
-    elif DBSession.get(User, removal.target_user_id) is None:
-        raise ValueError(f'The target account {removal.target_user_id} does not exist')
+class ForumDisabledError(Exception):
+    """The forum is disabled: its account cannot be removed."""
 
-    # the forum first: it can be done again if the next step fails
+
+def _lock(removal_id):
+    # locked until the end of the transaction; NOWAIT: a request another run
+    # is processing is skipped (OperationalError), not waited for
+    return (
+        DBSession.query(AccountRemovalRequest)
+        .filter(AccountRemovalRequest.id == removal_id)
+        .with_for_update(nowait=True)
+        .one()
+    )
+
+
+def process_removal(
+    removal_id, settings, queue_config, grace_hours=DEFAULT_GRACE_HOURS
+):
+    """Remove the account of a request; return False if it is not ready anymore."""
     client = get_discourse_client(settings)
-    _remove_forum_account(client, removal)
+    if not client.enabled:
+        raise ForumDisabledError('The forum is disabled: its account would stay')
 
-    if DBSession.get(User, user_id) is not None:
-        with commit_or_rollback(DBSession):
+    topic_ids = []
+    with commit_or_rollback(DBSession):
+        removal = _lock(removal_id)
+        # read again once locked: a validation may have been cancelled since
+        # the list of the ready requests was made
+        if not is_ready(removal, datetime.datetime.now(datetime.UTC), grace_hours):
+            print(f'The request #{removal_id} is not ready anymore.')
+            return False
+
+        user_id = removal.user_id
+        if DBSession.get(User, user_id) is None:
+            # merged by hand since the request
+            print(f'The account {user_id} does not exist anymore.')
+        elif DBSession.get(User, removal.target_user_id) is None:
+            raise ValueError(
+                f'The target account {removal.target_user_id} does not exist'
+            )
+
+        # the forum first: if a later step fails, the transaction is rolled
+        # back and the next run does it again (the forum account is then
+        # already gone, see _remove_forum_account)
+        _remove_forum_account(client, removal)
+
+        if DBSession.get(User, user_id) is not None:
             if removal.reason == REASON_SPAM:
-                purge_contributions(user_id, settings, queue_config)
+                topic_ids = purge_contributions(user_id, settings, queue_config)
             merge_user_accounts(user_id, removal.target_user_id, queue_config)
-            removal.done_at = datetime.datetime.now(datetime.UTC)
-    else:
-        with commit_or_rollback(DBSession):
-            removal.done_at = datetime.datetime.now(datetime.UTC)
+        removal.done_at = datetime.datetime.now(datetime.UTC)
+
+    # the comment topics of the purged documents, once it is all saved
+    set_topics_hidden(client, topic_ids, True)
+    return True
 
 
 def describe(removal):
@@ -199,6 +251,10 @@ def main(argv=sys.argv):
     logging.basicConfig()
     logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
+    if args.execute and not get_discourse_client(settings).enabled:
+        print('The forum is disabled (discourse.enabled): nothing can be removed.')
+        sys.exit(1)
+
     now = datetime.datetime.now(datetime.UTC)
     removals = find_ready_requests(now, args.grace_hours)
     if not removals:
@@ -212,8 +268,15 @@ def main(argv=sys.argv):
         if not args.execute:
             continue
         try:
-            process_removal(removal_id, settings, queue_config)
-            print(f'SUCCESS: request #{removal_id} done')
+            if process_removal(removal_id, settings, queue_config, args.grace_hours):
+                print(f'SUCCESS: request #{removal_id} done')
+        except OperationalError as e:
+            DBSession.rollback()
+            if getattr(e.orig, 'pgcode', None) != '55P03':  # lock_not_available
+                failed += 1
+                log.error('Request #%d failed', removal_id, exc_info=True)
+            else:
+                print(f'The request #{removal_id} is processed by another run.')
         except Exception:
             failed += 1
             DBSession.rollback()

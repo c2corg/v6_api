@@ -1,17 +1,18 @@
 """Add the account removal requests.
 
-Revision ID: c4e8a2b7d913
-Revises: b3d5f8a1c9e2
+Revision ID: e7b1d94a2f60
+Revises: c4e2a9d71f3b
 Create Date: 2026-11-08 12:00:00.000000
 
 """
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
-revision = 'c4e8a2b7d913'
-down_revision = 'b3d5f8a1c9e2'
+revision = 'e7b1d94a2f60'
+down_revision = 'c4e2a9d71f3b'
 branch_labels = None
 depends_on = None
 
@@ -41,6 +42,14 @@ def upgrade():
         sa.Column('forum_validated_by', sa.Integer(), nullable=True),
         sa.Column('forum_validated_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('done_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('cancelled_by', sa.Integer(), nullable=True),
+        sa.Column('cancelled_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            'history',
+            JSONB(),
+            server_default=sa.text("'[]'::jsonb"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint('id'),
         schema='users',
     )
@@ -50,7 +59,7 @@ def upgrade():
         ['user_id'],
         unique=True,
         schema='users',
-        postgresql_where=sa.text('done_at IS NULL'),
+        postgresql_where=sa.text('done_at IS NULL AND cancelled_at IS NULL'),
     )
 
 
