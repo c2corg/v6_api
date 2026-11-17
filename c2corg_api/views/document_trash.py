@@ -61,6 +61,7 @@ from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.views.forum import hide_topics
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id
 
@@ -172,6 +173,7 @@ def keep_deleted_document(request, document_id, document_type):
     with _ExactFloats():
         _capture_document(snapshot, document_id, document_type, redirecting=False)
     _add_entry(request, snapshot, document_id, document_type, None)
+    hide_topics(request, _topic_ids(snapshot.as_json()), hidden=True)
 
 
 def keep_deleted_locale(request, document_id, document_type, lang):
@@ -181,6 +183,13 @@ def keep_deleted_locale(request, document_id, document_type, lang):
     with _ExactFloats():
         _capture_locale(snapshot, document_id, document_type, lang)
     _add_entry(request, snapshot, document_id, document_type, lang)
+    hide_topics(request, _topic_ids(snapshot.as_json()), hidden=True)
+
+
+def _topic_ids(snapshot):
+    # the comment topics of the kept locales
+    rows = snapshot['tables'].get(DocumentTopic.__table__.fullname, [])
+    return [row['topic_id'] for row in rows]
 
 
 def _add_entry(request, snapshot, document_id, document_type, lang):
@@ -386,6 +395,7 @@ def restore(request, entry):
 
     entry.restored_at = datetime.now(UTC)
     entry.restored_by = user_id
+    hide_topics(request, _topic_ids(entry.snapshot), hidden=False)
 
     notify_es_syncer(request.registry.queue_config)
 

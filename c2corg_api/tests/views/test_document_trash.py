@@ -1,6 +1,7 @@
 import datetime
 import json
 from collections import Counter
+from unittest.mock import call, patch
 
 import pytest
 from httmock import HTTMock, all_requests
@@ -17,6 +18,7 @@ from c2corg_api.models.document import (
     UpdateType,
 )
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
+from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.route import ArchiveRoute
 from c2corg_api.models.waypoint import WaypointLocale
@@ -370,6 +372,59 @@ def test_list_and_details(client, session, docs):  # noqa: F811
     }
     assert {a['document_type'] for a in details['associations']} == {'r', 'i'}
     assert details['topics'] == [{'lang': 'en', 'topic_id': 6}]
+
+
+@pytest.fixture
+def topic_status(mock_topic_status):
+    """The status changes of the topics in Discourse, run once committed."""
+    with patch('c2corg_api.views.forum.in_background', side_effect=lambda op: op()):
+        yield mock_topic_status
+
+
+def test_topics_hidden_then_shown(client, session, docs, topic_status):  # noqa: F811
+    _delete(client, docs.waypoint3.document_id)
+
+    assert topic_status.call_args_list == [
+        call(2, 'closed', True),
+        call(2, 'visible', False),
+        call(3, 'closed', True),
+        call(3, 'visible', False),
+    ]
+
+    topic_status.reset_mock()
+    _restore(client, _entry(session, docs.waypoint3.document_id).id)
+
+    assert topic_status.call_args_list == [
+        call(2, 'closed', False),
+        call(2, 'visible', True),
+        call(3, 'closed', False),
+        call(3, 'visible', True),
+    ]
+
+
+def test_topic_of_deleted_locale_hidden(client, session, docs, topic_status):  # noqa: F811
+    _delete(client, docs.waypoint3.document_id, 'fr')
+
+    assert topic_status.call_args_list == [
+        call(3, 'closed', True),
+        call(3, 'visible', False),
+    ]
+
+
+def test_topics_forum_error(client, session, docs, topic_status):  # noqa: F811
+    # the deletion is kept, the topics stay as they were
+    topic_status.side_effect = ConnectionError()
+    _delete(client, docs.waypoint3.document_id)
+
+    assert not _exists(session, docs.waypoint3.document_id)
+    assert topic_status.call_count == 2
+
+
+def test_no_topic_no_forum_call(client, session, docs, topic_status):  # noqa: F811
+    session.query(DocumentTopic).delete()
+    _delete(client, docs.article1.document_id)
+
+    topic_status.assert_not_called()
 
 
 def test_list_filters(client, session, user_ids, docs):  # noqa: F811

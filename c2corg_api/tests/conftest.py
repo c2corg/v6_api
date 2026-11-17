@@ -181,6 +181,16 @@ def reset_discourse_client():
     set_discourse_client(None)
 
 
+@pytest.fixture(autouse=True)
+def mock_topic_status():
+    """Never change the status of a forum topic (a deleted document's topics)."""
+    # The change runs in a thread once the deletion is committed
+    # (views.forum.hide_topics): with a real call, it would race the HTTP
+    # mocks of the test (image service) and reach them.
+    with patch('pydiscourse.client.DiscourseClient.update_topic_status') as mock:
+        yield mock
+
+
 @pytest.fixture
 def discourse(settings):
     """Fake the Discourse client (up); restore the real one after the test."""
