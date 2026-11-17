@@ -258,6 +258,29 @@ def update_version(document, user_id, comment, update_types, changed_langs):
     DBSession.flush()
 
 
+def add_unchanged_version(document, user_id, comment, langs):
+    """Add a version of the given locales, the document unchanged (e.g. restored)."""
+    # the version points to the current archives, as the versions of the
+    # locales that an update leaves unchanged
+    meta_data = HistoryMetaData(comment=comment, user_id=user_id)
+    archive = _get_document_archive(document, [])
+    geometry_archive = _get_geometry_archive(document, [])
+    versions = [
+        DocumentVersion(
+            document_id=document.document_id,
+            lang=lang,
+            document_archive=archive,
+            document_geometry_archive=geometry_archive,
+            document_locales_archive=_get_locale_archive(document.get_locale(lang), []),
+            history_metadata=meta_data,
+        )
+        for lang in langs
+    ]
+    DBSession.add(meta_data)
+    DBSession.add_all(versions)
+    DBSession.flush()
+
+
 def _get_document_archive(document, update_types):
     if UpdateType.FIGURES in update_types:
         # the document has changed, create a new archive version

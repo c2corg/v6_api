@@ -280,6 +280,36 @@ def _update_topics(client, changes):
             log.warning(f'Updating the forum topic {topic_id} failed', exc_info=True)
 
 
+def hide_topics(request, topic_ids, hidden):
+    """Close and unlist comment topics, or open and list them again."""
+    # The topics of a deleted document (views.document_trash): closed and
+    # unlisted, their comments stay out of sight; opened and listed again when
+    # the document is restored. After the purge they stay hidden. Never slows
+    # down nor fails the deletion: the forum is called once it is saved.
+    topic_ids = sorted(set(topic_ids))
+    if not topic_ids:
+        return
+    client = get_discourse_client(request.registry.settings)
+    if not client.enabled:
+        return
+    run_on_successful_transaction(
+        partial(in_background, partial(_hide_topics, client, topic_ids, hidden))
+    )
+
+
+def _hide_topics(client, topic_ids, hidden):
+    for topic_id in topic_ids:
+        try:
+            client.client.update_topic_status(topic_id, 'closed', hidden)
+            client.client.update_topic_status(topic_id, 'visible', not hidden)
+        except Exception:
+            # the topic stays as it was: a moderator of the forum can fix it
+            log.warning(
+                f'Changing the status of the forum topic {topic_id} failed',
+                exc_info=True,
+            )
+
+
 def _first_accepted(titles, send):
     """Send the first of the titles Discourse accepts (send(title))."""
     # a title Discourse refuses (422: a duplicate...) is followed by the next one

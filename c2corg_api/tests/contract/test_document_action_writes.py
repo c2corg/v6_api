@@ -80,3 +80,38 @@ def test_delete_locale_reserved_to_the_moderators(browser, documents):
         status=403,
     )
     check_snapshot('documents_delete_locale_not_moderator', response)
+
+
+DELETED_DOCUMENT_ROUTES = [
+    ('GET', '/documents/deleted'),
+    ('GET', '/documents/deleted/{id}'),
+    ('POST', '/documents/deleted/{id}/restore'),
+]
+
+
+@contract(*DELETED_DOCUMENT_ROUTES)
+def test_deleted_documents_reserved_to_the_moderators(browser):
+    for method, path in DELETED_DOCUMENT_ROUTES:
+        url = path.replace('{id}', '1')
+        if method == 'GET':
+            response = browser.get(url, user='contributor', status=403)
+        else:
+            response = browser.post(url, {}, user='contributor', status=403)
+        check_snapshot('document_action_not_moderator', response)
+
+
+@contract(('GET', '/documents/deleted'))
+def test_deleted_documents(browser):
+    response = browser.get('/documents/deleted', user='moderator')
+    check_snapshot('documents_deleted', response)
+
+
+@contract(
+    ('GET', '/documents/deleted/{id}'), ('POST', '/documents/deleted/{id}/restore')
+)
+def test_deleted_document_unknown(browser):
+    url = '/documents/deleted/9999999'
+    response = browser.get(url, user='moderator', status=404)
+    check_snapshot('documents_deleted_unknown_get', response)
+    response = browser.post(f'{url}/restore', {}, user='moderator', status=404)
+    check_snapshot('documents_deleted_unknown_restore', response)
