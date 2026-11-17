@@ -36,6 +36,7 @@ from c2corg_api.views.document_delete import (
     update_deleted_documents_list,
 )
 from c2corg_api.views.document_merge import _and_in, transfer_associations
+from c2corg_api.views.document_trash import forget_user
 
 
 def usage(argv):
@@ -127,6 +128,9 @@ def merge_user_accounts(source_user_id, target_user_id, queue_config):
     _update_feed_entries(source_user_id, target_user_id)
     print('Updating contributions versions and histories...')
     _update_history_metadata(source_user_id, target_user_id)
+    print('Updating deleted documents...')
+    removed, rewritten = forget_user(source_user_id, target_user_id)
+    print(f'{removed} removed (only by this user), {rewritten} transferred')
     print('Unregistering from mailing lists...')
     _unregister_from_mailinglists(source_user_id)
     print('Removing profile and user account...')

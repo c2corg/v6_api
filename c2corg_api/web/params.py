@@ -5,6 +5,7 @@
 # `querystring` (also for the path parameters), the same names and messages
 # (#2512).
 
+import datetime
 import math
 from typing import Annotated, Any
 
@@ -116,6 +117,25 @@ DocType = Annotated[
     BeforeValidator(_doc_type),
     WithJsonSchema({'type': 'string', 'enum': list(document_types.ALL)}),
 ]
+
+
+def _day(name):
+    def parse(value):
+        try:
+            return datetime.date.fromisoformat(value)
+        except TypeError, ValueError:
+            raise PydanticCustomError('c2corg', f'invalid {name}') from None
+
+    return parse
+
+
+def day(name):
+    """Return the type of a date parameter (YYYY-MM-DD), `invalid <name>` if not."""
+    return Annotated[
+        datetime.date,
+        BeforeValidator(_day(name)),
+        WithJsonSchema({'type': 'string', 'format': 'date'}),
+    ]
 
 
 def _finite(name):

@@ -206,6 +206,24 @@ def delete_all_files_for_image(document_id, request):
     run_on_successful_transaction(send_delete_request)
 
 
+def restore_files_of_images(filenames, request):
+    """Restore deleted image files; return those that could not be."""
+    # The image service brings back the files and their thumbnails from the
+    # versions the bucket keeps (30 days). Called before the commit: a failure
+    # cancels the restoring of the document.
+    settings = request.registry.settings
+    response = requests.post(
+        image_backend_endpoint(settings, 'restore'),
+        data={'secret': settings['image_backend.secret_key'], 'filenames': filenames},
+        timeout=int(settings['url.timeout']),
+    )
+    if response.status_code != 200:
+        raise HTTPInternalServerError(
+            f'Restoring image files failed: {response.status_code} {response.reason}'
+        )
+    return response.json().get('missing', [])
+
+
 @write(
     validators=[
         body_validator(ImageCreateSchema),

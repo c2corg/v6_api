@@ -58,6 +58,7 @@ from c2corg_api.models.xreport import (
     XreportLocale,
 )
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.views.document_trash import keep_deleted_document, keep_deleted_locale
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id, validate_lang
@@ -253,7 +254,12 @@ def validate_requestor(request, **kwargs):
     )
 
 
-def _delete(request, document_id, document_type):
+def _delete(request, document_id, document_type, keep=True):
+    # kept a while, to be restored by a moderator (see views.document_trash),
+    # unless the deletion must leave nothing (e.g. the erasure of an account)
+    if keep:
+        keep_deleted_document(request, document_id, document_type)
+
     if document_type == IMAGE_TYPE:
         # Files are actually removed only if the transaction succeeds
         delete_all_files_for_image(document_id, request)
@@ -361,6 +367,8 @@ def delete_document_locale(request):
     # the whole document.
     if request.validated['is_only_locale']:
         return _delete(request, document_id, document_type)
+
+    keep_deleted_locale(request, document_id, document_type, lang)
 
     clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
         document_type
