@@ -29,8 +29,8 @@ from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
-# Discourse's max_topic_title_length (its default)
-TITLE_MAX_LENGTH = 255
+# max_topic_title_length of forum.camptocamp.org (Discourse's default: 255)
+TITLE_MAX_LENGTH = 120
 TITLE_SEPARATOR = ' · '
 
 DOCUMENT_TYPE_NAMES = {
@@ -43,6 +43,20 @@ DOCUMENT_TYPE_NAMES = {
     document_types.ROUTE_TYPE: 'route',
     document_types.WAYPOINT_TYPE: 'waypoint',
     document_types.XREPORT_TYPE: 'xreport',
+}
+
+# the tag of the document type, chosen by the forum moderators (November 2026): one
+# name for every language
+TYPE_TAGS = {
+    document_types.AREA_TYPE: 'region',
+    document_types.ARTICLE_TYPE: 'article',
+    document_types.BOOK_TYPE: 'livre',
+    document_types.IMAGE_TYPE: 'image',
+    document_types.MAP_TYPE: 'carte',
+    document_types.OUTING_TYPE: 'sortie',
+    document_types.ROUTE_TYPE: 'itineraire',
+    document_types.WAYPOINT_TYPE: 'point-de-passage',
+    document_types.XREPORT_TYPE: 'accident',
 }
 
 # too vague to name a waypoint: the generic 'waypoint' label is used instead
@@ -136,28 +150,45 @@ def _document_title(locale):
     return title
 
 
-def topic_title(document, locale):
+def topic_title(document, locale, with_id=False):
     """Give the title of the comment topic of a document locale."""
-    # '1966268_fr · Sortie · Mont Blanc par les Grands Mulets · 2026-11-02'
-    # The id comes first: titles stay unique (Discourse refuses duplicates) and the
-    # topics can still be found by the id, as the older ones.
+    # 'Mont Blanc par les Grands Mulets · 2026-11-02', the language and the type being
+    # tags (topic_tags). With the id, for a title Discourse refuses (a duplicate):
+    # 'Mont Blanc par les Grands Mulets · 2026-11-02 (1966268)'.
     title = _document_title(locale)
+    if not title:
+        # a document without title (images): its type, never alone
+        title = _type_label(document, locale.lang)
+        if not title:
+            # neither title nor type (profiles): the former title
+            return legacy_topic_title(locale)
+        with_id = True
 
     date = _date(document)
-    # no type label for some types (profiles)
-    head = [
-        part
-        for part in [legacy_topic_title(locale), _type_label(document, locale.lang)]
-        if part
-    ]
-    tail = [date.isoformat()] if date else []
+    tail = TITLE_SEPARATOR + date.isoformat() if date else ''
+    suffix = f' ({locale.document_id})' if with_id else ''
 
-    # only the title of the document is shortened, never the id or the date
-    room = TITLE_MAX_LENGTH - len(TITLE_SEPARATOR.join([*head, '', *tail]))
+    # only the title of the document is shortened, never the date or the id
+    room = TITLE_MAX_LENGTH - len(tail) - len(suffix)
     if len(title) > room:
         title = title[: room - 1].rstrip() + '…'
 
-    return TITLE_SEPARATOR.join(part for part in [*head, title, *tail] if part)
+    return (title + tail + suffix).strip()
+
+
+def topic_titles(document, locale):
+    """Give the titles to try for the topic, until Discourse accepts one."""
+    titles = [
+        topic_title(document, locale),
+        topic_title(document, locale, with_id=True),
+        legacy_topic_title(locale),
+    ]
+    return list(dict.fromkeys(titles))
+
+
+def topic_tags(document, locale):
+    """Give the tags of the comment topic: its language and the document type."""
+    return [tag for tag in [locale.lang, TYPE_TAGS.get(document.type)] if tag]
 
 
 def first_post_content(document, locale):
@@ -180,7 +211,7 @@ def first_post_content(document, locale):
 
 
 def topic_texts(document):
-    """Give the title and first post of the comment topics, by topic id."""
+    """Give the titles to try and the first post of the comment topics, by topic id."""
     topic_ids = dict(
         DBSession.query(DocumentTopic.document_locale_id, DocumentTopic.topic_id)
         .join(DocumentLocale, DocumentLocale.id == DocumentTopic.document_locale_id)
@@ -189,7 +220,7 @@ def topic_texts(document):
     )
     return {
         topic_ids[locale.id]: (
-            topic_title(document, locale),
+            topic_titles(document, locale),
             first_post_content(document, locale),
         )
         for locale in document.locales
@@ -210,11 +241,11 @@ def rename_topics(request, document, old_texts):
 
     changes = {
         topic_id: (
-            title if title != old_texts[topic_id][0] else None,
+            titles if titles != old_texts[topic_id][0] else None,
             content if content != old_texts[topic_id][1] else None,
         )
-        for topic_id, (title, content) in topic_texts(document).items()
-        if topic_id in old_texts and (title, content) != old_texts[topic_id]
+        for topic_id, (titles, content) in topic_texts(document).items()
+        if topic_id in old_texts and (titles, content) != old_texts[topic_id]
     }
     if not changes:
         return
@@ -235,11 +266,11 @@ def in_background(operation):
 
 def _update_topics(client, changes):
     """Give the topics their new title and first post in Discourse."""
-    # changes: (title, content) by topic id, None for what is unchanged
-    for topic_id, (title, content) in changes.items():
+    # changes: (titles to try, content) by topic id, None for what is unchanged
+    for topic_id, (titles, content) in changes.items():
         try:
-            if title is not None:
-                client.client.update_topic(f'/t/-/{topic_id}.json', title=title)
+            if titles is not None:
+                update_topic_title(client, topic_id, titles)
             if content is not None:
                 posts = client.client.topic_posts(topic_id)['post_stream']['posts']
                 first_post = next(p for p in posts if p['post_number'] == 1)
@@ -279,6 +310,28 @@ def _hide_topics(client, topic_ids, hidden):
             )
 
 
+def _first_accepted(titles, send):
+    """Send the first of the titles Discourse accepts (send(title))."""
+    # a title Discourse refuses (422: a duplicate...) is followed by the next one
+    for title in titles[:-1]:
+        try:
+            return send(title)
+        except DiscourseClientError as e:
+            if e.response is None or e.response.status_code != 422:
+                raise
+            log.warning(f'Discourse refused the title {title!r}: {e!s}')
+    return send(titles[-1])
+
+
+def update_topic_title(client, topic_id, titles, **kwargs):
+    """Give a topic the first of the titles Discourse accepts."""
+    # kwargs: other fields of the topic, e.g. {'tags[]': [...]}
+    url = f'/t/-/{topic_id}.json'
+    return _first_accepted(
+        titles, lambda title: client.client.update_topic(url, title=title, **kwargs)
+    )
+
+
 # only collection_post: it creates the topic in Discourse
 @write(
     validators=[body_validator(TopicCreateSchema), validate_topic_create],
@@ -304,18 +357,15 @@ def create_topic(request):
         pass  # a name: use it as it is
 
     try:
-        try:
-            response = client.client.create_post(
-                content, title=topic_title(document, locale), category_id=category
-            )
-        except DiscourseClientError as e:
-            # a title Discourse refuses (too short, shouting...): the id still works
-            if e.response is None or e.response.status_code != 422:
-                raise
-            log.warning(f'Discourse refused the title of the topic: {e!s}')
-            response = client.client.create_post(
-                content, title=legacy_topic_title(locale), category_id=category
-            )
+        response = _first_accepted(
+            topic_titles(document, locale),
+            lambda title: client.client.create_post(
+                content,
+                title=title,
+                category_id=category,
+                tags=topic_tags(document, locale),
+            ),
+        )
     except Exception as e:
         log.error(f'Error with Discourse: {e!s}', exc_info=True)
         raise HTTPInternalServerError('Error with Discourse') from e
