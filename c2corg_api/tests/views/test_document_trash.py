@@ -52,8 +52,18 @@ def _dump(session):
         rows = session.execute(
             select(cast(func.to_jsonb(literal_column('r')), Text)).select_from(alias)
         ).scalars()
+        if table.name == 'feed_document_changes':
+            rows = map(_sorted_langs, rows)
         dump[table.name] = Counter(rows)
     return dump
+
+
+def _sorted_langs(row):
+    # the langs of a feed item are recomputed by update_langs_of_changes, in
+    # no given order (array_agg): ["fr", "en"] seen on PostgreSQL 9.6
+    values = json.loads(row)
+    values['langs'] = sorted(values['langs'] or [])
+    return json.dumps(values, sort_keys=True)
 
 
 def _assert_restored(before, after, restored_langs, ignored=()):
