@@ -4,7 +4,12 @@ import os
 import re
 
 from c2corg_api.httpexceptions import HTTPServiceUnavailable
-from c2corg_api.models.document_map_queries import get_titles, get_track_ids, get_tracks
+from c2corg_api.models.document_map_queries import (
+    get_most_recent_ids,
+    get_titles,
+    get_track_ids,
+    get_tracks,
+)
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
 from c2corg_api.search.search_filters import build_query
@@ -73,7 +78,7 @@ GEOHASH_BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz'
 # one of the first version of the heatmap, and the sort and the pagination of
 # the listing mean nothing for a map (a `sort` on an unknown field is an error
 # of the search index)
-NON_FILTER_PARAMS = ('zoom', 'bbox', 'pl', 'ids', 'sort', 'offset', 'limit')
+NON_FILTER_PARAMS = ('zoom', 'bbox', 'pl', 'ids', 'recent', 'sort', 'offset', 'limit')
 
 
 def _search_params(request):
@@ -115,6 +120,30 @@ def validate_ids(request, **kwargs):
         return
 
     request.validated['ids'] = [int(token) for token in tokens]
+
+
+# `recent=` is the number of most recent tracks asked for, at most
+RECENT_MAX = 100
+
+
+def validate_recent(request, **kwargs):
+    """Check and parse the optional `recent=20` parameter.
+
+    The number is stored in `request.validated['recent']`, or None if there is
+    no such parameter.
+    """
+    value = request.GET.get('recent')
+    if value is None:
+        request.validated['recent'] = None
+        return
+
+    if not re.fullmatch('[0-9]{1,3}', value) or not 1 <= int(value) <= RECENT_MAX:
+        request.errors.add(
+            'querystring', 'recent', f'must be a number from 1 to {RECENT_MAX}'
+        )
+        return
+
+    request.validated['recent'] = int(value)
 
 
 def _document_ids(request):
@@ -304,11 +333,36 @@ def _cacheable(request):
     request.response.headers['Vary'] = 'Origin'
 
 
+def _too_many(count=None, capped=False):
+    """Return the answer of a box that has too many tracks: no track, and how many.
+
+    `count` is the number of tracks of the box, counted by their boxes (see
+    `get_track_ids`) and for the filters of the request: a little more than
+    the tracks that cross the box. `count_capped` says that there are more of
+    them than the candidates that are looked at (`TRACKS_CANDIDATES_MAX`).
+    It is left out when it is not known: many candidates, to be filtered by
+    the search index.
+    """
+    answer = {'documents': [], 'truncated': True}
+    if count is not None:
+        answer['count'] = count
+        answer['count_capped'] = capped
+    return answer
+
+
+def _count_tracks(model, bbox, document_ids):
+    """Return `(count, capped)`: the tracks of the box, up to the candidates."""
+    found = get_track_ids(model, bbox, TRACKS_CANDIDATES_MAX, document_ids=document_ids)
+    return min(len(found), TRACKS_CANDIDATES_MAX), len(found) > TRACKS_CANDIDATES_MAX
+
+
 def get_tracks_response(doc_type, model, locale_model, request):
     _cacheable(request)
     params = _search_params(request)
     bbox = request.validated['bbox']
     lang = request.validated.get('lang')
+    if request.validated.get('recent'):
+        return _recent_tracks_response(doc_type, model, locale_model, request, params)
 
     # Filters that match few documents (a route, a user...) come first, from
     # the search index: the database then only looks at these, whatever the
@@ -333,14 +387,25 @@ def get_tracks_response(doc_type, model, locale_model, request):
     # `tracks_limit() + 1` ids.
     needs_filter = bool(params) and not filtered
     cap = TRACKS_CANDIDATES_MAX if needs_filter else tracks_limit()
+    given_ids = document_ids
     document_ids = get_track_ids(model, bbox, cap, document_ids=document_ids)
     if len(document_ids) > cap:
-        return {'documents': [], 'truncated': True}
+        if needs_filter:
+            # the candidates are yet to be filtered: how many there are is not known
+            return _too_many()
+        # a little more work, for the ones that look at a busy place: how many
+        return _too_many(*_count_tracks(model, bbox, given_ids))
     if needs_filter and document_ids:
         document_ids = _filtered_ids(doc_type, params, document_ids)
     if len(document_ids) > tracks_limit():
-        return {'documents': [], 'truncated': True}
+        return _too_many(len(document_ids))
 
+    return _tracks_answer(doc_type, model, locale_model, document_ids, bbox, lang)
+
+
+def _tracks_answer(
+    doc_type, model, locale_model, document_ids, bbox, lang, truncated=False
+):
     fields = tuple(field for field in TRACK_FIELDS if hasattr(model, field))
     tolerance, decimals = _simplification(bbox)
     rows = get_tracks(model, document_ids, tolerance, decimals, fields, bbox)
@@ -359,8 +424,58 @@ def get_tracks_response(doc_type, model, locale_model, request):
             }
             for row in rows
         ],
-        'truncated': False,
+        'truncated': truncated,
     }
+
+
+def _recent_tracks_response(doc_type, model, locale_model, request, params):
+    """Answer `recent=N`: the N most recent tracks of the bbox, if there are many.
+
+    For the click on a place that is too busy to draw its tracks: `truncated`
+    says that there are more of them.
+    """
+    recent = request.validated['recent']
+    bbox = request.validated['bbox']
+    document_ids = _document_ids(request)
+
+    matching = (
+        _matching_ids(doc_type, params, TRACKS_CANDIDATES_MAX) if params else None
+    )
+    if matching is not None:
+        given = None if document_ids is None else set(document_ids)
+        document_ids = (
+            matching if given is None else [i for i in matching if i in given]
+        )
+    needs_filter = bool(params) and matching is None
+
+    # Without anything for the search index to filter, the most recent ones
+    # are the first of the database. Else, the candidates (the most recent
+    # ones first, up to a limit) are filtered, then sorted again.
+    cap = TRACKS_CANDIDATES_MAX if needs_filter else recent
+    ids = get_track_ids(model, bbox, cap, document_ids, most_recent=True)
+    count = capped = None
+    if needs_filter:
+        filtered = _filtered_ids(doc_type, params, ids)
+        # the candidates are all there, or only the most recent ones
+        if len(ids) <= cap:
+            count, capped = len(filtered), False
+        ids = get_most_recent_ids(model, filtered, recent + 1)
+    truncated = len(ids) > recent
+    if truncated and not needs_filter:
+        count, capped = _count_tracks(model, bbox, document_ids)
+    answer = _tracks_answer(
+        doc_type,
+        model,
+        locale_model,
+        ids[:recent],
+        bbox,
+        request.validated.get('lang'),
+        truncated,
+    )
+    if truncated and count is not None:
+        answer['count'] = count
+        answer['count_capped'] = capped
+    return answer
 
 
 def get_heatmap_response(doc_type, request):
@@ -402,6 +517,10 @@ def get_heatmap_response(doc_type, request):
 #   If more than `tracks_limit()` tracks cross the bbox, an empty,
 #   `"truncated": true` response is returned instead of a silently
 #   incomplete list: the frontend can ask the heatmap of the same bbox.
+#   It says how many there are, when it knows: `"count"` (counted by the boxes
+#   of the tracks, a little more than those that cross the bbox) and
+#   `"count_capped"` (there are more than `TRACKS_CANDIDATES_MAX`). With
+#   `recent=N`, the N most recent ones instead of an empty list.
 
 
 def tracks_limit():

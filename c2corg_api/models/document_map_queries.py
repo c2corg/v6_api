@@ -9,7 +9,7 @@ def _envelope(bbox_3857):
     return func.ST_MakeEnvelope(xmin, ymin, xmax, ymax, 3857)
 
 
-def get_track_ids(model, bbox_3857, limit, document_ids=None):
+def get_track_ids(model, bbox_3857, limit, document_ids=None, most_recent=False):
     """Return up to `limit + 1` ids of the `model` documents with a track in the bbox.
 
     The track (`geometry.geom_detail`) is the one that counts, not the point
@@ -19,7 +19,10 @@ def get_track_ids(model, bbox_3857, limit, document_ids=None):
     exact `ST_Intersects` would read every candidate track: 30 to 40 times
     slower on a dense view, for a result that is only counted). A track whose
     box crosses the bbox without the track doing so is a candidate too;
-    `get_tracks` drops it. `document_ids` restricts the documents.
+    `get_tracks` drops it. `document_ids` restricts the documents. With
+    `most_recent`, the ids are those of the most recent documents (see
+    `_most_recent_first`), not of any `limit + 1` of them: the database then
+    reads all the candidates to sort them.
     Callers should treat a result of length `limit + 1` as "too many results
     for this bbox".
     """
@@ -35,8 +38,36 @@ def get_track_ids(model, bbox_3857, limit, document_ids=None):
     )
     if document_ids is not None:
         query = query.filter(model.document_id.in_(document_ids))
+    if most_recent:
+        query = query.order_by(*_most_recent_first(model))
 
     return [row.document_id for row in query.limit(limit + 1).all()]
+
+
+def _most_recent_first(model):
+    """Return the sort of the most recent documents first.
+
+    The outings by date, the other documents (which have no date) by id.
+    """
+    order = [model.document_id.desc()]
+    if hasattr(model, 'date_end'):
+        order.insert(0, model.date_end.desc())
+    return order
+
+
+def get_most_recent_ids(model, document_ids, limit):
+    """Return up to `limit` of the ids, the most recent documents first."""
+    if not document_ids:
+        return []
+
+    return [
+        row.document_id
+        for row in DBSession.query(model.document_id)
+        .filter(model.document_id.in_(document_ids))
+        .order_by(*_most_recent_first(model))
+        .limit(limit)
+        .all()
+    ]
 
 
 def get_tracks(model, document_ids, tolerance, decimals, fields=(), bbox_3857=None):
@@ -61,11 +92,6 @@ def get_tracks(model, document_ids, tolerance, decimals, fields=(), bbox_3857=No
         func.coalesce(func.ST_Simplify(flat, tolerance), flat), decimals, 0
     ).label('geojson')
 
-    # the most recent first: the outings by date, the other documents by id
-    order = [model.document_id.desc()]
-    if hasattr(model, 'date_end'):
-        order.insert(0, model.date_end.desc())
-
     query = (
         DBSession.query(
             model.document_id,
@@ -79,7 +105,7 @@ def get_tracks(model, document_ids, tolerance, decimals, fields=(), bbox_3857=No
         query = query.filter(
             DocumentGeometry.geom_detail.ST_Intersects(_envelope(bbox_3857))
         )
-    return query.order_by(*order).all()
+    return query.order_by(*_most_recent_first(model)).all()
 
 
 def get_titles(locale_model, document_ids):

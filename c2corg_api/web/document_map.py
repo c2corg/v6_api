@@ -16,6 +16,7 @@ from c2corg_api.views.document_map import (
     read_routes_heatmap,
     read_routes_tracks,
     validate_ids,
+    validate_recent,
     validate_tracks_overlay_enabled,
 )
 from c2corg_api.views.validation import (
@@ -39,6 +40,16 @@ PreferredLang = Annotated[
         alias='pl',
         description='The locale of each document in this language if it exists, '
         'else in the best other one.',
+    ),
+]
+
+# checked by `validate_recent`, like the box
+Recent = Annotated[
+    described({'type': 'integer', 'minimum': 1, 'maximum': 100}),
+    Query(
+        description='Instead of an empty answer when the box has too many tracks, '
+        'the most recent ones (this many at most), and `truncated` tells that '
+        'there are more. For the click on a place too busy to draw its tracks.'
     ),
 ]
 
@@ -92,7 +103,11 @@ def outings_heatmap(request: Request, user: User, bbox: Bbox = None):
 
 
 def outings_tracks(
-    request: Request, user: User, bbox: Bbox = None, lang: PreferredLang = None
+    request: Request,
+    user: User,
+    bbox: Bbox = None,
+    lang: PreferredLang = None,
+    recent: Recent = None,
 ):
     """Return the tracks of the outings in a box."""
     return serve_read(
@@ -102,6 +117,7 @@ def outings_tracks(
             validate_tracks_overlay_enabled,
             validate_bbox,
             validate_ids,
+            validate_recent,
             validate_preferred_lang_param,
         ],
         read_outings_tracks,
@@ -119,7 +135,11 @@ def routes_heatmap(request: Request, user: User, bbox: Bbox = None):
 
 
 def routes_tracks(
-    request: Request, user: User, bbox: Bbox = None, lang: PreferredLang = None
+    request: Request,
+    user: User,
+    bbox: Bbox = None,
+    lang: PreferredLang = None,
+    recent: Recent = None,
 ):
     """Return the tracks of the routes in a box."""
     return serve_read(
@@ -129,6 +149,7 @@ def routes_tracks(
             validate_tracks_overlay_enabled,
             validate_bbox,
             validate_ids,
+            validate_recent,
             validate_preferred_lang_param,
         ],
         read_routes_tracks,
