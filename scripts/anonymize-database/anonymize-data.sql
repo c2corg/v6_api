@@ -16,6 +16,17 @@ create function pg_temp.scrub(t text) returns text language sql immutable as $$
     '(\+|\y00)[0-9]{2}[ .-]?(\(0\)|0)?[ .-]?[0-9]{1,3}([ .-]?[0-9]{2,4}){2,4}|\y0[1-9]([ .-]?[0-9]{2}){4}\y', '00 00 00 00 00', 'g')
 $$;
 
+-- The unique constraints on username and forum_username are checked row by row: setting them to 'user' || id in
+-- one update fails when a real account is already named like another account's new name (e.g. "user1234").
+-- Everybody is first renamed with a prefix that no account uses.
+do $$
+begin
+  if exists (select 1 from users.user where lower(username) like 'tmpanon%' or lower(forum_username) like 'tmpanon%') then
+    raise exception 'the temporary prefix tmpanon is already used by an account';
+  end if;
+end $$;
+update users.user set username = 'tmpanon' || id, forum_username = 'tmpanon' || id;
+
 -- Replace users'data by fake data. The name is the one displayed to everybody (history of the documents, authors
 -- of the outings...): it is kept for the users whose profile is public if it is a single word (a pseudonym), and replaced
 -- by `User <id>` for everybody else (a name with several words, an email...). The `is_profile_public` flag is kept.
