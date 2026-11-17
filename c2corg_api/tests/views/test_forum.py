@@ -25,7 +25,12 @@ from c2corg_api.security.discourse_client import (
 )
 from c2corg_api.tests import auth_headers, post_json_with_contributor, send_json
 from c2corg_api.views.document import create_new_version
-from c2corg_api.views.forum import TITLE_MAX_LENGTH, first_post_content, topic_title
+from c2corg_api.views.forum import (
+    TITLE_MAX_LENGTH,
+    first_post_content,
+    topic_tags,
+    topic_title,
+)
 
 
 @dataclass
@@ -205,17 +210,19 @@ def test_post_without_title(create_post_mock, client, docs):
         'Comments: Image · <a href="{}">{}</a>'.format(
             referer, f'/images/{locale.document_id}/{locale.lang}'
         ),
-        title=f'{locale.document_id}_{locale.lang} · Image',
+        title=f'Image ({locale.document_id})',
         category_id='Commentaires',
+        tags=['en', 'image'],
     )
 
 
 @patch('pydiscourse.client.DiscourseClient.create_post')
 def test_post_title_refused(create_post_mock, client, session, docs):
-    """Fall back on the id alone when Discourse refuses the title."""
+    """Add the id when Discourse refuses the title, then fall back on it alone."""
     response = Response()
     response.status_code = 422
     create_post_mock.side_effect = [
+        DiscourseClientError('Title has already been used', response=response),
         DiscourseClientError('Title seems unclear', response=response),
         {'topic_id': 10},
     ]
@@ -228,9 +235,12 @@ def test_post_title_refused(create_post_mock, client, session, docs):
     )
     titles = [c.kwargs['title'] for c in create_post_mock.call_args_list]
     assert titles == [
-        f'{locale.document_id}_en · Summit · Mont Granier',
+        'Mont Granier',
+        f'Mont Granier ({locale.document_id})',
         f'{locale.document_id}_en',
     ]
+    tags = {tuple(c.kwargs['tags']) for c in create_post_mock.call_args_list}
+    assert tags == {('en', 'point-de-passage')}
     session.expire(locale)
     assert 10 == locale.topic_id
 
@@ -256,9 +266,13 @@ def test_topic_title_outing():
         document_id=1966268, lang='fr', title='Mont Blanc par les Grands Mulets'
     )
     assert (
-        topic_title(outing, locale)
-        == '1966268_fr · Sortie · Mont Blanc par les Grands Mulets · 2026-11-02'
+        topic_title(outing, locale) == 'Mont Blanc par les Grands Mulets · 2026-11-02'
     )
+    assert (
+        topic_title(outing, locale, with_id=True)
+        == 'Mont Blanc par les Grands Mulets · 2026-11-02 (1966268)'
+    )
+    assert topic_tags(outing, locale) == ['fr', 'sortie']
 
 
 def test_topic_title_profile():
@@ -276,30 +290,31 @@ def test_topic_title_route():
         title='Voie des Cristalliers',
         title_prefix='Mont Blanc',
     )
-    assert (
-        topic_title(route, locale)
-        == '56789_fr · Itinéraire · Mont Blanc : Voie des Cristalliers'
-    )
+    assert topic_title(route, locale) == 'Mont Blanc : Voie des Cristalliers'
+    assert topic_tags(route, locale) == ['fr', 'itineraire']
 
 
-def test_topic_title_waypoint_type():
-    """A waypoint is named by its type, unless the type says nothing."""
+def test_topic_title_waypoint():
+    """A waypoint topic is tagged with the language and point-de-passage."""
     hut = Waypoint(document_id=123, waypoint_type='hut')
     locale = WaypointLocale(document_id=123, lang='de', title='Goûterhütte')
-    assert topic_title(hut, locale) == '123_de · Hütte · Goûterhütte'
+    assert topic_title(hut, locale) == 'Goûterhütte'
+    assert topic_tags(hut, locale) == ['de', 'point-de-passage']
 
-    misc = Waypoint(document_id=124, waypoint_type='misc')
-    locale = WaypointLocale(document_id=124, lang='fr', title='Pierre plate')
-    assert topic_title(misc, locale) == '124_fr · Point de passage · Pierre plate'
+
+def test_topic_title_without_title():
+    """A document without title is named by its type, with its id."""
+    image = Image(document_id=123456)
+    locale = DocumentLocale(document_id=123456, lang='fr', title='')
+    assert topic_title(image, locale) == 'Image (123456)'
+    assert topic_tags(image, locale) == ['fr', 'image']
 
 
 def test_topic_title_xreport():
     xreport = Xreport(document_id=1965903, date=datetime.date(2026, 8, 14))
     locale = XreportLocale(document_id=1965903, lang='en', title='Crevasse fall')
-    assert (
-        topic_title(xreport, locale)
-        == '1965903_en · Incident / accident · Crevasse fall · 2026-08-14'
-    )
+    assert topic_title(xreport, locale) == 'Crevasse fall · 2026-08-14'
+    assert topic_tags(xreport, locale) == ['en', 'accident']
 
 
 def test_topic_title_shouting():
@@ -307,7 +322,7 @@ def test_topic_title_shouting():
     locale = RouteLocale(
         document_id=1, lang='fr', title='VOIE NORMALE', title_prefix='MONT BLANC'
     )
-    assert topic_title(route, locale) == '1_fr · Itinéraire · Mont blanc : Voie normale'
+    assert topic_title(route, locale) == 'Mont blanc : Voie normale'
 
 
 def test_topic_title_too_long():
@@ -316,8 +331,10 @@ def test_topic_title_too_long():
     locale = OutingLocale(document_id=1966268, lang='fr', title='x' * 300)
     title = topic_title(outing, locale)
     assert len(title) == TITLE_MAX_LENGTH
-    assert title.startswith('1966268_fr · Sortie · xxx')
     assert title.endswith('x… · 2026-11-02')
+    title = topic_title(outing, locale, with_id=True)
+    assert len(title) == TITLE_MAX_LENGTH
+    assert title.endswith('x… · 2026-11-02 (1966268)')
 
 
 @patch('pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10})
@@ -407,9 +424,7 @@ def test_put_renames_topic(client, docs, forum):
             ],
         },
     )
-    forum.update_topic.assert_called_once_with(
-        '/t/-/1.json', title=f'{waypoint.document_id}_en · Lake · Granier lake'
-    )
+    forum.update_topic.assert_called_once_with('/t/-/1.json', title='Granier lake')
     forum.update_post.assert_called_once_with(
         50,
         'Comments: Lake · <a href="https://www.camptocamp.org/waypoints/'
@@ -503,7 +518,7 @@ def test_put_renames_route_topic(client, session, user_ids, docs, forum):
     forum.update_post.assert_called_once()
     forum.update_topic.assert_called_once_with(
         '/t/-/2.json',
-        title=f'{route.document_id}_en · Route · Mont Granier : North face',
+        title='Mont Granier : North face',
     )
 
 
@@ -531,6 +546,38 @@ def test_put_rename_failure(client, docs, forum):
         },
     )
     assert forum.update_topic.call_count == 1
+
+
+def test_put_rename_duplicate(client, docs, forum):
+    """A title Discourse refuses on rename (a duplicate) is retried with the id."""
+    response = Response()
+    response.status_code = 422
+    forum.update_topic.side_effect = [
+        DiscourseClientError('Title has already been used', response=response),
+        {},
+    ]
+    waypoint = docs.waypoint_with_topic
+    locale = docs.locale_en_with_topic
+    _put_as_moderator(
+        client,
+        f'/waypoints/{waypoint.document_id}',
+        {
+            'document_id': waypoint.document_id,
+            'version': waypoint.version,
+            'waypoint_type': 'summit',
+            'elevation': 2203,
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Granier',
+                    'description': '...',
+                    'version': locale.version,
+                }
+            ],
+        },
+    )
+    titles = [c.kwargs['title'] for c in forum.update_topic.call_args_list]
+    assert titles == ['Granier', f'Granier ({waypoint.document_id})']
 
 
 def test_first_post_content_outing():
