@@ -42,10 +42,12 @@ class TestConfigureCorsPolicy:
         )
 
     def test_falls_back_to_default_when_setting_missing(self):
+        configure_cors_policy({'cors.allowed_origins': 'https://example.org'})
         configure_cors_policy({})
         assert cors_policy['origins'] == DEFAULT_CORS_ORIGINS
 
     def test_falls_back_to_default_when_setting_blank(self):
+        configure_cors_policy({'cors.allowed_origins': 'https://example.org'})
         configure_cors_policy({'cors.allowed_origins': '   '})
         assert cors_policy['origins'] == DEFAULT_CORS_ORIGINS
 

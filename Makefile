@@ -5,17 +5,19 @@ TEMPLATE_FILES = $(TEMPLATE_FILES_IN:.in=)
 
 ENV_FILES = config/env.default config/env.dev
 
-ifdef CONFIG
-	ENV_FILES += $(CONFIG)
-endif
-
 ifneq ($(wildcard config/env.local),)
 	ENV_FILES += config/env.local
 endif
 
+# Last, so that it wins over env.local (e.g. the container hostnames of the dev container)
+ifdef CONFIG
+	ENV_FILES += $(CONFIG)
+endif
+
 SRC_DIRS = c2corg_api es_migration
 
-DOCKER_COMPOSE = docker compose
+# Override for rootless Podman: make DOCKER_COMPOSE="podman compose" <target> (or export DOCKER_COMPOSE)
+DOCKER_COMPOSE ?= docker compose
 DOCKER_EXEC = $(DOCKER_COMPOSE) exec
 DB_EXEC = $(DOCKER_EXEC) -u postgres -T postgresql
 
@@ -63,8 +65,9 @@ bootstrap:
 		$(MAKE) init-test-database
 		$(MAKE) init-elastic
 
+# --wait: until the healthchecks pass, i.e. the dev database is restored (first start) and Elasticsearch is up
 start:
-		$(DOCKER_COMPOSE) up -d
+		$(DOCKER_COMPOSE) up -d --wait
 
 stop:
 		$(DOCKER_COMPOSE) stop
@@ -98,15 +101,45 @@ audit:
 test:
 		$(UV_RUN) pytest -n 4
 
+# The image ghcr.io/c2corg/c2corg-dev-db (docker-compose.yml) comes with the anonymized dev database already
+# restored: it is only migrated to the alembic revision of the checkout. An empty server gets the empty schema
+# instead (initialize_c2corg_api_db is not idempotent: it is only run on a fresh database).
 init-database:
-		$(DB_EXEC) /v6_api/scripts/database/create_schema.sh
-		$(UV_RUN) initialize_c2corg_api_db development.ini
+		@if $(DB_EXEC) psql -d c2corg -tAc 'SELECT 1 FROM alembic.alembic_version' > /dev/null 2>&1; then \
+			echo "Dev database already initialized, migrating it to the latest revision"; \
+			$(UV_RUN) alembic upgrade head; \
+		else \
+			$(DB_EXEC) /v6_api/scripts/database/create_schema.sh && \
+			$(UV_RUN) initialize_c2corg_api_db development.ini; \
+		fi
 
 init-test-database:
 		$(DB_EXEC) /v6_api/scripts/database/create_test_schema.sh
 
+# Same logic as .devcontainer/setup.sh: create the index with its mappings (without them the search silently
+# finds nothing), keep the index of the image ghcr.io/c2corg/c2corg-dev-es if it was built by the indexing code
+# of this checkout, otherwise rebuild it from the database (about 5 minutes).
+ES_INDEX_URL ?= http://localhost:9200/c2corg
 init-elastic:
-		$(UV_RUN) fill_es_index development.ini
+		$(UV_RUN) initialize_c2corg_api_es development.ini
+		@set -e; \
+		count=$$(curl -fsS "$(ES_INDEX_URL)/_count" | $(UV_RUN) python -c "import json, sys; print(json.load(sys.stdin)['count'])"); \
+		if [ "$$count" -gt 0 ] && $(UV_RUN) es_index_fingerprint check development.ini; then \
+			echo "The index contains $$count documents and is up to date"; \
+		else \
+			echo "Rebuilding the index with the current indexing code"; \
+			curl -fsS -X DELETE "$(ES_INDEX_URL)" > /dev/null; \
+			$(UV_RUN) initialize_c2corg_api_es development.ini; \
+			for attempt in 1 2 3; do \
+				$(UV_RUN) fill_es_index development.ini && break; \
+				if [ "$$attempt" = 3 ]; then \
+					echo "fill_es_index failed 3 times" >&2; exit 1; \
+				fi; \
+				echo "fill_es_index failed (attempt $$attempt), retrying in 10s..." >&2; \
+				sleep 10; \
+			done; \
+			$(UV_RUN) es_index_fingerprint store development.ini; \
+		fi
 
 install:
 		uv sync

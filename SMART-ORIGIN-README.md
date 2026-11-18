@@ -13,7 +13,7 @@ One can either source the env file, or update the compose configuration to inclu
 
 If you haven't already, update the database with Alembic (this will create the missing tables and fields) :
 ```bash
-docker-compose exec api .build/venv/bin/alembic upgrade head
+alembic upgrade head   # in the venv, or: uv run alembic upgrade head
 ```
 
 ## "Show Nearby Stops" section

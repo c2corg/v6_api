@@ -10,7 +10,7 @@
       "url": "https://github.com/c2corg/v6_api",
       "provider": "github",
       "link_mode": "web",
-      "revision": "d095735abb1da90cb9dd34f38843b75fbc8df879"
+      "revision": "1206c80bd599819fc73f5145095b976c1cce5119"
     }
   },
   "components": [
@@ -22,46 +22,46 @@
       "id": "api", "type": "backend", "label": "v6_api (FastAPI)", "sublabel": "make serve · uvicorn :6543", "tag": "Python 3.15 · uv",
       "pos": [500, 200], "size": [210, 70],
       "sources": [
-        { "path": "Makefile", "line": 72, "end_line": 73, "label": "make serve" },
-        { "path": "config/env.dev", "line": 1, "end_line": 25, "label": "dev settings" },
-        { "path": "HOWTO-DEV.md", "line": 154, "end_line": 180, "label": "running the API" }
+        { "path": "Makefile", "line": 75, "end_line": 76, "label": "make serve" },
+        { "path": "config/env.dev", "line": 1, "end_line": 27, "label": "dev settings" },
+        { "path": "README.md", "line": 128, "end_line": 136, "label": "running the API" }
       ]
     },
     {
       "id": "redis", "type": "messagebus", "label": "Redis 7.2", "sublabel": ":6379 · queue db 6, cache db 7",
       "pos": [680, 40], "size": [180, 64],
       "sources": [
-        { "path": ".devcontainer/docker-compose.yml", "line": 63, "end_line": 69, "label": "dev container" },
-        { "path": "docker-compose.yml", "line": 29, "end_line": 32, "label": "manual setup" },
-        { "path": "config/env.dev", "line": 18, "end_line": 20 }
+        { "path": ".devcontainer/docker-compose.yml", "line": 75, "end_line": 81, "label": "dev container" },
+        { "path": "docker-compose.yml", "line": 58, "end_line": 66, "label": "manual setup" },
+        { "path": "config/env.dev", "line": 19, "end_line": 21 }
       ]
     },
     {
       "id": "syncer", "type": "backend", "label": "ES syncer", "sublabel": "make run-syncer",
       "pos": [800, 200], "size": [170, 70],
-      "sources": [ { "path": "Makefile", "line": 115, "end_line": 116 } ]
+      "sources": [ { "path": "Makefile", "line": 148, "end_line": 149 } ]
     },
     {
       "id": "pg", "type": "database", "label": "PostgreSQL + PostGIS", "sublabel": ":5432 · c2corg, c2corg_tests",
       "pos": [510, 370], "size": [190, 64],
       "sources": [
-        { "path": ".devcontainer/docker-compose.yml", "line": 27, "end_line": 47, "label": "dev container: PG 18" },
-        { "path": "docker-compose.yml", "line": 2, "end_line": 14, "label": "manual: PostGIS 16" }
+        { "path": ".devcontainer/docker-compose.yml", "line": 31, "end_line": 52, "label": "dev container: PG 18" },
+        { "path": "docker-compose.yml", "line": 5, "end_line": 32, "label": "manual: same image" }
       ]
     },
     {
       "id": "es", "type": "database", "label": "Elasticsearch 2.4", "sublabel": ":9200 · index c2corg",
       "pos": [800, 370], "size": [170, 64],
       "sources": [
-        { "path": ".devcontainer/docker-compose.yml", "line": 49, "end_line": 61, "label": "dev container" },
-        { "path": "docker-compose.yml", "line": 16, "end_line": 27, "label": "manual: 2018 image" },
-        { "path": ".devcontainer/setup.sh", "line": 93, "end_line": 124, "label": "index check / rebuild" }
+        { "path": ".devcontainer/docker-compose.yml", "line": 54, "end_line": 73, "label": "dev container" },
+        { "path": "docker-compose.yml", "line": 34, "end_line": 56, "label": "manual: same image" },
+        { "path": "Makefile", "line": 123, "end_line": 142, "label": "index check / rebuild" }
       ]
     },
     {
       "id": "scheduler", "type": "backend", "label": "Job scheduler", "sublabel": "make run-background-jobs",
       "pos": [470, 540], "size": [170, 64],
-      "sources": [ { "path": "Makefile", "line": 118, "end_line": 119 } ]
+      "sources": [ { "path": "Makefile", "line": 151, "end_line": 152 } ]
     },
     {
       "id": "ghcr", "type": "cloud", "label": "ghcr.io dev images", "sublabel": "c2corg-dev-db · c2corg-dev-es",
@@ -98,8 +98,8 @@
       "dot": "emerald",
       "title": "Two ways to run v6_api",
       "items": [
-        "Dev container (recommended): VS Code 'Reopen in Container'; setup.sh runs uv sync, writes the .ini files, initializes a fresh database and keeps the prebuilt index when its fingerprint matches the indexing code (else rebuilds it, about 5 min)",
-        "Manual: make bootstrap (start, install, load-env, init-database, init-test-database, init-elastic), then make serve, make run-syncer and make run-background-jobs in three terminals",
+        "Dev container (recommended, README.md): VS Code 'Reopen in Container', or the same Compose stack from a terminal; setup.sh runs uv sync, writes the .ini files, migrates the restored dev database and runs make init-elastic (keeps the prebuilt index when its fingerprint matches the indexing code, else rebuilds it, about 5 min, more under amd64 emulation)",
+        "Manual (not recommended, HOWTO-MANUAL-DEV.md): make bootstrap (start, install, load-env, init-database, init-test-database, init-elastic), then make serve, make run-syncer and make run-background-jobs in three terminals",
         "Check: http://localhost:6543/health · tests: make test (pytest -n 4, one database per worker)"
       ]
     },
@@ -109,7 +109,7 @@
       "items": [
         "c2corg-dev-db: PostgreSQL 18 + PostGIS restoring a ~110 MB anonymized extract of production on first start, already at the latest alembic revision; test accounts moderator, user, blocked, unvalidated",
         "c2corg-dev-es: Elasticsearch 2.4 with the index of that database, published with the same tag",
-        "Only the dev container uses this pair on master: the root docker-compose.yml still starts an empty PostGIS 16 database (filled by make init-database) next to the 2018 anonymized ES image"
+        "Both setups use this pair: .devcontainer/docker-compose.yml and the root docker-compose.yml (manual setup) start the same images, with separate volumes"
       ]
     },
     {
@@ -118,7 +118,7 @@
       "items": [
         "npm run serve starts on the production backend: pick 'localhost' in the backend selector of the navbar (C2C_API_URL overrides http://localhost:6543)",
         "Media, image upload and forum of 'localhost' default to demov6 (C2C_MEDIA_URL, C2C_IMAGE_BACKEND_URL, C2C_FORUM_URL)",
-        "CORS: config/env.dev only allows http://localhost:6553, the e2e port; add http://localhost:8080 to cors_allowed_origins in config/env.local for npm run serve",
+        "CORS: config/env.dev allows http://localhost:6553 (ui_url, the e2e port) and http://localhost:8080 (npm run serve)",
         "e2e: the test user is created by e2e/create-user.py, run in the v6_api environment"
       ]
     },
@@ -135,7 +135,7 @@
       "dot": "rose",
       "title": "Docs that disagree with the code",
       "items": [
-        "wiki.api 'Development environment on Linux' still lists Python 3.4 and PostgreSQL 9.4; HOWTO-DEV.md is the reference",
+        "wiki.api 'Development environment on Linux' still lists Python 3.4 and PostgreSQL 9.4; README.md (dev container) and HOWTO-MANUAL-DEV.md are the reference",
         "wiki.api 'Dev databases' still gives the logins of the 2018 dump",
         "wiki.ui 'Build environment' still names vue.config.js and the demo API as the default of npm run serve"
       ]
