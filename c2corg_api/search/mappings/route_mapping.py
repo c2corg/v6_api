@@ -21,6 +21,7 @@ from c2corg_api.models.common.sortable_search_attributes import (
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.search.mapping import BaseMeta, SearchDocument
 from c2corg_api.search.mapping_types import (
+    QBoolean,
     QEnum,
     QEnumArray,
     QEnumRange,
@@ -43,6 +44,8 @@ class SearchRoute(SearchDocument):
     users = QLong('u', is_id=True)
 
     activities = QEnumArray('act', model_field=Route.activities)
+    # the route has a track, not only a point
+    has_track = QBoolean('trk', is_bool=True)
     elevation_min = QInteger('rmina', range=True)
     elevation_max = QInteger('rmaxa', range=True)
     height_diff_up = QInteger('hdif', range=True)
@@ -199,6 +202,7 @@ class SearchRoute(SearchDocument):
             return search_document
 
         SearchDocument.copy_fields(search_document, document, SearchRoute.FIELDS)
+        search_document['has_track'] = SearchDocument.has_track(document)
 
         SearchDocument.copy_enum_range_fields(
             search_document, document, SearchRoute.ENUM_RANGE_FIELDS, SearchRoute
