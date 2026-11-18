@@ -76,7 +76,9 @@ def _add_es_status(status):
         client = elasticsearch_config['client']
         index = elasticsearch_config['index']
         stats = client.indices.stats(index, metric='docs')
-        es_docs = stats['indices'][index]['total']['docs']['count']
+        # '_all' sums the indices behind the name: once the name is an alias
+        # (reindex_es), stats['indices'] is keyed by the real index, not by it
+        es_docs = stats['_all']['total']['docs']['count']
         success = True
     except Exception:
         log.exception('Getting indexed docs count failed')
