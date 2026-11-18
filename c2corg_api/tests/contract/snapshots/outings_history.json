@@ -5,6 +5,7 @@
       {
         "comment": "str",
         "masked": "bool",
+        "moderator": "bool",
         "name": "str",
         "user_id": "int",
         "version_id": "int",
