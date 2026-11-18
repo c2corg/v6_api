@@ -4,6 +4,7 @@ See `README.md` next to this file, and `quality_rules.py` for the rules.
 """
 
 import argparse
+import csv
 import logging
 import sys
 from collections import Counter
@@ -15,11 +16,16 @@ from c2corg_api.config import get_appsettings, setup_logging
 from c2corg_api.models import DBSession, commit_or_rollback
 from c2corg_api.models.association import Association
 from c2corg_api.models.cache_version import update_cache_version
+from c2corg_api.models.common.attributes import activities as activity_types
 from c2corg_api.models.document import DocumentGeometry, UpdateType
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.user import User
-from c2corg_api.scripts.outings.quality_rules import OutingData, recomputed_quality
+from c2corg_api.scripts.outings.quality_rules import (
+    QUALITY_TYPES,
+    OutingData,
+    recomputed_quality,
+)
 from c2corg_api.search import get_queue_config
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.document import update_version
@@ -57,6 +63,12 @@ def parse_args(argv):
     parser.add_argument(
         '--ids', type=int, nargs='+', help='only these outings (to try it first)'
     )
+    parser.add_argument(
+        '--csv',
+        metavar='FILE',
+        help='write the outings that change (or would change) in this CSV file: '
+        'document_id, activities, before, after',
+    )
     args = parser.parse_args(argv[1:])
     if not args.dry_run and not args.user_id:
         parser.error('--user-id is required, unless --dry-run')
@@ -73,7 +85,7 @@ def main(argv=sys.argv):
     if not args.dry_run and not DBSession.get(User, args.user_id):
         sys.exit(f'ERROR: no user {args.user_id}')
 
-    changes = recompute_quality(
+    report = recompute_quality(
         DBSession,
         user_id=None if args.dry_run else args.user_id,
         comment=args.comment,
@@ -82,10 +94,101 @@ def main(argv=sys.argv):
         ids=args.ids,
     )
 
-    verb = 'would change' if args.dry_run else 'changed'
-    print(f'{sum(changes.values())} outings {verb}:')
-    for (before, after), count in sorted(changes.items()):
-        print(f'  {before} -> {after}: {count}')
+    print(report.summary(dry_run=args.dry_run))
+    if args.csv:
+        with open(args.csv, 'w', newline='', encoding='utf-8') as file:
+            report.write_csv(file)
+        print(f'\nThe outings that change: {args.csv}')
+
+
+class Report:
+    """What a run changed (or would change), and out of how many outings.
+
+    The outings are counted by activity and by their quality before the run:
+    an outing of several activities is counted in each of them, and once in
+    the "all" row.
+    """
+
+    def __init__(self):
+        self.changes = Counter()  # (before, after) -> outings
+        self.totals = Counter()  # (activity, or None for all, before) -> outings
+        self.changed = Counter()  # the same, for the changed outings
+        self.changed_outings = []  # (document_id, activities, before, after)
+
+    def add(self, document_id, activities, before, after):
+        """Count an outing read, `after` being None when it does not change."""
+        for activity in [None, *sorted(set(activities or []), key=_activity_order)]:
+            self.totals[activity, before] += 1
+            if after is not None:
+                self.changed[activity, before] += 1
+        if after is not None:
+            self.changes[before, after] += 1
+            self.changed_outings.append((document_id, activities, before, after))
+
+    def summary(self, dry_run=False):
+        """Return the changes, then the table of the changed outings (markdown)."""
+        read = self._total(self.totals, None)
+        changed = sum(self.changes.values())
+        verb = 'would change' if dry_run else 'changed'
+        lines = [f'{changed} outings {verb}, of {read} ({_percent(changed, read)}):']
+        for (before, after), count in sorted(
+            self.changes.items(),
+            key=lambda item: [QUALITY_TYPES.index(quality) for quality in item[0]],
+        ):
+            lines.append(f'  {before} -> {after}: {count}')
+        lines += ['', self.table()]
+        return '\n'.join(lines)
+
+    def table(self):
+        """Return the changed / total outings, by activity and quality before."""
+        lines = [
+            '| activity | ' + ' | '.join([*QUALITY_TYPES, 'total']) + ' |',
+            '|---' * (len(QUALITY_TYPES) + 2) + '|',
+        ]
+        activities = sorted(
+            {activity for activity, _ in self.totals if activity is not None},
+            key=_activity_order,
+        )
+        for activity in [*activities, None]:
+            cells = [
+                _cell(self.changed[activity, quality], self.totals[activity, quality])
+                for quality in QUALITY_TYPES
+            ]
+            cells.append(
+                _cell(
+                    self._total(self.changed, activity),
+                    self._total(self.totals, activity),
+                )
+            )
+            name = activity or '**all**'
+            lines.append(f'| {name} | ' + ' | '.join(cells) + ' |')
+        return '\n'.join(lines)
+
+    def write_csv(self, file):
+        writer = csv.writer(file)
+        writer.writerow(['document_id', 'activities', 'before', 'after'])
+        for document_id, activities, before, after in self.changed_outings:
+            writer.writerow([document_id, ' '.join(activities or []), before, after])
+
+    @staticmethod
+    def _total(counts, activity):
+        return sum(counts[activity, quality] for quality in QUALITY_TYPES)
+
+
+def _activity_order(activity):
+    return (
+        activity_types.index(activity)
+        if activity in activity_types
+        else len(activity_types)
+    )
+
+
+def _percent(part, total):
+    return f'{100 * part / total:.1f} %' if total else '-'
+
+
+def _cell(changed, total):
+    return f'{changed} / {total} ({_percent(changed, total)})' if total else '-'
 
 
 def recompute_quality(
@@ -96,17 +199,18 @@ def recompute_quality(
     Without `user_id`, nothing is saved (a dry run). Each batch of outings is
     a transaction: an interruption keeps the batches already saved, and a new
     run goes on (the outings already changed do not change again). Return the
-    number of outings per change: `{('empty', 'draft'): 12, ...}`.
+    `Report` of the changes.
     """
-    changes = Counter()
+    report = Report()
     for batch_ids in _batches(session, batch_size, ids):
         with commit_or_rollback(session):
-            batch_changes = _recompute_batch(session, batch_ids, user_id, comment)
-            if batch_changes and user_id and queue_config:
+            changed = _recompute_batch(session, batch_ids, user_id, comment, report)
+            if changed and user_id and queue_config:
                 notify_es_syncer(queue_config)
-        changes.update(batch_changes)
-        log.info(f'{len(batch_ids)} outings read, {sum(changes.values())} changes')
-    return changes
+        log.info(
+            f'{len(batch_ids)} outings read, {sum(report.changes.values())} changes'
+        )
+    return report
 
 
 def _batches(session, batch_size, ids):
@@ -128,7 +232,8 @@ def _batches(session, batch_size, ids):
         last_id = batch[-1]
 
 
-def _recompute_batch(session, outing_ids, user_id, comment):
+def _recompute_batch(session, outing_ids, user_id, comment, report):
+    """Recompute a batch of outings, and return how many of them change."""
     outings = (
         session.query(Outing)
         .options(selectinload(Outing.locales))
@@ -138,7 +243,7 @@ def _recompute_batch(session, outing_ids, user_id, comment):
     with_track = _with_track(session, outing_ids)
     image_counts = _image_counts(session, outing_ids)
 
-    changes = Counter()
+    changed = 0
     for outing in outings:
         has_track = outing.document_id in with_track
         image_count = image_counts.get(outing.document_id, 0)
@@ -149,10 +254,11 @@ def _recompute_batch(session, outing_ids, user_id, comment):
                 for locale in outing.locales
             ],
         )
+        report.add(outing.document_id, outing.activities, outing.quality, quality)
         if quality is None:
             continue
 
-        changes[outing.quality, quality] += 1
+        changed += 1
         if user_id is None:
             continue
 
@@ -160,7 +266,7 @@ def _recompute_batch(session, outing_ids, user_id, comment):
         update_version(outing, user_id, comment, [UpdateType.FIGURES], [])
         # the outing and the documents listing it (its routes, its users...)
         update_cache_version(outing)
-    return changes
+    return changed
 
 
 def _with_track(session, outing_ids):

@@ -37,6 +37,20 @@ On all of them (one transaction per batch of 500 outings: if it stops, run it ag
 
 `--user-id` is the account the new versions are saved by: a bot account, or a moderator. `--comment` changes the comment of the versions, `--batch-size` the size of the batches.
 
+What it prints (the same with `--dry-run`, before anything is saved): the changes, then, by activity and by quality before the run, the outings that change out of all of them, as a markdown table (to paste in an issue or on the forum). An outing of several activities is counted in each of them, and once in the "all" row:
+
+    3 outings changed, of 6 (50.0 %):
+      empty -> draft: 1
+      draft -> medium: 1
+      fine -> medium: 1
+
+    | activity | empty | draft | medium | fine | great | total |
+    |---|---|---|---|---|---|---|
+    | rock_climbing | 1 / 1 (100.0 %) | 1 / 2 (50.0 %) | - | 1 / 2 (50.0 %) | 0 / 1 (0.0 %) | 3 / 6 (50.0 %) |
+    | **all** | 1 / 1 (100.0 %) | 1 / 2 (50.0 %) | - | 1 / 2 (50.0 %) | 0 / 1 (0.0 %) | 3 / 6 (50.0 %) |
+
+`--csv changes.csv` also writes the outings that change, one per line (`document_id,activities,before,after`): to check a few of them by hand after a dry run.
+
 In a docker environment:
 
     docker compose run --rm api recompute_outing_quality production.ini --dry-run

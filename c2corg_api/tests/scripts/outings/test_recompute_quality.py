@@ -1,3 +1,4 @@
+import io
 from datetime import date
 
 import pytest
@@ -7,7 +8,7 @@ from c2corg_api.models.association import Association
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.image import Image
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_api.scripts.outings.recompute_quality import recompute_quality
+from c2corg_api.scripts.outings.recompute_quality import Report, recompute_quality
 from c2corg_api.views.document import create_new_version
 
 
@@ -85,7 +86,7 @@ def run(outings, user_id=None):
 
 
 def test_dry_run(outings):
-    changes = run(outings)
+    changes = run(outings).changes
     assert changes == {
         ('empty', 'draft'): 1,
         ('draft', 'medium'): 1,
@@ -103,7 +104,7 @@ def test_dry_run(outings):
 
 
 def test_recompute(outings, user_ids):
-    changes = run(outings, user_ids['moderator'])
+    changes = run(outings, user_ids['moderator']).changes
     assert sum(changes.values()) == 3
     assert {name: quality(outing) for name, outing in outings.items()} == {
         'empty': 'draft',
@@ -127,4 +128,41 @@ def test_recompute(outings, user_ids):
     assert version.user_id == user_ids['moderator']
 
     # a second run changes nothing
-    assert run(outings, user_ids['moderator']) == {}
+    assert run(outings, user_ids['moderator']).changes == {}
+
+
+def test_report_table(outings):
+    report = run(outings)
+    # by quality before: 1 empty, 2 draft (1 changes), 2 fine (1 chosen), 1 great
+    assert report.table().splitlines() == [
+        '| activity | empty | draft | medium | fine | great | total |',
+        '|---|---|---|---|---|---|---|',
+        '| rock_climbing | 1 / 1 (100.0 %) | 1 / 2 (50.0 %) | - '
+        '| 1 / 2 (50.0 %) | 0 / 1 (0.0 %) | 3 / 6 (50.0 %) |',
+        '| **all** | 1 / 1 (100.0 %) | 1 / 2 (50.0 %) | - '
+        '| 1 / 2 (50.0 %) | 0 / 1 (0.0 %) | 3 / 6 (50.0 %) |',
+    ]
+    assert report.summary(dry_run=True).splitlines()[:4] == [
+        '3 outings would change, of 6 (50.0 %):',
+        '  empty -> draft: 1',
+        '  draft -> medium: 1',
+        '  fine -> medium: 1',
+    ]
+
+    file = io.StringIO()
+    report.write_csv(file)
+    rows = file.getvalue().splitlines()
+    assert rows[0] == 'document_id,activities,before,after'
+    assert rows[1] == f'{outings["empty"].document_id},rock_climbing,empty,draft'
+    assert len(rows) == 4
+
+
+def test_report_several_activities():
+    report = Report()
+    report.add(1, ['rock_climbing', 'skitouring'], 'draft', 'medium')
+    report.add(2, ['skitouring'], 'draft', None)
+    lines = report.table().splitlines()
+    # in each of its activities (in the order of the activities), once in all
+    assert lines[2].startswith('| skitouring | - | 1 / 2 (50.0 %) |')
+    assert lines[3].startswith('| rock_climbing | - | 1 / 1 (100.0 %) |')
+    assert lines[4].startswith('| **all** | - | 1 / 2 (50.0 %) |')
