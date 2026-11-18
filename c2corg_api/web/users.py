@@ -3,7 +3,7 @@
 # document routes do (#2365).
 
 from email.utils import formatdate
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, Path, Query, Request
 from fastapi.responses import JSONResponse, Response
@@ -39,11 +39,15 @@ from c2corg_api.views.user_partners import read_partners
 from c2corg_api.views.user_preferences import (
     read_preferences,
 )
+from c2corg_api.views.user_removal import (
+    read_removal_requests,
+    read_removal_requests_count,
+)
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
 from c2corg_api.web.handlers import serve_read, typed_values
-from c2corg_api.web.params import Id, Lang
+from c2corg_api.web.params import Id, Lang, Limit, Offset
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 
@@ -84,6 +88,8 @@ def include(app):
         ('/users/partners', partners),
         ('/users/blocked', blocked_users),
         ('/users/blocked/{id:int}', is_blocked),
+        ('/users/removals', removals),
+        ('/users/removals/count', removals_count),
     ):
         app.add_api_route(
             path,
@@ -211,6 +217,54 @@ def is_blocked(
     return serve_read(request, user, [typed_values(validated)], read_blocked_user)
 
 
+def removals(
+    request: Request,
+    user: User,
+    status: Annotated[
+        Literal['open', 'in_progress', 'validated', 'done', 'cancelled'] | None,
+        Query(
+            description='Only the requests of this status; open: in progress '
+            'or validated, not done nor cancelled.'
+        ),
+    ] = None,
+    offset: Annotated[
+        Offset | None, Query(description='The first request, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many: 30 by default, 100 at most.')
+    ] = None,
+):
+    """Return the removal requests of the user accounts (for the moderators)."""
+    # the permission is checked by the view: a moderator of the forum is not
+    # necessarily one of the topoguide
+    validated = {'status': status, 'offset': offset, 'limit': limit}
+    return _not_cached(
+        serve_read(
+            request,
+            user,
+            [typed_values(validated)],
+            read_removal_requests,
+            permission='authenticated',
+            content_types=JSON,
+        )
+    )
+
+
+def removals_count(request: Request, user: User):
+    """Return the number of removal requests not done yet (for the moderators)."""
+    # the permission is checked by the view, as for the list
+    return _not_cached(
+        serve_read(
+            request,
+            user,
+            [],
+            read_removal_requests_count,
+            permission='authenticated',
+            content_types=JSON,
+        )
+    )
+
+
 # read by the route inventory of the contract tests (routes.txt)
 for _endpoint in (
     account,
@@ -222,6 +276,9 @@ for _endpoint in (
     partners,
 ):
     _endpoint.permission = 'authenticated'
+removals.permission = 'authenticated'
+# the view checks the role: a moderator of the forum is not always one of the topoguide
+removals_count.permission = 'authenticated'
 for _endpoint in (blocked_users, is_blocked):
     _endpoint.permission = 'moderator'
 for _endpoint in (
@@ -234,6 +291,8 @@ for _endpoint in (
     partners,
     blocked_users,
     is_blocked,
+    removals,
+    removals_count,
 ):
     # described in the OpenAPI document (see web.openapi)
     _endpoint.described = True
