@@ -192,6 +192,20 @@ def _geohash_center(geohash):
     return (sum(lon_range) / 2, sum(lat_range) / 2)
 
 
+def _bucket_position(bucket):
+    """Return the `(lon, lat)` where to draw a cell of the grid.
+
+    The mean position of its documents, not the center of the cell: the cells
+    are many kilometers wide when zoomed out, and the center of one that has
+    documents on a coast is in the sea. The mean is always inside the cell.
+    """
+    centroid = getattr(bucket, 'centroid', None)
+    location = getattr(centroid, 'location', None)
+    if location is None:
+        return _geohash_center(bucket.key)
+    return (location.lon, location.lat)
+
+
 def _lon_lat_to_3857(lon, lat):
     x = math.radians(lon) * WEB_MERCATOR_RADIUS
     y = WEB_MERCATOR_RADIUS * math.log(math.tan(math.pi / 4 + math.radians(lat) / 2))
@@ -218,12 +232,12 @@ def get_heatmap(doc_type, params, bbox, document_ids):
         field='geom',
         precision=_heatmap_precision(bbox),
         size=HEATMAP_BUCKETS_MAX,
-    )
+    ).metric('centroid', 'geo_centroid', field='geom')
     response = search.execute()
 
     buckets = []
     for bucket in response.aggregations.density.buckets:
-        x, y = _lon_lat_to_3857(*_geohash_center(bucket.key))
+        x, y = _lon_lat_to_3857(*_bucket_position(bucket))
         # meters are enough: the cells are tens of meters wide at least
         buckets.append({'x': round(x), 'y': round(y), 'count': bucket.doc_count})
 

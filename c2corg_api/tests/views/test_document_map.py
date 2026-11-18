@@ -134,6 +134,19 @@ def test_outings_heatmap_zoomed_in(client, outings):
     assert all(isinstance(bucket['x'], int) for bucket in response.json['buckets'])
 
 
+def test_outings_heatmap_is_drawn_where_the_outings_are(client, outings):
+    # a wide box, so cells of several kilometers: the center of the one of the
+    # outings is far from them (in the sea, for the ones of a coast)
+    bbox = '-1000000,4800000,2500000,6400000'
+    response = client.get(f'/outings/map/heatmap?bbox={bbox}', status=200)
+
+    (bucket,) = response.json['buckets']
+    assert bucket['count'] == 3
+    # the mean of the 3 outings (635956..635960, 5723604..5723620)
+    assert bucket['x'] == pytest.approx(635959, abs=20)
+    assert bucket['y'] == pytest.approx(5723611, abs=20)
+
+
 def test_outings_heatmap_beyond_the_world(client, outings):
     # a map zoomed out far shows more than the world of the projection
     bbox = '-30000000,-30000000,30000000,30000000'
