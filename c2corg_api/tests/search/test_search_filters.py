@@ -310,6 +310,15 @@ def test_create_filter_bool():
     assert create_filter('plift', '0', SearchWaypoint) == Term(lift_access=False)
 
 
+def test_create_filter_has_track():
+    for search_model in (SearchOuting, SearchRoute):
+        assert create_filter('trk', 'true', search_model) == Term(has_track=True)
+        assert create_filter('trk', '0', search_model) == Term(has_track=False)
+        assert create_filter('trk', 'invalid value', search_model) is None
+    # the other documents have no such filter
+    assert create_filter('trk', 'true', SearchWaypoint) is None
+
+
 def test_create_filter_area_ids():
     assert create_filter('a', '', SearchWaypoint) is None
     assert create_filter('a', 'invalid id', SearchWaypoint) is None

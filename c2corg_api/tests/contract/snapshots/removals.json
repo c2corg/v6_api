@@ -1,0 +1,17 @@
+{
+  "body": {
+    "removals": [],
+    "roles": {
+      "forum": "bool",
+      "topoguide": "bool"
+    },
+    "total": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "max-age=0, must-revalidate, no-cache, no-store",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

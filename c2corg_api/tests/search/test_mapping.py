@@ -43,6 +43,7 @@ def test_route_mapping():
     assert queryable_fields['act']._enum is not None
     assert 'dhei' in queryable_fields
     assert 'ralt' in queryable_fields
+    assert queryable_fields['trk']._is_bool
 
 
 def test_outing_mapping():
@@ -53,6 +54,7 @@ def test_outing_mapping():
     assert queryable_fields['date']._date_range
     assert 'act' in queryable_fields
     assert queryable_fields['act']._enum is not None
+    assert queryable_fields['trk']._is_bool
 
 
 def test_area_mapping():

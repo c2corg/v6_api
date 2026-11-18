@@ -293,11 +293,14 @@ def hide_topics(request, topic_ids, hidden):
     if not client.enabled:
         return
     run_on_successful_transaction(
-        partial(in_background, partial(_hide_topics, client, topic_ids, hidden))
+        partial(in_background, partial(set_topics_hidden, client, topic_ids, hidden))
     )
 
 
-def _hide_topics(client, topic_ids, hidden):
+def set_topics_hidden(client, topic_ids, hidden):
+    """Close and unlist topics (or the reverse) now, in this thread."""
+    # hide_topics runs it once the deletion is saved; a script (the purge of a
+    # spammer's documents) calls it itself after its commit
     for topic_id in topic_ids:
         try:
             client.client.update_topic_status(topic_id, 'closed', hidden)

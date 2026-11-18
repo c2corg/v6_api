@@ -291,3 +291,9 @@ uv run pre-commit install
  ```shell
 python c2corg_api/scripts/redis-flushdb.py development.ini
 ```
+
+- Compute again the quality ("complétude") of the outings, after the rules of the UI changed (see [c2corg_api/scripts/outings/README.md](c2corg_api/scripts/outings/README.md)):
+
+```shell
+recompute_outing_quality development.ini --dry-run
+```

@@ -58,6 +58,8 @@ class SearchOuting(SearchDocument):
     height_diff_up = QInteger('odif', range=True)
     length_total = QInteger('olen', range=True)
     public_transport = QBoolean('owpt', is_bool=True)
+    # the outing has a track, not only a point
+    has_track = QBoolean('trk', is_bool=True)
     elevation_access = QInteger('oparka', range=True)
     elevation_up_snow = QInteger('swlu', range=True)
     elevation_down_snow = QInteger('swld', range=True)
@@ -175,6 +177,7 @@ class SearchOuting(SearchDocument):
             return search_document
 
         SearchDocument.copy_fields(search_document, document, SearchOuting.FIELDS)
+        search_document['has_track'] = SearchDocument.has_track(document)
 
         SearchDocument.copy_enum_range_fields(
             search_document, document, SearchOuting.ENUM_RANGE_FIELDS, SearchOuting

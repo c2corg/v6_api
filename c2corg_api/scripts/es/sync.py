@@ -433,7 +433,11 @@ def get_documents(
 
     base_query = base_query.options(
         joinedload(clazz.locales.of_type(locales_clazz)).load_only(*locale_fields)
-    ).options(joinedload(clazz.geometry).load_only(DocumentGeometry.lon_lat))
+    ).options(
+        joinedload(clazz.geometry).load_only(
+            DocumentGeometry.lon_lat, DocumentGeometry.has_geom_detail
+        )
+    )
 
     if clazz != Area:
         base_query = base_query.options(
