@@ -167,6 +167,15 @@ class SearchDocument(DocType):
             return None
 
     @staticmethod
+    def has_track(document):
+        """Return whether the document has a track (`geom_detail`), not only a point.
+
+        `has_geom_detail` is read from the database with the geometry: the track
+        itself is large, and is not loaded to index a document.
+        """
+        return bool(document.geometry and document.geometry.has_geom_detail)
+
+    @staticmethod
     def copy_fields(search_document, document, fields):
         for field in fields:
             search_document[field] = getattr(document, field)
