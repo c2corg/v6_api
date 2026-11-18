@@ -12,7 +12,7 @@ Run them against a staging copy of the API with production-like data, never agai
 Running
 -------
 
-Locust runs in its own environment: the project holds urllib3 below 2 (Elasticsearch 2.4), which Locust does not support. With [uv](https://docs.astral.sh/uv/), from the root of the repository:
+Locust runs in its own environment, outside of the project's dependencies. With [uv](https://docs.astral.sh/uv/), from the root of the repository:
 
     uvx --from locust==2.46.7 locust -f c2corg_api/scripts/loadtests/locustfile.py --host https://api.staging.example
 

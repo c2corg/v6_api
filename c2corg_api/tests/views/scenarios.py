@@ -18,7 +18,7 @@ from c2corg_api.models.route import Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
 from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import elasticsearch_config, search_documents
+from c2corg_api.search import index_name, search_documents
 from c2corg_api.tests import (
     assert_required,
     auth_headers,
@@ -507,11 +507,11 @@ def validate_document(client, session, doc_type, body, headers=None):
     assert_notified_es(client)
     sync_es(session)
     search_doc = search_documents[doc_type.type].get(
-        id=doc.document_id, index=elasticsearch_config['index']
+        id=doc.document_id, index=index_name(doc_type.type)
     )
 
-    assert search_doc['doc_type'] is not None
-    assert search_doc['doc_type'] == doc.type
+    assert search_doc['c2corg_doc_type'] is not None
+    assert search_doc['c2corg_doc_type'] == doc.type
 
     if isinstance(doc, Route):
         title = locale.title_prefix + ' : ' + locale.title
@@ -632,7 +632,7 @@ def _archive_counts(session, doc_type, document_id):
 def _search_doc(session, doc_type, document):
     sync_es(session)
     return search_documents[doc_type.type].get(
-        id=document.document_id, index=elasticsearch_config['index']
+        id=document.document_id, index=index_name(doc_type.type)
     )
 
 
@@ -701,7 +701,7 @@ def put_success_all(
 
     if check_es:
         search_doc = _search_doc(session, doc_type, document)
-        assert search_doc['doc_type'] == document.type
+        assert search_doc['c2corg_doc_type'] == document.type
         assert search_doc['title_en'] == archive_locale.title
         assert search_doc['title_fr'] == archive_locale_fr.title
 
@@ -751,7 +751,7 @@ def put_success_figures_only(
     # check updates to the search index
     search_doc = _search_doc(session, doc_type, document)
 
-    assert search_doc['doc_type'] == document.type
+    assert search_doc['c2corg_doc_type'] == document.type
 
     if isinstance(document, Route) and document.main_waypoint_id:
         locale_en = document.get_locale('en')
@@ -818,7 +818,7 @@ def put_success_lang_only(
 
     if check_es:
         search_doc = _search_doc(session, doc_type, document)
-        assert search_doc['doc_type'] == document.type
+        assert search_doc['c2corg_doc_type'] == document.type
         assert search_doc['title_en'] == document.get_locale('en').title
         assert search_doc['title_fr'] == document.get_locale('fr').title
 
@@ -881,7 +881,7 @@ def put_success_new_lang(
 
     if check_es:
         search_doc = _search_doc(session, doc_type, document)
-        assert search_doc['doc_type'] == document.type
+        assert search_doc['c2corg_doc_type'] == document.type
         assert search_doc['title_en'] == document.get_locale('en').title
         assert search_doc['title_fr'] == document.get_locale('fr').title
         assert search_doc['title_es'] == document.get_locale('es').title

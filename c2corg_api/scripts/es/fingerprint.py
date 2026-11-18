@@ -26,7 +26,11 @@ from elasticsearch.exceptions import NotFoundError
 
 import c2corg_api
 from c2corg_api.config import get_appsettings, parse_vars, setup_logging
-from c2corg_api.search import configure_es_from_config, elasticsearch_config
+from c2corg_api.search import (
+    configure_es_from_config,
+    elasticsearch_config,
+    index_prefix,
+)
 
 # Files (relative to the c2corg_api package) which decide what the index contains: its
 # mappings and analyzers, the serialization of the documents (the mappings use the
@@ -44,7 +48,6 @@ SOURCES = (
     'scripts/es/sync.py',
 )
 
-META_DOC_TYPE = 'meta'
 META_DOC_ID = 'fingerprint'
 
 
@@ -60,15 +63,15 @@ def compute_fingerprint():
 
 
 def meta_index_name():
-    return f'{elasticsearch_config["index"]}_meta'
+    # not `c2corg_meta`: it would match the pattern of the document indices
+    return f'{index_prefix()}-meta'
 
 
 def store_fingerprint(client):
     client.index(
         index=meta_index_name(),
-        doc_type=META_DOC_TYPE,
         id=META_DOC_ID,
-        body={
+        document={
             'fingerprint': compute_fingerprint(),
             'indexed_at': datetime.now(UTC).isoformat(),
         },
@@ -78,9 +81,7 @@ def store_fingerprint(client):
 
 def stored_fingerprint(client):
     try:
-        doc = client.get(
-            index=meta_index_name(), doc_type=META_DOC_TYPE, id=META_DOC_ID
-        )
+        doc = client.get(index=meta_index_name(), id=META_DOC_ID)
     except NotFoundError:
         return None
     return doc['_source'].get('fingerprint')

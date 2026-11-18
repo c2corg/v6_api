@@ -18,7 +18,7 @@ def _client(aliases=None, indices=()):
 
 def test_new_index_name():
     now = datetime(2026, 11, 11, 8, 30, 5, tzinfo=UTC)
-    assert im.new_index_name('c2corg', now) == 'c2corg_20261111083005'
+    assert im.new_index_name('c2corg_w', now) == 'c2corg_w_20261111083005'
 
 
 def test_target_state_alias():
@@ -55,56 +55,70 @@ def test_serving_settings_defaults():
     assert im.get_serving_settings(client, ['i']) == ('1s', 1)
 
 
-def test_switch_alias_is_atomic():
+def test_switch_aliases_is_atomic():
     client = MagicMock()
-    im.switch_alias(client, 'c2corg', 'c2corg_new', im.ALIAS, ['c2corg_old'])
+    im.switch_aliases(
+        client,
+        [
+            ('c2corg_w', 'c2corg_w_new', im.ALIAS, ['c2corg_w_old']),
+            ('c2corg_r', 'c2corg_r_new', im.MISSING, []),
+        ],
+    )
     client.indices.update_aliases.assert_called_once_with(
         body={
             'actions': [
-                {'remove': {'index': 'c2corg_old', 'alias': 'c2corg'}},
-                {'add': {'index': 'c2corg_new', 'alias': 'c2corg'}},
+                {'remove': {'index': 'c2corg_w_old', 'alias': 'c2corg_w'}},
+                {'add': {'index': 'c2corg_w_new', 'alias': 'c2corg_w'}},
+                {'add': {'index': 'c2corg_r_new', 'alias': 'c2corg_r'}},
             ]
         }
     )
     client.indices.delete.assert_not_called()
 
 
-def test_switch_alias_without_previous_index():
+def test_switch_aliases_replaces_concrete_index():
     client = MagicMock()
-    im.switch_alias(client, 'c2corg', 'c2corg_new', im.MISSING, [])
+    im.switch_aliases(
+        client,
+        [
+            ('c2corg_w', 'c2corg_w_new', im.CONCRETE_INDEX, ['c2corg_w']),
+            ('c2corg_r', 'c2corg_r_new', im.ALIAS, ['c2corg_r_old']),
+        ],
+    )
+    client.indices.delete.assert_called_once_with(index='c2corg_w')
     client.indices.update_aliases.assert_called_once_with(
-        body={'actions': [{'add': {'index': 'c2corg_new', 'alias': 'c2corg'}}]}
+        body={
+            'actions': [
+                {'add': {'index': 'c2corg_w_new', 'alias': 'c2corg_w'}},
+                {'remove': {'index': 'c2corg_r_old', 'alias': 'c2corg_r'}},
+                {'add': {'index': 'c2corg_r_new', 'alias': 'c2corg_r'}},
+            ]
+        }
     )
 
 
-def test_switch_alias_replaces_concrete_index():
+def test_bulk_load_settings():
     client = MagicMock()
-    im.switch_alias(client, 'c2corg', 'c2corg_new', im.CONCRETE_INDEX, ['c2corg'])
-    client.indices.delete.assert_called_once_with(index='c2corg')
-    client.indices.put_alias.assert_called_once_with(index='c2corg_new', name='c2corg')
-
-
-def test_bulk_load_settings(monkeypatch):
-    # the mappings are saved through the global connection, not the client
-    monkeypatch.setattr(im, 'search_documents', {})
-    client = MagicMock()
-    im.create_index(client, 'c2corg_new', bulk_load=True)
-    settings = client.indices.create.call_args.kwargs['body']['settings']
+    im.create_index(client, 'c2corg_w_new', 'w', bulk_load=True)
+    settings = client.indices.create.call_args.kwargs['settings']
+    assert 'analysis' in settings
     assert settings['refresh_interval'] == '-1'
     assert settings['number_of_replicas'] == 0
+    assert 'properties' in client.indices.create.call_args.kwargs['mappings']
 
     client.reset_mock()
-    im.create_index(client, 'c2corg_new')
-    settings = client.indices.create.call_args.kwargs['body']['settings']
+    im.create_index(client, 'c2corg_w_new', 'w')
+    settings = client.indices.create.call_args.kwargs['settings']
+    assert 'analysis' in settings
     assert 'refresh_interval' not in settings
     assert 'number_of_replicas' not in settings
 
 
 def test_finish_bulk_load():
     client = MagicMock()
-    im.finish_bulk_load(client, 'c2corg_new', '1s', 1)
+    im.finish_bulk_load(client, 'c2corg_w_new', '1s', 1)
     client.indices.put_settings.assert_called_once_with(
-        index='c2corg_new',
+        index='c2corg_w_new',
         body={'index': {'refresh_interval': '1s', 'number_of_replicas': 1}},
     )
-    client.indices.refresh.assert_called_once_with(index='c2corg_new')
+    client.indices.refresh.assert_called_once_with(index='c2corg_w_new')

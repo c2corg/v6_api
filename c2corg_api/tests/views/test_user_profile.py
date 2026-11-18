@@ -13,7 +13,7 @@ from c2corg_api.models.user_profile import (
     UserProfile,
 )
 from c2corg_api.scripts.es.sync import sync_es
-from c2corg_api.search import elasticsearch_config
+from c2corg_api.search import index_name
 from c2corg_api.search.mappings.user_mapping import SearchUser
 from c2corg_api.tests import auth_headers, send_json
 from c2corg_api.tests.search import reset_search_index
@@ -577,9 +577,9 @@ def test_put_success_new_lang(client, session, docs):
 def _check_es_index(docs, session):
     sync_es(session)
     search_doc = SearchUser.get(
-        id=docs.profile1.document_id, index=elasticsearch_config['index']
+        id=docs.profile1.document_id, index=index_name(docs.profile1.type)
     )
-    assert search_doc['doc_type'] == docs.profile1.type
+    assert search_doc['c2corg_doc_type'] == docs.profile1.type
     assert search_doc['title_en'] == 'Contributor contributor'
     assert search_doc['title_fr'] == 'Contributor contributor'
     return search_doc

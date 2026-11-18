@@ -1,16 +1,16 @@
-"""Helpers to switch to a new ElasticSearch index without interrupting search.
+"""Helpers to switch to new ElasticSearch indices without interrupting search.
 
-The API always talks to `elasticsearch.index`. For a zero-downtime reindex that
-name has to be an *alias* pointing to a timestamped index (`c2corg_2026...`).
-A new index is built and filled while the alias still points to the old one,
-then the alias is moved in one atomic operation.
+There is one index per document type, and the API always talks to its name
+(`c2corg_w`, `c2corg_r`...). For a zero-downtime reindex each of these names
+has to be an *alias* pointing to a timestamped index (`c2corg_w_2026...`). New
+indices are built and filled while the aliases still point to the old ones,
+then all the aliases are moved in one atomic operation.
 """
 
 import logging
 from datetime import UTC, datetime
 
-from c2corg_api.search import search_documents
-from c2corg_api.search.mapping import analysis_settings
+from c2corg_api.scripts.initializees import create_type_index
 
 log = logging.getLogger(__name__)
 
@@ -59,24 +59,18 @@ def get_serving_settings(client, indices):
     return DEFAULT_REFRESH_INTERVAL, DEFAULT_REPLICAS
 
 
-def create_index(client, index_name, bulk_load=False):
-    """Create an index with the analysis settings and the mapping of every type.
+def create_index(client, index_name, doc_type, bulk_load=False):
+    """Create an index with the analysis settings and the mapping of a type.
 
     With `bulk_load` the index is tuned for the initial import: no replicas
     and no periodic refresh. Call `finish_bulk_load` once it is filled.
     """
-    settings = {'analysis': analysis_settings}
+    extra_settings = {}
     if bulk_load:
-        settings['refresh_interval'] = '-1'
-        settings['number_of_replicas'] = 0
+        extra_settings['refresh_interval'] = '-1'
+        extra_settings['number_of_replicas'] = 0
 
-    client.indices.create(index=index_name, body={'settings': settings})
-
-    # Apply the correct mapping for every document type (if we let ES infer
-    # types, some fields could get a wrong one, e.g. geom -> double instead
-    # of geo_point).
-    for search_class in search_documents.values():
-        search_class._doc_type.mapping.save(index_name)
+    create_type_index(client, index_name, doc_type, extra_settings)
 
 
 def finish_bulk_load(client, index_name, refresh_interval, number_of_replicas):
@@ -98,25 +92,28 @@ def count_documents(client, index_name):
     return client.count(index=index_name)['count']
 
 
-def switch_alias(client, alias, new_index, state, old_indices):
-    """Make `alias` point to `new_index`.
+def switch_aliases(client, switches):
+    """Make each alias point to its new index.
 
-    When the alias already exists, the move is atomic. When `alias` is a real
-    index (first run, before the migration to aliases) it has to be deleted
+    `switches` is a list of `(alias, new_index, state, old_indices)`. All the
+    aliases are moved in one atomic operation. An alias that is still a real
+    index (first run, before the migration to aliases) has to be deleted
     first: ES does not allow to replace an index by an alias atomically, so
-    the search has a short gap (two requests) in that single case.
+    the search has a short gap for these types, in that single case.
     """
-    if state == CONCRETE_INDEX:
-        client.indices.delete(index=alias)
-        client.indices.put_alias(index=new_index, name=alias)
-        return
-
-    actions = [{'remove': {'index': old, 'alias': alias}} for old in old_indices]
-    actions.append({'add': {'index': new_index, 'alias': alias}})
+    actions = []
+    for alias, new_index, state, old_indices in switches:
+        if state == CONCRETE_INDEX:
+            client.indices.delete(index=alias)
+        else:
+            actions.extend(
+                {'remove': {'index': old, 'alias': alias}} for old in old_indices
+            )
+        actions.append({'add': {'index': new_index, 'alias': alias}})
     client.indices.update_aliases(body={'actions': actions})
 
 
 def delete_indices(client, indices):
     for index in indices:
         log.info(f'Deleting index {index}')
-        client.indices.delete(index=index)
+        client.indices.delete(index=index, ignore_unavailable=True)
