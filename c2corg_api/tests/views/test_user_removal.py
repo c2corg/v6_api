@@ -467,20 +467,29 @@ class TestRead:
         response = client.get(self.PREFIX + '/count', headers=headers, status=200)
         assert response.json == {
             'open': 0,
+            'actionable': 0,
             'roles': {'topoguide': True, 'forum': False},
         }
 
-        create(client, user_ids)
+        request_id = create(client, user_ids)
         response = client.get(self.PREFIX + '/count', headers=headers, status=200)
+        # its author validates nothing
         assert response.json['open'] == 1
+        assert response.json['actionable'] == 0
 
-        # a moderator of the forum only
+        # a moderator of the forum only: the forum side is theirs
         headers = auth_headers(username='contributor3')
         response = client.get(self.PREFIX + '/count', headers=headers, status=200)
         assert response.json == {
             'open': 1,
+            'actionable': 1,
             'roles': {'topoguide': False, 'forum': True},
         }
+
+        # once they validated it, nothing left for them
+        post(client, url(request_id, 'validate'), {'side': 'forum'}, 'contributor3')
+        response = client.get(self.PREFIX + '/count', headers=headers, status=200)
+        assert response.json['actionable'] == 0
 
         # neither of the topoguide nor of the forum
         headers = auth_headers(username='contributornotos')

@@ -1,5 +1,6 @@
 {
   "body": {
+    "actionable": "int",
     "open": "int",
     "roles": {
       "forum": "bool",
