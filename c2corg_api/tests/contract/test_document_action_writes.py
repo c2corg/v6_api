@@ -107,6 +107,14 @@ def test_deleted_documents(browser):
     check_snapshot('documents_deleted', response)
 
 
+@contract(('GET', '/documents/delete/{id}/images'))
+def test_images_of_deletion_unknown(browser):
+    response = browser.get(
+        '/documents/delete/9999999/images', user='moderator', status=404
+    )
+    check_snapshot('documents_delete_images_unknown', response)
+
+
 @contract(('GET', '/images/orphans'))
 def test_orphan_images(browser):
     response = browser.get('/images/orphans', user='moderator')

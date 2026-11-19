@@ -795,3 +795,30 @@ def test_no_image_deleted_with_an_image(client, session, user_ids, docs):  # noq
         _delete(client, linked.document_id)
 
     assert _exists(session, child_id.scalar())
+
+
+def test_images_of_deletion(client, outing_images, docs):  # noqa: F811
+    url = f'/documents/delete/{docs.outing2.document_id}/images'
+    expected = {
+        'deleted': 1,
+        # the collaborative image, and the personal one of another user
+        'orphaned': {'collaborative': 1, 'personal': 1, 'copyright': 0},
+    }
+
+    for username in ('moderator', 'contributor'):
+        body = client.get(url, headers=auth_headers(username=username)).json
+        assert body == expected, username
+
+    # who may not delete the document may not ask either
+    client.get(url, headers=auth_headers(username='contributor2'), status=400)
+    client.get(url, status=403)
+    client.get('/documents/delete/9999999/images', headers=_moderator(), status=404)
+
+
+def test_images_of_deletion_of_an_image(client, docs):  # noqa: F811
+    url = f'/documents/delete/{docs.image1.document_id}/images'
+    body = client.get(url, headers=_moderator()).json
+    assert body == {
+        'deleted': 0,
+        'orphaned': {'collaborative': 0, 'personal': 0, 'copyright': 0},
+    }

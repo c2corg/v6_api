@@ -6,7 +6,13 @@ from typing import Annotated
 
 from fastapi import Depends, Query, Request
 
-from c2corg_api.views.document_delete import delete_document, delete_document_locale
+from c2corg_api.views.document_delete import (
+    delete_document,
+    delete_document_locale,
+    read_images_of_deletion,
+    validate_document_type,
+    validate_requestor,
+)
 from c2corg_api.views.document_merge import merge_documents
 from c2corg_api.views.document_protect import protect_document, unprotect_document
 from c2corg_api.views.document_revert import revert_document
@@ -54,6 +60,7 @@ def include(app):
         ('/documents/deleted', deleted_documents),
         ('/documents/deleted/{id:int}', deleted_document),
         ('/images/orphans', orphan_images),
+        ('/documents/delete/{id:int}/images', images_of_deletion),
     ):
         app.add_api_route(
             path,
@@ -135,6 +142,22 @@ def orphan_images(
     validated = {'offset': offset, 'limit': limit, 'image_type': image_type}
     return serve_read(request, user, [typed_values(validated)], read_orphan_images)
 
+
+def images_of_deletion(request: Request, user: User, id: Id):
+    """Return how many images a deletion takes along, and leaves orphan."""
+    # the checks of the deletion: who may delete this document
+    validated = {'id': id}
+    return serve_read(
+        request,
+        user,
+        [typed_values(validated), validate_document_type, validate_requestor],
+        read_images_of_deletion,
+        permission='authenticated',
+    )
+
+
+images_of_deletion.permission = 'authenticated'
+images_of_deletion.described = True
 
 # read by the route inventory of the contract tests (routes.txt)
 for _endpoint in (deleted_documents, deleted_document, orphan_images):
