@@ -85,6 +85,9 @@ discourse.allowed_sso_hosts = {discourse_allowed_sso_hosts}
 discourse.enabled = {discourse_enabled}
 discourse.category = {discourse_category}
 
+# the scheduler removes the accounts of the validated removal requests
+users.removals.auto = {removals_auto}
+
 ui.url = {ui_url}
 
 # Space separated list of origins allowed to make cross-origin (CORS)

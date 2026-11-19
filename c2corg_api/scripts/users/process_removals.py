@@ -3,7 +3,10 @@
 A request (see views/user_removal.py) is processed once it is validated by a
 moderator of the topoguide and by one of the forum, its date is past, and a
 delay has elapsed since its last validation (to leave time to cancel a
-validation made by mistake).
+validation made by mistake): 1 hour for a spammer, 24 hours else.
+
+The scheduler runs it every hour when `users.removals.auto` is on (see
+jobs/process_removals.py); this script runs it by hand.
 
 The script only lists the requests to process, with what would be removed,
 unless `--execute` is given. `--id` limits it to some requests:
@@ -54,6 +57,7 @@ from c2corg_api.models.account_removal import (
     ACTION_DONE,
     DEFAULT_GRACE_HOURS,
     REASON_SPAM,
+    SPAM_GRACE_HOURS,
     AccountRemovalRequest,
     is_ready,
     log_action,
@@ -79,10 +83,15 @@ log = logging.getLogger(__name__)
 PURGED_TYPES = [OUTING_TYPE, XREPORT_TYPE, ARTICLE_TYPE, IMAGE_TYPE]
 
 
-def find_ready_requests(now, grace_hours=DEFAULT_GRACE_HOURS, ids=None):
+def find_ready_requests(now, grace_hours=None, ids=None):
     """Return the requests validated by both sides, which can be processed."""
+    # the delay of each reason (grace_hours_for), unless one is given: the
+    # query keeps the requests past the shortest one, is_ready the others
     today = now.date()
-    limit = now - datetime.timedelta(hours=grace_hours)
+    shortest = min(SPAM_GRACE_HOURS, DEFAULT_GRACE_HOURS)
+    limit = now - datetime.timedelta(
+        hours=shortest if grace_hours is None else grace_hours
+    )
     query = (
         DBSession.query(AccountRemovalRequest)
         .filter(
@@ -98,7 +107,7 @@ def find_ready_requests(now, grace_hours=DEFAULT_GRACE_HOURS, ids=None):
     )
     if ids is not None:
         query = query.filter(AccountRemovalRequest.id.in_(ids))
-    return query.all()
+    return [r for r in query.all() if is_ready(r, now, grace_hours)]
 
 
 def find_purged_documents(user_id):
@@ -195,9 +204,7 @@ def _lock(removal_id):
     )
 
 
-def process_removal(
-    removal_id, settings, queue_config, grace_hours=DEFAULT_GRACE_HOURS
-):
+def process_removal(removal_id, settings, queue_config, grace_hours=None):
     """Remove the account of a request; return False if it is not ready anymore."""
     client = get_discourse_client(settings)
     if not client.enabled:
@@ -313,8 +320,9 @@ def parse_args(argv):
     parser.add_argument(
         '--grace-hours',
         type=int,
-        default=DEFAULT_GRACE_HOURS,
-        help='Delay between the last validation and the removal',
+        default=None,
+        help='Delay between the last validation and the removal (default: '
+        f'{SPAM_GRACE_HOURS} h for a spammer, {DEFAULT_GRACE_HOURS} h else)',
     )
     parser.add_argument(
         '--id',
@@ -358,16 +366,28 @@ def run(args, settings, queue_config):
         print('No removal to process.')
         return 0
 
+    if not args.execute:
+        for removal in removals:
+            print('\n'.join(preview(client, removal)))
+        print('Nothing done: use --execute to remove these accounts.')
+        return 0
+
+    failed = process_all(removals, settings, queue_config, args.grace_hours)
+    return 1 if failed else 0
+
+
+def process_all(removals, settings, queue_config, grace_hours=None):
+    """Remove the accounts of the requests, each on its own; return the failures."""
+    # also run by the removal job (jobs/process_removals.py): a failed request
+    # is logged and stays open, the next run tries it again
     failed = 0
     for removal in removals:
         removal_id = removal.id
-        if not args.execute:
-            print('\n'.join(preview(client, removal)))
-            continue
         print(describe(removal))
         try:
-            if process_removal(removal_id, settings, queue_config, args.grace_hours):
+            if process_removal(removal_id, settings, queue_config, grace_hours):
                 print(f'SUCCESS: request #{removal_id} done')
+                log.info('Account removal request #%d done', removal_id)
         except OperationalError as e:
             DBSession.rollback()
             if getattr(e.orig, 'pgcode', None) != '55P03':  # lock_not_available
@@ -379,10 +399,7 @@ def run(args, settings, queue_config):
             failed += 1
             DBSession.rollback()
             log.error('Request #%d failed', removal_id, exc_info=True)
-
-    if not args.execute:
-        print('Nothing done: use --execute to remove these accounts.')
-    return 1 if failed else 0
+    return failed
 
 
 if __name__ == '__main__':
