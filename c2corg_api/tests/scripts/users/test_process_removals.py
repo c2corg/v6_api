@@ -41,6 +41,13 @@ def discourse(settings):
     set_discourse_client(original)
 
 
+@pytest.fixture(autouse=True)
+def send_email():
+    """Catch the emails telling the users about their removal."""
+    with patch('c2corg_api.emails.email_service.EmailService._send_email') as mock:
+        yield mock
+
+
 def make_removal(session, user_ids, reason='merge', **kwargs):
     values = {
         'user_id': user_ids['contributor'],
@@ -346,6 +353,48 @@ class TestProcessRemoval:
         assert done['topoguide'] == 'merged'
         assert 'documents' not in done
 
+    @pytest.mark.parametrize(
+        ('reason', 'addresses', 'subject'),
+        [
+            (
+                'anonymization',
+                ['contributor@camptocamp.org'],
+                'Votre compte Camptocamp.org a été anonymisé',
+            ),
+            (
+                'merge',
+                ['contributor@camptocamp.org', 'contributor2@camptocamp.org'],
+                'Vos comptes Camptocamp.org ont été fusionnés',
+            ),
+        ],
+    )
+    def test_emails(
+        self,
+        session,
+        user_ids,
+        queue_config,
+        settings,
+        send_email,
+        reason,
+        addresses,
+        subject,
+    ):
+        # read before the merge deletes the account, sent once it is saved
+        removal = make_removal(session, user_ids, reason=reason)
+        process_removal(removal.id, settings, queue_config)
+
+        assert [c.args[0] for c in send_email.call_args_list] == addresses
+        assert {c.kwargs['subject'] for c in send_email.call_args_list} == {subject}
+        assert '"Contributor"' in send_email.call_args.kwargs['body']
+
+    def test_email_failure(self, session, user_ids, queue_config, settings, send_email):
+        # the account is removed all the same
+        send_email.side_effect = OSError('no mail server')
+        removal = make_removal(session, user_ids, reason='anonymization')
+        assert process_removal(removal.id, settings, queue_config) is True
+        session.expire_all()
+        assert removal.done_at is not None
+
     def test_already_removed(
         self, session, user_ids, queue_config, settings, discourse
     ):
@@ -407,7 +456,9 @@ class TestProcessRemoval:
         discourse.merge_user.assert_not_called()
         assert session.get(User, user_ids['contributor']) is not None
 
-    def test_spam(self, session, user_ids, queue_config, settings, discourse):
+    def test_spam(
+        self, session, user_ids, queue_config, settings, discourse, send_email
+    ):
         source_id = user_ids['contributor']
         spam = make_outing(session, source_id)
         spam.locales[0].document_topic = DocumentTopic(topic_id=77)
@@ -438,6 +489,8 @@ class TestProcessRemoval:
         assert done['action'] == 'done'
         assert done['forum'] == 'deleted'
         assert done['documents'] == [spam_id]
+        # no email to a spammer
+        send_email.assert_not_called()
         assert session.get(User, source_id) is None
         # deleted for good, its comment topic closed and unlisted
         assert session.query(DeletedDocument).count() == 0

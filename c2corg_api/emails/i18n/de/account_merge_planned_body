@@ -1,0 +1,10 @@
+Guten Tag,
+
+Ihr Camptocamp.org-Konto "%(name)s" wird ab dem %(date)s mit dem Konto "%(target)s" zusammengeführt.
+
+Die Beiträge und Forumsbeiträge von "%(name)s" gehen an "%(target)s" über. Sie können sich dann nur noch mit "%(target)s" anmelden.
+
+Falls Sie dies nicht beantragt haben oder es sich anders überlegt haben, schreiben Sie bitte vor diesem Datum den Moderatoren im Forum: %(forum)s
+
+Vielen Dank
+Das Camptocamp.org Team

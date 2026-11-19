@@ -15,6 +15,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.functions import func
 
 from c2corg_api import DBSession
+from c2corg_api.emails.account_removal import (
+    PLANNED,
+    removal_emails,
+    send_removal_emails,
+)
 from c2corg_api.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -446,7 +451,8 @@ def create_removal_request(request):
         }
 
     An anonymized or spam account goes to the closed account; a merged one to
-    the given account, and to its forum account.
+    the given account, and to its forum account. The user is told by email,
+    unless a spammer (see emails/account_removal.py).
     """
     roles = _check_moderator(request)
     validated = request.validated
@@ -501,6 +507,10 @@ def create_removal_request(request):
             DBSession.add(removal)
     except IntegrityError as e:
         raise HTTPConflict(f'The user {user_id} already has a removal request') from e
+    settings = request.registry.settings
+    send_removal_emails(
+        removal.id, removal_emails(removal, PLANNED, settings), settings
+    )
     return _answer(request, removal, roles)
 
 
