@@ -56,6 +56,7 @@ from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
+from c2corg_api.models.image import Image
 from c2corg_api.models.route import ArchiveRoute
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
@@ -98,6 +99,9 @@ class Snapshot:
         # the archives of routes whose main waypoint is the deleted waypoint
         # (set to null by the deletion): {waypoint id: [route archive ids]}
         self.main_waypoint_of = {}
+        # the personal images deleted with the document (see
+        # views.document_delete.personal_images_deleted_with)
+        self.deleted_images = []
 
     def capture(self, model, condition):
         """Keep the rows of the table of a model that match a condition."""
@@ -131,6 +135,7 @@ class Snapshot:
             'format': FORMAT,
             'tables': self.tables,
             'main_waypoint_of': {str(k): v for k, v in self.main_waypoint_of.items()},
+            'deleted_images': self.deleted_images,
         }
 
 
@@ -165,13 +170,17 @@ class _ExactFloats:
         DBSession.execute(select(func.set_config('extra_float_digits', value, True)))
 
 
-def keep_deleted_document(request, document_id, document_type):
+def keep_deleted_document(request, document_id, document_type, image_ids=()):
     """Keep the rows that the deletion of a whole document removes."""
     # called before the deletion (views.document_delete._delete), with the
-    # documents merged into this one, deleted with it
+    # documents merged into this one and the personal images (`image_ids`),
+    # deleted with it: all are restored together
     snapshot = Snapshot()
     with _ExactFloats():
         _capture_document(snapshot, document_id, document_type, redirecting=False)
+        for image_id in image_ids:
+            _capture_document(snapshot, image_id, IMAGE_TYPE, redirecting=False)
+    snapshot.deleted_images = list(image_ids)
     _add_entry(request, snapshot, document_id, document_type, None)
     hide_topics(request, _topic_ids(snapshot.as_json()), hidden=True)
 
@@ -388,9 +397,17 @@ def restore(request, entry):
 
     add_unchanged_version(document, user_id, 'Restored', langs)
     update_cache_version_full(document_id, entry.document_type)
+    for image_id in _deleted_images(entry):
+        image = DBSession.get(Document, image_id)
+        add_unchanged_version(
+            image, user_id, 'Restored', [locale.lang for locale in image.locales]
+        )
+        update_cache_version_full(image_id, IMAGE_TYPE)
 
     missing_files = []
-    if entry.document_type == IMAGE_TYPE and entry.lang is None:
+    if entry.lang is None and (
+        entry.document_type == IMAGE_TYPE or _deleted_images(entry)
+    ):
         missing_files = _restore_image_files(request, tables)
 
     entry.restored_at = datetime.now(UTC)
@@ -405,6 +422,12 @@ def restore(request, entry):
         'skipped': skipped,
         'missing_files': missing_files,
     }
+
+
+def _deleted_images(entry):
+    # the entries kept before the images were deleted with their document
+    # have no `deleted_images`
+    return entry.snapshot.get('deleted_images', [])
 
 
 def _check_restorable(entry):
@@ -606,6 +629,8 @@ def _entry_summary(entry, history, users):
         'deleted_by': _user(users, entry.deleted_by),
         'expires_at': (entry.deleted_at + RETENTION).isoformat(),
         'restored_at': entry.restored_at.isoformat() if entry.restored_at else None,
+        # the personal images deleted with the document
+        'deleted_images': len(_deleted_images(entry)),
     }
 
 
@@ -725,13 +750,38 @@ def entry_details(entry):
     details['merged_document_ids'] = sorted(
         row['document_id']
         for row in _rows(entry, Document)
-        if row['document_id'] != entry.document_id
+        if row['redirects_to'] == entry.document_id
     )
+    details['deleted_images'] = _deleted_image_details(entry)
     details['rows'] = {
         name.split('.', 1)[1]: len(rows)
         for name, rows in sorted(entry.snapshot['tables'].items())
     }
     return details
+
+
+def _deleted_image_details(entry):
+    image_ids = _deleted_images(entry)
+    if not image_ids:
+        return []
+    titles = {}
+    for row in _rows(entry, DocumentLocale):
+        if row['document_id'] in image_ids:
+            titles.setdefault(row['document_id'], {})[row['lang']] = row['title']
+    images = {row['document_id']: row for row in _rows(entry, Image)}
+    result = []
+    for image_id in image_ids:
+        by_lang = titles.get(image_id, {})
+        result.append(
+            {
+                'document_id': image_id,
+                'title': next(
+                    (by_lang[lang] for lang in default_langs if lang in by_lang), None
+                ),
+                'filename': images.get(image_id, {}).get('filename'),
+            }
+        )
+    return result
 
 
 def _associations(entry):
@@ -742,6 +792,9 @@ def _associations(entry):
             linked[row['child_document_id']] = row['child_document_type']
         elif row['child_document_id'] == entry.document_id:
             linked[row['parent_document_id']] = row['parent_document_type']
+    # the images deleted with the document are listed apart
+    for image_id in _deleted_images(entry):
+        linked.pop(image_id, None)
     if not linked:
         return []
     existing = set(

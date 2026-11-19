@@ -1,4 +1,4 @@
-from sqlalchemy.sql.expression import and_, exists, or_, over
+from sqlalchemy.sql.expression import and_, exists, or_, over, select
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import DBSession, article, image
@@ -20,6 +20,7 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_history import (
     DocumentVersion,
     HistoryMetaData,
+    get_creators,
     has_been_created_by,
     is_less_than_24h_old,
 )
@@ -257,8 +258,17 @@ def validate_requestor(request, **kwargs):
 def _delete(request, document_id, document_type, keep=True):
     # kept a while, to be restored by a moderator (see views.document_trash),
     # unless the deletion must leave nothing (e.g. the erasure of an account)
+    image_ids = []
     if keep:
-        keep_deleted_document(request, document_id, document_type)
+        # The erasure of an account deletes each document of the user itself
+        # (scripts/users/process_removals.py): no image deleted with them.
+        image_ids = personal_images_deleted_with(request, document_id, document_type)
+        keep_deleted_document(request, document_id, document_type, image_ids)
+
+    for image_id in image_ids:
+        delete_all_files_for_image(image_id, request)
+        _delete_document(request, image_id, IMAGE_TYPE)
+        update_deleted_documents_list(image_id, IMAGE_TYPE)
 
     if document_type == IMAGE_TYPE:
         # Files are actually removed only if the transaction succeeds
@@ -270,6 +280,67 @@ def _delete(request, document_id, document_type, keep=True):
     notify_es_syncer(request.registry.queue_config)
 
     return {}
+
+
+def personal_images_deleted_with(request, document_id, document_type):
+    """Return the ids of the personal images deleted with a document."""
+    # The personal images linked to this document only, uploaded by its
+    # author (e.g. the photos of an outing), are deleted with it, kept in the
+    # same entry of the deleted documents, and restored with it. The other
+    # images linked to it stay, without the link: the collaborative ones and
+    # those of other users are listed for the moderators (GET /images/orphans).
+    if document_type == IMAGE_TYPE:
+        return []
+    linked = (
+        select(Association.child_document_id)
+        .where(
+            Association.parent_document_id == document_id,
+            Association.child_document_type == IMAGE_TYPE,
+        )
+        .union(
+            select(Association.parent_document_id).where(
+                Association.child_document_id == document_id,
+                Association.parent_document_type == IMAGE_TYPE,
+            )
+        )
+    )
+    other_link = exists().where(
+        or_(
+            and_(
+                Association.parent_document_id == Image.document_id,
+                Association.child_document_id != document_id,
+            ),
+            and_(
+                Association.child_document_id == Image.document_id,
+                Association.parent_document_id != document_id,
+            ),
+        )
+    )
+    image_ids = (
+        DBSession.execute(
+            select(Image.document_id).where(
+                Image.document_id.in_(linked),
+                Image.image_type == 'personal',
+                ~other_link,
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not image_ids:
+        return []
+    creators = get_creators([document_id, *image_ids])
+    author_id = creators.get(document_id, {}).get('user_id')
+    image_ids = [
+        image_id
+        for image_id in image_ids
+        if author_id is not None
+        and creators.get(image_id, {}).get('user_id') == author_id
+    ]
+    if not request.has_permission('moderator'):
+        # only the images the user could delete (see validate_requestor)
+        image_ids = [i for i in image_ids if is_less_than_24h_old(i)]
+    return sorted(image_ids)
 
 
 def _delete_document(request, document_id, document_type, redirecting=False):

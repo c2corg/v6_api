@@ -630,3 +630,168 @@ def test_merge_user_accounts(client, session, user_ids, queue_config, docs):  # 
     merge_user_accounts(user_ids['contributor'], user_ids['contributor2'], queue_config)
 
     assert _entry(session, document_id) is None
+
+
+def _image(session, user_ids, username, image_type, linked_to, title):
+    """Add an image created by a user, linked to the given documents."""
+    from c2corg_api.models.image import Image
+    from c2corg_api.tests.views.test_document_delete import _add_association
+    from c2corg_api.views.document import create_new_version
+
+    image = Image(
+        filename=f'{title}.jpg',
+        image_type=image_type,
+        locales=[DocumentLocale(lang='en', title=title)],
+    )
+    session.add(image)
+    session.flush()
+    create_new_version(image, user_ids[username])
+    for document in linked_to:
+        _add_association(session, user_ids, document, image)
+    session.flush()
+    return image
+
+
+@pytest.fixture
+def outing_images(session, user_ids, docs):  # noqa: F811
+    """Images of outing2 (created by contributor): only `photo` goes with it."""
+    from c2corg_api.models.feed import update_feed_images_upload
+
+    outing = docs.outing2
+    images = {
+        # personal, by the author of the outing, linked to the outing only
+        'photo': _image(
+            session, user_ids, 'contributor', 'personal', [outing], 'photo'
+        ),
+        # also linked to a route
+        'shared': _image(
+            session,
+            user_ids,
+            'contributor',
+            'personal',
+            [outing, docs.route3],
+            'shared',
+        ),
+        'collaborative': _image(
+            session, user_ids, 'contributor', 'collaborative', [outing], 'collab'
+        ),
+        # by another user
+        'other': _image(
+            session, user_ids, 'contributor2', 'personal', [outing], 'other'
+        ),
+    }
+    update_feed_images_upload(
+        [images['photo']],
+        [
+            {
+                'filename': 'photo.jpg',
+                'image_type': 'personal',
+                'locales': [{'lang': 'en', 'title': 'photo'}],
+                'associations': {'outings': [{'document_id': outing.document_id}]},
+            }
+        ],
+        user_ids['contributor'],
+    )
+    session.flush()
+    return images
+
+
+def test_personal_images_deleted_with_document(
+    client,
+    session,
+    settings,
+    outing_images,
+    docs,  # noqa: F811
+):
+    outing_id = docs.outing2.document_id
+    photo_id = outing_images['photo'].document_id
+    before = _dump(session)
+    _image_service.calls = []
+
+    with HTTMock(_image_service):
+        _delete(client, outing_id)
+
+        assert not _exists(session, photo_id)
+        for name in ('shared', 'collaborative', 'other'):
+            assert _exists(session, outing_images[name].document_id), name
+        # one entry for the outing and its images, the files deleted
+        assert _entry(session, photo_id) is None
+        entry = _entry(session, outing_id)
+        assert entry.snapshot['deleted_images'] == [photo_id]
+        assert session.get(ESDeletedDocument, photo_id) is not None
+        url, request_body = _image_service.calls[0]
+        assert url == settings['image_backend.url'] + '/delete'
+        assert 'filenames=photo.jpg' in request_body.split('&')
+
+        listed = client.get('/documents/deleted', headers=_moderator()).json
+        assert listed['documents'][0]['deleted_images'] == 1
+        details = client.get(
+            f'/documents/deleted/{entry.id}', headers=_moderator()
+        ).json
+        assert details['deleted_images'] == [
+            {'document_id': photo_id, 'title': 'photo', 'filename': 'photo.jpg'}
+        ]
+        assert details['merged_document_ids'] == []
+        assert photo_id not in {a['document_id'] for a in details['associations']}
+
+        body = _restore(client, entry.id).json
+
+    url, request_body = _image_service.calls[-1]
+    assert url == settings['image_backend.url'] + '/restore'
+    assert 'filenames=photo.jpg' in request_body.split('&')
+    assert body['skipped'] == {}
+    # the outing, the image, their link and the feed item are back, with a
+    # version of each saying it was restored
+    _assert_restored(before, _dump(session), ['en', 'en'], ignored={'history_metadata'})
+    session.expire_all()
+    assert session.get(ESDeletedDocument, photo_id) is None
+
+
+def test_images_kept_when_deleted_by_their_author(
+    client,
+    session,
+    user_ids,
+    outing_images,
+    docs,  # noqa: F811
+):
+    # the author of the outing deletes it: their photo goes with it
+    with HTTMock(_image_service):
+        client.delete_json(
+            f'/documents/delete/{docs.outing2.document_id}',
+            headers=auth_headers(username='contributor'),
+            status=200,
+        )
+
+    assert not _exists(session, outing_images['photo'].document_id)
+    assert _exists(session, outing_images['other'].document_id)
+
+
+def test_no_image_deleted_without_keeping(
+    client,
+    session,
+    settings,
+    queue_config,
+    outing_images,
+    docs,  # noqa: F811
+):
+    from types import SimpleNamespace
+
+    from c2corg_api.views.document_delete import _delete as delete
+
+    request = SimpleNamespace(
+        registry=SimpleNamespace(settings=settings, queue_config=queue_config)
+    )
+    with HTTMock(_image_service):
+        delete(request, docs.outing2.document_id, 'o', keep=False)
+
+    assert _exists(session, outing_images['photo'].document_id)
+
+
+def test_no_image_deleted_with_an_image(client, session, user_ids, docs):  # noqa: F811
+    linked = _image(session, user_ids, 'contributor', 'personal', [], 'linked')
+    _image(session, user_ids, 'contributor', 'personal', [linked], 'child')
+    child_id = session.query(DocumentLocale.document_id).filter_by(title='child')
+    with HTTMock(_image_service):
+        _delete(client, linked.document_id)
+
+    assert _exists(session, child_id.scalar())

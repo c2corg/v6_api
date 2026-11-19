@@ -16,11 +16,20 @@ from c2corg_api.views.document_trash import (
     restore_deleted_document,
 )
 from c2corg_api.views.document_version_mask import mask_version, unmask_version
+from c2corg_api.views.image_orphans import read_orphan_images
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
 from c2corg_api.web.handlers import serve_read, typed_values
-from c2corg_api.web.params import DocType, Id, Limit, Offset, day, natural
+from c2corg_api.web.params import (
+    DocType,
+    Id,
+    ImageType,
+    Limit,
+    Offset,
+    day,
+    natural,
+)
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 Moderator = Annotated[None, Depends(permission_check('moderator'))]
@@ -44,6 +53,7 @@ def include(app):
     for path, endpoint in (
         ('/documents/deleted', deleted_documents),
         ('/documents/deleted/{id:int}', deleted_document),
+        ('/images/orphans', orphan_images),
     ):
         app.add_api_route(
             path,
@@ -107,8 +117,27 @@ def deleted_document(request: Request, user: User, _: Moderator, id: Id):
     return serve_read(request, user, [typed_values(validated)], read_deleted_document)
 
 
+def orphan_images(
+    request: Request,
+    user: User,
+    _: Moderator,
+    offset: Annotated[
+        Offset | None, Query(description='The first image, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many: 30 by default, 100 at most.')
+    ] = None,
+    image_type: Annotated[
+        ImageType | None, Query(description='Only the images of this type.')
+    ] = None,
+):
+    """Return the images linked to no document, the last created first."""
+    validated = {'offset': offset, 'limit': limit, 'image_type': image_type}
+    return serve_read(request, user, [typed_values(validated)], read_orphan_images)
+
+
 # read by the route inventory of the contract tests (routes.txt)
-for _endpoint in (deleted_documents, deleted_document):
+for _endpoint in (deleted_documents, deleted_document, orphan_images):
     _endpoint.permission = 'moderator'
     # described in the OpenAPI document (see web.openapi)
     _endpoint.described = True

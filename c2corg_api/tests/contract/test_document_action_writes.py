@@ -86,6 +86,7 @@ DELETED_DOCUMENT_ROUTES = [
     ('GET', '/documents/deleted'),
     ('GET', '/documents/deleted/{id}'),
     ('POST', '/documents/deleted/{id}/restore'),
+    ('GET', '/images/orphans'),
 ]
 
 
@@ -104,6 +105,12 @@ def test_deleted_documents_reserved_to_the_moderators(browser):
 def test_deleted_documents(browser):
     response = browser.get('/documents/deleted', user='moderator')
     check_snapshot('documents_deleted', response)
+
+
+@contract(('GET', '/images/orphans'))
+def test_orphan_images(browser):
+    response = browser.get('/images/orphans', user='moderator')
+    check_snapshot('images_orphans', response)
 
 
 @contract(
