@@ -22,7 +22,9 @@ For each request:
   with its posts;
 - else: the account of the forum is merged into the target one;
 - then the account of the topoguide is merged into the target one, as with
-  scripts/users/merge.py.
+  scripts/users/merge.py;
+- once saved, the user is told by email, unless a spammer (see
+  emails/account_removal.py).
 
 Each request is locked while it is processed, and checked again once locked: a
 validation cancelled meanwhile stops it, and two runs at once never process the
@@ -52,6 +54,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql.expression import and_, exists
 
 from c2corg_api.config import get_appsettings
+from c2corg_api.emails.account_removal import DONE, removal_emails, send_removal_emails
 from c2corg_api.models import DBSession, commit_or_rollback
 from c2corg_api.models.account_removal import (
     ACTION_DONE,
@@ -220,6 +223,8 @@ def process_removal(removal_id, settings, queue_config, grace_hours=None):
             return False
 
         user_id = removal.user_id
+        # the addresses before the merge deletes the account; sent once saved
+        emails = removal_emails(removal, DONE, settings)
         if DBSession.get(User, user_id) is None:
             # merged by hand since the request
             print(f'The account {user_id} does not exist anymore.')
@@ -248,6 +253,7 @@ def process_removal(removal_id, settings, queue_config, grace_hours=None):
 
     # the comment topics of the purged documents, once it is all saved
     set_topics_hidden(client, topic_ids, True)
+    send_removal_emails(removal_id, emails, settings)
     return True
 
 

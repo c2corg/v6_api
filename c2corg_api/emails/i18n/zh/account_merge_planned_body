@@ -1,0 +1,11 @@
+你好
+
+你的 Camptocamp.org 账户 « %(name)s » 将从 %(date)s 起合并到账户 « %(target)s »。
+
+« %(name)s » 的贡献和论坛帖子将转到 « %(target)s »。之后你只能用 « %(target)s » 登录。
+
+如果你没有提出此请求，或者你改变了主意，请在该日期之前在论坛上联系版主： %(forum)s
+
+非常感谢
+
+Camptocamp.org 团队
