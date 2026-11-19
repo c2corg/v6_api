@@ -352,13 +352,19 @@ def read_removal_requests_count(request):
 
     Example response:
 
-        {'open': 2, 'roles': {'topoguide': true, 'forum': false}}
+        {'open': 2, 'actionable': 1, 'roles': {'topoguide': true, 'forum': false}}
 
     Like the list, it is for the moderators of the topoguide and of the forum.
+    `actionable` counts the open requests the user can validate now (the
+    `validate` of their `can`): the pill of the moderation menu of the UI.
     """
     roles = _check_moderator(request)
-    count = _open_requests().with_entities(func.count(AccountRemovalRequest.id))
-    return {'open': count.scalar(), 'roles': roles}
+    # the open requests are few (a handful a month): the same rules as the
+    # buttons, rather than their SQL twin
+    user_id = request.authenticated_userid
+    removals = _open_requests().all()
+    actionable = sum(1 for r in removals if _actions(r, roles, user_id)['validate'])
+    return {'open': len(removals), 'actionable': actionable, 'roles': roles}
 
 
 def _targets(request, validated, user_id):
