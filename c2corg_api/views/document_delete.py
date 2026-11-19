@@ -1,4 +1,4 @@
-from sqlalchemy.sql.expression import and_, exists, or_, over
+from sqlalchemy.sql.expression import and_, exists, or_, over, select
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import DBSession, article, image
@@ -7,6 +7,7 @@ from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
 from c2corg_api.models.cache_version import CacheVersion, update_cache_version_full
+from c2corg_api.models.common.attributes import image_types
 from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.models.document import (
     ArchiveDocument,
@@ -20,6 +21,7 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_history import (
     DocumentVersion,
     HistoryMetaData,
+    get_creators,
     has_been_created_by,
     is_less_than_24h_old,
 )
@@ -257,8 +259,17 @@ def validate_requestor(request, **kwargs):
 def _delete(request, document_id, document_type, keep=True):
     # kept a while, to be restored by a moderator (see views.document_trash),
     # unless the deletion must leave nothing (e.g. the erasure of an account)
+    image_ids = []
     if keep:
-        keep_deleted_document(request, document_id, document_type)
+        # The erasure of an account deletes each document of the user itself
+        # (scripts/users/process_removals.py): no image deleted with them.
+        image_ids = personal_images_deleted_with(request, document_id, document_type)
+        keep_deleted_document(request, document_id, document_type, image_ids)
+
+    for image_id in image_ids:
+        delete_all_files_for_image(image_id, request)
+        _delete_document(request, image_id, IMAGE_TYPE)
+        update_deleted_documents_list(image_id, IMAGE_TYPE)
 
     if document_type == IMAGE_TYPE:
         # Files are actually removed only if the transaction succeeds
@@ -270,6 +281,95 @@ def _delete(request, document_id, document_type, keep=True):
     notify_es_syncer(request.registry.queue_config)
 
     return {}
+
+
+def _images_linked_only_to(document_id):
+    """Return the images linked to this document and to no other: {id: type}."""
+    linked = (
+        select(Association.child_document_id)
+        .where(
+            Association.parent_document_id == document_id,
+            Association.child_document_type == IMAGE_TYPE,
+        )
+        .union(
+            select(Association.parent_document_id).where(
+                Association.child_document_id == document_id,
+                Association.parent_document_type == IMAGE_TYPE,
+            )
+        )
+    )
+    other_link = exists().where(
+        or_(
+            and_(
+                Association.parent_document_id == Image.document_id,
+                Association.child_document_id != document_id,
+            ),
+            and_(
+                Association.child_document_id == Image.document_id,
+                Association.parent_document_id != document_id,
+            ),
+        )
+    )
+    rows = DBSession.execute(
+        select(Image.document_id, Image.image_type).where(
+            Image.document_id.in_(linked), ~other_link
+        )
+    )
+    return dict(rows.all())
+
+
+def personal_images_deleted_with(request, document_id, document_type, images=None):
+    """Return the ids of the personal images deleted with a document."""
+    # The personal images linked to this document only, uploaded by its
+    # author (e.g. the photos of an outing), are deleted with it, kept in the
+    # same entry of the deleted documents, and restored with it. The other
+    # images linked to it stay, without the link: the collaborative ones and
+    # those of other users are listed for the moderators (GET /images/orphans).
+    # `images`: the result of _images_linked_only_to, when already read.
+    if document_type == IMAGE_TYPE:
+        return []
+    if images is None:
+        images = _images_linked_only_to(document_id)
+    image_ids = [i for i, image_type in images.items() if image_type == 'personal']
+    if not image_ids:
+        return []
+    creators = get_creators([document_id, *image_ids])
+    author_id = creators.get(document_id, {}).get('user_id')
+    image_ids = [
+        image_id
+        for image_id in image_ids
+        if author_id is not None
+        and creators.get(image_id, {}).get('user_id') == author_id
+    ]
+    if not request.has_permission('moderator'):
+        # only the images the user could delete (see validate_requestor)
+        image_ids = [i for i in image_ids if is_less_than_24h_old(i)]
+    return sorted(image_ids)
+
+
+def read_images_of_deletion(request):
+    """Tell what the deletion of a document does to the images linked to it.
+
+    Request:
+        `GET` `/documents/delete/{id}/images`
+
+    Response: how many images are deleted with it, and how many stay linked
+    to no document, by type (shown before deleting):
+
+        {'deleted': 3,
+         'orphaned': {'collaborative': 2, 'personal': 1, 'copyright': 0}}
+    """
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
+    images = _images_linked_only_to(document_id)
+    deleted = set(
+        personal_images_deleted_with(request, document_id, document_type, images)
+    )
+    orphaned = dict.fromkeys(image_types, 0)
+    for image_id, image_type in images.items():
+        if image_id not in deleted and image_type in orphaned:
+            orphaned[image_type] += 1
+    return {'deleted': len(deleted), 'orphaned': orphaned}
 
 
 def _delete_document(request, document_id, document_type, redirecting=False):
