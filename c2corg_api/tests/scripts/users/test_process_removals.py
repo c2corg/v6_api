@@ -1,8 +1,10 @@
 import datetime
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
+from c2corg_api.jobs import configure_scheduler_from_config
+from c2corg_api.jobs.process_removals import process_removals, removals_auto
 from c2corg_api.models.account_removal import AccountRemovalRequest
 from c2corg_api.models.deleted_document import DeletedDocument
 from c2corg_api.models.document import Document, DocumentGeometry
@@ -123,6 +125,101 @@ class TestFindReadyRequests:
 
 class _NotFound(Exception):
     response = Mock(status_code=404)
+
+
+class TestGraceByReason:
+    """A spammer goes 1 hour after the last validation, the others 24 hours."""
+
+    @pytest.mark.parametrize(('reason', 'ready'), [('spam', True), ('merge', False)])
+    def test_two_hours_after(self, session, user_ids, reason, ready):
+        two_hours_ago = NOW - datetime.timedelta(hours=2)
+        removal = make_removal(
+            session,
+            user_ids,
+            reason=reason,
+            topoguide_validated_at=two_hours_ago,
+            forum_validated_at=two_hours_ago,
+        )
+        found = [r.id for r in find_ready_requests(NOW)]
+        assert found == ([removal.id] if ready else [])
+        assert removal.ready_at() == two_hours_ago + datetime.timedelta(
+            hours=1 if reason == 'spam' else 24
+        )
+
+    def test_given_delay(self, session, user_ids):
+        # the --grace-hours of the script applies to all
+        two_hours_ago = NOW - datetime.timedelta(hours=2)
+        make_removal(
+            session,
+            user_ids,
+            reason='spam',
+            topoguide_validated_at=two_hours_ago,
+            forum_validated_at=two_hours_ago,
+        )
+        assert find_ready_requests(NOW, grace_hours=3) == []
+
+
+class TestJob:
+    """The scheduler's job: the same removal, off unless switched on."""
+
+    @pytest.mark.parametrize(
+        ('value', 'on'),
+        [
+            (None, False),
+            ('false', False),
+            ('true', True),
+            (' True ', True),
+            ('1', True),
+        ],
+    )
+    def test_switch(self, value, on):
+        settings = {} if value is None else {'users.removals.auto': value}
+        assert removals_auto(settings) is on
+
+    @pytest.mark.parametrize('on', [False, True])
+    def test_scheduled_when_on(self, settings, on):
+        scheduler = Mock()
+        with patch('c2corg_api.jobs.BackgroundScheduler', return_value=scheduler):
+            configure_scheduler_from_config(
+                {**settings, 'users.removals.auto': 'true' if on else 'false'}
+            )
+        ids = [call.kwargs['id'] for call in scheduler.add_job.call_args_list]
+        assert ('process_removals' in ids) is on
+
+    def test_removes_the_ready_accounts(self, session, user_ids, settings, discourse):
+        removal = make_removal(session, user_ids)
+        later = make_removal(
+            session,
+            user_ids,
+            user_id=user_ids['contributor3'],
+            forum_validated_at=NOW - datetime.timedelta(hours=2),
+        )
+
+        process_removals(settings)
+
+        discourse.merge_user.assert_called_once_with(user_ids['contributor'], 49513)
+        session.expire_all()
+        assert removal.done_at is not None
+        assert later.done_at is None
+
+    def test_forum_disabled(self, session, user_ids, settings, discourse):
+        discourse.enabled = False
+        removal = make_removal(session, user_ids)
+
+        process_removals(settings)
+
+        discourse.merge_user.assert_not_called()
+        session.expire_all()
+        assert removal.done_at is None
+
+    def test_failure_stays_open(self, session, user_ids, settings, discourse):
+        discourse.merge_user.side_effect = Exception('forum down')
+        removal = make_removal(session, user_ids)
+
+        process_removals(settings)
+
+        session.expire_all()
+        assert removal.done_at is None
 
 
 class TestPreview:

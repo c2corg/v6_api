@@ -4,6 +4,7 @@ import logging
 from apscheduler.events import EVENT_JOB_ERROR
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from c2corg_api.jobs.process_removals import process_removals, removals_auto
 from c2corg_api.jobs.purge_deleted_documents import purge_deleted_documents
 from c2corg_api.jobs.purge_expired_tokens import purge_token
 from c2corg_api.jobs.purge_non_activated_accounts import purge_account
@@ -49,6 +50,18 @@ def configure_scheduler_from_config(settings):
         hour=1,
         minute=0,
     )
+
+    # run `process_removals` every hour, at :15, once switched on: the first
+    # removals are run by hand (scripts/users/process_removals.py)
+    if removals_auto(settings):
+        scheduler.add_job(
+            process_removals,
+            id='process_removals',
+            name='Remove the accounts of the validated removal requests',
+            trigger='cron',
+            minute=15,
+            kwargs={'settings': settings},
+        )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)
 
