@@ -102,22 +102,29 @@ def main(argv=None):
     if not client.enabled:
         sys.exit('The forum is disabled')
 
-    done = failed = 0
-    for topic_id, document, locale in topics_to_retitle(
-        args.start_after, args.all, args.limit
-    ):
-        try:
-            retitle(client, topic_id, document, locale, args.apply, args.first_post)
-            done += 1
-        except DiscourseClientError as e:
-            # a topic deleted in the forum (404), ...: the others go on
-            print(f'{topic_id}: failed: {e!s}', flush=True)
-            failed += 1
-        if args.apply:
-            time.sleep(args.delay)
+    topics = topics_to_retitle(args.start_after, args.all, args.limit)
+    done, failed = retitle_all(client, topics, args.apply, args.first_post, args.delay)
     print(
         f'{done} topics {"retitled" if args.apply else "to retitle"}, {failed} failed'
     )
+
+
+def retitle_all(client, topics, apply, first_post, delay):
+    """Retitle the given topics, one failure stopping none of the others."""
+    done = failed = 0
+    for topic_id, document, locale in topics:
+        try:
+            retitle(client, topic_id, document, locale, apply, first_post)
+            done += 1
+        except (DiscourseClientError, KeyError) as e:
+            # DiscourseClientError: a topic deleted in the forum (403/404), ...
+            # KeyError: a broken document, as an outing without its row in
+            # guidebook.outings, whose date SQLAlchemy cannot load
+            print(f'{topic_id}: failed: {type(e).__name__}: {e!s}', flush=True)
+            failed += 1
+        if apply:
+            time.sleep(delay)
+    return done, failed
 
 
 if __name__ == '__main__':
