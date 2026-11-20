@@ -18,7 +18,7 @@ dependencies = [
     "alembic==1.20.1",
     "apscheduler==3.11.3",
     "bcrypt==5.0.0",
-    "nh3==0.3.7",
+    "nh3==0.3.8",
     "dogpile.cache==1.5.0",
     "elasticsearch==2.4.1",
     "elasticsearch_dsl==2.2.0",
@@ -45,7 +45,7 @@ dependencies = [
     # Discourse API client
     "pydiscourse==1.7.0",
     "pydantic==2.14.3",
-    "fastapi==0.162.5",
+    "fastapi==0.162.7",
 ]
 
 [dependency-groups]
@@ -53,7 +53,7 @@ dev = [
     "ruff==0.17.4",
     "pre-commit==4.7.0",
     # the client of FastAPI's TestClient, for the tests
-    "httpx2==2.16.0",
+    "httpx2==2.16.2",
     "ipdb==0.13.13",
     "httmock==1.4.0",
     "pytest==9.2.0",
