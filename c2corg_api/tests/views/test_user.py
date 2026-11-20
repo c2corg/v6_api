@@ -12,6 +12,14 @@ import pytest
 from c2corg_api.httpexceptions import HTTPBadRequest
 
 # from pytest import mark
+from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.document import (
+    ArchiveDocument,
+    ArchiveDocumentLocale,
+    Document,
+    DocumentLocale,
+)
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
@@ -559,8 +567,22 @@ def test_purge_accounts(_send_email, client, session):
     session.commit()
 
     # The user should be removed
+    user_id = user.id
     purge_account()
     assert 0 == query.count()
+
+    # with its whole profile document: a documents row left without its
+    # user_profiles row breaks every polymorphic load of it
+    for model in (
+        Document,
+        DocumentLocale,
+        DocumentVersion,
+        ArchiveDocument,
+        ArchiveDocumentLocale,
+        CacheVersion,
+    ):
+        rows = session.query(model).filter(model.document_id == user_id).count()
+        assert rows == 0, model.__name__
 
 
 def test_purge_tokens(client, session, settings, passwords):
