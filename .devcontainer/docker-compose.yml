@@ -8,6 +8,11 @@ services:
     ports:
       - "127.0.0.1:6543:6543"
     command: sleep infinity
+    # No core dumps: a crashed Node/Chromium process (Playwright, vitest) writes a core file
+    # as big as its address space (20 GB+) into its working directory, which fills the
+    # container's writable layer
+    ulimits:
+      core: 0
     depends_on:
       postgresql:
         condition: service_healthy
