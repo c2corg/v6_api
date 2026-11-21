@@ -1,0 +1,18 @@
+{
+  "body": {
+    "folders": [
+      {
+        "created_at": "str",
+        "id": "int",
+        "name": "str",
+        "position": "int"
+      }
+    ]
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

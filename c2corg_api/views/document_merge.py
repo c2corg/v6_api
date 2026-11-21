@@ -9,7 +9,7 @@ from c2corg_api.models.cache_version import (
     update_cache_version_full,
 )
 from c2corg_api.models.document import Document, UpdateType
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.route import Route
@@ -115,7 +115,7 @@ def validate_documents(request, **kwargs):
 def merge_documents(request):
     """Merge a document into another document.
 
-    - Associations and tags of the source document are transferred to
+    - Associations and favourites of the source document are transferred to
       the target document.
     - The association log entries are rewritten to the target document.
     - The time of the log entries is updated, so that the ES syncer will
@@ -144,8 +144,8 @@ def merge_documents(request):
     # transfer associations from source to target
     transfer_associations(source_document_id, target_document_id)
 
-    # transfer tags from source to target
-    transfer_tags(source_document_id, target_document_id)
+    # transfer favourites from source to target
+    transfer_favourites(source_document_id, target_document_id)
 
     # if waypoint, update main waypoint of routes
     if source_doc.type == WAYPOINT_TYPE:
@@ -259,43 +259,41 @@ def transfer_associations(source_document_id, target_document_id):
     )
 
 
-def transfer_tags(source_document_id, target_document_id):
-    # get the ids of users that have already tagged the target document
+def transfer_favourites(source_document_id, target_document_id):
+    # get the ids of users that already have the target document in favourites
     target_user_ids_result = (
-        DBSession.query(DocumentTag.user_id)
-        .filter(DocumentTag.document_id == target_document_id)
+        DBSession.query(Favourite.user_id)
+        .filter(Favourite.document_id == target_document_id)
         .all()
     )
     target_user_ids = [user_id for (user_id,) in target_user_ids_result]
 
-    # move the current tags (only if the target document does not
-    # already have been tagged by the same user)
+    # move the current favourites, with their folder and date (only if the
+    # target document is not already a favourite of the same user)
     DBSession.execute(
-        DocumentTag.__table__.update()
+        Favourite.__table__.update()
         .where(
             _and_in(
-                DocumentTag.document_id == source_document_id,
-                DocumentTag.user_id,
+                Favourite.document_id == source_document_id,
+                Favourite.user_id,
                 target_user_ids,
             )
         )
         .values(document_id=target_document_id)
     )
 
-    # remove remaining tags
+    # remove remaining favourites
     DBSession.execute(
-        DocumentTag.__table__.delete().where(
-            DocumentTag.document_id == source_document_id
-        )
+        Favourite.__table__.delete().where(Favourite.document_id == source_document_id)
     )
 
-    # transfer the tag log entries
+    # transfer the favourite log entries
     DBSession.execute(
-        DocumentTagLog.__table__.update()
+        FavouriteLog.__table__.update()
         .where(
             _and_in(
-                DocumentTagLog.document_id == source_document_id,
-                DocumentTagLog.user_id,
+                FavouriteLog.document_id == source_document_id,
+                FavouriteLog.user_id,
                 target_user_ids,
             )
         )
@@ -303,8 +301,8 @@ def transfer_tags(source_document_id, target_document_id):
     )
 
     DBSession.execute(
-        DocumentTagLog.__table__.delete().where(
-            DocumentTagLog.document_id == source_document_id
+        FavouriteLog.__table__.delete().where(
+            FavouriteLog.document_id == source_document_id
         )
     )
 
