@@ -148,6 +148,19 @@ class APIDiscourseClient:
             f'/t/{topic_id}/notifications.json', notification_level=WATCHING
         )
 
+    def topic_is_gone(self, topic_id):
+        """Whether visitors get a 404 for a topic: deleted, or moved out of sight."""
+        # Anonymous request: the admin API key sees deleted topics and every category.
+        # Any other answer, or no answer, keeps the topic.
+        try:
+            r = requests.get(
+                f'{self.discourse_base_url}/t/{topic_id}.json', timeout=self.timeout
+            )
+        except requests.exceptions.RequestException:
+            log.warning(f'Checking the forum topic {topic_id} failed', exc_info=True)
+            return False
+        return r.status_code == 404
+
     # Below this: SSO provider
     def decode_payload(self, payload):
         """Return the parameters of an SSO payload, or raise a ValueError."""

@@ -140,7 +140,11 @@ def test_post_profile(client, user_ids):
     assert 'No comments for a profile' == json['errors'][0]['description']
 
 
-def test_post_topic_exists(client, docs):
+@patch(
+    'c2corg_api.security.discourse_client.APIDiscourseClient.topic_is_gone',
+    return_value=False,
+)
+def test_post_topic_exists(topic_is_gone_mock, client, docs):
     json = post_json_with_contributor(
         client,
         '/forum/topics',
@@ -150,6 +154,45 @@ def test_post_topic_exists(client, docs):
     errors = json.get('errors')
     assert 'Topic already exists' == errors[0].get('description')
     assert 1 == errors[0].get('topic_id')
+
+
+@patch('pydiscourse.client.DiscourseClient.create_post', return_value={'topic_id': 10})
+@patch(
+    'c2corg_api.security.discourse_client.APIDiscourseClient.topic_is_gone',
+    return_value=True,
+)
+def test_post_topic_gone(topic_is_gone_mock, create_post_mock, client, session, docs):
+    """A topic deleted in the forum is replaced by a new one."""
+    json = post_json_with_contributor(
+        client,
+        '/forum/topics',
+        {'document_id': docs.waypoint_with_topic.document_id, 'lang': 'en'},
+        status=200,
+    )
+    assert 10 == json['topic_id']
+    topic_is_gone_mock.assert_called_once_with(1)
+    session.expire_all()
+    assert 10 == docs.locale_en_with_topic.topic_id
+    assert session.query(DocumentTopic).filter(DocumentTopic.topic_id == 1).count() == 0
+
+
+@pytest.mark.parametrize(
+    ('answer', 'gone'),
+    [(404, True), (200, False), (403, False), (502, False), (ConnectionError(), False)],
+)
+def test_topic_is_gone(settings, answer, gone):
+    """Only a 404 to an anonymous request tells that a topic is gone."""
+    from c2corg_api.security.discourse_client import APIDiscourseClient
+
+    kwargs = (
+        {'side_effect': answer}
+        if isinstance(answer, Exception)
+        else {'return_value': MagicMock(status_code=answer)}
+    )
+    with patch('c2corg_api.security.discourse_client.requests.get', **kwargs) as get:
+        assert APIDiscourseClient(settings).topic_is_gone(42) is gone
+    assert get.call_args.args[0].endswith('/t/42.json')
+    assert 'headers' not in get.call_args.kwargs
 
 
 def test_post_forum_disabled(client, session, docs):
