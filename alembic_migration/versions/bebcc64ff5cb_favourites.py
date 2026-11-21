@@ -77,18 +77,26 @@ def _rename_constraints(forward):
 
 
 def _rename_snapshot_tables(pairs):
-    # the rows kept by the deleted documents (views.document_trash), by table
+    # the rows kept by the deleted documents (views.document_trash), by table;
+    # the names as bound parameters, not in the SQL text
+    update = sa.text(
+        """
+        UPDATE guidebook.deleted_documents
+        SET snapshot = jsonb_set(
+            snapshot #- CAST(:old_path AS text[]),
+            CAST(:new_path AS text[]),
+            snapshot -> 'tables' -> :old_key
+        )
+        WHERE snapshot -> 'tables' ? :old_key
+        """
+    )
     for old, new in pairs:
         op.execute(
-            f"""
-            UPDATE guidebook.deleted_documents
-            SET snapshot = jsonb_set(
-                snapshot #- '{{tables,guidebook.{old}}}',
-                '{{tables,guidebook.{new}}}',
-                snapshot -> 'tables' -> 'guidebook.{old}'
+            update.bindparams(
+                old_key=f'guidebook.{old}',
+                old_path=f'{{tables,guidebook.{old}}}',
+                new_path=f'{{tables,guidebook.{new}}}',
             )
-            WHERE snapshot -> 'tables' ? 'guidebook.{old}'
-            """
         )
 
 
