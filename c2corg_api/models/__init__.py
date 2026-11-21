@@ -39,7 +39,7 @@ from c2corg_api.models import waypoint  # noqa
 from c2corg_api.models import route  # noqa
 from c2corg_api.models import document_history  # noqa
 from c2corg_api.models import document_topic  # noqa
-from c2corg_api.models import document_tag  # noqa
+from c2corg_api.models import favourite  # noqa
 from c2corg_api.models import image  # noqa
 from c2corg_api.models import user  # noqa
 from c2corg_api.models import association  # noqa

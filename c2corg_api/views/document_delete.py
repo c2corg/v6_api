@@ -25,9 +25,9 @@ from c2corg_api.models.document_history import (
     has_been_created_by,
     is_less_than_24h_old,
 )
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
+from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
 from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
 from c2corg_api.models.outing import (
@@ -382,7 +382,7 @@ def _delete_document(request, document_id, document_type, redirecting=False):
     # Remove associations and update cache of formerly associated docs
     update_cache_version_full(document_id, document_type)
     _remove_associations(document_id)
-    _remove_tags(document_id)
+    _remove_favourites(document_id)
 
     clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
         document_type
@@ -745,10 +745,10 @@ def _remove_associations(document_id):
     ).delete()
 
 
-def _remove_tags(document_id):
-    DBSession.query(DocumentTag).filter(DocumentTag.document_id == document_id).delete()
-    DBSession.query(DocumentTagLog).filter(
-        DocumentTagLog.document_id == document_id
+def _remove_favourites(document_id):
+    DBSession.query(Favourite).filter(Favourite.document_id == document_id).delete()
+    DBSession.query(FavouriteLog).filter(
+        FavouriteLog.document_id == document_id
     ).delete()
 
 

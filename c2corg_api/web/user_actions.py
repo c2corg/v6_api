@@ -1,9 +1,9 @@
-"""The actions of the users: associations, tags, follows, blocks, preferences."""
+"""The actions of the users: associations, follows, blocks, preferences, tags."""
 # The routes call the functions of views/ through web.handlers, with the
 # checks their decorators declare (see web.documents.include_document_writes).
 
 from c2corg_api.views.association import add_association, remove_association
-from c2corg_api.views.document_tag import tag_document, untag_document
+from c2corg_api.views.favourite import add_favourite, remove_favourite
 from c2corg_api.views.user_block import block_user, unblock_user
 from c2corg_api.views.user_follow import follow_user, unfollow_user
 from c2corg_api.views.user_mailinglists import update_mailinglists
@@ -21,8 +21,6 @@ from c2corg_api.web.documents import handler_arguments, include_handler_write
 WRITES = [
     ('/associations', 'POST', add_association),
     ('/associations', 'DELETE', remove_association),
-    ('/tags/add', 'POST', tag_document),
-    ('/tags/remove', 'POST', untag_document),
     ('/users/follow', 'POST', follow_user),
     ('/users/unfollow', 'POST', unfollow_user),
     ('/users/block', 'POST', block_user),
@@ -37,9 +35,26 @@ WRITES = [
 ]
 
 
+# the former routes of the favourites, for the clients not updated yet (see
+# web.favourites): (path, function, operation id)
+TAG_WRITES = [
+    ('/tags/add', add_favourite, 'tag_document'),
+    ('/tags/remove', remove_favourite, 'untag_document'),
+]
+
+
 def include(app):
     """Add the routes of this module to the FastAPI application."""
     for path, http_method, function in WRITES:
         include_handler_write(
             app, path, http_method, function, *handler_arguments(function)
+        )
+    for path, function, operation_id in TAG_WRITES:
+        include_handler_write(
+            app,
+            path,
+            'POST',
+            function,
+            *handler_arguments(function),
+            operation_id=operation_id,
         )

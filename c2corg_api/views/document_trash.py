@@ -52,9 +52,9 @@ from c2corg_api.models.document import (
     DocumentLocale,
 )
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
+from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import ArchiveRoute
@@ -79,8 +79,8 @@ OPTIONAL_TABLES = {
         AssociationLog.__table__,
         TopoMapAssociation.__table__,
         AreaAssociation.__table__,
-        DocumentTag.__table__,
-        DocumentTagLog.__table__,
+        Favourite.__table__,
+        FavouriteLog.__table__,
         DocumentChange.__table__,
         DocumentTopic.__table__,
     )
@@ -280,8 +280,8 @@ def _capture_document(snapshot, document_id, document_type, redirecting):
     snapshot.capture(AssociationLog, of_association)
     snapshot.capture(TopoMapAssociation, of_document)
     snapshot.capture(AreaAssociation, of_document)
-    snapshot.capture(DocumentTag, of_document)
-    snapshot.capture(DocumentTagLog, of_document)
+    snapshot.capture(Favourite, of_document)
+    snapshot.capture(FavouriteLog, of_document)
     if not redirecting:
         # Not kept: the references to a deleted image in the feed items of
         # other documents (removed or shifted by the deletion).
@@ -878,7 +878,7 @@ def restore_deleted_document(request):
         `POST` `/documents/deleted/{id}/restore`
 
     Response: what could not be restored, the other end of the associations,
-    tags, feed items... deleted since, and the image files without a version
+    favourites, feed items... deleted since, and the image files without a version
     left in the bucket:
 
         {'document_id': 123, 'lang': None,
@@ -916,8 +916,8 @@ def forget_user(user_id, target_user_id):
 _USER_COLUMNS = {
     HistoryMetaData.__table__.fullname: ('user_id',),
     AssociationLog.__table__.fullname: ('user_id',),
-    DocumentTag.__table__.fullname: ('user_id',),
-    DocumentTagLog.__table__.fullname: ('user_id',),
+    Favourite.__table__.fullname: ('user_id',),
+    FavouriteLog.__table__.fullname: ('user_id',),
     DocumentChange.__table__.fullname: ('user_id',),
 }
 

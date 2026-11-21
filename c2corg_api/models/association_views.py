@@ -7,7 +7,7 @@ from sqlalchemy.sql.functions import func
 from c2corg_api.ext import sqa_view
 from c2corg_api.models import Base, schema
 from c2corg_api.models.association import Association
-from c2corg_api.models.document_tag import DocumentTag
+from c2corg_api.models.favourite import Favourite
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
@@ -308,18 +308,19 @@ Outing.associated_routes_ids = relationship(
 )
 
 
-# users for routes (tags)
+# users for routes (favourites)
 def _get_select_users_for_routes_aggregated():
-    """Return a select which retrieves for every route the ids of associated users."""
+    """Return, for every route, the ids of the users having it in favourites."""
     return (
         select(
-            DocumentTag.document_id.label('route_id'),
-            func.array_agg(DocumentTag.user_id, type_=postgresql.ARRAY(Integer)).label(
+            Favourite.document_id.label('route_id'),
+            func.array_agg(Favourite.user_id, type_=postgresql.ARRAY(Integer)).label(
                 'user_ids'
             ),
         )
-        .select_from(DocumentTag)
-        .group_by(DocumentTag.document_id)
+        .select_from(Favourite)
+        .where(Favourite.document_type == ROUTE_TYPE)
+        .group_by(Favourite.document_id)
     )
 
 

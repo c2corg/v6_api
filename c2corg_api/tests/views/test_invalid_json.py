@@ -27,6 +27,7 @@ def _write_routes():
 WITHOUT_BODY = {
     ('DELETE', '/documents/delete/1'),
     ('DELETE', '/documents/delete/1/fr'),
+    ('DELETE', '/favourites/folders/1'),
     ('POST', '/documents/deleted/1/restore'),
     ('POST', '/routes/update_public_transportation_rating'),
     ('POST', '/users/renew'),
