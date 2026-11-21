@@ -499,6 +499,14 @@ def test_forgot_password_discourse_up(_send_email, client, session, user_ids):
 
 
 @patch('c2corg_api.emails.email_service.EmailService._send_email')
+def test_forgot_password_strips_the_email(_send_email, client, session, user_ids):
+    user = session.get(User, user_ids['contributor'])
+    url = '/users/request_password_change'
+    send_json(client, 'post', url, {'email': f' {user.email} '}, status=200)
+    _send_email.check_call_once()
+
+
+@patch('c2corg_api.emails.email_service.EmailService._send_email')
 def test_forgot_password_discourse_down(
     _send_email, client, session, settings, user_ids, discourse
 ):
@@ -864,6 +872,39 @@ def test_login_failure(client, settings, passwords):
         status=401,
     ).json
     assert body['status'] == 'error'
+
+
+def test_login_strips_the_username(client, settings, passwords):
+    body = login(
+        client, settings, passwords, ' moderator ', passwords['moderator']
+    ).json
+    assert body['username'] == 'moderator'
+
+
+def test_login_strips_the_email(client, settings, passwords):
+    body = login(
+        client,
+        settings,
+        passwords,
+        '\tmoderator@camptocamp.org ',
+        passwords['moderator'],
+    ).json
+    assert body['username'] == 'moderator'
+
+
+def test_login_strips_the_password(client, settings, passwords):
+    password = ' ' + passwords['moderator'] + '\n'
+    body = login(client, settings, passwords, 'moderator', password).json
+    assert 'token' in body
+
+
+def test_login_keeps_a_password_with_spaces(client, session, settings, user_ids):
+    # a password set with a trailing space must be given with it
+    user = session.get(User, user_ids['contributor'])
+    user.password = 'with a space '  # nosec B105 (a test password)
+    session.flush()
+    login(client, settings, {}, 'contributor', 'with a space ', status=200)
+    login(client, settings, {}, 'contributor', 'with a space', status=401)
 
 
 def test_login_no_tos_failure(client, settings, passwords):

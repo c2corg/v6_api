@@ -339,7 +339,8 @@ def validate_required_user_from_email(request, **kwargs):
     validate_required_json_string('email', request)
     if len(request.errors) != 0:
         return
-    email = request.validated['email']
+    # a pasted address often comes with a leading or trailing space
+    email = request.validated['email'].strip()
     user = DBSession.query(User).filter(User.email == email).first()
     if user:
         request.validated['user'] = user
@@ -464,6 +465,21 @@ def token_to_response(user, token, request):
     }
 
 
+def _matching_password(user, password):
+    """Return the password as given, or stripped if only that one matches."""
+    # A password may legitimately start or end with a space (it is not
+    # stripped when set), so the password as given is tried first. The
+    # stripped one is a fallback for a space added by a copy and paste.
+    stripped = password.strip()
+    if (
+        stripped != password
+        and not user.validate_password(password)
+        and user.validate_password(stripped)
+    ):
+        return stripped
+    return password
+
+
 @write(
     validators=[
         body_validator(LoginSchema),
@@ -472,7 +488,9 @@ def token_to_response(user, token, request):
     json=True,
 )
 def login_user(request):
-    username = request.validated['username']
+    # registration strips usernames and refuses spaces in emails, so a
+    # leading or trailing space only comes from a paste or an autocomplete
+    username = request.validated['username'].strip()
     password = request.validated['password']
     accept_tos = request.validated['accept_tos']
     user = DBSession.query(User).filter(User.username == username).first()
@@ -481,6 +499,8 @@ def login_user(request):
     if user is None and is_valid_email(username):
         user = DBSession.query(User).filter(User.email == username).first()
 
+    if user is not None:
+        password = _matching_password(user, password)
     remember = request.validated['remember']
     token = try_login(user, password, request, remember) if user else None
     if token:
