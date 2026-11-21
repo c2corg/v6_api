@@ -12,6 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Match
 
 from c2corg_api.web import (
+    avalanche_bulletins,
     document_actions,
     document_map,
     documents,
@@ -101,6 +102,7 @@ def create_fastapi_app(settings, registry=None):
     misc.include(app)
     users.include(app)
     navitia.include(app)
+    avalanche_bulletins.include(app)
     user_actions.include(app)
     document_actions.include(app)
     if openapi.enabled(settings):
