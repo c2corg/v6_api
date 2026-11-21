@@ -360,7 +360,7 @@ def taggable(browser) -> TaggableDocs:
     waypoint_id = browser.post('/waypoints', body, user='contributor').json[
         'document_id'
     ]
-    # only routes can be tagged
+    # the route is tagged (a favourite, as the waypoint could be)
     route = {
         'main_waypoint_id': waypoint_id,
         'activities': ['hiking'],
@@ -429,6 +429,85 @@ class TestDocumentUserActions:
                 user='contributor',
             )
         check_snapshot('forum_topics', response)
+
+
+@pytest.mark.usefixtures('discourse')
+class TestFavourites:
+    @contract(
+        ('POST', '/favourites/folders'),
+        ('PUT', '/favourites/folders/{id}'),
+        ('GET', '/favourites/folders'),
+        ('POST', '/favourites/folders/order'),
+        ('POST', '/favourites/add'),
+        ('POST', '/favourites/move'),
+        ('GET', '/favourites/has/{document_id}'),
+        ('GET', '/favourites'),
+        ('POST', '/favourites/remove'),
+        ('DELETE', '/favourites/folders/{id}'),
+    )
+    def test_favourites(self, browser, taggable):
+        user = 'contributor'
+        response = browser.post('/favourites/folders', {'name': 'Summits'}, user=user)
+        check_snapshot('favourites_folder_create', response)
+        folder_id = response.json['id']
+        response = browser.put(
+            f'/favourites/folders/{folder_id}', {'name': 'Peaks'}, user=user
+        )
+        check_snapshot('favourites_folder_rename', response)
+        check_snapshot(
+            'favourites_folders', browser.get('/favourites/folders', user=user)
+        )
+        response = browser.post(
+            '/favourites/folders/order', {'folder_ids': [folder_id]}, user=user
+        )
+        check_snapshot('favourites_folders_order', response)
+
+        body = {'document_id': taggable.waypoint_id, 'folder_id': folder_id}
+        check_snapshot(
+            'favourites_add', browser.post('/favourites/add', body, user=user)
+        )
+        body = {'document_id': taggable.route_id}
+        browser.post('/favourites/add', body, user=user)
+        body = {'document_id': taggable.route_id, 'folder_id': folder_id}
+        check_snapshot(
+            'favourites_move', browser.post('/favourites/move', body, user=user)
+        )
+        check_snapshot(
+            'favourites_has',
+            browser.get(f'/favourites/has/{taggable.route_id}', user=user),
+        )
+        response = browser.get('/favourites', user=user, params={'pl': 'en'})
+        check_snapshot('favourites', response)
+        assert {f['document_id'] for f in response.json['favourites']} == {
+            taggable.waypoint_id,
+            taggable.route_id,
+        }
+
+        body = {'document_id': taggable.route_id}
+        check_snapshot(
+            'favourites_remove', browser.post('/favourites/remove', body, user=user)
+        )
+        response = browser.request(
+            'DELETE', f'/favourites/folders/{folder_id}', user=user
+        )
+        check_snapshot('favourites_folder_delete', response)
+
+    @contract(('GET', '/favourites'), ('POST', '/favourites/add'))
+    def test_favourites_need_a_user(self, browser, taggable):
+        check_snapshot('favourites_anonymous', browser.get('/favourites', status=403))
+        body = {'document_id': taggable.route_id}
+        response = browser.post('/favourites/add', body, status=403)
+        check_snapshot('favourites_anonymous', response)
+
+    @contract(
+        ('PUT', '/favourites/folders/{id}'), ('DELETE', '/favourites/folders/{id}')
+    )
+    def test_unknown_folder(self, browser):
+        url = '/favourites/folders/9999999'
+        response = browser.put(url, {'name': 'x'}, user='contributor', status=404)
+        check_snapshot('favourites_folder_unknown', response)
+        response = browser.request('DELETE', url, user='contributor', status=404)
+        check_snapshot('favourites_folder_unknown', response)
 
 
 @pytest.fixture

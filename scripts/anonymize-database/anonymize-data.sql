@@ -64,7 +64,7 @@ update guidebook.documents_locales_archives set summary = null, description = nu
 update guidebook.documents_geometries_archives set geom = null, geom_detail = null where document_id in (select distinct d.document_id from guidebook.user_profiles_archives p join guidebook.documents_archives d using (id));
 
 -- Remove user subscriptions, bookmarks and preferences
-truncate guidebook.feed_followed_users, guidebook.feed_filter_area, guidebook.documents_tags, guidebook.documents_tags_log;
+truncate guidebook.feed_followed_users, guidebook.feed_filter_area, guidebook.favourites, guidebook.favourites_log, guidebook.favourite_folders;
 
 -- Remove ES indexing related data
 truncate guidebook.es_deleted_documents, guidebook.es_deleted_locales, guidebook.es_sync_status;

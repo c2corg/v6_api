@@ -7,7 +7,7 @@ from sqlalchemy.sql.expression import or_
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale, UpdateType
 from c2corg_api.models.document_history import DocumentVersion
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange, update_feed_document_create
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
@@ -196,14 +196,14 @@ def docs(session, user_ids) -> Docs:
     session.flush()
 
     session.add(
-        DocumentTag(
+        Favourite(
             document_id=route1.document_id,
             document_type=ROUTE_TYPE,
             user_id=contributor_id,
         )
     )
     session.add(
-        DocumentTagLog(
+        FavouriteLog(
             document_id=route1.document_id,
             document_type=ROUTE_TYPE,
             user_id=contributor_id,
@@ -432,14 +432,14 @@ def test_tags(client, session, docs):
 
     # Check tags and logs have been transfered from route1 to route2
     count = (
-        session.query(DocumentTag)
-        .filter(DocumentTag.document_id == docs.route2.document_id)
+        session.query(Favourite)
+        .filter(Favourite.document_id == docs.route2.document_id)
         .count()
     )
     assert count == 1
     count = (
-        session.query(DocumentTagLog)
-        .filter(DocumentTagLog.document_id == docs.route2.document_id)
+        session.query(FavouriteLog)
+        .filter(FavouriteLog.document_id == docs.route2.document_id)
         .count()
     )
     assert count == 1

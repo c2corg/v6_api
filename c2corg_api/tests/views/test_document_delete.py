@@ -22,8 +22,8 @@ from c2corg_api.models.document import (
     get_available_langs,
 )
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
+from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import (
     DocumentChange,
     update_feed_document_create,
@@ -539,11 +539,11 @@ def _add_tag(session, user_ids, document):
     document_id = document.document_id
     document_type = document.type
     user_id = user_ids['contributor']
-    tag = DocumentTag(
+    tag = Favourite(
         document_id=document_id, document_type=document_type, user_id=user_id
     )
     session.add(tag)
-    log = DocumentTagLog(
+    log = FavouriteLog(
         document_id=document_id,
         document_type=document_type,
         user_id=user_id,
@@ -798,13 +798,11 @@ def test_delete_route(client, session, docs):
 
 def _count_tags(session, document_id):
     nb_tags = (
-        session.query(DocumentTag)
-        .filter(DocumentTag.document_id == document_id)
-        .count()
+        session.query(Favourite).filter(Favourite.document_id == document_id).count()
     )
     nb_logs = (
-        session.query(DocumentTagLog)
-        .filter(DocumentTagLog.document_id == document_id)
+        session.query(FavouriteLog)
+        .filter(FavouriteLog.document_id == document_id)
         .count()
     )
     return nb_tags, nb_logs

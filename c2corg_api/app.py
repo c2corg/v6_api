@@ -15,6 +15,7 @@ from c2corg_api.web import (
     document_actions,
     document_map,
     documents,
+    favourites,
     feeds,
     health,
     history,
@@ -102,6 +103,7 @@ def create_fastapi_app(settings, registry=None):
     users.include(app)
     navitia.include(app)
     user_actions.include(app)
+    favourites.include(app)
     document_actions.include(app)
     if openapi.enabled(settings):
         openapi.include(app)

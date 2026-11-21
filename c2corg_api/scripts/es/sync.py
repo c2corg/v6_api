@@ -14,8 +14,8 @@ from c2corg_api.models.association_views import (
 )
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.document_tag import DocumentTagLog
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
+from c2corg_api.models.favourite import FavouriteLog
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user import User
@@ -57,7 +57,7 @@ def sync_es(session, batch_size=1000):
         + get_changed_users(session, since)
         + get_changed_documents_for_associations(session, since)
         + get_deleted_locale_documents(session, since)
-        + get_tagged_documents(session, since)
+        + get_favourite_routes(session, since)
     )
     log.info(f'Number of changed documents: {len(changed_documents)}')
     if changed_documents:
@@ -345,11 +345,13 @@ def get_deleted_documents(session, last_update):
     )
 
 
-def get_tagged_documents(session, last_update):
-    """Return the ids of documents tagged/untagged since the last update."""
+def get_favourite_routes(session, last_update):
+    """Return the routes added to or removed from favourites since the last update."""
+    # only the routes have the users having them in favourites in the index
     return (
-        session.query(DocumentTagLog.document_id, DocumentTagLog.document_type)
-        .filter(DocumentTagLog.written_at >= last_update)
+        session.query(FavouriteLog.document_id, FavouriteLog.document_type)
+        .filter(FavouriteLog.written_at >= last_update)
+        .filter(FavouriteLog.document_type == ROUTE_TYPE)
         .all()
     )
 
