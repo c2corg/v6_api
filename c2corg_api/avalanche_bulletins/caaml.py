@@ -166,9 +166,10 @@ def _checked(data, url):
     try:
         found = data['bulletins']
         for b in found:
-            assert all(isinstance(r['regionID'], str) for r in b['regions'])
+            if not all(isinstance(r['regionID'], str) for r in b['regions']):
+                raise TypeError('a regionID is not a string')
             main_date(b['validTime'])
-    except (AssertionError, KeyError, TypeError, ValueError) as e:
+    except (KeyError, TypeError, ValueError) as e:
         raise UpstreamError(f'{url} is not CAAML v6: {e!r}') from e
     return found
 
