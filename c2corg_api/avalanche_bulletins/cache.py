@@ -56,9 +56,15 @@ def cached(key, fetch):
         return stale
 
 
+def end_time(valid_time):
+    """Return the end of the validity of a bulletin (CET when without offset)."""
+    end = datetime.fromisoformat(valid_time['endTime'])
+    return end if end.tzinfo else end.replace(tzinfo=CET)
+
+
 def main_date(valid_time):
     """Return the day a bulletin is valid for, from its validity (YYYY-MM-DD)."""
     # the last instant of the validity, in local time: a bulletin valid until
     # 17:00, or until midnight, is the one of that day
-    end = datetime.fromisoformat(valid_time['endTime'])
+    end = end_time(valid_time)
     return (end.astimezone(CET) - timedelta(seconds=1)).date().isoformat()

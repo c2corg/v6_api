@@ -15,6 +15,7 @@ PDF = ('GET', '/avalanche-bulletins/regions/{region_id}/latest/pdf')
 
 GET = 'c2corg_api.avalanche_bulletins.meteofrance.requests.get'
 CAAML_GET = 'c2corg_api.avalanche_bulletins.caaml.requests.get'
+REDIS_DOWN = 'c2corg_api.caching.cache_status.is_down'
 
 
 def answer(status, content=b''):
@@ -52,6 +53,19 @@ def json_answer(status, content=b''):
     response = answer(status, content)
     response.json.side_effect = lambda: json.loads(content)
     return response
+
+
+def slf(**fields):
+    """Return a CAAML file of one bulletin, its times without offset."""
+    bulletin = {
+        'regions': [{'regionID': 'CH-1112'}],
+        'validTime': {
+            'startTime': '2026-11-22T08:00:00',
+            'endTime': '2026-11-22T17:00:00',
+        },
+        **fields,
+    }
+    return json.dumps({'bulletins': [bulletin]}).encode()
 
 
 @pytest.mark.usefixtures('client')
@@ -120,6 +134,18 @@ class TestAvalancheBulletin:
         with patch(GET) as get:
             browser.get('/avalanche-bulletins/regions/FR-03/latest', status=503)
         get.assert_not_called()
+
+    @contract(BULLETIN)
+    def test_cache_down(self, browser, monkeypatch):
+        # without the cache, the bulletin is fetched each time, and no last copy
+        with patch(REDIS_DOWN, return_value=True):
+            with patch(GET, return_value=answer(200, bra(3))) as get:
+                browser.get('/avalanche-bulletins/regions/FR-03/latest')
+                browser.get('/avalanche-bulletins/regions/FR-03/latest')
+            assert get.call_count == 2
+            monkeypatch.delenv('METEOFRANCE_API_KEY')
+            browser.get('/avalanche-bulletins/regions/FR-03/latest', status=503)
+            browser.get('/avalanche-bulletins/regions/FR-03/latest/pdf', status=503)
 
 
 @pytest.mark.usefixtures('client')
@@ -202,6 +228,15 @@ class TestCaamlBulletin:
             browser.get('/avalanche-bulletins/regions/CH-1112/latest', status=503)
         with patch(CAAML_GET, return_value=json_answer(200, b'<html>')):
             browser.get('/avalanche-bulletins/regions/CH-1113/latest', status=503)
+        with patch(CAAML_GET, return_value=json_answer(200, slf(source='SLF'))):
+            browser.get('/avalanche-bulletins/regions/CH-1112/latest', status=503)
+
+    @contract(BULLETIN)
+    def test_times_without_offset(self, browser):
+        with patch(CAAML_GET, return_value=json_answer(200, slf())):
+            response = browser.get('/avalanche-bulletins/regions/CH-1112/latest')
+        [bulletin] = response.json['bulletins']
+        assert bulletin['customData']['ALBINA'] == {'mainDate': '2026-11-22'}
 
     @contract(PDF)
     def test_no_pdf(self, browser):

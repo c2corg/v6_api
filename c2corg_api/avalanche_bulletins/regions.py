@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 
 from c2corg_api.avalanche_bulletins import caaml, meteofrance
-from c2corg_api.avalanche_bulletins.cache import CET
+from c2corg_api.avalanche_bulletins.cache import CET, end_time
 
 # out of season, the latest file of a service keeps the last bulletin of the
 # previous season: older than that, it is not shown (as Yeti does)
@@ -40,4 +40,4 @@ def _covers(bulletin, region_id):
 
 
 def _end(bulletin):
-    return datetime.fromisoformat(bulletin['validTime']['endTime'])
+    return end_time(bulletin['validTime'])

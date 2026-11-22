@@ -83,6 +83,8 @@ def test_expiration_shorter_around_the_publications(hour, minute, seconds):
         ('2026-11-22T23:00:00Z', '2026-11-22'),
         # Météo-France, until 18:00
         ('2026-11-22T18:00:00+01:00', '2026-11-22'),
+        # without offset: in local time
+        ('2026-11-23T00:00:00', '2026-11-22'),
     ],
 )
 def test_main_date_is_the_day_of_validity(end, day):

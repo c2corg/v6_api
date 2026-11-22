@@ -156,7 +156,12 @@ def bulletins(service_id, lang):
             data = response.json()
         except ValueError as e:
             raise UpstreamError(f'{url} is not JSON') from e
-        return [_normalized(b, service) for b in _checked(data, url)]
+        found = _checked(data, url)
+        try:
+            return [_normalized(b, service) for b in found]
+        except AttributeError as e:
+            # a source or customData that is not an object
+            raise UpstreamError(f'{url} is not CAAML v6: {e!r}') from e
 
     return cached(f'caaml:{service_id}:{lang}', fetch)
 
