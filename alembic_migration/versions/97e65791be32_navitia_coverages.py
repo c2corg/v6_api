@@ -19,16 +19,18 @@ depends_on = None
 # The coverages were documents of type 'v' without history nor locale, with
 # their polygon in documents_geometries.geom_detail: in longitude and latitude
 # although tagged 3857, as update_navitia_coverage.sh saved them. A polygon
-# really in 3857 is transformed.
+# really in 3857 is transformed. That script joined the polygons of a coverage
+# into one ring, which may cross itself: made valid, until
+# update_navitia_coverages loads them again.
 COPY_SQL = """
 INSERT INTO guidebook.navitia_coverages (coverage_type, geom)
 SELECT DISTINCT ON (c.coverage_type) c.coverage_type,
-       ST_Multi(CASE
+       ST_Multi(ST_CollectionExtract(ST_MakeValid(CASE
          WHEN ST_XMin(g.geom_detail) < -180 OR ST_XMax(g.geom_detail) > 180
            OR ST_YMin(g.geom_detail) < -90 OR ST_YMax(g.geom_detail) > 90
          THEN ST_Transform(ST_SetSRID(g.geom_detail, 3857), 4326)
          ELSE ST_SetSRID(g.geom_detail, 4326)
-       END)
+       END), 3))
 FROM guidebook.coverages c
 JOIN guidebook.documents_geometries g ON g.document_id = c.document_id
 WHERE c.coverage_type IS NOT NULL
