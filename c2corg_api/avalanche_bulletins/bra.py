@@ -95,7 +95,11 @@ def _bulletin(root):
             'snowpackStructure': _texts(None, _text(root, 'QUALITE/TEXTE')),
             'weatherForecast': _texts(None, _text(root, 'METEO/COMMENTAIRE')),
             'tendency': _tendency(root, risk),
-            'customData': {'MeteoFrance': _meteofrance(root, risk)},
+            'customData': {
+                # the day the bulletin is valid for, as in the EAWS bulletins
+                'ALBINA': {'mainDate': _date(root.get('DATEVALIDITE'))},
+                'MeteoFrance': _meteofrance(root, risk),
+            },
         }
     )
 

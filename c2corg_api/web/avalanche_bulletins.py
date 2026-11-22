@@ -1,6 +1,8 @@
 """The avalanche bulletins: Météo-France's, as CAAML v6 JSON, and its PDF."""
 # Only the French massifs for now: the EAWS region ids FR-01 to FR-74 are the
-# numbers of the Météo-France massifs (c2corg/v6_api#2681).
+# numbers of the Météo-France massifs (c2corg/v6_api#2681). The latest bulletin
+# only, for now: the bulletin of a day will be /regions/{region_id}/{YYYY-MM-DD}
+# (#2686), the day it is valid for, as the EAWS services name their files.
 
 from typing import Annotated
 
@@ -26,8 +28,11 @@ CACHE_CONTROL = 'public, max-age=300'
 def include(app):
     """Add the routes of this module to the FastAPI application."""
     for path, endpoint in (
-        ('/avalanche-bulletins/regions/{region_id}', avalanche_bulletin),
-        ('/avalanche-bulletins/regions/{region_id}/pdf', avalanche_bulletin_pdf),
+        ('/avalanche-bulletins/regions/{region_id}/latest', avalanche_bulletin),
+        (
+            '/avalanche-bulletins/regions/{region_id}/latest/pdf',
+            avalanche_bulletin_pdf,
+        ),
     ):
         app.add_api_route(
             path,
@@ -39,7 +44,7 @@ def include(app):
 
 
 def avalanche_bulletin(region_id: RegionId, response: Response):
-    """Return the bulletin of a region as CAAML v6: none out of season."""
+    """Return the last bulletin published for a region, as CAAML v6."""
     massif = meteofrance.massif_of(region_id)
     if massif is None:
         return http_error(HTTPNotFound('no avalanche bulletin for this region'))
@@ -52,7 +57,7 @@ def avalanche_bulletin(region_id: RegionId, response: Response):
 
 
 def avalanche_bulletin_pdf(region_id: RegionId):
-    """Return the official PDF of the bulletin of a region."""
+    """Return the official PDF of the last bulletin of a region."""
     massif = meteofrance.massif_of(region_id)
     if massif is None:
         return http_error(HTTPNotFound('no avalanche bulletin for this region'))

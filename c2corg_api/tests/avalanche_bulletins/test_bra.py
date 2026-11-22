@@ -37,6 +37,8 @@ def test_two_elevation_bands_all_day():
         {'problemType': 'wet_snow'},
     ]
     assert b['tendency'][0]['tendencyType'] == 'steady'
+    # the day it is valid for: the date of its URL once the bulletins are kept
+    assert b['customData']['ALBINA'] == {'mainDate': '2026-11-22'}
     meteofrance = b['customData']['MeteoFrance']
     assert meteofrance['maxDangerRating'] == 'high'
     assert meteofrance['elevationThreshold'] == 2200

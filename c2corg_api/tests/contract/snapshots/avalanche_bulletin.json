@@ -13,6 +13,9 @@
         ],
         "bulletinID": "str",
         "customData": {
+          "ALBINA": {
+            "mainDate": "str"
+          },
           "MeteoFrance": {
             "avalancheProneLocation": {
               "aspects": [
