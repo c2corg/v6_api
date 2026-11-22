@@ -81,7 +81,7 @@ def upgrade():
     # dropped from the first migration of the coverages after it ran somewhere
     op.execute('DROP TABLE IF EXISTS guidebook.coverages_archives')
     op.execute("DELETE FROM guidebook.deleted_documents WHERE document_type = 'v'")
-    op.execute(f'DELETE FROM guidebook.documents WHERE document_id IN ({COVERAGE_IDS})')
+    op.execute("DELETE FROM guidebook.documents WHERE type = 'v'")
 
 
 def downgrade():
