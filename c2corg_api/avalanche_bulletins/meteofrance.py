@@ -1,37 +1,22 @@
 """The avalanche bulletins of Météo-France (DPBRA API), cached in Redis."""
 # Fetched on demand, with the key of the association (METEOFRANCE_API_KEY).
-# The last copy is answered while Météo-France does not answer.
 
-import logging
 import os
-from datetime import datetime, time
 
 import requests
-from dogpile.cache.api import NO_VALUE
 
-from c2corg_api import caching
-from c2corg_api.avalanche_bulletins.bra import PARIS, InvalidBulletin, bra_to_caaml
-from c2corg_api.caching import cache_avalanche_bulletin
-
-log = logging.getLogger(__name__)
+from c2corg_api.avalanche_bulletins.bra import InvalidBulletin, bra_to_caaml
+from c2corg_api.avalanche_bulletins.cache import (
+    TIMEOUT,
+    USER_AGENT,
+    UpstreamError,
+    cached,
+)
 
 API_URL = 'https://public-api.meteofrance.fr/public/DPBRA/v1/massif/BRA'
 
 # the massifs of GET /liste-massifs: Andorra (71) has its own service
 MASSIFS = frozenset([*range(1, 24), 40, 41, *range(64, 71), 72, 73, 74])
-
-# Météo-France publishes at about 16:00, and corrects rarely
-PUBLICATION = (time(15, 30), time(18, 30))
-EXPIRATION_AT_PUBLICATION = 600
-EXPIRATION = 3600
-
-# below the 15 s of the lock of the cache (caching.configure_caches): a
-# longer fetch would lose the lock, and the cache be taken as down
-TIMEOUT = (3, 10)
-
-
-class UpstreamError(Exception):
-    """Météo-France did not answer, or the API key is not set."""
 
 
 def massif_of(region_id):
@@ -57,33 +42,12 @@ def bulletin(massif):
         except InvalidBulletin as e:
             raise UpstreamError(f'invalid bulletin of massif {massif}: {e}') from e
 
-    return _cached(str(massif), fetch)
+    return cached(f'meteofrance:{massif}', fetch)
 
 
 def pdf(massif):
     """Return the official PDF of the bulletin of a massif, None without one."""
-    return _cached(f'{massif}.pdf', lambda: _fetch(massif, 'pdf'))
-
-
-def expiration(now=None):
-    """Return how long a bulletin is kept (s): less around its publication."""
-    now = (now or datetime.now(PARIS)).astimezone(PARIS).time()
-    start, end = PUBLICATION
-    return EXPIRATION_AT_PUBLICATION if start <= now <= end else EXPIRATION
-
-
-def _cached(key, fetch):
-    key = f'{caching.CACHE_VERSION}:{key}'
-    try:
-        return caching.get_or_create(
-            cache_avalanche_bulletin, key, fetch, expiration_time=expiration()
-        )
-    except UpstreamError:
-        stale = caching.get(cache_avalanche_bulletin, key)
-        if stale is NO_VALUE:
-            raise
-        log.warning('Météo-France did not answer, answering the last bulletin %s', key)
-        return stale
+    return cached(f'meteofrance:{massif}.pdf', lambda: _fetch(massif, 'pdf'))
 
 
 def _fetch(massif, kind):
@@ -95,7 +59,7 @@ def _fetch(massif, kind):
         response = requests.get(
             API_URL,
             params={'id-massif': massif, 'format': kind},
-            headers={'apikey': key},
+            headers={'apikey': key, 'User-Agent': USER_AGENT},
             timeout=TIMEOUT,
         )
     except requests.exceptions.RequestException as e:

@@ -1,0 +1,384 @@
+{
+ "bulletins": [
+  {
+   "publicationTime": "2026-05-02T15:00:00Z",
+   "validTime": {
+    "startTime": "2026-05-02T15:00:00Z",
+    "endTime": "2026-05-03T15:00:00Z"
+   },
+   "unscheduled": false,
+   "avalancheActivity": {
+    "highlights": "Slight increase in danger of wet snow slides in the course of the day.",
+    "comment": "As a consequence of warming during the day and the solar radiation, the likelihood of wet snow slides being released will increase a little. Individual avalanche prone locations are to be found on extremely steep slopes at high altitude. <br/> <br/> This is the final hazard map for the winter 2025/26. Current information and announcements are posted on our blog. We wish all users of the Euregio Avalanche Report an accident-free summer season."
+   },
+   "snowpackStructure": {
+    "comment": "Outgoing longwave radiation during the night will be good over a wide area. The surface of the snowpack will freeze to form a strong crust and will soften during the day. At low and intermediate altitudes hardly any snow is lying."
+   },
+   "tendency": [
+    {
+     "highlights": "Low avalanche danger will prevail.",
+     "tendencyType": "steady",
+     "validTime": {
+      "startTime": "2026-05-03T15:00:00Z",
+      "endTime": "2026-05-04T15:00:00Z"
+     }
+    }
+   ],
+   "customData": {
+    "ALBINA": {
+     "mainDate": "2026-05-03"
+    },
+    "LWD_Tyrol": {
+     "dangerPatterns": [
+      "DP10"
+     ]
+    }
+   },
+   "avalancheProblems": [],
+   "bulletinID": "f8bf23c4-55f1-4e2b-9f5c-b49e7d8ee38b",
+   "dangerRatings": [
+    {
+     "mainValue": "low",
+     "validTimePeriod": "all_day"
+    }
+   ],
+   "lang": "en",
+   "regions": [
+    {
+     "name": "Brandenberg Alps",
+     "regionID": "AT-07-05"
+    },
+    {
+     "name": "Kaiser Mountains - Waidring Alps",
+     "regionID": "AT-07-06"
+    },
+    {
+     "name": "Kitzbühel Alps Wildseeloder",
+     "regionID": "AT-07-18"
+    },
+    {
+     "name": "Ammergau Alps South",
+     "regionID": "AT-07-02-01"
+    },
+    {
+     "name": "Kitzbühel Alps Wildschönau",
+     "regionID": "AT-07-17-02"
+    },
+    {
+     "name": "Kitzbühel Alps Brixental",
+     "regionID": "AT-07-17-01"
+    }
+   ]
+  },
+  {
+   "publicationTime": "2026-05-02T15:00:00Z",
+   "validTime": {
+    "startTime": "2026-05-02T15:00:00Z",
+    "endTime": "2026-05-03T15:00:00Z"
+   },
+   "unscheduled": false,
+   "avalancheActivity": {
+    "highlights": "Slight increase in danger of wet avalanches in the course of the day.",
+    "comment": "As the day progresses as a consequence of warming during the day and solar radiation there will be only a slight increase in the danger of wet avalanches. Wet avalanches can in isolated cases be released by people, especially on very steep sunny slopes above approximately 2500 m, this also applies on very steep shady slopes below approximately 2500 m in gullies and bowls. In isolated cases avalanches are medium-sized. <br/> <br/> Weak layers in the old snowpack can be released in isolated cases and mostly by large additional loads in particular on very steep shady slopes, in particular above approximately 2500 m. <br/> <br/> In steep terrain there is a danger of falling on the hard snow surface. <br/> <br/> This is the final hazard map for the winter 2025/26. Current information and announcements are posted on our blog. We wish all users of the Euregio Avalanche Report an accident-free summer season."
+   },
+   "snowpackStructure": {
+    "comment": "Outgoing longwave radiation during the night will be good over a wide area. The surface of the snowpack will freeze to form a strong crust and will soften during the day. <br/> <br/> Shady slopes above approximately 2500 m: Faceted weak layers exist in the bottom section of the old snowpack at elevated altitudes. <br/> <br/> Below approximately 2000 m no snow is lying. Between approximately 2000 and 2500 m only a little snow is now lying."
+   },
+   "tendency": [
+    {
+     "highlights": "The early morning will see favourable conditions generally. Slight increase in danger of wet avalanches as a consequence of warming during the day and solar radiation.",
+     "tendencyType": "steady",
+     "validTime": {
+      "startTime": "2026-05-03T15:00:00Z",
+      "endTime": "2026-05-04T15:00:00Z"
+     }
+    }
+   ],
+   "customData": {
+    "ALBINA": {
+     "mainDate": "2026-05-03"
+    },
+    "LWD_Tyrol": {
+     "dangerPatterns": [
+      "DP10",
+      "DP1"
+     ]
+    }
+   },
+   "avalancheProblems": [
+    {
+     "problemType": "wet_snow",
+     "elevation": {
+      "lowerBound": "2500"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "fair",
+     "frequency": "few",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "S",
+      "W",
+      "E",
+      "SE",
+      "SW"
+     ]
+    }
+   ],
+   "bulletinID": "5dc0e225-e322-42c1-895f-f6808e9a4c0e",
+   "dangerRatings": [
+    {
+     "mainValue": "low",
+     "validTimePeriod": "all_day"
+    }
+   ],
+   "lang": "en",
+   "regions": [
+    {
+     "name": "Kauner Ridge",
+     "regionID": "AT-07-14-01"
+    },
+    {
+     "name": "Verwall Mountains Central",
+     "regionID": "AT-07-10"
+    },
+    {
+     "name": "Verwall Mountains East",
+     "regionID": "AT-07-11"
+    },
+    {
+     "name": "Silvretta East",
+     "regionID": "AT-07-12"
+    },
+    {
+     "name": "Samnaun Mountains",
+     "regionID": "AT-07-13"
+    },
+    {
+     "name": "Tuxer Alps West",
+     "regionID": "AT-07-15"
+    },
+    {
+     "name": "Tuxer Alps East",
+     "regionID": "AT-07-16"
+    },
+    {
+     "name": "Glockturm Group",
+     "regionID": "AT-07-19"
+    },
+    {
+     "name": "Karwendel Mountains East",
+     "regionID": "AT-07-04-02"
+    },
+    {
+     "name": "Karwendel Mountains West",
+     "regionID": "AT-07-04-01"
+    },
+    {
+     "name": "Lienz Dolomites",
+     "regionID": "AT-07-29-02"
+    },
+    {
+     "name": "Kreuzeck Group East Tirol",
+     "regionID": "AT-07-29-03"
+    },
+    {
+     "name": "Carnic Alps East Tirol",
+     "regionID": "AT-07-29-01"
+    },
+    {
+     "name": "Zillertal Alps Northeast",
+     "regionID": "AT-07-23-02"
+    },
+    {
+     "name": "Zillertal Alps Northwest",
+     "regionID": "AT-07-23-01"
+    },
+    {
+     "name": "Lechtal Alps East",
+     "regionID": "AT-07-02-02"
+    },
+    {
+     "name": "Weißkugel Group",
+     "regionID": "AT-07-20"
+    },
+    {
+     "name": "Gurgler Group",
+     "regionID": "AT-07-21"
+    },
+    {
+     "name": "Stubai Alps Central",
+     "regionID": "AT-07-22"
+    },
+    {
+     "name": "Allgäu Alps East",
+     "regionID": "AT-07-01"
+    },
+    {
+     "name": "Venediger Group South",
+     "regionID": "AT-07-24"
+    },
+    {
+     "name": "Mieming Mountains",
+     "regionID": "AT-07-03"
+    },
+    {
+     "name": "Lasörling Group",
+     "regionID": "AT-07-25"
+    },
+    {
+     "name": "Deferegger Alps East",
+     "regionID": "AT-07-27"
+    },
+    {
+     "name": "Schober Group West",
+     "regionID": "AT-07-28"
+    },
+    {
+     "name": "Lechtal Alps West",
+     "regionID": "AT-07-07"
+    },
+    {
+     "name": "Lechtal Alps Central",
+     "regionID": "AT-07-08"
+    },
+    {
+     "name": "Kalkkögel",
+     "regionID": "AT-07-14-04"
+    },
+    {
+     "name": "Grieskogel Mountains",
+     "regionID": "AT-07-09"
+    },
+    {
+     "name": "Serles Ridge",
+     "regionID": "AT-07-14-05"
+    },
+    {
+     "name": "Kühtai - Geigen Ridge",
+     "regionID": "AT-07-14-02"
+    },
+    {
+     "name": "Sellrain - Alpein Mountains",
+     "regionID": "AT-07-14-03"
+    },
+    {
+     "name": "Goldried",
+     "regionID": "AT-07-26-02"
+    },
+    {
+     "name": "Glockner Group South",
+     "regionID": "AT-07-26-01"
+    },
+    {
+     "name": "Sexten Dolomites",
+     "regionID": "IT-32-BZ-20"
+    },
+    {
+     "name": "Ratschings",
+     "regionID": "IT-32-BZ-04-02"
+    },
+    {
+     "name": "Stubai Alps South",
+     "regionID": "IT-32-BZ-04-01"
+    },
+    {
+     "name": "Upper Passeier Valley",
+     "regionID": "IT-32-BZ-07-01"
+    },
+    {
+     "name": "Texel Mountains",
+     "regionID": "IT-32-BZ-07-02"
+    },
+    {
+     "name": "Gröden Dolomites",
+     "regionID": "IT-32-BZ-18-02"
+    },
+    {
+     "name": "Lüsner Mountains",
+     "regionID": "IT-32-BZ-18-01"
+    },
+    {
+     "name": "Upper Ahr Valley",
+     "regionID": "IT-32-BZ-05-03"
+    },
+    {
+     "name": "Zillertal Alps South",
+     "regionID": "IT-32-BZ-05-02"
+    },
+    {
+     "name": "Pfitsch",
+     "regionID": "IT-32-BZ-05-01"
+    },
+    {
+     "name": "Sesvenna Group South",
+     "regionID": "IT-32-BZ-01-02"
+    },
+    {
+     "name": "Schnals Ridge",
+     "regionID": "IT-32-BZ-03"
+    },
+    {
+     "name": "Sesvenna Group North",
+     "regionID": "IT-32-BZ-01-01"
+    },
+    {
+     "name": "Saldurn-Mastaun Ridge",
+     "regionID": "IT-32-BZ-06"
+    },
+    {
+     "name": "Hirzer Range",
+     "regionID": "IT-32-BZ-08-01"
+    },
+    {
+     "name": "Pfunderer Mountains West",
+     "regionID": "IT-32-BZ-09"
+    },
+    {
+     "name": "Mount Saint Jakob Range",
+     "regionID": "IT-32-BZ-08-02"
+    },
+    {
+     "name": "Pfunderer Mountains East",
+     "regionID": "IT-32-BZ-10"
+    },
+    {
+     "name": "Durreck Range",
+     "regionID": "IT-32-BZ-11"
+    },
+    {
+     "name": "Langtaufers",
+     "regionID": "IT-32-BZ-02-01"
+    },
+    {
+     "name": "Rieserferner Mountains",
+     "regionID": "IT-32-BZ-12"
+    },
+    {
+     "name": "Deferegger Alps West",
+     "regionID": "IT-32-BZ-13"
+    },
+    {
+     "name": "Ortler Range",
+     "regionID": "IT-32-BZ-14"
+    },
+    {
+     "name": "Ulten Valley",
+     "regionID": "IT-32-BZ-15"
+    },
+    {
+     "name": "Planeil Mountains",
+     "regionID": "IT-32-BZ-02-02"
+    },
+    {
+     "name": "Prags Dolomites",
+     "regionID": "IT-32-BZ-19"
+    }
+   ]
+  }
+ ]
+}
