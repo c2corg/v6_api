@@ -4,7 +4,6 @@ from c2corg_api.models.common.document_types import (
     AREA_TYPE,
     ARTICLE_TYPE,
     BOOK_TYPE,
-    COVERAGE_TYPE,
     IMAGE_TYPE,
     MAP_TYPE,
     OUTING_TYPE,
@@ -56,7 +55,6 @@ def test_license(document_type, attrs, expected):
     'document_type,attrs',
     [
         (MAP_TYPE, {}),
-        (COVERAGE_TYPE, {}),
         # the type is not loaded
         (ARTICLE_TYPE, {}),
         (IMAGE_TYPE, {}),

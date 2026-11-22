@@ -70,6 +70,7 @@ fill_es_index = "c2corg_api.scripts.es.fill_index:main"
 reindex_es = "c2corg_api.scripts.es.reindex:main"
 es_index_fingerprint = "c2corg_api.scripts.es.fingerprint:main"
 recompute_outing_quality = "c2corg_api.scripts.outings.recompute_quality:main"
+update_navitia_coverages = "c2corg_api.scripts.navitia.update_coverages:main"
 
 [tool.setuptools]
 zip-safe = false

@@ -84,11 +84,6 @@ def fill_index(session, batch_size=1000, index_name=None, mark_updated=True):
     count = 0
     with batch:
         for doc_type in document_types:
-            if doc_type not in search_documents:
-                # some document types (e.g. coverages) are not indexed
-                logging.warning(f'Document type {doc_type} is not indexed')
-                continue
-
             logging.info(f'Importing document type {doc_type}')
             to_search_document = search_documents[doc_type].to_search_document
 

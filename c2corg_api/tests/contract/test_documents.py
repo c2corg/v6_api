@@ -17,7 +17,6 @@ DOCUMENT_TYPES = [
     'areas',
     'articles',
     'books',
-    'coverages',
     'images',
     'maps',
     'outings',
@@ -27,9 +26,9 @@ DOCUMENT_TYPES = [
     'xreports',
 ]
 # the types with an /{id}/{lang}/info route
-WITH_INFO = [t for t in DOCUMENT_TYPES if t != 'coverages']
+WITH_INFO = DOCUMENT_TYPES
 # the types with an /{id}/{lang}/{version_id} route
-WITH_VERSION = [t for t in DOCUMENT_TYPES if t not in ('coverages', 'maps', 'profiles')]
+WITH_VERSION = [t for t in DOCUMENT_TYPES if t not in ('maps', 'profiles')]
 
 
 def _routes(method, path, types):

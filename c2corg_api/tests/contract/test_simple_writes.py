@@ -1,6 +1,5 @@
 import pytest
 
-from c2corg_api.tests import errors_of
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_writes import writable
 
@@ -72,13 +71,3 @@ class TestModeratedWrites:
 
         response = documents.update('maps', change, user='contributor', status=403)
         check_snapshot('maps_update_forbidden', response)
-
-
-@pytest.mark.usefixtures('documents')
-class TestCoverageWrites:
-    @contract(('POST', '/coverages'))
-    def test_create_invalid(self, browser):
-        body = {'coverage_type': 'no-such-coverage', 'locales': []}
-        response = browser.post('/coverages', body, user='contributor', status=422)
-        check_snapshot('coverages_create_invalid', response)
-        assert [e['name'] for e in errors_of(response.json)] == ['coverage_type']

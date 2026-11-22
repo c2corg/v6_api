@@ -8,7 +8,6 @@ from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
 from c2corg_api.models.cache_version import CacheVersion, update_cache_version_full
 from c2corg_api.models.common.attributes import image_types
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.models.document import (
     ArchiveDocument,
     ArchiveDocumentGeometry,
@@ -91,7 +90,6 @@ def validate_document_type(request, **kwargs):
         ARTICLE_TYPE,
         BOOK_TYPE,
         XREPORT_TYPE,
-        COVERAGE_TYPE,
     ):
         request.errors.add(
             'querystring', 'document_id', 'Unsupported type when deleting document'
@@ -517,8 +515,6 @@ def _get_models(document_type):
         return Article, None, ArchiveArticle, None
     if document_type == BOOK_TYPE:
         return Book, None, ArchiveBook, None
-    if document_type == COVERAGE_TYPE:
-        return Coverage, None, ArchiveDocument, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
     raise AssertionError(f'unexpected document type {document_type}')

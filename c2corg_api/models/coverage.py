@@ -1,57 +1,33 @@
-from sqlalchemy import Column, ForeignKey, Integer
+from geoalchemy2 import Geometry
+from sqlalchemy import Column, DateTime, func
 
-from c2corg_api.models import schema
-from c2corg_api.models.common import document_types
-from c2corg_api.models.document import (
-    Document,
-)
+from c2corg_api.models import Base, schema
 from c2corg_api.models.enums import coverage_types
-from c2corg_api.models.utils import copy_attributes
-
-COVERAGE_TYPE = document_types.COVERAGE_TYPE
 
 
-class _CoverageMixin:
-    coverage_type = Column(coverage_types)
+class NavitiaCoverage(Base):
+    """A region of Navitia, the public transport API.
 
+    France is divided into a few coverages ('fr-idf', 'fr-ne', 'fr-nw',
+    'fr-se', 'fr-sw'). The isochrones need the coverage of their source, and
+    the journeys give better results with the coverage of their destination.
 
-attributes = ['coverage_type']
+    Reference data, not a document: no history, no locale, no association.
+    `scripts/navitia/update_coverages.py` loads them from Navitia, to run
+    again when Navitia changes its coverages.
 
-
-class Coverage(_CoverageMixin, Document):
-    """
-    Represents a Navitia Coverage, which defines a specific geographical area.
-
-    For example, France is divided into multiple coverages:
-    - 'fr-se' : South-East France
-    - 'fr-ne' : North-East France
-    - 'fr-nw' : North-West France
-    - 'fr-sw' : South-West France
-    - 'fr-idf': Île-de-France region
-
-    They are defined by Navitia, and might get updated,
-    hence the script 'update_navitia_coverage'
-
-    Usage:
-        Coverage is used to get more results when using journey API,
-        and is required when using Isochrone API
-
-    More information:
-        See the Navitia documentation for coverage details:
-        https://doc.navitia.io/#coverage
+    See https://doc.navitia.io/#coverage
     """
 
-    __tablename__ = 'coverages'
+    __tablename__ = 'navitia_coverages'
+    __table_args__ = {'schema': schema}
 
-    document_id = Column(
-        Integer, ForeignKey(schema + '.documents.document_id'), primary_key=True
+    coverage_type = Column(coverage_types, primary_key=True)
+    # in longitude and latitude, as Navitia gives them
+    geom = Column(
+        Geometry(geometry_type='MULTIPOLYGON', srid=4326, spatial_index=False),
+        nullable=False,
     )
-
-    __mapper_args__ = {
-        'polymorphic_identity': COVERAGE_TYPE,
-        'inherit_condition': Document.document_id == document_id,
-    }
-
-    def update(self, other):
-        super().update(other)
-        copy_attributes(other, self, attributes)
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

@@ -1,86 +1,21 @@
-import functools
+"""The coverages of Navitia (public transport API): which one a place is in."""
+
 import json
 import logging
 import math
 
 from shapely.errors import ShapelyError
-from shapely.geometry import Point, shape
+from shapely.geometry import shape
+from sqlalchemy import func
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.common.fields_coverage import fields_coverage
-from c2corg_api.models.coverage import (
-    COVERAGE_TYPE,
-    Coverage,
-)
-from c2corg_api.models.utils import wkb_to_shape
-from c2corg_api.schemas.base import body_validator
-from c2corg_api.schemas.coverage import (
-    CoverageCreateSchema,
-    CoverageUpdateSchema,
-    coverage_schema,
-)
-from c2corg_api.views.document import (
-    collection_get,
-    create_document,
-    make_validator_create,
-    make_validator_update,
-    put_document,
-    read_document,
-)
-from c2corg_api.views.document_schemas import coverage_documents_config
+from c2corg_api.models.coverage import NavitiaCoverage
 from c2corg_api.views.resource import write
-from c2corg_api.views.validation import (
-    validate_associations,
-    validate_id,
-)
 
 log = logging.getLogger(__name__)
 
-validate_coverage_create = make_validator_create(fields_coverage.get('required'))
-validate_coverage_update = make_validator_update(fields_coverage.get('required'))
-validate_associations_create = functools.partial(
-    validate_associations, COVERAGE_TYPE, True
-)
-validate_associations_update = functools.partial(
-    validate_associations, COVERAGE_TYPE, False
-)
-
-
-@write(
-    validators=[
-        body_validator(CoverageCreateSchema),
-        validate_coverage_create,
-        validate_associations_create,
-    ],
-    permission='authenticated',
-    json=True,
-)
-def create_coverage(request):
-    return create_document(request, coverage_schema, allow_anonymous=False)
-
-
-@write(
-    validators=[
-        body_validator(CoverageUpdateSchema),
-        validate_id,
-        validate_coverage_update,
-        validate_associations_update,
-    ],
-    permission='authenticated',
-    json=True,
-)
-def update_coverage(request):
-    return put_document(request, Coverage, coverage_schema)
-
-
-def list_coverages(request):
-    return collection_get(request, COVERAGE_TYPE, coverage_documents_config)
-
-
-def get_coverage_document(request):
-    return read_document(
-        request, coverage_documents_config, coverage_schema, include_areas=False
-    )
+# the coverages are in longitude and latitude
+SRID = 4326
 
 
 def validate_lon_lat(request, **kwargs):
@@ -124,42 +59,23 @@ def coverage_of_a_polygon(request):
 
 
 def get_coverage(lon, lat):
-    """Get the coverage that contains a point(lon, lat)."""
-    pt = Point(lon, lat)
-
-    coverage_found = None
-
-    coverages = DBSession.query(Coverage).all()
-
-    for coverage in coverages:
-        geom = coverage.geometry.geom_detail
-
-        # convert WKB → Shapely polygon
-        poly = wkb_to_shape(geom)
-
-        if poly.contains(pt):
-            coverage_found = coverage
-            break
-
-    if coverage_found:
-        return coverage_found.coverage_type
-    else:
-        return None
+    """Return the type of the coverage containing a point, or None."""
+    point = func.ST_SetSRID(func.ST_MakePoint(lon, lat), SRID)
+    return (
+        DBSession.query(NavitiaCoverage.coverage_type)
+        .filter(func.ST_Contains(NavitiaCoverage.geom, point))
+        .order_by(NavitiaCoverage.coverage_type)
+        .limit(1)
+        .scalar()
+    )
 
 
 def get_coverages(polygon):
-    """Get all the coverages that intersects a polygon."""
-    coverage_found = []
-
-    coverages = DBSession.query(Coverage).all()
-
-    for coverage in coverages:
-        geom = coverage.geometry.geom_detail
-
-        # convert WKB → Shapely polygon
-        poly = wkb_to_shape(geom)
-
-        if poly.contains(polygon) or poly.intersects(polygon):
-            coverage_found.append(coverage.coverage_type)
-
-    return coverage_found
+    """Return the types of the coverages a geometry intersects."""
+    geom = func.ST_GeomFromText(polygon.wkt, SRID)
+    return [
+        coverage_type
+        for (coverage_type,) in DBSession.query(NavitiaCoverage.coverage_type)
+        .filter(func.ST_Intersects(NavitiaCoverage.geom, geom))
+        .order_by(NavitiaCoverage.coverage_type)
+    ]
