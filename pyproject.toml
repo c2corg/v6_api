@@ -46,6 +46,8 @@ dependencies = [
     "pydiscourse==1.7.0",
     "pydantic==2.14.3",
     "fastapi==0.162.7",
+    # parses the XML of the Météo-France avalanche bulletins
+    "defusedxml==0.7.1",
 ]
 
 [dependency-groups]

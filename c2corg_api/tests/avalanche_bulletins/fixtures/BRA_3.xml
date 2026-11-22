@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<?xml-stylesheet type="text/xsl" href="../web/bra.xslt"?>
+<BULLETINS_NEIGE_AVALANCHE xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" TYPEBULLETIN="BRA" ID="3" MASSIF="Mont-Blanc" DATEBULLETIN="2026-11-21T16:00:00" DATEECHEANCE="2026-11-22T18:00:00" DATEVALIDITE="2026-11-22T18:00:00" DATEDIFFUSION="2026-11-21T16:21:00" AMENDEMENT="false">
+  <DateValidite>2026-11-22T18:00:00</DateValidite>
+  <CARTOUCHERISQUE>
+    <RISQUE RISQUE1="3" EVOLURISQUE1="" LOC1="&lt;2200" ALTITUDE="2200" RISQUE2="4" EVOLURISQUE2="" LOC2="&gt;2200" RISQUEMAXI="4" COMMENTAIRE="Au-dessus de 2200m indice de risque fort, plus bas indice marqué." RISQUEMAXIJ2="4" DATE_RISQUE_J2="2026-11-23T00:00:00"/>
+    <PENTE NE="true" E="true" SE="true" S="true" SW="true" W="true" NW="true" N="true" COMMENTAIRE=""/>
+    <ACCIDENTEL><![CDATA[Instabilités dans la neige fraîche en altitude. ]]></ACCIDENTEL>
+    <NATUREL><![CDATA[Avalanches de neige fraîche en altitude et de neige humide en dessous, sous les précipitations. ]]></NATUREL>
+    <RESUME><![CDATA[Départs spontanés : Avalanches de neige fraîche en altitude et de neige humide en dessous, sous les précipitations. 
+Déclenchements skieurs : Instabilités dans la neige fraîche en altitude. ]]></RESUME>
+    <RisqueJ2><![CDATA[Indice de risque fort]]></RisqueJ2>
+    <CommentaireRisqueJ2><![CDATA[Encore quelques chutes de neige froide dans la nuit de dimanche à lundi. Les instabilités présentes dans le manteau neigeux en altitude sont toujours très réactives. Manteau neigeux plus stable à plus basse altitude. ]]></CommentaireRisqueJ2>
+    <AVIS>FORT RISQUE D'AVALANCHE</AVIS>
+    <VIGILANCE/>
+    <ImageRisque>montagne_risques_3.png</ImageRisque>
+    <ImagePente>rose_pentes_3.png</ImagePente>
+  </CARTOUCHERISQUE>
+  <STABILITE>
+    <SitAvalTyp SAT1="1" SAT2="4"/>
+    <TITRE><![CDATA[Nouvelles précipitations toute la journée avec des variations de la limite pluie-neige. ]]></TITRE>
+    <TEXTESANSTITRE><![CDATA[Départs spontanés :* Au-dessus de 2200 m : avalanches de neige fraîche pendant les chutes de neige, toute la journée de dimanche. Plus nombreuses au fil de la journée avec l'épaississement du manteau neigeux. La neige tombe sous un fort vent de Sud-Ouest à Ouest, créant des instabilités dans la couche de neige, ainsi que des grosses accumulations. Cassures plus épaisses en montant en altitude. Taille 2 à 3 (moyenne à grande).* En dessous de 2200 m : nombreuses avalanches de neige humide, sous les pluies, en tous versants. Plus nombreuses le matin, lors de la remontée de la limite pluie-neige. Quelques départs au sol possibles, sur les pentes raides et lisses (pentes herbeuses, dalles rocheuses). Cassures épaisses possibles au-dessus de 1700 m : taille 2 (moyenne), rarement 3 (grande). Avalanches plus petites en descendant en altitude. Déclenchements provoqués :* Au-dessus de 2200 m : nombreuses plaques friables dans la neige récente et fraiche. Facilement déclenchables. De plus en plus nombreuses au fil des chutes de neige de la journée de dimanche. Les plaques sont plus épaisses au dessus de 2400/2600 m, surtout sur l'Est des massifs des Aiguilles-Rouges et du Mont-Blanc : taille 2 à 3. Les instabilités sont notamment formées par le fort vent d'Ouest à Sud-Ouest ces derniers jours, mais aussi dimanche. Ces plaques sont parfois peu visibles. * En dessous de 2200 m : de la neige humide peut couler sous les skis. Possible dès le début de journée en tous versants. Taille 1 à 2 (petite à moyenne). ]]></TEXTESANSTITRE>
+    <TEXTE><![CDATA[Nouvelles précipitations toute la journée avec des variations de la limite pluie-neige. 
+
+Départs spontanés :* Au-dessus de 2200 m : avalanches de neige fraîche pendant les chutes de neige, toute la journée de dimanche. Plus nombreuses au fil de la journée avec l'épaississement du manteau neigeux. La neige tombe sous un fort vent de Sud-Ouest à Ouest, créant des instabilités dans la couche de neige, ainsi que des grosses accumulations. Cassures plus épaisses en montant en altitude. Taille 2 à 3 (moyenne à grande).* En dessous de 2200 m : nombreuses avalanches de neige humide, sous les pluies, en tous versants. Plus nombreuses le matin, lors de la remontée de la limite pluie-neige. Quelques départs au sol possibles, sur les pentes raides et lisses (pentes herbeuses, dalles rocheuses). Cassures épaisses possibles au-dessus de 1700 m : taille 2 (moyenne), rarement 3 (grande). Avalanches plus petites en descendant en altitude. Déclenchements provoqués :* Au-dessus de 2200 m : nombreuses plaques friables dans la neige récente et fraiche. Facilement déclenchables. De plus en plus nombreuses au fil des chutes de neige de la journée de dimanche. Les plaques sont plus épaisses au dessus de 2400/2600 m, surtout sur l'Est des massifs des Aiguilles-Rouges et du Mont-Blanc : taille 2 à 3. Les instabilités sont notamment formées par le fort vent d'Ouest à Sud-Ouest ces derniers jours, mais aussi dimanche. Ces plaques sont parfois peu visibles. * En dessous de 2200 m : de la neige humide peut couler sous les skis. Possible dès le début de journée en tous versants. Taille 1 à 2 (petite à moyenne). ]]></TEXTE>
+  </STABILITE>
+  <QUALITE>
+    <TEXTE><![CDATA[Enneigement : Pour la saison, l’enneigement est correct. L'enneigement est plus important à l'est du massif qu'à l'ouest. On peut chausser les skis au-dessus de 1500/1600 m sur l'herbe. Pas de sous-couche en dessous de 2300 m. Nombreux cailloux à peine recouverts. Présence de grosses corniches et de grosses congères (plus d'un mètre). Les cumuls de neige sont un peu plus faibles sur l'ouest du massif. Qualité de la neige ce dimanche :* En dessous de 2200 m : le matin, le manteau neigeux se détrempe avec les chutes de pluie, sur tout ou grande partie de l'épaisseur. Ensuite, une nouvelle couche de neige se forme progressivement avec la baisse de la limite pluie-neige (15-20 cm possibles en fin de journée vers 1800 m).* Entre 2200 m et 2600 m : le matin, 40-70 cm de neige légère, alourdie en surface. En journée, le manteau neigeux s'épaissit, d'abord avec de la neige humide, puis avec de la neige plus froide (cumuls de l'ordre de 30-50 cm le soir). La neige est ventée, manteau neigeux irrégulier. * Au-dessus de 2600 m : manteau neigeux épais, léger et froid. 30-50 cm de neige froide en plus le dimanche soir qui tombe très venté (nombreuses zones d'accumulations et d'ablations)]]></TEXTE>
+  </QUALITE>
+  <ENNEIGEMENT DATE="2026-11-21T00:00:00" LimiteSud="1300" LimiteNord="1300">
+    <NIVEAU ALTI="1500" N="40" S="40"/>
+    <NIVEAU ALTI="2000" N="100" S="100"/>
+    <NIVEAU ALTI="2500" N="130" S="120"/>
+    <ImageEnneigement>montagne_enneigement_3.png</ImageEnneigement>
+  </ENNEIGEMENT>
+  <NEIGEFRAICHE ALTITUDESS="1800">
+    <NEIGE24H DATE="2026-11-18T00:00:00" SS24Min="0" SS24Max="0" RR24="50"/>
+    <NEIGE24H DATE="2026-11-19T00:00:00" SS24Min="3" SS24Max="7" RR24="20"/>
+    <NEIGE24H DATE="2026-11-20T00:00:00" SS24Min="30" SS24Max="40" RR24="40"/>
+    <NEIGE24H DATE="2026-11-21T00:00:00" SS24Min="25" SS24Max="30" RR24="30"/>
+    <NEIGE24H DATE="2026-11-22T00:00:00" SS24Min="5" SS24Max="10" RR24="2"/>
+    <NEIGE24H DATE="2026-11-23T00:00:00" SS24Min="30" SS24Max="40" RR24="20"/>
+    <ImageNeigeFraiche>graphe_neige_fraiche_3.png</ImageNeigeFraiche>
+  </NEIGEFRAICHE>
+  <METEO ALTITUDEVENT1="2000" ALTITUDEVENT2="4000">
+    <COMMENTAIRE>Nombreuses précipitations tout altitude journée. La limite pluie-neige fluctue. Vent fort en moyenne et haute montagne.   </COMMENTAIRE>
+    <ECHEANCE DATE="2026-11-22T06:00:00" FF1="30" DD1="S" FF2="80" DD2="SO" ISO0="2300" PLUIENEIGE="1300" TEMPSSENSIBLE="80" MERNUAGES="-1"/>
+    <ECHEANCE DATE="2026-11-22T12:00:00" FF1="50" DD1="SO" FF2="90" DD2="SO" ISO0="2500" PLUIENEIGE="2100" TEMPSSENSIBLE="53" MERNUAGES="-1"/>
+    <ECHEANCE DATE="2026-11-22T18:00:00" FF1="45" DD1="SO" FF2="80" DD2="O" ISO0="1700" PLUIENEIGE="1400" TEMPSSENSIBLE="63" MERNUAGES="-1"/>
+    <ECHEANCE DATE="2026-11-23T00:00:00" FF1="45" DD1="SO" FF2="100" DD2="NO" ISO0="1600" PLUIENEIGE="1300" TEMPSSENSIBLE="63" MERNUAGES="-1"/>
+    <ImageMeteo>apercu_meteo_3.png</ImageMeteo>
+  </METEO>
+  <BSH>
+    <METEO>
+      <ECHEANCE DATE="2026-11-15T06:00:00" FF1="40" DD1="SO" FF2="70" DD2="SO" ISO0="2200" PLUIENEIGE="1700" TEMPSSENSIBLE="80"/>
+      <ECHEANCE DATE="2026-11-15T12:00:00" FF1="40" DD1="SO" FF2="50" DD2="SO" ISO0="2300" PLUIENEIGE="1900" TEMPSSENSIBLE="71"/>
+      <ECHEANCE DATE="2026-11-15T18:00:00" FF1="60" DD1="SO" FF2="70" DD2="SO" ISO0="2400" PLUIENEIGE="-1" TEMPSSENSIBLE="3"/>
+      <ECHEANCE DATE="2026-11-16T00:00:00" FF1="70" DD1="SO" FF2="90" DD2="SO" ISO0="2300" PLUIENEIGE="1800" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-16T06:00:00" FF1="60" DD1="SO" FF2="80" DD2="O" ISO0="2000" PLUIENEIGE="1600" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-16T12:00:00" FF1="40" DD1="SO" FF2="90" DD2="NO" ISO0="1900" PLUIENEIGE="1600" TEMPSSENSIBLE="80"/>
+      <ECHEANCE DATE="2026-11-16T18:00:00" FF1="50" DD1="SO" FF2="100" DD2="O" ISO0="2000" PLUIENEIGE="1700" TEMPSSENSIBLE="81"/>
+      <ECHEANCE DATE="2026-11-17T00:00:00" FF1="60" DD1="SO" FF2="90" DD2="O" ISO0="2300" PLUIENEIGE="-1" TEMPSSENSIBLE="4"/>
+      <ECHEANCE DATE="2026-11-17T06:00:00" FF1="80" DD1="SO" FF2="90" DD2="O" ISO0="2600" PLUIENEIGE="2300" TEMPSSENSIBLE="71"/>
+      <ECHEANCE DATE="2026-11-17T12:00:00" FF1="90" DD1="SO" FF2="100" DD2="O" ISO0="2900" PLUIENEIGE="2700" TEMPSSENSIBLE="53"/>
+      <ECHEANCE DATE="2026-11-17T18:00:00" FF1="80" DD1="SO" FF2="110" DD2="O" ISO0="2700" PLUIENEIGE="2500" TEMPSSENSIBLE="53"/>
+      <ECHEANCE DATE="2026-11-18T00:00:00" FF1="80" DD1="SO" FF2="120" DD2="O" ISO0="2400" PLUIENEIGE="2100" TEMPSSENSIBLE="51"/>
+      <ECHEANCE DATE="2026-11-18T06:00:00" FF1="60" DD1="SO" FF2="100" DD2="O" ISO0="2400" PLUIENEIGE="2000" TEMPSSENSIBLE="51"/>
+      <ECHEANCE DATE="2026-11-18T12:00:00" FF1="55" DD1="SO" FF2="95" DD2="O" ISO0="2200" PLUIENEIGE="1800" TEMPSSENSIBLE="58"/>
+      <ECHEANCE DATE="2026-11-18T18:00:00" FF1="50" DD1="SO" FF2="90" DD2="O" ISO0="2100" PLUIENEIGE="1800" TEMPSSENSIBLE="58"/>
+      <ECHEANCE DATE="2026-11-19T00:00:00" FF1="35" DD1="O" FF2="80" DD2="O" ISO0="2300" PLUIENEIGE="2000" TEMPSSENSIBLE="58"/>
+      <ECHEANCE DATE="2026-11-19T06:00:00" FF1="40" DD1="SO" FF2="85" DD2="O" ISO0="2200" PLUIENEIGE="1800" TEMPSSENSIBLE="53"/>
+      <ECHEANCE DATE="2026-11-19T12:00:00" FF1="50" DD1="SO" FF2="90" DD2="O" ISO0="1800" PLUIENEIGE="1400" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-19T18:00:00" FF1="50" DD1="SO" FF2="90" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="80"/>
+      <ECHEANCE DATE="2026-11-20T00:00:00" FF1="40" DD1="SO" FF2="70" DD2="O" ISO0="1700" PLUIENEIGE="1500" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-20T06:00:00" FF1="40" DD1="SO" FF2="80" DD2="O" ISO0="1600" PLUIENEIGE="1400" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-20T12:00:00" FF1="40" DD1="SO" FF2="90" DD2="O" ISO0="1700" PLUIENEIGE="1200" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-20T18:00:00" FF1="40" DD1="SO" FF2="90" DD2="O" ISO0="1800" PLUIENEIGE="1400" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-21T00:00:00" FF1="60" DD1="SO" FF2="110" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-21T06:00:00" FF1="50" DD1="O" FF2="90" DD2="NO" ISO0="1700" PLUIENEIGE="1400" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-21T12:00:00" FF1="20" DD1="SO" FF2="80" DD2="NO" ISO0="2000" PLUIENEIGE="-1" TEMPSSENSIBLE="4"/>
+      <ECHEANCE DATE="2026-11-21T18:00:00" FF1="20" DD1="SO" FF2="80" DD2="NO" ISO0="2300" PLUIENEIGE="-1" TEMPSSENSIBLE="1"/>
+      <ECHEANCE DATE="2026-11-22T00:00:00" FF1="20" DD1="SO" FF2="50" DD2="O" ISO0="2700" PLUIENEIGE="-1" TEMPSSENSIBLE="6"/>
+    </METEO>
+    <ENNEIGEMENTS>
+      <ENNEIGEMENT DATE="2026-11-15T00:00:00" LimiteSud="1700" LimiteNord="1700">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="3" S="3"/>
+        <NIVEAU ALTI="2500" N="50" S="40"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-16T00:00:00" LimiteSud="1700" LimiteNord="1700">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="3" S="3"/>
+        <NIVEAU ALTI="2500" N="65" S="55"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-17T00:00:00" LimiteSud="2000" LimiteNord="2000">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="5" S="5"/>
+        <NIVEAU ALTI="2500" N="50" S="45"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-18T00:00:00" LimiteSud="1800" LimiteNord="1800">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="10" S="10"/>
+        <NIVEAU ALTI="2500" N="60" S="50"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-19T00:00:00" LimiteSud="1600" LimiteNord="1600">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="30" S="30"/>
+        <NIVEAU ALTI="2500" N="70" S="60"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-20T00:00:00" LimiteSud="1300" LimiteNord="1300">
+        <NIVEAU ALTI="1500" N="15" S="15"/>
+        <NIVEAU ALTI="2000" N="80" S="80"/>
+        <NIVEAU ALTI="2500" N="100" S="90"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-21T00:00:00" LimiteSud="1300" LimiteNord="1300">
+        <NIVEAU ALTI="1500" N="40" S="40"/>
+        <NIVEAU ALTI="2000" N="100" S="100"/>
+        <NIVEAU ALTI="2500" N="130" S="120"/>
+      </ENNEIGEMENT>
+    </ENNEIGEMENTS>
+    <NEIGEFRAICHE ALTITUDESS="1800">
+      <NEIGE24H DATE="2026-11-16T00:00:00" SS24Min="7" SS24Max="10"/>
+      <NEIGE24H DATE="2026-11-17T00:00:00" SS24Min="1" SS24Max="3"/>
+      <NEIGE24H DATE="2026-11-18T00:00:00" SS24Min="0" SS24Max="0"/>
+      <NEIGE24H DATE="2026-11-19T00:00:00" SS24Min="3" SS24Max="7"/>
+      <NEIGE24H DATE="2026-11-20T00:00:00" SS24Min="30" SS24Max="40"/>
+      <NEIGE24H DATE="2026-11-21T00:00:00" SS24Min="25" SS24Max="30"/>
+    </NEIGEFRAICHE>
+    <RISQUES>
+      <RISQUE DATE="2026-11-15T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-16T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-17T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-18T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-19T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-20T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-21T00:00:00" RISQUEMAXI="4"/>
+    </RISQUES>
+    <Image7derniersjours>sept_derniers_jours_3.png</Image7derniersjours>
+    <Image7derniersjours_portrait>sept_derniers_jours_portrait_3.png</Image7derniersjours_portrait>
+  </BSH>
+  <TexteMeta>
+    <Vigilance>Pour consulter la vigilance en cours, veuillez vous rendre sur le site <a href="https://vigilance.meteofrance.fr/fr">https://vigilance.meteofrance.fr/fr</a></Vigilance>
+    <EnteteGenerique/>
+    <BasDePageGenerique/>
+    <LienDocumentation>La documentation utile à la bonne lecture de ce BRA est disponible sur <a href="https://meteofrance.fr/sites/meteofrance.fr/files/files/editorial/guide-avalanche-2025-meteo-france.pdf">le guide avalanche 2025</a></LienDocumentation>
+    <Partenaires>Rédigé par Météo-France avec la contribution des observateurs du réseau nivo-météorologique. Partenariat : ANMSM (Maires de Stations de Montagne), DSF (Domaines Skiables de France), ADSP (Directeurs de Pistes et de la Sécurité des Stations de Sports d'Hiver) et autres acteurs de la montagne.</Partenaires>
+  </TexteMeta>
+</BULLETINS_NEIGE_AVALANCHE>
