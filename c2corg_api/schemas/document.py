@@ -29,7 +29,6 @@ class AssociationsSchema(Schema):
     images: Seq(AssociatedDocument) = None
     articles: Seq(AssociatedDocument) = None
     outings: Seq(AssociatedDocument) = None
-    coverages: Seq(AssociatedDocument) = None
 
 
 def geometry_schema(geometry_types):

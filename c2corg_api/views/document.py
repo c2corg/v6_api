@@ -28,7 +28,6 @@ from c2corg_api.models.cache_version import (
     update_cache_version,
     update_cache_version_associations,
 )
-from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.models.document import (
     ArchiveDocument,
     ArchiveDocumentGeometry,
@@ -50,7 +49,6 @@ from c2corg_api.models.topo_map_association import get_maps, update_maps_for_doc
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
-from c2corg_api.search import search_documents as search_mappings
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale, to_json_dict
 from c2corg_api.views.document_listings import (
@@ -144,16 +142,14 @@ def update_document(
     (update_types, changed_langs) = document.get_update_type(old_versions)
 
     if update_types:
-        # A new version needs to be created and persisted, except for
-        # coverages: they have no history (see _create_document)
-        if document.type != COVERAGE_TYPE:
-            update_version(
-                document,
-                user_id,
-                request.validated['message'],
-                update_types,
-                changed_langs,
-            )
+        # A new version needs to be created and persisted
+        update_version(
+            document,
+            user_id,
+            request.validated['message'],
+            update_types,
+            changed_langs,
+        )
 
         if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
             update_areas_for_document(document, reset=True)
@@ -468,9 +464,7 @@ def insert_document(
     DBSession.add(document)
     DBSession.flush()
 
-    # don't create a new version for coverages (no archive for this class)
-    if document.type != COVERAGE_TYPE:
-        create_new_version(document, user_id)
+    create_new_version(document, user_id)
 
     if document.type != AREA_TYPE:
         update_areas_for_document(document, reset=False)
@@ -637,11 +631,7 @@ def collection_get(request, doc_type, documents_config):
         # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
         raise HTTPBadRequest('offset + limit greater than 10000')
 
-    # the coverages are not indexed (see scripts/es/fill_index.py): their
-    # listing reads the database, whatever the search parameters
-    if doc_type in search_mappings and advanced_search.contains_search_params(
-        request.GET
-    ):
+    if advanced_search.contains_search_params(request.GET):
         # search with ElasticSearch
         search_documents = advanced_search.get_search_documents(
             request.GET, meta_params, doc_type

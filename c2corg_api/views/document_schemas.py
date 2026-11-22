@@ -7,7 +7,6 @@ from c2corg_api.models.common import attributes
 from c2corg_api.models.common.fields_area import fields_area
 from c2corg_api.models.common.fields_article import fields_article
 from c2corg_api.models.common.fields_book import fields_book
-from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.common.fields_outing import fields_outing
 from c2corg_api.models.common.fields_route import fields_route
@@ -15,7 +14,6 @@ from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.common.fields_xreport import fields_xreport
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
@@ -37,7 +35,6 @@ from c2corg_api.models.xreport import (
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.article import article_listing_schema
 from c2corg_api.schemas.book import book_listing_schema
-from c2corg_api.schemas.coverage import coverage_listing_schema
 from c2corg_api.schemas.image import image_listing_schema
 from c2corg_api.schemas.outing import outing_schema
 from c2corg_api.schemas.route import route_schema
@@ -334,14 +331,6 @@ waypoint_documents_config = GetDocumentsConfig(
     adapt_schema=waypoint_listing_schema_adaptor,
 )
 
-# coverages
-coverage_documents_config = GetDocumentsConfig(
-    COVERAGE_TYPE,
-    Coverage,
-    coverage_listing_schema,
-    listing_fields=fields_coverage['listing'],
-)
-
 document_configs = {
     WAYPOINT_TYPE: waypoint_documents_config,
     ROUTE_TYPE: route_documents_config,
@@ -353,5 +342,4 @@ document_configs = {
     MAP_TYPE: topo_map_documents_config,
     ARTICLE_TYPE: article_documents_config,
     USERPROFILE_TYPE: user_profile_documents_config,
-    COVERAGE_TYPE: coverage_documents_config,
 }

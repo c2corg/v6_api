@@ -66,7 +66,7 @@ def configure_license(settings):
 
 def get_license(document_type, document):
     """Return the licence of a serialized document, or None if it has none."""
-    # topo maps and coverages are not user content: they have no licence
+    # topo maps are not user content: they have no licence
     if document_type == ARTICLE_TYPE:
         doc_license = _ARTICLE_LICENSES.get(document.get('article_type'))
     elif document_type == IMAGE_TYPE:

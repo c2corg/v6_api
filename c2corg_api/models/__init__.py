@@ -72,7 +72,6 @@ document_types = {
     topo_map.MAP_TYPE: topo_map.TopoMap,
     area.AREA_TYPE: area.Area,
     outing.OUTING_TYPE: outing.Outing,
-    coverage.COVERAGE_TYPE: coverage.Coverage,
 }
 
 document_locale_types = {
@@ -86,5 +85,4 @@ document_locale_types = {
     topo_map.MAP_TYPE: document.DocumentLocale,
     area.AREA_TYPE: document.DocumentLocale,
     outing.OUTING_TYPE: outing.OutingLocale,
-    coverage.COVERAGE_TYPE: document.DocumentLocale,
 }
