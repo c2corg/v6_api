@@ -107,3 +107,17 @@ def test_invalid_xml():
     # entities are refused (billion laughs and the like)
     with pytest.raises(InvalidBulletin):
         bra_to_caaml(b'<!DOCTYPE x [<!ENTITY a "aaaa">]><x>&a;</x>')
+
+
+@pytest.mark.parametrize(
+    'xml',
+    [
+        b'<BULLETINS_NEIGE_AVALANCHE/>',
+        b'<BULLETINS_NEIGE_AVALANCHE ID="3" DATEBULLETIN="hier"/>',
+        # no end of validity
+        b'<BULLETINS_NEIGE_AVALANCHE ID="3" DATEBULLETIN="2026-11-22T16:00:00"/>',
+    ],
+)
+def test_missing_or_odd_attributes(xml):
+    with pytest.raises(InvalidBulletin):
+        bra_to_caaml(xml)
