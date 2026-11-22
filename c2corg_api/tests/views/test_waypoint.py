@@ -458,6 +458,20 @@ def test_get_collection_paginated(client, session, docs):
     )
 
 
+def test_get_collection_limit_max(client):
+    # a map asks for up to 500 documents of its view; more is cut to that
+    with patch(
+        'c2corg_api.views.document.get_documents',
+        return_value={'documents': [], 'total': 0},
+    ) as get_documents:
+        client.get('/waypoints?limit=500')
+        client.get('/waypoints?limit=1000')
+    assert [call.args[1]['limit'] for call in get_documents.call_args_list] == [
+        500,
+        500,
+    ]
+
+
 def test_get_collection_caching(client, session, docs):
     cache_key_3 = get_cache_key(docs.waypoint3.document_id, None, WAYPOINT_TYPE)
     cache_key_4 = get_cache_key(docs.waypoint4.document_id, None, WAYPOINT_TYPE)
