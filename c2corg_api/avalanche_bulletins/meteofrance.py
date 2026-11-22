@@ -5,14 +5,12 @@
 import logging
 import os
 from datetime import datetime, time
-from xml.etree.ElementTree import ParseError
 
 import requests
-from defusedxml import DefusedXmlException
 from dogpile.cache.api import NO_VALUE
 
 from c2corg_api import caching
-from c2corg_api.avalanche_bulletins.bra import PARIS, bra_to_caaml
+from c2corg_api.avalanche_bulletins.bra import PARIS, InvalidBulletin, bra_to_caaml
 from c2corg_api.caching import cache_avalanche_bulletin
 
 log = logging.getLogger(__name__)
@@ -56,7 +54,7 @@ def bulletin(massif):
             return {'bulletins': []}
         try:
             return bra_to_caaml(xml)
-        except (ParseError, DefusedXmlException) as e:
+        except InvalidBulletin as e:
             raise UpstreamError(f'invalid bulletin of massif {massif}: {e}') from e
 
     return _cached(str(massif), fetch)

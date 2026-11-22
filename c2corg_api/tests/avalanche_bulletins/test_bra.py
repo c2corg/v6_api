@@ -1,6 +1,8 @@
 import os
 
-from c2corg_api.avalanche_bulletins.bra import bra_to_caaml
+import pytest
+
+from c2corg_api.avalanche_bulletins.bra import InvalidBulletin, bra_to_caaml
 
 FIXTURES = os.path.join(os.path.dirname(__file__), 'fixtures')
 
@@ -97,3 +99,11 @@ def test_the_sections_of_the_texts_on_their_own_lines():
 def test_no_bulletin():
     # Andorra: a message pointing to the service of Andorra
     assert bulletin(71) is None
+
+
+def test_invalid_xml():
+    with pytest.raises(InvalidBulletin):
+        bra_to_caaml(b'<BULLETINS_NEIGE_AVALANCHE')
+    # entities are refused (billion laughs and the like)
+    with pytest.raises(InvalidBulletin):
+        bra_to_caaml(b'<!DOCTYPE x [<!ENTITY a "aaaa">]><x>&a;</x>')

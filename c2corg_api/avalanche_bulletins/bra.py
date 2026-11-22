@@ -7,7 +7,8 @@ import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from defusedxml.ElementTree import fromstring
+from defusedxml import DefusedXmlException
+from defusedxml.ElementTree import ParseError, fromstring
 
 PARIS = ZoneInfo('Europe/Paris')
 
@@ -58,9 +59,16 @@ WIND_DIRECTIONS = {
 }
 
 
+class InvalidBulletin(ValueError):
+    """The XML is not a well-formed BRA (or holds entities, refused)."""
+
+
 def bra_to_caaml(xml):
     """Return the CAAML bulletins of a BRA: an empty list without a bulletin."""
-    root = fromstring(xml)
+    try:
+        root = fromstring(xml)
+    except (ParseError, DefusedXmlException) as e:
+        raise InvalidBulletin(str(e)) from e
     # the massif of Andorra answers a <message> pointing to its own service
     if root.tag != 'BULLETINS_NEIGE_AVALANCHE':
         return {'bulletins': []}
