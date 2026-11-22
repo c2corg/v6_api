@@ -84,6 +84,9 @@ class TestAvalancheBulletin:
     def test_invalid_bulletin(self, browser):
         with patch(GET, return_value=answer(200, b'<BULLETINS_NEIGE_AVALANCHE')):
             browser.get('/avalanche-bulletins/regions/FR-03/latest', status=503)
+        # well-formed, but without the massif nor the dates
+        with patch(GET, return_value=answer(200, b'<BULLETINS_NEIGE_AVALANCHE/>')):
+            browser.get('/avalanche-bulletins/regions/FR-03/latest', status=503)
 
     @contract(BULLETIN)
     def test_no_key(self, browser, monkeypatch):

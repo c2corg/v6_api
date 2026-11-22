@@ -60,7 +60,7 @@ WIND_DIRECTIONS = {
 
 
 class InvalidBulletin(ValueError):
-    """The XML is not a well-formed BRA (or holds entities, refused)."""
+    """The XML is not a well-formed BRA, lacks its massif or dates, or has entities."""
 
 
 def bra_to_caaml(xml):
@@ -72,7 +72,11 @@ def bra_to_caaml(xml):
     # the massif of Andorra answers a <message> pointing to its own service
     if root.tag != 'BULLETINS_NEIGE_AVALANCHE':
         return {'bulletins': []}
-    return {'bulletins': [_bulletin(root)]}
+    try:
+        return {'bulletins': [_bulletin(root)]}
+    except (AttributeError, TypeError, ValueError) as e:
+        # a missing or odd attribute: the massif, the dates...
+        raise InvalidBulletin(f'unexpected BRA: {e!r}') from e
 
 
 def _bulletin(root):
@@ -88,7 +92,7 @@ def _bulletin(root):
             ),
             'validTime': {
                 'startTime': start.isoformat(),
-                'endTime': _iso(root.get('DATEVALIDITE')),
+                'endTime': _time(root.get('DATEVALIDITE')).isoformat(),
             },
             'unscheduled': root.get('AMENDEMENT') == 'true',
             'source': {'provider': PROVIDER},
