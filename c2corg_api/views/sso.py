@@ -23,6 +23,7 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import OneOf, Str
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import hash_token, log_validated_user_i_know_what_i_do
+from c2corg_api.views.document import create_new_version
 from c2corg_api.views.resource import write
 from c2corg_api.views.user import (
     token_to_response,
@@ -151,6 +152,8 @@ def sso_sync(request):
         )
         DBSession.add(user)
         DBSession.flush()
+        # also create a version for the profile, as the registration does
+        create_new_version(user.profile, user.id)
 
     if sso_external_id is None:
         sso_external_id = SsoExternalId(
