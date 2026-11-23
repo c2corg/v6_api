@@ -23,6 +23,8 @@
         "available_langs": [
           "str"
         ],
+        "camera_name": "null",
+        "date_time": "null",
         "document_id": "int",
         "filename": "str",
         "geometry": {
