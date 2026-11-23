@@ -114,7 +114,8 @@ def update_schema(create):
     return create_model(
         f'{create.__name__}Update',
         __base__=Schema,
-        message=(Str(), ''),
+        # stored in history_metadata.comment, a varchar(200)
+        message=(Str(200), ''),
         document=(Map(create), ...),
     )
 
