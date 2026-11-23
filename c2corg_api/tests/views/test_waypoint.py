@@ -458,6 +458,27 @@ def test_get_collection_paginated(client, session, docs):
     )
 
 
+def test_get_collection_hut_category(client, session):
+    hut = Waypoint(
+        waypoint_type='hut',
+        capacity=40,
+        capacity_staffed=30,
+        custodianship='always_accessible',
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+    )
+    session.add(hut)
+    session.flush()
+
+    documents = client.get('/waypoints?limit=100').json['documents']
+    by_id = {document['document_id']: document for document in documents}
+    # what the hut offers, without the fields it comes from
+    assert by_id[hut.document_id]['hut_category'] == 'wardened'
+    assert 'capacity_staffed' not in by_id[hut.document_id]
+    assert all(
+        'hut_category' not in d for d in documents if d['waypoint_type'] != 'hut'
+    )
+
+
 def test_get_collection_caching(client, session, docs):
     cache_key_3 = get_cache_key(docs.waypoint3.document_id, None, WAYPOINT_TYPE)
     cache_key_4 = get_cache_key(docs.waypoint4.document_id, None, WAYPOINT_TYPE)

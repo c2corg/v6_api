@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import StaleDataError
 
 from c2corg_api.models.document import DocumentGeometry, UpdateType, set_available_langs
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.waypoint import Waypoint, WaypointLocale, hut_category
 
 
 def test_inheritance(session):
@@ -530,3 +530,29 @@ def _get_waypoint():
             geom='SRID=3857;POINT(635956.075332665 5723604.677994)'
         ),
     )
+
+
+@pytest.mark.parametrize(
+    'fields, status',
+    [
+        (
+            {
+                'capacity': 30,
+                'capacity_staffed': 30,
+                'custodianship': 'always_accessible',
+            },
+            'wardened',
+        ),
+        ({'capacity': 20, 'custodianship': 'accessible_when_wardened'}, 'wardened'),
+        ({'capacity': 0, 'custodianship': 'always_accessible'}, 'shelter'),
+        ({'capacity': 10, 'custodianship': 'key_needed'}, 'key_needed'),
+        ({'custodianship': 'no_warden'}, 'no_warden'),
+        ({}, None),
+    ],
+)
+def test_hut_category(fields, status):
+    assert hut_category(Waypoint(waypoint_type='hut', **fields)) == status
+
+
+def test_hut_category_of_other_types():
+    assert hut_category(Waypoint(waypoint_type='gite', capacity_staffed=10)) is None

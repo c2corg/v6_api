@@ -111,6 +111,7 @@ def to_json_dict(
         'forum_username',
         'creator',
         'img_count',
+        'hut_category',
     ]
     for attr in special_attributes:
         if hasattr(obj, attr):

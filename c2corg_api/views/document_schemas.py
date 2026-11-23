@@ -23,9 +23,11 @@ from c2corg_api.models.user_profile import (
     UserProfile,
 )
 from c2corg_api.models.waypoint import (
+    HUT_CATEGORY_FIELDS,
     WAYPOINT_TYPE,
     Waypoint,
     WaypointLocale,
+    hut_category,
 )
 from c2corg_api.models.xreport import (
     XREPORT_TYPE,
@@ -58,6 +60,7 @@ class GetDocumentsConfig:
         include_areas=True,
         include_img_count=False,
         set_custom_fields=None,
+        load_fields=(),
     ):
         self.document_type = document_type
         self.clazz = clazz
@@ -69,6 +72,8 @@ class GetDocumentsConfig:
         self.set_custom_fields = set_custom_fields
 
         self._set_load_only_fields(fields, listing_fields)
+        # read to compute a field of the listings (set_custom_fields), not given as such
+        self.fields_document.update(load_fields)
 
     def _set_load_only_fields(self, fields, listing_fields):
         if not listing_fields:
@@ -322,6 +327,15 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
     adapt_waypoint_schema_for_type, 'waypoint_type', 'listing'
 )
 
+
+def set_hut_category(waypoints, lang):
+    """Set what the huts offer (`hut_category`) on the waypoints of a listing."""
+    for waypoint in waypoints:
+        status = hut_category(waypoint)
+        if status:
+            waypoint.hut_category = status
+
+
 waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE,
     Waypoint,
@@ -329,6 +343,8 @@ waypoint_documents_config = GetDocumentsConfig(
     clazz_locale=WaypointLocale,
     fields=fields_waypoint,
     adapt_schema=waypoint_listing_schema_adaptor,
+    set_custom_fields=set_hut_category,
+    load_fields=HUT_CATEGORY_FIELDS,
 )
 
 document_configs = {
