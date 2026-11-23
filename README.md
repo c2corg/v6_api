@@ -113,8 +113,9 @@ Use a Compose provider supporting `up --wait` (Docker Compose v2 or podman-compo
   Elasticsearch comes with its index already built: see
   [`scripts/dev-database`](scripts/dev-database/README.md).
 - Accounts: `moderator`, `user`, `blocked`, `unvalidated`, password `c2c` for all.
-- The UI dev server (`npm run serve` in c2c_ui, `http://localhost:8080`) is allowed by the CORS
-  configuration of the local API: select `http://localhost:6543` as its backend.
+- The UI dev servers (`npm run serve` in c2c_ui, `http://localhost:8080` or any other port of
+  `localhost` / `127.0.0.1`) are allowed by the CORS configuration of the local API: select
+  `http://localhost:6543` as their backend.
 - There is no Discourse: `config/env.dev` sets `discourse_enabled="false"`. Logging in, registering
   and editing a profile work; creating the comments topic of a document answers 503. To work on the
   forum, run a Discourse and set `discourse_enabled="true"`, `discourse_url`, its key and secret in
