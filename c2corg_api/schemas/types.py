@@ -43,22 +43,58 @@ def _none(value):
     return value is None
 
 
-def _to_int(value):
+def _to_int(value, bounds=None):
     """Convert like `colander.Integer`: `int(value)`, so 1.5 gives 1."""
     if _int_empty(value):
         raise _required()
     try:
-        return int(value)
+        result = int(value)
     except (TypeError, ValueError) as e:
         raise PydanticCustomError(
             'not_a_number', '"{value}" is not a number', {'value': str(value)}
         ) from e
+    if bounds is not None:
+        bounds.check(result)
+    return result
+
+
+class IntRange:
+    """The values an integer field accepts: those its column can store."""
+
+    # A value out of the range of the column made the INSERT fail with a 500
+    # ("smallint out of range"): it is a 422 now, with pydantic's error types
+    # and limits (ctx), which the UI translates.
+
+    def __init__(self, minimum, maximum):
+        self.minimum = minimum
+        self.maximum = maximum
+
+    def check(self, value):
+        if value < self.minimum:
+            raise PydanticCustomError(
+                'greater_than_equal',
+                'Less than minimum value {ge}',
+                {'ge': self.minimum},
+            )
+        if value > self.maximum:
+            raise PydanticCustomError(
+                'less_than_equal',
+                'Greater than maximum value {le}',
+                {'le': self.maximum},
+            )
+
+
+# the ranges of the PostgreSQL integer types
+SMALLINT = IntRange(-(2**15), 2**15 - 1)
+INTEGER = IntRange(-(2**31), 2**31 - 1)
 
 
 class _StrSpec:
-    def __init__(self, checks):
+    def __init__(self, checks, max_length=None):
         # functions returning an error message, or None if the value is valid
         self.checks = checks
+        # the longest value the checks accept, if they limit it
+        self.max_length = max_length
 
 
 def max_length_check(max_length):
@@ -174,7 +210,18 @@ def check_mapping(value):
     return value
 
 
-Int = Annotated[int | None, Empty(_int_empty), BeforeValidator(_to_int)]
+def _int_type(bounds):
+    return Annotated[
+        int | None,
+        Empty(_int_empty),
+        bounds,
+        BeforeValidator(partial(_to_int, bounds=bounds)),
+    ]
+
+
+# an integer column, and a smallint one
+Int = _int_type(INTEGER)
+SmallInt = _int_type(SMALLINT)
 
 
 def Str(max_length=None, min_length=None, checks=()):  # noqa: N802 (used like a type)
@@ -184,12 +231,15 @@ def Str(max_length=None, min_length=None, checks=()):  # noqa: N802 (used like a
         all_checks.append(min_length_check(min_length))
     if max_length is not None:
         all_checks.append(max_length_check(max_length))
-    return _str_type(_StrSpec([*all_checks, *checks]))
+    return _str_type(_StrSpec([*all_checks, *checks], max_length))
 
 
 def OneOf(choices):  # noqa: N802 (used like a type)
     """Return a string type limited to the given choices."""
-    return _str_type(_StrSpec([one_of_check(list(choices))]))
+    choices = list(choices)
+    return _str_type(
+        _StrSpec([one_of_check(choices)], max(map(len, choices), default=0))
+    )
 
 
 def Seq(item, min_length=None):  # noqa: N802 (used like a type)

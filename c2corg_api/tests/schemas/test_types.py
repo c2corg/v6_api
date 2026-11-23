@@ -17,6 +17,7 @@ from c2corg_api.schemas.types import (
     Map,
     OneOf,
     Seq,
+    SmallInt,
     Str,
     email_check,
     function_check,
@@ -106,6 +107,27 @@ class TestConversions:
         assert _value({'number': True}, 'number') == 1
         assert _error({'number': 'x'}, 'number') == '"x" is not a number'
         assert _error({'number': '1.5'}, 'number') == '"1.5" is not a number'
+
+    def test_integer_range(self):
+        # the range of an integer column, as pydantic's error types
+        assert _value({'number': 2**31 - 1}, 'number') == 2**31 - 1
+        assert _error({'number': 2**31}, 'number') == (
+            'Greater than maximum value 2147483647'
+        )
+        assert _error({'number': -(2**31) - 1}, 'number') == (
+            'Less than minimum value -2147483648'
+        )
+
+        class Small(Schema):
+            number: SmallInt = None
+
+        _, errors = validate(Small, {'number': '32768'})
+        assert errors[0]['type'] == 'less_than_equal'
+        assert errors[0]['ctx'] == {'le': 32767}
+        _, errors = validate(Small, {'number': -32769})
+        assert errors[0]['type'] == 'greater_than_equal'
+        assert errors[0]['ctx'] == {'ge': -32768}
+        assert validate(Small, {'number': -32768})[1] == []
 
     def test_string(self):
         assert _error({'text': 12}, 'text') == "12 is not a string: {'text': ''}"

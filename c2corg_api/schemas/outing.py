@@ -10,7 +10,7 @@ from c2corg_api.schemas.document import (
     document_children,
     geometry_schema,
 )
-from c2corg_api.schemas.types import Bool, Date, Int, Map, OneOf, Seq, Str
+from c2corg_api.schemas.types import Bool, Date, Int, Map, OneOf, Seq, SmallInt, Str
 
 OutingGeometrySchema = geometry_schema(['LINESTRING', 'MULTILINESTRING'])
 
@@ -36,20 +36,20 @@ class OutingSchema(DocumentSchema):
     condition_rating: OneOf(a.condition_ratings) = None
     date_end: Date
     date_start: Date
-    elevation_access: Int = None
-    elevation_down_snow: Int = None
-    elevation_max: Int = None
-    elevation_min: Int = None
-    elevation_up_snow: Int = None
+    elevation_access: SmallInt = None
+    elevation_down_snow: SmallInt = None
+    elevation_max: SmallInt = None
+    elevation_min: SmallInt = None
+    elevation_up_snow: SmallInt = None
     frequentation: OneOf(a.frequentation_types) = None
     glacier_rating: OneOf(a.glacier_ratings) = None
-    height_diff_down: Int = None
-    height_diff_up: Int = None
+    height_diff_down: SmallInt = None
+    height_diff_up: SmallInt = None
     hut_status: OneOf(a.hut_status) = None
     length_total: Int = None
     lift_status: OneOf(a.lift_status) = None
     partial_trip: Bool = None
-    participant_count: Int = None
+    participant_count: SmallInt = None
     public_transport: Bool = None
     snow_quality: OneOf(a.condition_ratings) = None
     snow_quantity: OneOf(a.condition_ratings) = None
@@ -60,7 +60,7 @@ class OutingSchema(DocumentSchema):
     ice_rating: OneOf(a.ice_ratings) = None
     snowshoe_rating: OneOf(a.snowshoe_ratings) = None
     global_rating: OneOf(a.global_ratings) = None
-    height_diff_difficulties: Int = None
+    height_diff_difficulties: SmallInt = None
     engagement_rating: OneOf(a.engagement_ratings) = None
     equipment_rating: OneOf(a.equipment_ratings) = None
     rock_free_rating: OneOf(a.climbing_ratings) = None

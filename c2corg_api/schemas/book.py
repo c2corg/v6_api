@@ -9,7 +9,7 @@ from c2corg_api.schemas.document import (
     DocumentSchema,
     document_children,
 )
-from c2corg_api.schemas.types import Int, OneOf, Seq, Str
+from c2corg_api.schemas.types import OneOf, Seq, SmallInt, Str
 
 
 class BookSchema(DocumentSchema):
@@ -20,7 +20,7 @@ class BookSchema(DocumentSchema):
     url: Str(255) = None
     isbn: Str(17) = None
     book_types: Seq(OneOf(a.book_types)) = None
-    nb_pages: Int = None
+    nb_pages: SmallInt = None
     publication_date: Str(100) = None
     langs: Seq(Str()) = None
 

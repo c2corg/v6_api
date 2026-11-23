@@ -20,7 +20,7 @@ from c2corg_api.models.sso import (
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.schemas.base import Schema, body_validator
-from c2corg_api.schemas.types import OneOf, Str
+from c2corg_api.schemas.types import Int, OneOf, Str
 from c2corg_api.security.discourse_client import get_discourse_client
 from c2corg_api.security.roles import hash_token, log_validated_user_i_know_what_i_do
 from c2corg_api.views.document import create_new_version
@@ -38,10 +38,12 @@ log = logging.getLogger(__name__)
 
 class SsoSyncSchema(Schema):
     sso_key: Str()
-    external_id: Str()
-    email: Str() = None
-    username: Str() = None
-    name: Str() = None
+    # the limits of the columns they are stored in (sso_external_id, user)
+    external_id: Int
+    email: Str(200) = None
+    username: Str(200) = None
+    name: Str(200) = None
+    # its length is checked by validate_forum_username (a 400, as before)
     forum_username: Str() = None
     lang: OneOf(default_langs) = None
     groups: Str() = None
