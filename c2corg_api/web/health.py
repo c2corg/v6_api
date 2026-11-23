@@ -46,8 +46,7 @@ def health(request: Request, response: Response):
     with request_session() as session:
         if not _add_database_status(status, session):
             response.status_code = 500
-    if not _add_es_status(status):
-        response.status_code = 500
+    _add_es_status(status)
     _add_redis_status(status)
     if _add_maintenance_mode_status(status):
         response.status_code = 404
@@ -70,6 +69,9 @@ def _add_database_status(status, session):
 
 
 def _add_es_status(status):
+    # an ES failure does not fail the health check: the documents are read from
+    # PostgreSQL, only the search is degraded, and every API shares the same ES
+    # cluster, so the load balancer would take them all out of its pool
     es_docs = None
     success = False
     try:
@@ -84,7 +86,6 @@ def _add_es_status(status):
         log.exception('Getting indexed docs count failed')
     status['es'] = 'ok' if success else 'error'
     status['es_indexed_docs'] = es_docs
-    return success
 
 
 def _add_redis_status(status):
