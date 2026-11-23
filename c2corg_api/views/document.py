@@ -67,8 +67,9 @@ from c2corg_api.views.validation import (
 
 log = logging.getLogger(__name__)
 
-# the maximum number of documents that can be returned in a request
-LIMIT_MAX = 100
+# the maximum number of documents that can be returned in a request (the map
+# of the waypoints asks for that many in its view)
+LIMIT_MAX = 500
 
 # the default limit value (how much documents are returned at once in a
 # listing request)

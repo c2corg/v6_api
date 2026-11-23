@@ -457,7 +457,6 @@ def test_get_collection_paginated(client, session, docs):
         5,
     )
 
-
 def test_get_collection_hut_category(client, session):
     hut = Waypoint(
         waypoint_type='hut',
@@ -477,6 +476,19 @@ def test_get_collection_hut_category(client, session):
     assert all(
         'hut_category' not in d for d in documents if d['waypoint_type'] != 'hut'
     )
+
+def test_get_collection_limit_max(client):
+    # a map asks for up to 500 documents of its view; more is cut to that
+    with patch(
+        'c2corg_api.views.document.get_documents',
+        return_value={'documents': [], 'total': 0},
+    ) as get_documents:
+        client.get('/waypoints?limit=500')
+        client.get('/waypoints?limit=1000')
+    assert [call.args[1]['limit'] for call in get_documents.call_args_list] == [
+        500,
+        500,
+    ]
 
 
 def test_get_collection_caching(client, session, docs):
