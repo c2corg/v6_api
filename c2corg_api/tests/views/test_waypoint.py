@@ -457,6 +457,7 @@ def test_get_collection_paginated(client, session, docs):
         5,
     )
 
+
 def test_get_collection_hut_category(client, session):
     hut = Waypoint(
         waypoint_type='hut',
@@ -476,6 +477,7 @@ def test_get_collection_hut_category(client, session):
     assert all(
         'hut_category' not in d for d in documents if d['waypoint_type'] != 'hut'
     )
+
 
 def test_get_collection_limit_max(client):
     # a map asks for up to 500 documents of its view; more is cut to that
