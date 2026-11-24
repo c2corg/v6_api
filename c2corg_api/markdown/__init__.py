@@ -327,3 +327,26 @@ def parse_code(text, image_url_resolver=None, image_size_resolver=None):
     text = text.replace(_img_height_secret_attribute, 'c2c:height')
 
     return text
+
+
+def get_embedded_image_ids(text):
+    """Return the ids of the images that `parse_code` shows in a text, in order."""
+    # The same parser as parse_code(), whose [img=ID] processor collects the
+    # ids of the images it builds (see img.C2CImageBlock): a tag it does not
+    # turn into an image (inside raw HTML, in the middle of a line, with
+    # uppercase letters...) is not shown, so it is not counted either.
+    with _parser_lock:
+        parser = _get_markdown_parser()
+        parser.reset()
+        ids = []
+        parser.c2c_embedded_image_ids = ids
+        try:
+            parser.convert(text)
+        except Exception as e:
+            # parse_code() shows an error message instead of the text
+            logger.exception('While parsing markdown', exc_info=e)
+            return []
+        finally:
+            parser.c2c_embedded_image_ids = None
+
+    return ids
