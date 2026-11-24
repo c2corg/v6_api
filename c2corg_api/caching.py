@@ -38,6 +38,8 @@ cache_sitemap_xml = create_region('sitemap_xml')
 cache_listing_total = create_region('listing_total')
 # the bulletins of Météo-France, and their PDF (see avalanche_bulletins)
 cache_avalanche_bulletin = create_region('avalanche_bulletin')
+# the listing of the partner outings (see views.partner_outings)
+cache_partner_outings = create_region('partner_outings')
 
 # how long the total of a listing is kept (seconds): counting all the
 # documents of a type reads the whole table (about 1 s for the images)
@@ -54,6 +56,7 @@ caches = [
     cache_sitemap_xml,
     cache_listing_total,
     cache_avalanche_bulletin,
+    cache_partner_outings,
 ]
 
 
