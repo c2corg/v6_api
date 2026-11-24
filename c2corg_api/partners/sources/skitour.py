@@ -6,12 +6,13 @@ looked at.
 """
 
 import logging
+import re
 from collections import Counter
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
 from c2corg_api.partners import normalise
-from c2corg_api.partners.adapter import ParseError, require_secrets
+from c2corg_api.partners.adapter import ParseError, SourceBlocked, require_secrets
 from c2corg_api.partners.model import (
     FetchContext,
     FetchResult,
@@ -24,6 +25,17 @@ log = logging.getLogger(__name__)
 API_URL = 'https://skitour.fr/api/sorties'
 OUTING_URL = 'https://skitour.fr/sorties/{}'
 TIMEZONE = 'Europe/Paris'
+
+# skitour answers HTTP 200 with `{"ERROR": "<message>"}` (observed:
+# "NO API KEY", "INVALID API KEY"). A message about the key, the rights or a
+# quota means the site refuses us (SourceBlocked, status 'blocked': someone has
+# to fix or renew the key). Any other message is an answer we do not know:
+# ParseError (status 'failing'), with the message.
+_REFUSAL = re.compile(
+    r'\b(api|key|cle|clef|auth\w*|token|quota|limit\w*|forbidden|denied|'
+    r'unauthori[sz]ed|rate|too many|expired|disabled|banned|blocked)\b',
+    re.IGNORECASE,
+)
 
 
 class SkitourAdapter:
@@ -90,6 +102,11 @@ class SkitourAdapter:
             payload = response.json()
         except ValueError as e:
             raise ParseError(f'not JSON: {e}') from e
+        if isinstance(payload, dict) and 'ERROR' in payload:
+            message = normalise.clean_text(str(payload['ERROR']), 200) or '?'
+            if _REFUSAL.search(message):
+                raise SourceBlocked(f'skitour API error: {message}')
+            raise ParseError(f'skitour API error: {message}')
         if not isinstance(payload, list):
             raise ParseError(
                 f'expected a list of outings, got {type(payload).__name__}'

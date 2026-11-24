@@ -5,6 +5,7 @@ import datetime
 import json
 import math
 from collections import Counter
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -868,6 +869,27 @@ def test_fixture_mode_with_the_real_adapters(db, db_connection, days_after):
         assert rows
         assert max(r.date for r in rows) <= now.date()
         assert max(r.date for r in rows) >= now.date() - datetime.timedelta(days=2)
+
+
+@pytest.mark.parametrize(
+    'directory, message',
+    [
+        ('skitour_no_key', 'NO API KEY'),
+        ('skitour_bad_key', 'INVALID API KEY'),
+    ],
+)
+def test_skitour_key_error_is_blocked(db, directory, message):
+    # skitour answers HTTP 200 + {"ERROR": ...} when it rejects the key
+    fixtures = Path(__file__).parents[1] / 'partners' / 'fixtures'
+    adapter = REGISTRY['skitour']()
+    transport = FixtureTransport(fixtures, directory, rate=adapter.rate)
+    settings = {**SETTINGS, 'partners.sources': 'skitour'}
+    run(db, adapter, transport=transport, settings=settings)
+    row = source_row(db, 'skitour')
+    assert row.status == 'blocked'
+    assert row.status_detail == f'skitour API error: {message}'
+    assert row.consecutive_failures == 1
+    assert not outings_of(db, 'skitour')
 
 
 # ------------------------------------------------------------ the whole job
