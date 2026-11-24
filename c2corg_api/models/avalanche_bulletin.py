@@ -20,7 +20,8 @@ class AvalancheBulletin(Base):
     # One row by publication and language, updated only when a service
     # changes a publication without changing its time. The publications
     # superseded the same day are pruned after a week (see
-    # avalanche_bulletins.store.prune_superseded).
+    # avalanche_bulletins.store.prune_superseded). The weather of SLF
+    # (customData.CH.weather) is stored apart (models.region_weather).
 
     __tablename__ = 'avalanche_bulletins'
 

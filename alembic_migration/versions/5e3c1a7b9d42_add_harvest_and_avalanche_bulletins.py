@@ -1,4 +1,4 @@
-"""Add the harvest sources and payloads, and the avalanche bulletins.
+"""Add the harvest sources and payloads, the avalanche bulletins, the weather.
 
 Revision ID: 5e3c1a7b9d42
 Revises: 31b82bbbcecb
@@ -144,9 +144,40 @@ def upgrade():
         ['bulletin'],
         schema='guidebook',
     )
+    op.create_table(
+        'region_weather_hours',
+        sa.Column('region_id', sa.Text(), nullable=False),
+        sa.Column('time', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('provider', sa.Text(), nullable=False),
+        sa.Column('temperature_c', sa.REAL(), nullable=True),
+        sa.Column('temperature_elevation_m', sa.SmallInteger(), nullable=True),
+        sa.Column('snowfall_limit_m', sa.SmallInteger(), nullable=True),
+        sa.Column('snowfall_limit_null_reason', sa.Text(), nullable=True),
+        sa.Column('is_forecast', sa.Boolean(), nullable=False),
+        sa.Column('publication_time', sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint('region_id', 'time'),
+        schema='guidebook',
+    )
+    op.create_table(
+        'region_weather_periods',
+        sa.Column('region_id', sa.Text(), nullable=False),
+        sa.Column('period_start', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('period_end', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('provider', sa.Text(), nullable=False),
+        sa.Column('wind_speed_kmh', sa.SmallInteger(), nullable=True),
+        sa.Column('wind_direction', sa.Text(), nullable=True),
+        sa.Column('wind_highlight', sa.Text(), nullable=True),
+        sa.Column('new_snow', JSONB(), nullable=False),
+        sa.Column('is_forecast', sa.Boolean(), nullable=False),
+        sa.Column('publication_time', sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint('region_id', 'period_start'),
+        schema='guidebook',
+    )
 
 
 def downgrade():
+    op.drop_table('region_weather_periods', schema='guidebook')
+    op.drop_table('region_weather_hours', schema='guidebook')
     op.drop_table('avalanche_bulletin_regions', schema='guidebook')
     op.drop_table('avalanche_bulletins', schema='guidebook')
     op.drop_table('harvest_payloads', schema='guidebook')

@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 
+from c2corg_api.avalanche_bulletins import weather
 from c2corg_api.avalanche_bulletins.cache import CET, STALE_AFTER, main_date
 from c2corg_api.models.avalanche_bulletin import (
     AvalancheBulletin,
@@ -26,6 +27,7 @@ def save(session, provider, lang, bulletins, source_id=None):
     """Store the bulletins new or changed: tell if there was any."""
     new = False
     for bulletin in bulletins:
+        bulletin, region_weather = weather.extract(bulletin)
         row = _row(provider, lang, bulletin, source_id)
         insertion = insert(AvalancheBulletin).values(**row)
         # a service may change a publication without changing its time
@@ -47,6 +49,14 @@ def save(session, provider, lang, bulletins, source_id=None):
         danger = summary(bulletin)
         for region_id in row['region_ids']:
             _save_region(session, region_id, row, id, danger)
+        if region_weather:
+            weather.save(
+                session,
+                provider,
+                row['region_ids'],
+                row['publication_time'],
+                region_weather,
+            )
     return new
 
 
