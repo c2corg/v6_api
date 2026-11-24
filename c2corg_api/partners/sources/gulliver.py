@@ -9,6 +9,7 @@ Narrative content and media are never read into the result.
 import logging
 import re
 from collections import Counter
+from typing import ClassVar
 from urllib.parse import urlsplit
 
 from c2corg_api.partners import normalise
@@ -105,6 +106,25 @@ class GulliverAdapter:
     site_url = 'https://www.gulliver.it'
     required_secrets = ()
     rate = RateLimit(2.0, 40, 20)
+    # file stem (endpoint) -> JSON paths read from it, checked by `python -m
+    # c2corg_api.partners shapes` and the live tests (`[]` = list items)
+    REQUIRED_PATHS: ClassVar[dict[str, list[str]]] = {
+        'commentglobal': [
+            '[].ID',
+            '[].comment_date',
+            '[].comment_post_ID',
+            '[].permalink',
+            '[].term',
+            '[].user_nicename',
+            '[].meta.snow_top',
+        ],
+        'routes': [
+            'title',
+            'meta.data',
+            'meta.geo.coords.lat',
+            'meta.geo.coords.lng',
+        ],
+    }
 
     def fetch(self, ctx: FetchContext) -> FetchResult:
         result = FetchResult(outings=[], skipped=Counter())
