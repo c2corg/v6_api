@@ -34,6 +34,23 @@ class SkitourAdapter:
     # the API allows 60 requests/min and 1000/day
     rate: ClassVar[RateLimit] = RateLimit(1.1, 10, 20)
 
+    # file stem (endpoint) -> JSON paths read from it, checked by `python -m
+    # c2corg_api.partners shapes` and the live tests (`[]` = list items)
+    REQUIRED_PATHS: ClassVar[dict[str, list[str]]] = {
+        'sorties': [
+            '[].id',
+            '[].titre',
+            '[].date',
+            '[].auteur.pseudo',
+            '[].massif.nom',
+            '[].sommets[].altitude',
+            '[].sommets[].latlon',
+            '[].orientation',
+            '[].denivele',
+            '[].dif_ski',
+        ]
+    }
+
     PAGE_SIZE: ClassVar[int] = 200
     MAX_DAYS: ClassVar[int] = 31
 

@@ -1,0 +1,258 @@
+{
+ "commentglobal_page1.json": [
+  {
+   "ID": "int",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "meta": {
+    "access": "str",
+    "obs": "str",
+    "skimo_equip": "str",
+    "snow_alt": {
+     "any_of": [
+      "\"int\"",
+      "\"str\""
+     ]
+    },
+    "snow_low": {
+     "any_of": [
+      "\"int\"",
+      "\"str\""
+     ]
+    },
+    "snow_top": {
+     "any_of": [
+      "\"int\"",
+      "\"str\""
+     ]
+    }
+   },
+   "permalink": "str",
+   "rating": "int",
+   "term": {
+    "code": "str",
+    "name": "str"
+   },
+   "tracks": [],
+   "user_nicename": "str"
+  }
+ ],
+ "commentglobal_page2.json": [
+  {
+   "ID": "int",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "meta": {
+    "access": "str",
+    "obs": "str",
+    "skimo_equip": "str",
+    "snow_alt": {
+     "any_of": [
+      "\"int\"",
+      "\"null\""
+     ]
+    },
+    "snow_low": {
+     "any_of": [
+      "\"int\"",
+      "\"null\""
+     ]
+    },
+    "snow_top": {
+     "any_of": [
+      "\"int\"",
+      "\"null\""
+     ]
+    }
+   },
+   "permalink": "str",
+   "rating": "int",
+   "term": {
+    "code": "str",
+    "name": "str"
+   },
+   "tracks": [],
+   "user_nicename": "str"
+  }
+ ],
+ "commentglobal_page3.json": [],
+ "routes_id44871.json": {
+  "city": "str",
+  "district": "str",
+  "id": "int",
+  "meta": {
+   "data": {
+    "alt_start": "str",
+    "alt_top": "str",
+    "drop": "str",
+    "exposure": "str",
+    "type_route": "str"
+   },
+   "geo": {
+    "coords": {
+     "lat": "float",
+     "lng": "float"
+    }
+   }
+  },
+  "permalink": "str",
+  "region": {
+   "name": "str"
+  },
+  "title": "str"
+ },
+ "routes_id52980.json": {
+  "city": "str",
+  "district": "str",
+  "id": "int",
+  "meta": {
+   "data": {
+    "alt_start": "str",
+    "alt_top": "str",
+    "drop": "str",
+    "exposure": "str",
+    "grade_skimo": "str",
+    "type_route": "str"
+   },
+   "geo": {
+    "coords": {
+     "lat": "float",
+     "lng": "float"
+    }
+   }
+  },
+  "permalink": "str",
+  "region": {
+   "name": "str"
+  },
+  "title": "str"
+ },
+ "routes_id55310.json": {
+  "city": "str",
+  "district": "str",
+  "id": "int",
+  "meta": {
+   "data": {
+    "alt_start": "str",
+    "alt_top": "str",
+    "drop": "str",
+    "exposure": "str",
+    "grade_skimo": "str",
+    "type_route": "str"
+   },
+   "geo": {
+    "coords": {
+     "lat": "float",
+     "lng": "float"
+    }
+   }
+  },
+  "permalink": "str",
+  "region": {
+   "name": "str"
+  },
+  "title": "str"
+ },
+ "routes_id57949.json": {
+  "city": "str",
+  "district": "str",
+  "id": "int",
+  "meta": {
+   "data": {
+    "alt_start": "str",
+    "alt_top": "str",
+    "drop": "str",
+    "exposure": "str",
+    "grade_skimo": "str",
+    "type_route": "str"
+   },
+   "geo": {
+    "coords": {
+     "lat": "str",
+     "lng": "str"
+    }
+   }
+  },
+  "permalink": "str",
+  "region": {
+   "name": "str"
+  },
+  "title": "str"
+ },
+ "routes_id59407.json": {
+  "city": "str",
+  "district": "str",
+  "id": "int",
+  "meta": {
+   "data": {
+    "alt_start": "str",
+    "alt_top": "str",
+    "drop": "str",
+    "exposure": "str",
+    "type_route": "str"
+   },
+   "geo": {
+    "coords": {
+     "lat": "float",
+     "lng": "float"
+    }
+   }
+  },
+  "permalink": "str",
+  "region": {
+   "name": "str"
+  },
+  "title": "str"
+ },
+ "routes_id60118.json": {
+  "city": "str",
+  "district": "str",
+  "id": "int",
+  "meta": {
+   "data": {
+    "alt_start": "str",
+    "alt_top": "str",
+    "drop": "str",
+    "exposure": "str",
+    "type_route": "str"
+   },
+   "geo": {
+    "coords": {
+     "lat": "float",
+     "lng": "float"
+    }
+   }
+  },
+  "permalink": "str",
+  "region": {
+   "name": "str"
+  },
+  "title": "str"
+ },
+ "routes_id62001.json": {
+  "city": "str",
+  "district": "str",
+  "id": "int",
+  "meta": {
+   "data": {
+    "alt_start": "str",
+    "alt_top": "str",
+    "drop": "str",
+    "exposure": "str",
+    "grade_skimo": "str",
+    "type_route": "str"
+   },
+   "geo": {
+    "coords": {
+     "lat": "null",
+     "lng": "null"
+    }
+   }
+  },
+  "permalink": "str",
+  "region": {
+   "name": "str"
+  },
+  "title": "str"
+ }
+}

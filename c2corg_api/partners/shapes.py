@@ -33,11 +33,17 @@ def shape(value):
     return [merged]
 
 
+def merge(a, b):
+    """Merge two shapes (of the same endpoint, e.g. two pages) into one."""
+    return _merge(a, b)
+
+
 def _merge(a, b):
     """Merge the shapes of two items of the same list."""
     if a == b:
         return a
-    if isinstance(a, dict) and isinstance(b, dict):
+    plain_dicts = all(isinstance(x, dict) and 'any_of' not in x for x in (a, b))
+    if plain_dicts:
         return {
             key: _merge(a[key], b[key])
             if key in a and key in b
