@@ -93,6 +93,10 @@ app container** (a VS Code terminal, or `dc exec app bash`). Do not run `make bo
   the setup again. With VS Code the Compose project is named after the folder: find its
   `…_postgres_data` and `…_es_data` volumes with `docker volume ls`.
 
+### Claude Code on the web / restricted sandboxes
+
+See [docs/claude-code-cloud.md](docs/claude-code-cloud.md) (`scripts/sandbox-up.sh`).
+
 ### Podman
 
 Use a Compose provider supporting `up --wait` (Docker Compose v2 or podman-compose 1.6+; check with
