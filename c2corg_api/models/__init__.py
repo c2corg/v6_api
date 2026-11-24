@@ -65,6 +65,7 @@ from c2corg_api.models import image_duplicate  # noqa
 from c2corg_api.models import harvest  # noqa
 from c2corg_api.models import avalanche_bulletin  # noqa
 from c2corg_api.models import region_weather  # noqa
+from c2corg_api.models import partner_outing  # noqa
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,
