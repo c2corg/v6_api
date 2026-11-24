@@ -13,6 +13,7 @@ import time
 from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from urllib.parse import quote, quote_plus
 
 from sqlalchemy import delete, func, null, select, text
 from sqlalchemy.dialects.postgresql import insert
@@ -46,6 +47,7 @@ MIN_ITEM_ERRORS = 3
 MAX_ITEM_ERROR_RATIO = 0.1
 # runs failed in a row before the backoff starts
 BACKOFF_AFTER = 3
+BACKOFF_MARGIN = timedelta(seconds=30)
 DETAIL_LENGTH = 500
 DEFAULT_FIXTURES_DIR = (
     Path(__file__).resolve().parent.parent / 'tests' / ('partners/fixtures')
@@ -230,9 +232,15 @@ def purge_partner_outings(session, now, retention_days):
 
 
 def _clean_detail(message, secrets):
-    for value in secrets.values():
-        if value:
-            message = message.replace(value, '***')
+    # also the forms a secret takes in a URL (an error often quotes the URL)
+    forms = {
+        form
+        for value in secrets.values()
+        if value
+        for form in (value, quote(value, safe=''), quote_plus(value))
+    }
+    for form in sorted(forms, key=len, reverse=True):
+        message = message.replace(form, '***')
     return message[:DETAIL_LENGTH]
 
 
@@ -255,7 +263,9 @@ def _backoff_active(row, now, settings):
     if failures < BACKOFF_AFTER or row.last_run_at is None:
         return False
     wait = timedelta(minutes=_interval_minutes(settings) * 2 ** min(failures - 2, 4))
-    return now - row.last_run_at < wait
+    # the scheduler ticks every interval, but `now` is read a few ms after the
+    # tick: without a margin, a tick right on the end of the wait is skipped
+    return now - row.last_run_at < wait - BACKOFF_MARGIN
 
 
 def _since(row, now, settings):
@@ -310,10 +320,13 @@ def _run_source(session, row, adapter, transport, lookups, now, settings):
     upserted = 0
     skipped = Counter()
     fetched = 0
+    shift = _fixture_shift(name, transport, now)
     try:
+        # in fixture mode the adapter lives on the day of the recording: its
+        # `since` filter and relative dates ("yesterday") match the fixtures
         ctx = FetchContext(
-            since=_since(row, now, settings),
-            now=now,
+            since=_since(row, now, settings) - shift,
+            now=now - shift,
             cursor=row.cursor,
             transport=transport,
             lookups=lookups,
@@ -348,9 +361,7 @@ def _run_source(session, row, adapter, transport, lookups, now, settings):
                 status = 'degraded'
                 detail = f'{result.item_errors} items failed to parse'
             try:
-                upserted = _store(
-                    session, name, result, transport, now, settings, skipped
-                )
+                upserted = _store(session, result, shift, now, settings, skipped)
             except Exception as e:
                 log.warning('Partner source %s: storing failed', name, exc_info=True)
                 session.rollback()
@@ -362,7 +373,9 @@ def _run_source(session, row, adapter, transport, lookups, now, settings):
                 row.cursor = result.cursor if result.cursor is not None else null()
 
     row.status = status
-    row.status_detail = _clean_detail(detail, secrets) if detail else None
+    # the fixture secrets are placeholders, not worth masking ("No fixture...")
+    masked = {} if fixtures else secrets
+    row.status_detail = _clean_detail(detail, masked) if detail else None
     row.last_duration_ms = int((time.monotonic() - started) * 1000)
     row.last_requests = transport.request_count
     row.last_fetched = fetched
@@ -382,14 +395,24 @@ def _run_source(session, row, adapter, transport, lookups, now, settings):
     return status
 
 
-def _store(session, name, result, transport, now, settings, skipped):
+def _fixture_shift(name, transport, now):
+    """Return the days between the recording of the fixtures and today.
+
+    Zero in http mode. The demo shows the fixtures as if recorded today.
+    """
+    if not isinstance(transport, FixtureTransport) or not transport.recorded_at:
+        return timedelta(0)
+    shift = now.date() - date.fromisoformat(transport.recorded_at)
+    log.warning(
+        'Partner source %s: fixtures, dates shifted by %d days', name, shift.days
+    )
+    return shift
+
+
+def _store(session, result, shift, now, settings, skipped):
     """Upsert the outings of a result, and assign their areas."""
     outings = result.outings
-    if isinstance(transport, FixtureTransport) and transport.recorded_at:
-        shift = now.date() - date.fromisoformat(transport.recorded_at)
-        log.warning(
-            'Partner source %s: fixtures, dates shifted by %d days', name, shift.days
-        )
+    if shift:
         outings = [dataclasses.replace(o, date=o.date + shift) for o in outings]
     limit = now.date() - timedelta(days=_retention_days(settings))
     kept = [o for o in outings if o.date >= limit]

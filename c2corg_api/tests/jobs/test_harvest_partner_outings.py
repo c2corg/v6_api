@@ -481,6 +481,16 @@ def test_no_secret_in_the_detail(db, monkeypatch):
     assert '***' in detail
 
 
+def test_no_url_encoded_secret_in_the_detail(db, monkeypatch):
+    monkeypatch.setenv('FAKE_KEY', 'a/b c+d')
+    adapter = make_adapter(
+        fetch=raises(SourceDown('503 for https://x/?key=a%2Fb+c%2Bd&k=a%2Fb%20c%2Bd')),
+        secrets=('FAKE_KEY',),
+    )
+    run(db, adapter)
+    assert source_row(db).status_detail == '503 for https://x/?key=***&k=***'
+
+
 def test_detail_is_truncated(db):
     adapter = make_adapter(fetch=raises(SourceDown('x' * 2000)))
     run(db, adapter)
@@ -629,7 +639,9 @@ def test_backoff(db):
     assert row.last_run_at == last
     assert row.consecutive_failures == 4
 
-    assert run(db, adapter, now=last + datetime.timedelta(minutes=60)) == 'down'
+    # the next tick, read a few ms early, is not skipped
+    tick = last + datetime.timedelta(minutes=60, milliseconds=-5)
+    assert run(db, adapter, now=tick) == 'down'
     assert len(adapter.calls) == 5
     assert source_row(db).consecutive_failures == 5
 
@@ -797,6 +809,22 @@ def test_fixture_mode_shift_follows_the_clock(db, fixtures_dir):
     transport = fixture_transport(fixtures_dir, adapter)
     run(db, adapter, now=NOW + datetime.timedelta(days=2), transport=transport)
     assert outings_of(db)[0].date == TODAY + datetime.timedelta(days=2)
+
+
+def test_fixture_mode_gives_the_adapter_the_recording_clock(db, fixtures_dir):
+    # weeks after the recording, the adapter still sees the recorded items as
+    # recent: its `since` filter must not drop them
+    later = NOW + datetime.timedelta(days=40)
+    adapter = make_adapter(
+        fetch=lambda ctx: FetchResult([outing('rec', date=datetime.date(2026, 11, 9))])
+    )
+    transport = fixture_transport(fixtures_dir, adapter)
+    run(db, adapter, now=later, transport=transport)
+    ctx = adapter.calls[0]
+    # recorded on 2026-11-10: the first run reads 16 days before it
+    assert ctx.now == datetime.datetime(2026, 11, 10, 12, 0, tzinfo=UTC)
+    assert ctx.since == datetime.date(2026, 10, 25)
+    assert outings_of(db)[0].date == later.date() - datetime.timedelta(days=1)
 
 
 def test_http_mode_never_shifts_the_dates(db):
