@@ -61,6 +61,8 @@ from c2corg_api.models import sso  # noqa
 from c2corg_api.models import account_removal  # noqa
 from c2corg_api.models import deleted_document  # noqa
 from c2corg_api.models import image_embed  # noqa
+from c2corg_api.models import harvest  # noqa
+from c2corg_api.models import avalanche_bulletin  # noqa
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,
