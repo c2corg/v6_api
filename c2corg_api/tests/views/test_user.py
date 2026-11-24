@@ -12,6 +12,14 @@ import pytest
 from c2corg_api.httpexceptions import HTTPBadRequest
 
 # from pytest import mark
+from c2corg_api.models.cache_version import CacheVersion
+from c2corg_api.models.document import (
+    ArchiveDocument,
+    ArchiveDocumentLocale,
+    Document,
+    DocumentLocale,
+)
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE, UserProfile
@@ -490,6 +498,14 @@ def test_forgot_password_discourse_up(_send_email, client, session, user_ids):
 
 
 @patch('c2corg_api.emails.email_service.EmailService._send_email')
+def test_forgot_password_strips_the_email(_send_email, client, session, user_ids):
+    user = session.get(User, user_ids['contributor'])
+    url = '/users/request_password_change'
+    send_json(client, 'post', url, {'email': f' {user.email} '}, status=200)
+    _send_email.check_call_once()
+
+
+@patch('c2corg_api.emails.email_service.EmailService._send_email')
 def test_forgot_password_discourse_down(
     _send_email, client, session, settings, user_ids, discourse
 ):
@@ -558,8 +574,22 @@ def test_purge_accounts(_send_email, client, session):
     session.commit()
 
     # The user should be removed
+    user_id = user.id
     purge_account()
     assert 0 == query.count()
+
+    # with its whole profile document: a documents row left without its
+    # user_profiles row breaks every polymorphic load of it
+    for model in (
+        Document,
+        DocumentLocale,
+        DocumentVersion,
+        ArchiveDocument,
+        ArchiveDocumentLocale,
+        CacheVersion,
+    ):
+        rows = session.query(model).filter(model.document_id == user_id).count()
+        assert rows == 0, model.__name__
 
 
 def test_purge_tokens(client, session, settings, passwords):
@@ -841,6 +871,39 @@ def test_login_failure(client, settings, passwords):
         status=401,
     ).json
     assert body['status'] == 'error'
+
+
+def test_login_strips_the_username(client, settings, passwords):
+    body = login(
+        client, settings, passwords, ' moderator ', passwords['moderator']
+    ).json
+    assert body['username'] == 'moderator'
+
+
+def test_login_strips_the_email(client, settings, passwords):
+    body = login(
+        client,
+        settings,
+        passwords,
+        '\tmoderator@camptocamp.org ',
+        passwords['moderator'],
+    ).json
+    assert body['username'] == 'moderator'
+
+
+def test_login_strips_the_password(client, settings, passwords):
+    password = ' ' + passwords['moderator'] + '\n'
+    body = login(client, settings, passwords, 'moderator', password).json
+    assert 'token' in body
+
+
+def test_login_keeps_a_password_with_spaces(client, session, settings, user_ids):
+    # a password set with a trailing space must be given with it
+    user = session.get(User, user_ids['contributor'])
+    user.password = 'with a space '  # nosec B105 (a test password)
+    session.flush()
+    login(client, settings, {}, 'contributor', 'with a space ', status=200)
+    login(client, settings, {}, 'contributor', 'with a space', status=401)
 
 
 def test_login_no_tos_failure(client, settings, passwords):

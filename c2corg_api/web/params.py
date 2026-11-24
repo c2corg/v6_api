@@ -16,7 +16,7 @@ from pydantic import BeforeValidator, WithJsonSchema
 from pydantic_core import PydanticCustomError
 
 from c2corg_api.models.common import document_types
-from c2corg_api.models.common.attributes import default_langs
+from c2corg_api.models.common.attributes import default_langs, image_types
 from c2corg_api.views.validation import parse_datetime, parse_int_safe
 from c2corg_api.web.errors import error_response
 
@@ -116,6 +116,20 @@ DocType = Annotated[
     str,
     BeforeValidator(_doc_type),
     WithJsonSchema({'type': 'string', 'enum': list(document_types.ALL)}),
+]
+
+
+def _image_type(value):
+    if value not in image_types:
+        raise PydanticCustomError('c2corg', 'invalid image_type')
+    return value
+
+
+# the type of an image: `collaborative`, `personal` or `copyright`
+ImageType = Annotated[
+    str,
+    BeforeValidator(_image_type),
+    WithJsonSchema({'type': 'string', 'enum': list(image_types)}),
 ]
 
 

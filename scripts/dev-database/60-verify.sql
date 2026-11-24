@@ -21,8 +21,9 @@ begin
   foreach t in array array[
     'users.token', 'users.sso_external_id', 'users.sso_key', 'sympa.subscriber_table',
     'tracking.users', 'tracking.activities', 'tracking.polar', 'tracking.strava',
-    'guidebook.feed_followed_users', 'guidebook.feed_filter_area', 'guidebook.documents_tags',
-    'guidebook.documents_tags_log', 'guidebook.documents_topics', 'guidebook.es_deleted_documents',
+    'guidebook.feed_followed_users', 'guidebook.feed_filter_area', 'guidebook.favourites',
+    'guidebook.favourites_log', 'guidebook.favourite_folders', 'guidebook.documents_topics',
+    'guidebook.es_deleted_documents',
     'guidebook.es_deleted_locales'
   ] loop
     execute format('select count(*) from %s', t) into n;

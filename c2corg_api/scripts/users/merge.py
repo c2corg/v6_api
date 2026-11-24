@@ -16,10 +16,9 @@ from c2corg_api.models.cache_version import (
     update_cache_version_full,
 )
 from c2corg_api.models.document_history import HistoryMetaData
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.favourite import Favourite, FavouriteFolder, FavouriteLog
 from c2corg_api.models.feed import DocumentChange, FilterArea, FollowedUser
 from c2corg_api.models.mailinglist import Mailinglist
-from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.sso import SsoExternalId
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
@@ -122,8 +121,8 @@ def merge_user_accounts(source_user_id, target_user_id, queue_config):
     _remove_geo_associations(source_user_id)
     print('Transfering associations...')
     _transfer_associations(source_user_id, target_user_id)
-    print('Transfering tags...')
-    _transfer_tags(source_user_id, target_user_id)
+    print('Transfering favourites and their folders...')
+    _transfer_favourites(source_user_id, target_user_id)
     print('Updating feed entries...')
     _update_feed_entries(source_user_id, target_user_id)
     print('Updating contributions versions and histories...')
@@ -163,56 +162,87 @@ def _transfer_associations(source_user_id, target_user_id):
     ).update({AssociationLog.user_id: target_user_id})
 
 
-def _transfer_tags(source_user_id, target_user_id):
+def _transfer_favourites(source_user_id, target_user_id):
+    _transfer_favourite_folders(source_user_id, target_user_id)
+
     target_document_ids_result = (
-        DBSession.query(DocumentTag.document_id)
-        .filter(DocumentTag.user_id == target_user_id)
+        DBSession.query(Favourite.document_id)
+        .filter(Favourite.user_id == target_user_id)
         .all()
     )
     target_document_ids = [document_id for (document_id,) in target_document_ids_result]
-    # move the current tags (only if the target user has not
-    # already tagged the same document)
-    transfered_document_ids_result = DBSession.execute(
-        DocumentTag.__table__.update()
+    # move the current favourites, with their folder and date (only if the
+    # target user does not already have the same document in favourites)
+    transfered_documents_result = DBSession.execute(
+        Favourite.__table__.update()
         .where(
             _and_in(
-                DocumentTag.user_id == source_user_id,
-                DocumentTag.document_id,
+                Favourite.user_id == source_user_id,
+                Favourite.document_id,
                 target_document_ids,
             )
         )
         .values(user_id=target_user_id)
-        .returning(DocumentTag.document_id)
+        .returning(Favourite.document_id, Favourite.document_type)
     )
 
-    # remove remaining tags
+    # remove remaining favourites
     DBSession.execute(
-        DocumentTag.__table__.delete().where(DocumentTag.user_id == source_user_id)
+        Favourite.__table__.delete().where(Favourite.user_id == source_user_id)
     )
 
     # remove all existing logs
     DBSession.execute(
-        DocumentTagLog.__table__.delete().where(
-            DocumentTagLog.user_id == source_user_id
-        )
+        FavouriteLog.__table__.delete().where(FavouriteLog.user_id == source_user_id)
     )
 
-    # create new ones for the transfered tags
-    transfered_document_ids = [
+    # create new ones for the transfered favourites
+    transfered_documents = [
         {
             'document_id': document_id,
             'user_id': target_user_id,
-            # FIXME OK as long as tags are only used for routes:
-            'document_type': ROUTE_TYPE,
+            'document_type': document_type,
             'is_creation': True,
             'written_at': func.now(),
         }
-        for (document_id,) in transfered_document_ids_result
+        for (document_id, document_type) in transfered_documents_result
     ]
-    if len(transfered_document_ids):
-        DBSession.execute(
-            DocumentTagLog.__table__.insert().values(transfered_document_ids)
+    if len(transfered_documents):
+        DBSession.execute(FavouriteLog.__table__.insert().values(transfered_documents))
+
+
+def _transfer_favourite_folders(source_user_id, target_user_id):
+    # A folder named as one of the target user's is merged into it, the
+    # others are moved after the folders of the target user.
+    target_folders = dict(
+        DBSession.query(FavouriteFolder.name, FavouriteFolder.id).filter(
+            FavouriteFolder.user_id == target_user_id
         )
+    )
+    last_position = (
+        DBSession.query(func.max(FavouriteFolder.position))
+        .filter(FavouriteFolder.user_id == target_user_id)
+        .scalar()
+    )
+    position = -1 if last_position is None else last_position
+    source_folders = (
+        DBSession.query(FavouriteFolder)
+        .filter(FavouriteFolder.user_id == source_user_id)
+        .order_by(FavouriteFolder.position, FavouriteFolder.id)
+        .all()
+    )
+    for folder in source_folders:
+        same_name_id = target_folders.get(folder.name)
+        if same_name_id is not None:
+            DBSession.query(Favourite).filter(Favourite.folder_id == folder.id).update(
+                {Favourite.folder_id: same_name_id}, synchronize_session=False
+            )
+            DBSession.delete(folder)
+        else:
+            position += 1
+            folder.user_id = target_user_id
+            folder.position = position
+    DBSession.flush()
 
 
 def _update_feed_entries(source_user_id, target_user_id):

@@ -176,12 +176,4 @@ def create_documents(browser, user_ids):
         },
         user='moderator',
     )
-    ids['coverages'] = browser.create(
-        'coverages',
-        {
-            'coverage_type': 'fr-se',
-            'geometry': {'geom_detail': POLYGON},
-            'locales': [{'lang': 'en', 'title': 'Coverage'}],
-        },
-    )
     return Documents(browser, ids)

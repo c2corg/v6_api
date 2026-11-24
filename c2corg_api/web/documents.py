@@ -199,11 +199,19 @@ def handler_arguments(function):
 
 
 def include_handler_write(
-    app, path, http_method, handler, validators, permission, content_types
+    app,
+    path,
+    http_method,
+    handler,
+    validators,
+    permission,
+    content_types,
+    operation_id=None,
 ):
     """Add a write route served by a handler of the validated request."""
     # the checks run in this order: rate limiting, content type, permission,
-    # validators (web.handlers.serve_write)
+    # validators (web.handlers.serve_write); `operation_id`: the name of the
+    # handler by default, another one for a second route of the handler
 
     async def endpoint(request: Request, user: User):
         return await serve_write(
@@ -221,7 +229,7 @@ def include_handler_write(
         path,
         endpoint,
         methods=[http_method],
-        operation_id=handler.__name__,
+        operation_id=operation_id or handler.__name__,
         tags=[path.strip('/').split('/')[0]],
     )
 
@@ -251,7 +259,6 @@ def include(app):
         AREA_TYPE,
         ARTICLE_TYPE,
         BOOK_TYPE,
-        COVERAGE_TYPE,
         IMAGE_TYPE,
         MAP_TYPE,
         OUTING_TYPE,
@@ -264,7 +271,6 @@ def include(app):
         area,
         article,
         book,
-        coverage,
         image,
         outing,
         route,
@@ -298,19 +304,13 @@ def include(app):
         area.get_area_info,
         doc_type=AREA_TYPE,
     )
-    # maps have no version route, coverages neither version nor info
+    # maps have no version route
     include_document_type(
         app,
         'maps',
         (topo_map.list_topo_maps, topo_map.get_topo_map),
         get_info=topo_map.get_topo_map_info,
         doc_type=MAP_TYPE,
-    )
-    include_document_type(
-        app,
-        'coverages',
-        (coverage.list_coverages, coverage.get_coverage_document),
-        doc_type=COVERAGE_TYPE,
     )
     # the image proxy (/images/proxy/{id}) and /images/list stay on Pyramid
     include_document_type(
@@ -386,9 +386,6 @@ def include(app):
     include_document_writes(app, 'areas', area.create_area, area.update_area)
     include_document_writes(
         app, 'maps', topo_map.create_topo_map, topo_map.update_topo_map
-    )
-    include_document_writes(
-        app, 'coverages', coverage.create_coverage, coverage.update_coverage
     )
     include_document_writes(
         app, 'xreports', xreport.create_xreport, xreport.update_xreport

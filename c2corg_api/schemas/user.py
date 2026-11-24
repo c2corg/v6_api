@@ -38,7 +38,7 @@ class UserCreateSchema(Schema):
     forum_username: Str(**FORUM_USERNAME_LENGTH, checks=[forum_username_check])
     name: Str(200)
     # no length check here: Colander's Email validator replaced it
-    email: Str(checks=[email_check])
+    email: Str(200, checks=[email_check])
     lang: OneOf(default_langs) = 'fr'
 
 

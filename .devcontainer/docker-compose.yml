@@ -5,12 +5,19 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ..:/workspace:cached
+    ports:
+      - "127.0.0.1:6543:6543"
     command: sleep infinity
+    # No core dumps: a crashed Node/Chromium process (Playwright, vitest) writes a core file
+    # as big as its address space (20 GB+) into its working directory, which fills the
+    # container's writable layer
+    ulimits:
+      core: 0
     depends_on:
       postgresql:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
     # Navitia settings, read with os.getenv() by the API (the server does not load .env, only the tests do)
@@ -20,6 +27,8 @@ services:
       PGHOST: postgresql
       PGUSER: postgres
       PGPASSWORD: test
+      CONFIG: config/env.devcontainer
+      ES_INDEX_URL: http://elasticsearch:9200/c2corg
       # alembic_migration has no __init__.py, so the editable install does not expose it:
       # without this, initialize_c2corg_api_db only works when run from /workspace
       PYTHONPATH: /workspace
@@ -41,12 +50,15 @@ services:
       - ../docker/conf/postgresql.conf:/etc/postgresql.conf
     command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 10s
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 60
+      start_period: 10m
 
   elasticsearch:
+    # Elasticsearch 8 (+ analysis-icu). The index of the dev database is built at the first start
+    # (.devcontainer/setup.sh, `make init-elastic`) and kept in the es_data volume.
     build:
       context: ..
       dockerfile: docker/Dockerfile.elasticsearch
@@ -56,13 +68,18 @@ services:
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
       - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=4s"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
 
   redis:
-    image: redis:7.2
+    image: docker.io/library/redis:7.2
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

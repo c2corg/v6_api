@@ -1,6 +1,9 @@
+import pathlib
+import re
+
 import pytest
 
-from c2corg_api.markdown import parse_code
+from c2corg_api.markdown import get_embedded_image_ids, parse_code
 from c2corg_api.markdown.img import (
     get_image_url,
     make_image_size_resolver,
@@ -148,3 +151,44 @@ class TestImageTagSize:
         )
         assert 1 == html.count('c2c:width=')
         assert 'c2c:width="4000"' in html
+
+
+@pytest.mark.parametrize(
+    ('text', 'ids'),
+    [
+        ('[img=1/]', [1]),
+        ('[img=1 right big/]', [1]),
+        ('[img=1 right]a caption\non two lines[/img]', [1]),
+        ('text\n[img=1/]\n\n[img=2 left]caption[/img]', [1, 2]),
+        # one right after another
+        ('[img=1/][img=2 inline/][img=3]caption[/img]', [1, 2, 3]),
+        ('[img=1/]\n[img=1/]', [1, 1]),
+        # not shown: no image
+        ('in a line [img=1/]', []),
+        ('[img=1 right]no closing tag', []),
+        ('[IMG=1/]', []),
+        ('[img=1 Right/]', []),
+        ('[img=1 2/]', []),
+        ('<center>\n[img=1/]\n</center>', []),
+        ('', []),
+        ('no image', []),
+    ],
+)
+def test_get_embedded_image_ids(text, ids):
+    assert get_embedded_image_ids(text) == ids
+
+
+def test_get_embedded_image_ids_as_parse_code_shows_them():
+    # every markdown sample of the img tag tests, and its HTML
+    folder = pathlib.Path(__file__).parent / 'img_tag'
+    shown = re.compile(r'<img [^>]*c2c:document-id="(\d+)"')
+    for sample in sorted(folder.glob('*.md')):
+        text = sample.read_text()
+        expected = [int(i) for i in shown.findall(parse_code(text))]
+        assert get_embedded_image_ids(text) == expected, sample.name
+
+
+def test_get_embedded_image_ids_does_not_change_parse_code():
+    html = parse_code('[img=1/]')
+    get_embedded_image_ids('[img=1/]')
+    assert parse_code('[img=1/]') == html

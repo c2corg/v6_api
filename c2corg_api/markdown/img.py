@@ -109,6 +109,11 @@ class C2CImageBlock(BlockProcessor):
         # group(2) is the first group of the pattern
         img_id = m.group(1)
         options = m.group(2).split() if m.group(2) else []
+
+        # the ids of the images shown, collected by get_embedded_image_ids()
+        embedded_ids = getattr(self.parser.md, 'c2c_embedded_image_ids', None)
+        if embedded_ids is not None:
+            embedded_ids.append(int(img_id))
         caption = m.group(4).strip() if m.group(4) else ''
 
         position = 'inline'

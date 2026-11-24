@@ -1,0 +1,116 @@
+{
+  "body": {
+    "bulletins": [
+      {
+        "avalancheProblems": [
+          {
+            "aspects": [
+              "str"
+            ],
+            "comment": "str",
+            "customData": {
+              "CH": {
+                "coreZoneText": "str",
+                "problemID": "str",
+                "subdivision": "str"
+              }
+            },
+            "dangerRatingValue": "str",
+            "elevation": {
+              "lowerBound": "str",
+              "upperBound": "str"
+            },
+            "problemType": "str",
+            "validTimePeriod": "str"
+          }
+        ],
+        "bulletinID": "str",
+        "customData": {
+          "ALBINA": {
+            "mainDate": "str"
+          },
+          "CH": {
+            "aggregation": [
+              {
+                "category": "str",
+                "problemIDs": [
+                  "str"
+                ],
+                "problemTypes": [
+                  "str"
+                ],
+                "title": "str",
+                "validTimePeriod": "str"
+              }
+            ],
+            "dangerRatingEvolution": [
+              {
+                "dangerRating": {
+                  "customData": {
+                    "CH": {
+                      "subdivision": "str"
+                    }
+                  },
+                  "mainValue": "str"
+                },
+                "date": "str"
+              }
+            ]
+          }
+        },
+        "dangerRatings": [
+          {
+            "customData": {
+              "CH": {
+                "subdivision": "str"
+              }
+            },
+            "mainValue": "str",
+            "validTimePeriod": "str"
+          }
+        ],
+        "lang": "str",
+        "nextUpdate": "str",
+        "publicationTime": "str",
+        "regions": [
+          {
+            "name": "str",
+            "regionID": "str"
+          }
+        ],
+        "snowpackStructure": {
+          "comment": "str"
+        },
+        "source": {
+          "provider": {
+            "name": "str",
+            "website": "str"
+          }
+        },
+        "tendency": [
+          {
+            "comment": "str"
+          }
+        ],
+        "unscheduled": "bool",
+        "validTime": {
+          "endTime": "str",
+          "startTime": "str"
+        },
+        "weatherForecast": {
+          "comment": "str"
+        },
+        "weatherReview": {
+          "comment": "str"
+        }
+      }
+    ]
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "public, max-age=300",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

@@ -1,0 +1,10 @@
+Hola
+
+Su cuenta de Camptocamp.org "%(name)s" será fusionada con la cuenta "%(target)s" a partir del %(date)s.
+
+Las contribuciones y los mensajes del foro de "%(name)s" pasarán a "%(target)s". Solo podrá iniciar sesión con "%(target)s".
+
+Si usted no ha hecho esta solicitud, o si ha cambiado de opinión, escriba a los moderadores en el foro antes de esa fecha: %(forum)s
+
+Muchas gracias
+El equipo Camptocamp.org

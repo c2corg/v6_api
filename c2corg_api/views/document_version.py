@@ -105,6 +105,8 @@ def serialize_version(version):
         'version_id': version.id,
         'user_id': version.history_metadata.user_id,
         'name': version.history_metadata.user.name,
+        # the UI marks the contributions of the moderators
+        'moderator': version.history_metadata.user.moderator,
         'comment': version.history_metadata.comment,
         'written_at': version.history_metadata.written_at.isoformat(),
         'masked': version.masked,

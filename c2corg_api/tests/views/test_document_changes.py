@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from c2corg_api.models.document import DocumentGeometry
+from c2corg_api.models.document import DocumentGeometry, UpdateType
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.outing import Outing
 from c2corg_api.models.route import Route, RouteLocale
@@ -11,7 +11,7 @@ from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.views.test_feed import get_document_ids
-from c2corg_api.views.document import create_new_version
+from c2corg_api.views.document import create_new_version, update_version
 
 PREFIX = '/documents/changes'
 
@@ -209,3 +209,19 @@ def test_get_changes_pagination_invalid_format(client):
 def test_get_changes_userid_invalid_format(client):
     response = client.get(PREFIX + '?u=invalid-user_id', status=422)
     assert ('query', 'u', 'invalid u') in invalid_parameters(response)
+
+
+def test_get_changes_marks_the_moderators(client, session, user_ids, docs):
+    docs.waypoint1.elevation = 2001
+    session.flush()
+    update_version(
+        docs.waypoint1, user_ids['moderator'], 'elevation', [UpdateType.FIGURES], []
+    )
+    session.flush()
+
+    feed = client.get(PREFIX, status=200).json['feed']
+
+    # the change of the moderator is the latest one
+    assert feed[0]['user']['user_id'] == user_ids['moderator']
+    assert feed[0]['user']['moderator'] is True
+    assert all(change['user']['moderator'] is False for change in feed[1:])

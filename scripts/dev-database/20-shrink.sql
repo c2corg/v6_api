@@ -9,7 +9,7 @@ declare
   t text;
 begin
   foreach t in array array[
-    'documents', 'areas', 'articles', 'books', 'coverages', 'images', 'maps', 'outings', 'routes',
+    'documents', 'areas', 'articles', 'books', 'images', 'maps', 'outings', 'routes',
     'user_profiles', 'waypoints', 'xreports', 'documents_locales', 'documents_geometries',
     'cache_versions', 'area_associations'
   ] loop

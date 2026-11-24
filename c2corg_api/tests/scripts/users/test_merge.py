@@ -16,7 +16,7 @@ from c2corg_api.models.document import (
     DocumentLocale,
 )
 from c2corg_api.models.document_history import HistoryMetaData
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.favourite import Favourite, FavouriteFolder, FavouriteLog
 from c2corg_api.models.feed import DocumentChange, update_feed_document_create
 from c2corg_api.models.mailinglist import Mailinglist
 from c2corg_api.models.outing import OUTING_TYPE, Outing, OutingLocale
@@ -31,7 +31,7 @@ from c2corg_api.models.user_profile import (
     ArchiveUserProfile,
     UserProfile,
 )
-from c2corg_api.models.waypoint import Waypoint, WaypointLocale
+from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint, WaypointLocale
 from c2corg_api.scripts.users.merge import merge_user_accounts
 from c2corg_api.views.document import create_new_version
 
@@ -173,14 +173,14 @@ def docs(session, user_ids) -> Docs:
     )
 
     session.add(
-        DocumentTag(
+        Favourite(
             document_id=route1.document_id,
             document_type=ROUTE_TYPE,
             user_id=contributor.id,
         )
     )
     session.add(
-        DocumentTagLog(
+        FavouriteLog(
             document_id=route1.document_id,
             document_type=ROUTE_TYPE,
             user_id=contributor.id,
@@ -222,10 +222,10 @@ def test_merge_user_accounts(session, user_ids, queue_config, docs):
     assert _is_registered_to_ml(session, docs.contributor)
     assert not _is_registered_to_ml(session, docs.contributor2)
 
-    assert 1 == _count_tags(session, source_id)
-    assert 1 == _count_tag_logs(session, source_id)
-    assert 0 == _count_tags(session, target_id)
-    assert 0 == _count_tag_logs(session, target_id)
+    assert 1 == _count_favourites(session, source_id)
+    assert 1 == _count_favourite_logs(session, source_id)
+    assert 0 == _count_favourites(session, target_id)
+    assert 0 == _count_favourite_logs(session, target_id)
 
     # Actually do the merge
     merge_user_accounts(source_id, target_id, queue_config)
@@ -303,21 +303,96 @@ def test_merge_user_accounts(session, user_ids, queue_config, docs):
     )
     assert 0 == count
 
-    # Check tags have been transfered to the target user
-    assert 0 == _count_tags(session, source_id)
-    assert 0 == _count_tag_logs(session, source_id)
-    assert 1 == _count_tags(session, target_id)
-    assert 1 == _count_tag_logs(session, target_id)
+    # Check favourites have been transfered to the target user
+    assert 0 == _count_favourites(session, source_id)
+    assert 0 == _count_favourite_logs(session, source_id)
+    assert 1 == _count_favourites(session, target_id)
+    assert 1 == _count_favourite_logs(session, target_id)
 
 
-def _count_tags(session, user_id):
-    return session.query(DocumentTag).filter(DocumentTag.user_id == user_id).count()
-
-
-def _count_tag_logs(session, user_id):
-    return (
-        session.query(DocumentTagLog).filter(DocumentTagLog.user_id == user_id).count()
+def test_merge_favourite_folders(session, user_ids, queue_config, docs):
+    source_id = user_ids['contributor']
+    target_id = user_ids['contributor2']
+    source_a = FavouriteFolder(user_id=source_id, name='A', position=0)
+    source_b = FavouriteFolder(user_id=source_id, name='B', position=1)
+    target_b = FavouriteFolder(user_id=target_id, name='B', position=0)
+    session.add_all([source_a, source_b, target_b])
+    session.flush()
+    # route1 is already a favourite of the source (docs), without folder
+    session.query(Favourite).filter(Favourite.user_id == source_id).update(
+        {Favourite.folder_id: source_a.id}
     )
+    session.add_all(
+        [
+            Favourite(
+                user_id=source_id,
+                document_id=docs.waypoint1.document_id,
+                document_type=WAYPOINT_TYPE,
+                folder_id=source_b.id,
+            ),
+            Favourite(
+                user_id=source_id,
+                document_id=docs.outing1.document_id,
+                document_type=OUTING_TYPE,
+            ),
+            # also a favourite of the target: the target's one is kept
+            Favourite(
+                user_id=target_id,
+                document_id=docs.outing1.document_id,
+                document_type=OUTING_TYPE,
+                folder_id=target_b.id,
+            ),
+        ]
+    )
+    session.flush()
+    source_a_id, source_b_id = source_a.id, source_b.id
+
+    merge_user_accounts(source_id, target_id, queue_config)
+    session.expire_all()
+
+    folders = (
+        session.query(
+            FavouriteFolder.id, FavouriteFolder.name, FavouriteFolder.position
+        )
+        .filter(FavouriteFolder.user_id == target_id)
+        .order_by(FavouriteFolder.position)
+        .all()
+    )
+    # B merged into the target's one, A moved after it
+    assert folders == [(target_b.id, 'B', 0), (source_a_id, 'A', 1)]
+    assert session.get(FavouriteFolder, source_b_id) is None
+    assert (
+        session.query(FavouriteFolder)
+        .filter(FavouriteFolder.user_id == source_id)
+        .count()
+        == 0
+    )
+    favourites = {
+        f.document_id: (f.document_type, f.folder_id)
+        for f in session.query(Favourite).filter(Favourite.user_id == target_id)
+    }
+    assert favourites == {
+        docs.route1.document_id: (ROUTE_TYPE, source_a_id),
+        docs.waypoint1.document_id: (WAYPOINT_TYPE, target_b.id),
+        docs.outing1.document_id: (OUTING_TYPE, target_b.id),
+    }
+    # a log entry for each transferred favourite, with its type
+    logs = {
+        (log.document_id, log.document_type)
+        for log in session.query(FavouriteLog).filter(FavouriteLog.user_id == target_id)
+    }
+    assert logs == {
+        (docs.route1.document_id, ROUTE_TYPE),
+        (docs.waypoint1.document_id, WAYPOINT_TYPE),
+    }
+
+
+def _count_favourites(session, user_id):
+    return session.query(Favourite).filter(Favourite.user_id == user_id).count()
+
+
+def _count_favourite_logs(session, user_id):
+    return session.query(FavouriteLog).filter(FavouriteLog.user_id == user_id).count()
 
 
 def _count_area_associations(session, user_id):

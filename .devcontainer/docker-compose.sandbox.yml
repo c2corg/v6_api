@@ -1,0 +1,22 @@
+# Override for restricted sandboxes (Claude Code on the web, CI runners...), see
+# docs/claude-code-cloud.md. Not needed on a normal Docker/Podman install.
+#
+#   docker compose -p v6-api-dev -f .devcontainer/docker-compose.yml \
+#     -f .devcontainer/docker-compose.sandbox.yml up -d --build --wait
+#
+# - raising RLIMIT_NOFILE is refused by the sandbox ("error setting rlimit type 7")
+# - the egress proxy re-signs TLS: the app container must trust its CA bundle
+#   (CCR_CA_BUNDLE, default /root/.ccr/ca-bundle.crt) to install the dependencies
+services:
+  elasticsearch:
+    ulimits: !reset {}
+  app:
+    ulimits: !reset {}
+    volumes:
+      - ${CCR_CA_BUNDLE:-/root/.ccr/ca-bundle.crt}:/etc/ssl/ccr-ca-bundle.crt:ro
+    environment:
+      SSL_CERT_FILE: /etc/ssl/ccr-ca-bundle.crt
+      REQUESTS_CA_BUNDLE: /etc/ssl/ccr-ca-bundle.crt
+      PIP_CERT: /etc/ssl/ccr-ca-bundle.crt
+      CURL_CA_BUNDLE: /etc/ssl/ccr-ca-bundle.crt
+      NODE_EXTRA_CA_CERTS: /etc/ssl/ccr-ca-bundle.crt

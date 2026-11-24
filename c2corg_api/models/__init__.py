@@ -39,7 +39,7 @@ from c2corg_api.models import waypoint  # noqa
 from c2corg_api.models import route  # noqa
 from c2corg_api.models import document_history  # noqa
 from c2corg_api.models import document_topic  # noqa
-from c2corg_api.models import document_tag  # noqa
+from c2corg_api.models import favourite  # noqa
 from c2corg_api.models import image  # noqa
 from c2corg_api.models import user  # noqa
 from c2corg_api.models import association  # noqa
@@ -60,6 +60,10 @@ from c2corg_api.models import mailinglist  # noqa
 from c2corg_api.models import sso  # noqa
 from c2corg_api.models import account_removal  # noqa
 from c2corg_api.models import deleted_document  # noqa
+from c2corg_api.models import image_embed  # noqa
+from c2corg_api.models import harvest  # noqa
+from c2corg_api.models import avalanche_bulletin  # noqa
+from c2corg_api.models import region_weather  # noqa
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,
@@ -72,7 +76,6 @@ document_types = {
     topo_map.MAP_TYPE: topo_map.TopoMap,
     area.AREA_TYPE: area.Area,
     outing.OUTING_TYPE: outing.Outing,
-    coverage.COVERAGE_TYPE: coverage.Coverage,
 }
 
 document_locale_types = {
@@ -86,5 +89,4 @@ document_locale_types = {
     topo_map.MAP_TYPE: document.DocumentLocale,
     area.AREA_TYPE: document.DocumentLocale,
     outing.OUTING_TYPE: outing.OutingLocale,
-    coverage.COVERAGE_TYPE: document.DocumentLocale,
 }

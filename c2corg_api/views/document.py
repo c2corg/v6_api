@@ -28,7 +28,6 @@ from c2corg_api.models.cache_version import (
     update_cache_version,
     update_cache_version_associations,
 )
-from c2corg_api.models.coverage import COVERAGE_TYPE
 from c2corg_api.models.document import (
     ArchiveDocument,
     ArchiveDocumentGeometry,
@@ -50,7 +49,6 @@ from c2corg_api.models.topo_map_association import get_maps, update_maps_for_doc
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
-from c2corg_api.search import search_documents as search_mappings
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views import etag_cache, set_best_locale, to_json_dict
 from c2corg_api.views.document_listings import (
@@ -60,6 +58,7 @@ from c2corg_api.views.document_listings import (
 )
 from c2corg_api.views.forum import rename_topics, topic_texts
 from c2corg_api.views.license import get_license
+from c2corg_api.views.markdown import update_image_embeds
 from c2corg_api.views.validation import (
     association_permission_checker,
     association_permission_removal_checker,
@@ -69,8 +68,9 @@ from c2corg_api.views.validation import (
 
 log = logging.getLogger(__name__)
 
-# the maximum number of documents that can be returned in a request
-LIMIT_MAX = 100
+# the maximum number of documents that can be returned in a request (the map
+# of the waypoints asks for that many in its view)
+LIMIT_MAX = 500
 
 # the default limit value (how much documents are returned at once in a
 # listing request)
@@ -144,16 +144,14 @@ def update_document(
     (update_types, changed_langs) = document.get_update_type(old_versions)
 
     if update_types:
-        # A new version needs to be created and persisted, except for
-        # coverages: they have no history (see _create_document)
-        if document.type != COVERAGE_TYPE:
-            update_version(
-                document,
-                user_id,
-                request.validated['message'],
-                update_types,
-                changed_langs,
-            )
+        # A new version needs to be created and persisted
+        update_version(
+            document,
+            user_id,
+            request.validated['message'],
+            update_types,
+            changed_langs,
+        )
 
         if document.type != AREA_TYPE and UpdateType.GEOM in update_types:
             update_areas_for_document(document, reset=True)
@@ -218,6 +216,7 @@ def create_new_version(document, user_id, written_at=None):
     DBSession.add(meta_data)
     DBSession.add_all(versions)
     DBSession.flush()
+    update_image_embeds(document.locales)
 
 
 def update_version(document, user_id, comment, update_types, changed_langs):
@@ -256,6 +255,10 @@ def update_version(document, user_id, comment, update_types, changed_langs):
     DBSession.add(meta_data)
     DBSession.add_all(locale_versions)
     DBSession.flush()
+    # the locales whose text changed (none for a merge, a protection...)
+    update_image_embeds(
+        locale for locale in document.locales if locale.lang in changed_langs
+    )
 
 
 def add_unchanged_version(document, user_id, comment, langs):
@@ -279,6 +282,8 @@ def add_unchanged_version(document, user_id, comment, langs):
     DBSession.add(meta_data)
     DBSession.add_all(versions)
     DBSession.flush()
+    # a restored locale lost its embeds with its row
+    update_image_embeds(locale for locale in document.locales if locale.lang in langs)
 
 
 def _get_document_archive(document, update_types):
@@ -468,9 +473,7 @@ def insert_document(
     DBSession.add(document)
     DBSession.flush()
 
-    # don't create a new version for coverages (no archive for this class)
-    if document.type != COVERAGE_TYPE:
-        create_new_version(document, user_id)
+    create_new_version(document, user_id)
 
     if document.type != AREA_TYPE:
         update_areas_for_document(document, reset=False)
@@ -637,11 +640,7 @@ def collection_get(request, doc_type, documents_config):
         # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
         raise HTTPBadRequest('offset + limit greater than 10000')
 
-    # the coverages are not indexed (see scripts/es/fill_index.py): their
-    # listing reads the database, whatever the search parameters
-    if doc_type in search_mappings and advanced_search.contains_search_params(
-        request.GET
-    ):
+    if advanced_search.contains_search_params(request.GET):
         # search with ElasticSearch
         search_documents = advanced_search.get_search_documents(
             request.GET, meta_params, doc_type

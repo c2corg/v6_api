@@ -35,6 +35,14 @@ ANONYMIZATION_DELAY_DAYS = 7
 # delay between the last validation and the removal, to leave time to cancel a
 # validation made by mistake
 DEFAULT_GRACE_HOURS = 24
+# a spammer goes sooner: its account keeps spamming meanwhile
+SPAM_GRACE_HOURS = 1
+
+
+def grace_hours_for(reason):
+    """Return the delay between the last validation and the removal."""
+    return SPAM_GRACE_HOURS if reason == REASON_SPAM else DEFAULT_GRACE_HOURS
+
 
 # the actions kept in the history of a request
 ACTION_CREATE = 'create'
@@ -143,10 +151,13 @@ class AccountRemovalRequest(Base):
             return STATUS_VALIDATED
         return STATUS_IN_PROGRESS
 
-    def ready_at(self, grace_hours=DEFAULT_GRACE_HOURS):
+    def ready_at(self, grace_hours=None):
         """Return when a validated request can be processed, else None."""
+        # the delay of its reason, unless one is given (the script's option)
         if self.status != STATUS_VALIDATED:
             return None
+        if grace_hours is None:
+            grace_hours = grace_hours_for(self.reason)
         day = self.executable_after
         grace = datetime.timedelta(hours=grace_hours)
         return max(
@@ -156,7 +167,7 @@ class AccountRemovalRequest(Base):
         )
 
 
-def is_ready(removal, now, grace_hours=DEFAULT_GRACE_HOURS):
+def is_ready(removal, now, grace_hours=None):
     """Tell whether a request can be processed now."""
     ready_at = removal.ready_at(grace_hours)
     return ready_at is not None and ready_at <= now

@@ -5,8 +5,10 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from pydiscourse.exceptions import DiscourseClientError
 
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.sso import SsoExternalId, SsoKey
 from c2corg_api.models.user import User
+from c2corg_api.models.user_profile import ArchiveUserProfile
 from c2corg_api.security.discourse_client import (
     DisabledDiscourseClient,
     set_discourse_client,
@@ -208,6 +210,14 @@ def test_new_user_success(discourse_mock, client, session, settings, sync_docs):
     assert 'newuser' == sso_user.username
     assert 'New User' == sso_user.name
     assert 'NewUser' == sso_user.forum_username
+
+    # the profile has its first version, as with the registration
+    profile_id = sso_user.id
+    archive = session.query(ArchiveUserProfile).filter_by(document_id=profile_id).one()
+    assert archive.version == sso_user.profile.version
+    version = session.query(DocumentVersion).filter_by(document_id=profile_id).one()
+    assert version.lang == 'fr'
+    assert version.history_metadata.user_id == profile_id
 
     assert sso_external_id.token == hash_token(token_from_url(body.get('url')))
 
