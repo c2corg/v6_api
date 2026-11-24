@@ -60,6 +60,7 @@ from c2corg_api.models import mailinglist  # noqa
 from c2corg_api.models import sso  # noqa
 from c2corg_api.models import account_removal  # noqa
 from c2corg_api.models import deleted_document  # noqa
+from c2corg_api.models import partner_outing  # noqa
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,
