@@ -5,6 +5,7 @@
     "harvest": {},
     "last_es_syncer_run": "str",
     "maintenance_mode": "bool",
+    "partners": {},
     "pg": "str",
     "redis": "str",
     "redis_keys": "int",

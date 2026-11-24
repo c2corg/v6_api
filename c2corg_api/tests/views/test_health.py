@@ -60,3 +60,28 @@ def test_es_down(monkeypatch, client):
 
     r = client.get('/outings?act=skitouring', status=503)
     assert r.json['errors'][0]['name'] == 'search unavailable'
+def test_partners_status_empty(client):
+    # no source ever ran: still a 200
+    r = client.get('/health', status=200)
+    assert r.json['partners'] == {}
+
+
+def test_partners_status(client, session):
+    from c2corg_api.models import DBSession
+    from c2corg_api.models.partner_outing import PartnerSource
+
+    DBSession.add(PartnerSource(source='skitour', status='disabled'))
+    DBSession.add(PartnerSource(source='gulliver', status='blocked'))
+    DBSession.flush()
+
+    r = client.get('/health', status=200)
+    assert r.json['partners'] == {'skitour': 'disabled', 'gulliver': 'blocked'}
+
+
+def test_partners_status_failure_does_not_fail_the_check(client, monkeypatch):
+    from c2corg_api.web import health
+
+    # the query raises: the key is empty and the status stays 200
+    monkeypatch.setattr(health, 'PartnerSource', None)
+    r = client.get('/health', status=200)
+    assert r.json['partners'] == {}
