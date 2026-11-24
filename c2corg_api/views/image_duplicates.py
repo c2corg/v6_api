@@ -7,16 +7,22 @@
 # different photos often have the same size (9 of 14k such sets in 2018 had
 # different EXIF dates). No hash of the files is stored.
 #
-# The sets are computed on each request (1 s for 650k images): no table to
-# keep up to date. A moderator merges the copies (POST /documents/merge),
-# deletes one, or dismisses the set: the pairs are kept in
-# DismissedImageDuplicate, a set is hidden while all its pairs are dismissed.
+# The sets are computed from all the images (1 s for 650k images, a scan
+# of the whole table): the result is cached for an hour, the query runs at
+# most once an hour whatever the moderators click. Each request then checks
+# the images of the cached sets (by id): merged or deleted images, and
+# dismissed pairs, leave the list at once; new copies show within an hour.
+# A moderator merges the copies (POST /documents/merge), deletes one, or
+# dismisses the set: the pairs are kept in DismissedImageDuplicate, a set is
+# hidden while all its pairs are dismissed.
 
 from itertools import combinations
 
-from sqlalchemy import select, text
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import Integer, bindparam, func, select, text
+from sqlalchemy.dialects.postgresql import ARRAY, insert
 
+from c2corg_api import caching
+from c2corg_api.caching import cache_image_duplicates, get_or_create
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import Document
@@ -36,6 +42,10 @@ DISMISS_MAX = 100
 # the images without EXIF date uploaded by different users are copies only
 # when uploaded within this time (photos shared after a group outing)
 NO_EXIF_SPAN = '7 days'
+# how long the sets are cached (seconds)
+SETS_EXPIRATION = 3600
+# the query gives up past this time rather than load the database
+SETS_TIMEOUT = '20s'
 
 # The sets, the last uploaded first. GROUP BY puts the images without EXIF
 # date together: the size and dimensions alone often match by chance, such a
@@ -43,7 +53,7 @@ NO_EXIF_SPAN = '7 days'
 # (the first versions tell who and when). The images merged into another
 # (redirected) are left out after the grouping: joining the documents first
 # takes seconds. `same_document`: two of the images are linked to the same
-# document.
+# document, when computed (an image merged since may change it).
 SETS_QUERY = """
 WITH candidates AS (
   SELECT array_agg(document_id) AS ids, date_time
@@ -76,49 +86,33 @@ WITH candidates AS (
   ) first
   WHERE s.date_time IS NULL
   GROUP BY s.ids
-), shown AS (
-  SELECT s.ids, s.newest,
-    EXISTS (
-      SELECT 1
-      FROM guidebook.associations a1
-      JOIN guidebook.associations a2
-        ON a2.parent_document_id = a1.parent_document_id
-       AND a2.child_document_id > a1.child_document_id
-      WHERE a1.child_document_id = ANY (s.ids)
-        AND a2.child_document_id = ANY (s.ids)
-    ) AS same_document
-  FROM sets s
-  LEFT JOIN uploads up ON up.ids = s.ids
-  WHERE (
-    s.date_time IS NOT NULL
-    OR up.uploaders = 1
-    OR up.span <= interval '{no_exif_span}'
-  )
-  AND (
-    SELECT count(*) FROM guidebook.dismissed_image_duplicates x
-    WHERE x.image1_id = ANY (s.ids) AND x.image2_id = ANY (s.ids)
-  ) < cardinality(s.ids) * (cardinality(s.ids) - 1) / 2
 )
-SELECT ids, same_document, count(*) OVER () AS total
-FROM shown
-{where}
-ORDER BY newest DESC
-OFFSET :offset LIMIT :limit
+SELECT s.ids,
+  EXISTS (
+    SELECT 1
+    FROM guidebook.associations a1
+    JOIN guidebook.associations a2
+      ON a2.parent_document_id = a1.parent_document_id
+     AND a2.child_document_id > a1.child_document_id
+    WHERE a1.child_document_id = ANY (s.ids)
+      AND a2.child_document_id = ANY (s.ids)
+  ) AS same_document
+FROM sets s
+LEFT JOIN uploads up ON up.ids = s.ids
+WHERE (
+  s.date_time IS NOT NULL
+  OR up.uploaders = 1
+  OR up.span <= interval '{no_exif_span}'
+)
+ORDER BY s.newest DESC
 """
 
 
 def list_duplicate_images(offset, limit, same_document=False):
     """Return the sets of duplicate images, the last uploaded first."""
-    where = 'WHERE same_document' if same_document else ''
-    # the grouping of all the images sorts in memory then, not on disk (about
-    # 30 MB for 650k images); for this transaction only
-    DBSession.execute(text("SET LOCAL work_mem = '64MB'"))
-    rows = DBSession.execute(
-        text(_query(where)), {'offset': offset, 'limit': limit}
-    ).all()
-    # past the last page: no row, no total
-    total = rows[0].total if rows else _count(where)
-    ids = [image_id for row in rows for image_id in row.ids]
+    shown = _shown(_sets(), same_document)
+    rows = shown[offset : offset + limit]
+    ids = [image_id for image_ids, _ in rows for image_id in image_ids]
     images = _images(ids)
     created = _created(ids)
     links = _links(ids)
@@ -130,27 +124,73 @@ def list_duplicate_images(offset, limit, same_document=False):
         + [e['document_id'] for es in embeds.values() for e in es]
     )
     return {
-        'total': total,
+        'total': len(shown),
         'sets': [
             {
-                'same_document': row.same_document,
+                'same_document': same,
                 'images': [
                     _image(images[i], created.get(i), users, links, embeds, titles)
-                    for i in row.ids
+                    for i in image_ids
                 ],
             }
-            for row in rows
+            for image_ids, same in rows
         ],
     }
 
 
-def _query(where):
-    return SETS_QUERY.format(where=where, no_exif_span=NO_EXIF_SPAN)
+def _sets():
+    """Return the sets as computed within the hour: [(ids, same_document)]."""
+    return get_or_create(
+        cache_image_duplicates,
+        f'sets-{caching.CACHE_VERSION}',
+        _compute_sets,
+        expiration_time=SETS_EXPIRATION,
+    )
 
 
-def _count(where):
-    row = DBSession.execute(text(_query(where)), {'offset': 0, 'limit': 1}).first()
-    return row.total if row else 0
+def _compute_sets():
+    # the grouping of all the images sorts in memory then, not on disk (about
+    # 30 MB for 650k images); for this transaction only
+    DBSession.execute(text("SET LOCAL work_mem = '64MB'"))
+    DBSession.execute(text(f"SET LOCAL statement_timeout = '{SETS_TIMEOUT}'"))
+    rows = DBSession.execute(text(SETS_QUERY.format(no_exif_span=NO_EXIF_SPAN)))
+    sets = [(list(row.ids), row.same_document) for row in rows]
+    DBSession.execute(text('SET LOCAL statement_timeout = DEFAULT'))
+    return sets
+
+
+def _shown(sets, same_document):
+    """Return the sets still to review: [(ids, same_document)]."""
+    # Lookups by id: the images not merged nor deleted since, the pairs
+    # dismissed.
+    all_ids = sorted({image_id for ids, _ in sets for image_id in ids})
+    if not all_ids:
+        return []
+    ids_param = bindparam('ids', all_ids, type_=ARRAY(Integer))
+    live = set(
+        DBSession.execute(
+            select(Document.document_id).where(
+                Document.document_id == func.any(ids_param),
+                Document.redirects_to.is_(None),
+            )
+        ).scalars()
+    )
+    dismissed = {
+        tuple(row)
+        for row in DBSession.execute(
+            select(
+                DismissedImageDuplicate.image1_id, DismissedImageDuplicate.image2_id
+            ).where(DismissedImageDuplicate.image1_id == func.any(ids_param))
+        )
+    }
+    shown = []
+    for ids, same in sets:
+        if same_document and not same:
+            continue
+        ids = [image_id for image_id in ids if image_id in live]
+        if any(pair not in dismissed for pair in combinations(ids, 2)):
+            shown.append((ids, same))
+    return shown
 
 
 def _images(ids):

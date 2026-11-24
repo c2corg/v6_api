@@ -8,7 +8,7 @@ from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.image_duplicate import DismissedImageDuplicate
 from c2corg_api.models.image_embed import ImageEmbed
-from c2corg_api.tests import auth_headers
+from c2corg_api.tests import auth_headers, reset_cache_key
 from c2corg_api.tests.views.test_document_delete import (  # noqa: F401
     _add_association,
     docs,
@@ -159,6 +159,8 @@ def test_duplicate_images_filter_and_page(client, copies):
 
 def test_merged_image_not_listed(client, session, copies):
     personal, collaborative, twice = copies
+    # listed first: the sets are cached, the merge shows at once all the same
+    assert _list(client).json['total'] == 2
     personal.redirects_to = collaborative.document_id
     session.flush()
 
@@ -208,8 +210,10 @@ def test_dismiss_one_image_of_a_set(client, session, user_ids, docs, copies):  #
     _dismiss(client, {'image_ids': [personal.document_id, collaborative.document_id]})
     assert _list(client).json['total'] == 1
 
-    # a new copy shows the set again
+    # a new copy shows the set again, once the cached sets expire
     _file(session, user_ids, 'contributor', 'personal', [docs.outing2], '4')
+    assert _list(client).json['total'] == 1
+    reset_cache_key()
     assert _list(client).json['total'] == 2
 
 
