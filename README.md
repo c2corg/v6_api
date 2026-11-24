@@ -97,6 +97,8 @@ app container** (a VS Code terminal, or `dc exec app bash`). Do not run `make bo
 
 See [docs/claude-code-cloud.md](docs/claude-code-cloud.md) (`scripts/sandbox-up.sh`).
 
+Partner outings (skitour.fr, gulliver.it) and their offline demo: [docs/partner-outings.md](docs/partner-outings.md).
+
 ### Podman
 
 Use a Compose provider supporting `up --wait` (Docker Compose v2 or podman-compose 1.6+; check with
