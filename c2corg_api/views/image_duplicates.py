@@ -33,27 +33,49 @@ LIMIT_DEFAULT = 30
 LIMIT_MAX = 100
 # the images of one dismissal
 DISMISS_MAX = 100
+# the images without EXIF date uploaded by different users are copies only
+# when uploaded within this time (photos shared after a group outing)
+NO_EXIF_SPAN = '7 days'
 
 # The sets, the last uploaded first. GROUP BY puts the images without EXIF
-# date together. The images merged into another (redirected) are left out
-# after the grouping: joining the documents first takes seconds. `same_document`:
-# two of the images are linked to the same document.
+# date together: the size and dimensions alone often match by chance, such a
+# set is kept when one user uploaded all its images, or within NO_EXIF_SPAN
+# (the first versions tell who and when). The images merged into another
+# (redirected) are left out after the grouping: joining the documents first
+# takes seconds. `same_document`: two of the images are linked to the same
+# document.
 SETS_QUERY = """
 WITH candidates AS (
-  SELECT array_agg(document_id) AS ids
+  SELECT array_agg(document_id) AS ids, date_time
   FROM guidebook.images
   WHERE file_size IS NOT NULL
   GROUP BY file_size, width, height, date_time
   HAVING count(*) > 1
 ), sets AS (
   SELECT array_agg(d.document_id ORDER BY d.document_id) AS ids,
-         max(d.document_id) AS newest
+         max(d.document_id) AS newest, c.date_time
   FROM candidates c
   CROSS JOIN LATERAL unnest(c.ids) AS u (id)
   JOIN guidebook.documents d ON d.document_id = u.id
   WHERE d.redirects_to IS NULL
-  GROUP BY c.ids
+  GROUP BY c.ids, c.date_time
   HAVING count(*) > 1
+), uploads AS (
+  SELECT s.ids,
+         count(DISTINCT first.user_id) AS uploaders,
+         max(first.written_at) - min(first.written_at) AS span
+  FROM sets s
+  CROSS JOIN LATERAL unnest(s.ids) AS u (id)
+  CROSS JOIN LATERAL (
+    SELECT h.user_id, h.written_at
+    FROM guidebook.documents_versions v
+    JOIN guidebook.history_metadata h ON h.id = v.history_metadata_id
+    WHERE v.document_id = u.id
+    ORDER BY h.id
+    LIMIT 1
+  ) first
+  WHERE s.date_time IS NULL
+  GROUP BY s.ids
 ), shown AS (
   SELECT s.ids, s.newest,
     EXISTS (
@@ -66,7 +88,13 @@ WITH candidates AS (
         AND a2.child_document_id = ANY (s.ids)
     ) AS same_document
   FROM sets s
+  LEFT JOIN uploads up ON up.ids = s.ids
   WHERE (
+    s.date_time IS NOT NULL
+    OR up.uploaders = 1
+    OR up.span <= interval '{no_exif_span}'
+  )
+  AND (
     SELECT count(*) FROM guidebook.dismissed_image_duplicates x
     WHERE x.image1_id = ANY (s.ids) AND x.image2_id = ANY (s.ids)
   ) < cardinality(s.ids) * (cardinality(s.ids) - 1) / 2
@@ -86,7 +114,7 @@ def list_duplicate_images(offset, limit, same_document=False):
     # 30 MB for 650k images); for this transaction only
     DBSession.execute(text("SET LOCAL work_mem = '64MB'"))
     rows = DBSession.execute(
-        text(SETS_QUERY.format(where=where)), {'offset': offset, 'limit': limit}
+        text(_query(where)), {'offset': offset, 'limit': limit}
     ).all()
     # past the last page: no row, no total
     total = rows[0].total if rows else _count(where)
@@ -116,10 +144,12 @@ def list_duplicate_images(offset, limit, same_document=False):
     }
 
 
+def _query(where):
+    return SETS_QUERY.format(where=where, no_exif_span=NO_EXIF_SPAN)
+
+
 def _count(where):
-    row = DBSession.execute(
-        text(SETS_QUERY.format(where=where)), {'offset': 0, 'limit': 1}
-    ).first()
+    row = DBSession.execute(text(_query(where)), {'offset': 0, 'limit': 1}).first()
     return row.total if row else 0
 
 

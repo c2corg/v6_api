@@ -4,6 +4,7 @@ import pytest
 from httmock import HTTMock
 
 from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.image import Image
 from c2corg_api.models.image_duplicate import DismissedImageDuplicate
 from c2corg_api.models.image_embed import ImageEmbed
@@ -295,3 +296,43 @@ def test_texts_showing_an_image(client, session, user_ids, docs, copies):  # noq
 
 def _image_file(session, user_ids, title, **file):
     return _file(session, user_ids, 'contributor', 'collaborative', [], title, **file)
+
+
+def _uploaded_at(session, image, at):
+    """Move the first version of an image to another time."""
+    version = (
+        session.query(DocumentVersion)
+        .filter(DocumentVersion.document_id == image.document_id)
+        .order_by(DocumentVersion.id)
+        .first()
+    )
+    version.history_metadata.written_at = at
+    session.flush()
+
+
+@pytest.mark.parametrize(('days_apart', 'listed'), [(6, True), (8, False)])
+def test_without_exif_date_by_other_users(
+    client, session, user_ids, days_apart, listed
+):
+    # no EXIF date: the same size and dimensions match by chance more often
+    first = _file(session, user_ids, 'contributor', 'personal', [], 'a', date_time=None)
+    second = _file(
+        session, user_ids, 'contributor2', 'personal', [], 'b', date_time=None
+    )
+    _uploaded_at(session, first, TAKEN)
+    _uploaded_at(session, second, TAKEN + datetime.timedelta(days=days_apart))
+
+    body = _list(client).json
+
+    assert body['total'] == (1 if listed else 0)
+
+
+def test_without_exif_date_by_one_user(client, session, user_ids):
+    first = _file(session, user_ids, 'contributor', 'personal', [], 'a', date_time=None)
+    second = _file(
+        session, user_ids, 'contributor', 'personal', [], 'b', date_time=None
+    )
+    _uploaded_at(session, first, TAKEN)
+    _uploaded_at(session, second, TAKEN + datetime.timedelta(days=400))
+
+    assert _list(client).json['total'] == 1
