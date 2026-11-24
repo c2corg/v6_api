@@ -1,0 +1,7 @@
+{
+  "code": "rest_no_route",
+  "message": "Nessun percorso trovato.",
+  "data": {
+    "status": 404
+  }
+}

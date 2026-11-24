@@ -1,0 +1,25 @@
+{
+  "id": 60118,
+  "title": "Ciaspolata al Lago d&#8217;Arpy",
+  "permalink": "https://www.gulliver.it/itinerari/ciaspolata-al-lago-d-arpy/",
+  "region": {
+    "name": "Valle d&#8217;Aosta"
+  },
+  "city": "Morgex",
+  "district": "Morgex",
+  "meta": {
+    "data": {
+      "drop": "560",
+      "alt_start": "1506",
+      "alt_top": "2066",
+      "exposure": "S",
+      "type_route": "snowshoe"
+    },
+    "geo": {
+      "coords": {
+        "lat": 45.7389,
+        "lng": 7.0003
+      }
+    }
+  }
+}
