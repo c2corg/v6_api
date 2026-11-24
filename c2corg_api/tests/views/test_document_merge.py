@@ -339,6 +339,9 @@ def test_merge_waypoint(client, session, docs):
     # check that the redirection is set
     session.refresh(docs.waypoint1)
     assert docs.waypoint1.redirects_to == docs.waypoint2.document_id
+    # merged into waypoint1 before: one level of redirection only
+    session.refresh(docs.waypoint3)
+    assert docs.waypoint3.redirects_to == docs.waypoint2.document_id
 
     # check that a new version was created for the source document
     new_source_version = (

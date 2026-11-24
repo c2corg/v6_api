@@ -57,6 +57,7 @@ from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
 from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
 from c2corg_api.models.image import Image
+from c2corg_api.models.image_duplicate import DismissedImageDuplicate
 from c2corg_api.models.route import ArchiveRoute
 from c2corg_api.models.topo_map_association import TopoMapAssociation
 from c2corg_api.models.user import User
@@ -83,6 +84,7 @@ OPTIONAL_TABLES = {
         FavouriteLog.__table__,
         DocumentChange.__table__,
         DocumentTopic.__table__,
+        DismissedImageDuplicate.__table__,
     )
 }
 
@@ -282,6 +284,11 @@ def _capture_document(snapshot, document_id, document_type, redirecting):
     snapshot.capture(AreaAssociation, of_document)
     snapshot.capture(Favourite, of_document)
     snapshot.capture(FavouriteLog, of_document)
+    if document_type == IMAGE_TYPE:
+        snapshot.capture(
+            DismissedImageDuplicate,
+            lambda r: or_(r.c.image1_id == document_id, r.c.image2_id == document_id),
+        )
     if not redirecting:
         # Not kept: the references to a deleted image in the feed items of
         # other documents (removed or shifted by the deletion).

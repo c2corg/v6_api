@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from c2corg_api.avalanche_bulletins import caaml, meteofrance, store
 from c2corg_api.avalanche_bulletins.cache import CET
@@ -23,6 +23,12 @@ from c2corg_api.tests.contract.test_avalanche_bulletins import (  # noqa: F401
 )
 from c2corg_api.tests.contract.test_avalanche_bulletins import (
     caaml as fixture,
+)
+from c2corg_api.web import avalanche_bulletins as views
+
+# the database before `alembic upgrade head`: the tables are not there
+MISSING_TABLE = ProgrammingError(
+    'SELECT', {}, type('E', (Exception,), {'pgcode': '42P01'})()
 )
 
 DAY = ('GET', '/avalanche-bulletins/regions/{region_id}/{day}')
@@ -223,6 +229,14 @@ class TestDay:
         [bulletin] = browser.get(url).json['bulletins']
         assert bulletin['dangerRatings'] == [{'mainValue': 'low'}]
 
+    @contract(DAY)
+    def test_tables_missing(self, browser):
+        with patch.object(views, 'day_bulletins', side_effect=MISSING_TABLE):
+            response = browser.get(
+                '/avalanche-bulletins/regions/FR-03/2026-11-22', status=503
+            )
+        assert response.json['status'] == 'error'
+
 
 @pytest.mark.usefixtures('client')
 class TestRatings:
@@ -292,3 +306,8 @@ class TestRatings:
         session.flush()
         [day] = browser.get(url, params=params).json['days']
         assert day['maxRating'] == 1
+
+    @contract(RATINGS)
+    def test_tables_missing(self, browser):
+        with patch.object(views, 'ratings', side_effect=MISSING_TABLE):
+            browser.get('/avalanche-bulletins/regions/FR-03/ratings', status=503)

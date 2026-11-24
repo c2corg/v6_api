@@ -5,11 +5,13 @@
 # the latest ones, those of a day (#2686), the day they are valid for as the
 # EAWS services name their files, and the danger of each day.
 
+import logging
 import re
 from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import Path, Query, Response
+from sqlalchemy.exc import SQLAlchemyError
 
 from c2corg_api.avalanche_bulletins import meteofrance
 from c2corg_api.avalanche_bulletins.cache import UpstreamError
@@ -26,6 +28,8 @@ from c2corg_api.web.answers import http_error
 from c2corg_api.web.db import request_session
 from c2corg_api.web.errors import error_response
 from c2corg_api.web.params import Lang
+
+log = logging.getLogger(__name__)
 
 RegionId = Annotated[
     str,
@@ -134,8 +138,11 @@ def avalanche_bulletin_day(
     day = _date(day)
     if day is None:
         return error_response([('path', 'day', 'invalid date (YYYY-MM-DD)')])
-    with request_session() as session:
-        bulletins = day_bulletins(session, region_id, day, lang)
+    try:
+        with request_session() as session:
+            bulletins = day_bulletins(session, region_id, day, lang)
+    except SQLAlchemyError:
+        return _not_stored(region_id)
     if not bulletins:
         return http_error(HTTPNotFound('no avalanche bulletin for this region and day'))
     response.headers['Cache-Control'] = (
@@ -178,10 +185,20 @@ def avalanche_bulletin_ratings(
         return error_response(
             [('querystring', 'from', f'more than {RATINGS_MAX_DAYS} days')]
         )
-    with request_session() as session:
-        days = ratings(session, region_id, since, to)
+    try:
+        with request_session() as session:
+            days = ratings(session, region_id, since, to)
+    except SQLAlchemyError:
+        return _not_stored(region_id)
     response.headers['Cache-Control'] = CACHE_CONTROL
     return {'days': days}
+
+
+def _not_stored(region_id):
+    # the database fails, or its tables are not there yet (a deployment
+    # before `alembic upgrade head`): the stored bulletins are unavailable
+    log.exception('Reading the stored bulletins of %s failed', region_id)
+    return http_error(HTTPServiceUnavailable('the stored bulletins are not available'))
 
 
 def _date(value):

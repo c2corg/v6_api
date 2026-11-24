@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session
 
 from c2corg_api.harvest.harvester import NotModified, State
@@ -30,6 +31,9 @@ SYNC_EVERY = timedelta(minutes=10)
 DISABLED_RETENTION = timedelta(days=30)
 # what is kept of an error message
 ERROR_LENGTH = 1000
+
+# PostgreSQL's undefined_table: the migration of the harvest not run yet
+UNDEFINED_TABLE = '42P01'
 
 # the last sync of this process
 _last_sync = None
@@ -76,11 +80,18 @@ def harvest_tick(settings=None, all_harvesters=None, workers=WORKERS):
     by_name = {h.name: h for h in all_harvesters}
     # A plain session on the engine configured on DBSession, as the other
     # jobs; each source then stores in its own session, in its thread.
-    with Session(DBSession.get_bind()) as session:
-        if _last_sync is None or _now() - _last_sync >= SYNC_EVERY:
-            sync_sources(session, by_name.values())
-            _last_sync = _now()
-        claimed = claim(session, by_name)
+    try:
+        with Session(DBSession.get_bind()) as session:
+            if _last_sync is None or _now() - _last_sync >= SYNC_EVERY:
+                sync_sources(session, by_name.values())
+                _last_sync = _now()
+            claimed = claim(session, by_name)
+    except ProgrammingError as e:
+        if getattr(e.orig, 'pgcode', None) != UNDEFINED_TABLE:
+            raise
+        # deployed before `alembic upgrade head`: a line a minute, no trace
+        log.warning('The harvest tables are missing (alembic upgrade head?)')
+        return
     lanes = _lanes([(by_name[name], id, state) for name, id, state in claimed])
     if workers <= 1:
         for lane in lanes:

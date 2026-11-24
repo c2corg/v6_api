@@ -61,6 +61,7 @@ from c2corg_api.models.xreport import (
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.document_trash import keep_deleted_document, keep_deleted_locale
 from c2corg_api.views.image import delete_all_files_for_image
+from c2corg_api.views.image_embeds import images_embedded_elsewhere
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id, validate_lang
 
@@ -322,7 +323,8 @@ def personal_images_deleted_with(request, document_id, document_type, images=Non
     # author (e.g. the photos of an outing), are deleted with it, kept in the
     # same entry of the deleted documents, and restored with it. The other
     # images linked to it stay, without the link: the collaborative ones and
-    # those of other users are listed for the moderators (GET /images/orphans).
+    # those of other users are listed for the moderators (GET /images/orphans),
+    # as are the personal images shown in the text of another document.
     # `images`: the result of _images_linked_only_to, when already read.
     if document_type == IMAGE_TYPE:
         return []
@@ -342,7 +344,9 @@ def personal_images_deleted_with(request, document_id, document_type, images=Non
     if not request.has_permission('moderator'):
         # only the images the user could delete (see validate_requestor)
         image_ids = [i for i in image_ids if is_less_than_24h_old(i)]
-    return sorted(image_ids)
+    # an image shown in the text of another document ([img=ID]) stays
+    embedded = images_embedded_elsewhere(image_ids, document_id)
+    return sorted(i for i in image_ids if i not in embedded)
 
 
 def read_images_of_deletion(request):

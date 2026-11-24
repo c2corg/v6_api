@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import ProgrammingError
 
 from c2corg_api.harvest import runner
 from c2corg_api.harvest.harvester import (
@@ -345,3 +346,26 @@ def test_health(client, harvest_session, clock, monkeypatch):
     assert client.get('/health').json['harvest'] == {
         'fake': {'sources': 1, 'failing': 0, 'last_success': clock.now.isoformat()}
     }
+
+
+@pytest.mark.usefixtures('harvest_session')
+def test_tables_missing(monkeypatch, caplog):
+    # deployed before `alembic upgrade head`: a warning, no exception
+    error = ProgrammingError(
+        'SELECT', {}, type('E', (Exception,), {'pgcode': '42P01'})()
+    )
+    monkeypatch.setattr(runner, '_last_sync', None)
+    monkeypatch.setattr(runner, 'sync_sources', Mock(side_effect=error))
+    runner.harvest_tick(all_harvesters=[FakeHarvester({})])
+    assert 'harvest tables are missing' in caplog.text
+
+
+@pytest.mark.usefixtures('harvest_session')
+def test_other_database_errors_raised(monkeypatch):
+    error = ProgrammingError(
+        'SELECT', {}, type('E', (Exception,), {'pgcode': '42601'})()
+    )
+    monkeypatch.setattr(runner, '_last_sync', None)
+    monkeypatch.setattr(runner, 'sync_sources', Mock(side_effect=error))
+    with pytest.raises(ProgrammingError):
+        runner.harvest_tick(all_harvesters=[FakeHarvester({})])
