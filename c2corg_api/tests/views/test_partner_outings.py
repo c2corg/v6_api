@@ -601,6 +601,19 @@ class TestItems:
         assert item['credit'] == {'site': 'newsite', 'site_url': ''}
 
 
+def test_credits_come_from_the_adapters():
+    from c2corg_api.partners.sources import REGISTRY
+    from c2corg_api.views import partner_outings as view
+
+    assert set(view.SITES) == {view.C2C, *REGISTRY}
+    for name, adapter in REGISTRY.items():
+        assert view._credit(name) == {
+            'site': adapter.site_name,
+            'site_url': adapter.site_url,
+        }
+    assert view._credit(view.C2C)['site'] == 'camptocamp.org'
+
+
 class TestSources:
     def test_health_in_the_listing(self, client, session, data):
         session.add(
@@ -619,6 +632,19 @@ class TestSources:
                 'last_success_at': '2026-11-24T10:15:00+00:00',
             },
         ]
+
+    def test_unconfigured_source_is_listed_as_disabled(self, client, session):
+        session.add(
+            PartnerSource(
+                source='gulliver', status='disabled', status_detail='not configured'
+            )
+        )
+        session.flush()
+        sources = client.get('/partner-outings/sources', status=200).json['sources']
+        by_name = {s['source']: s for s in sources}
+        assert by_name['gulliver']['status'] == 'disabled'
+        assert by_name['gulliver']['status_detail'] == 'not configured'
+        assert by_name['skitour']['status'] == 'never_run'
 
     def test_sources_route(self, client, session):
         session.add(

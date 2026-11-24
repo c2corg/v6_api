@@ -5,6 +5,10 @@ JSON answers of an adapter run are reduced to shapes (see `shapes.py`), per
 endpoint, and compared with the shapes of the committed fixtures
 (`fixtures/<source>/shape.json`). Only what the adapter reads
 (`REQUIRED_PATHS`) can make the comparison fail; other differences are listed.
+
+`REQUIRED_PATHS` is also the allow-list of what a recording keeps: any other
+field (licensed texts, comments, photos, tracks...) is dropped before it is
+written, so a new free-text field of a partner never reaches the fixtures.
 """
 
 import datetime
@@ -22,15 +26,9 @@ from c2corg_api.partners.model import FetchContext, FetchResult
 from c2corg_api.partners.transport import HttpResponse, Transport
 
 SHAPE_FILE = 'shape.json'
+_TOKEN = re.compile(r'\[\]|[^.\[\]]+')
 # lists longer than this are cut in the recorded fixtures
 MAX_ITEMS = 30
-# fields the adapters never read and that are not ours to republish: licensed
-# texts and photos (skitour), comment texts and route media (gulliver)
-DROPPED_FIELDS: dict[tuple[str, str], tuple[str, ...]] = {
-    ('skitour', 'sorties'): ('conditions', 'recit', 'photos'),
-    ('gulliver', 'commentglobal'): ('content',),
-    ('gulliver', 'routes'): ('media',),
-}
 
 
 # request params that change from run to run: sent, but not recorded
@@ -43,17 +41,47 @@ def endpoint_of(url: str) -> str:
     return re.sub(r'[^a-z0-9]+', '_', segment.lower()).strip('_') or 'index'
 
 
-def _trim(value, drop):
-    if isinstance(value, dict):
-        return {k: _trim(v, drop) for k, v in value.items() if k not in drop}
+def read_paths(source: str, endpoint: str) -> list[str]:
+    """Return the JSON paths the adapter of a source reads from an endpoint.
+
+    Empty for an unknown source or endpoint: nothing is kept of it.
+    """
+    from c2corg_api.partners.sources import REGISTRY
+
+    adapter = REGISTRY.get(source)
+    if adapter is None:
+        return []
+    return list(adapter.REQUIRED_PATHS.get(endpoint, ()))
+
+
+def _tree(paths):
+    """Turn paths into a nested dict; `{}` marks a path end (kept whole)."""
+    root: dict = {}
+    for path in paths:
+        node = root
+        for token in _TOKEN.findall(path):
+            node = node.setdefault(token, {})
+    return root
+
+
+def _keep(value, tree):
+    if not tree:  # end of a path: the value is read, keep it
+        return value
     if isinstance(value, list):
-        return [_trim(v, drop) for v in value[:MAX_ITEMS]]
-    return value
+        # a top-level list is entered even when the paths do not start with []
+        sub = tree.get('[]', tree)
+        return [_keep(v, sub) for v in value[:MAX_ITEMS]]
+    if isinstance(value, dict):
+        return {k: _keep(v, tree[k]) for k, v in value.items() if k in tree}
+    return None  # a scalar where the adapter expects an object: nothing read
 
 
 def trim_data(source: str, endpoint: str, data):
-    """Drop the fields we do not keep and cut the lists to `MAX_ITEMS`."""
-    return _trim(data, DROPPED_FIELDS.get((source, endpoint), ()))
+    """Keep only the paths the adapter reads; cut the lists to `MAX_ITEMS`."""
+    paths = read_paths(source, endpoint)
+    if not paths:  # an endpoint the adapter does not declare: keep nothing
+        return [] if isinstance(data, list) else {} if isinstance(data, dict) else None
+    return _keep(data, _tree(paths))
 
 
 def trim_body(source: str, url: str, body: bytes) -> bytes:
@@ -166,8 +194,6 @@ def fixture_shapes(directory: Path) -> dict[str, Any]:
 
 
 # -- paths ('[].sommets[].latlon') ------------------------------------------
-
-_TOKEN = re.compile(r'\[\]|[^.\[\]]+')
 
 
 def _type_name(node) -> str:

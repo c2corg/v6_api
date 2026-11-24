@@ -2,7 +2,6 @@
  "sorties_c1_l200_p1.json": [
   {
    "auteur": {
-    "id": "int",
     "pseudo": "str"
    },
    "date": {
@@ -22,7 +21,7 @@
    "massif": {
     "any_of": [
      "\"null\"",
-     "{\"id\": \"int\", \"nom\": \"str\"}"
+     "{\"nom\": \"str\"}"
     ]
    },
    "orientation": "str",
@@ -34,7 +33,6 @@
        "\"str\""
       ]
      },
-     "id": "int",
      "latlon": [
       {
        "any_of": [
@@ -42,16 +40,10 @@
         "\"int\""
        ]
       }
-     ],
-     "nom": "str"
+     ]
     }
    ],
-   "titre": "str",
-   "topos": [
-    {
-     "id": "int"
-    }
-   ]
+   "titre": "str"
   }
  ],
  "sorties_c1_l200_p2.json": []

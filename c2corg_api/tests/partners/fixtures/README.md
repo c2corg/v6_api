@@ -55,6 +55,11 @@ c2corg_api.partners shapes` to see what changed.
 
 Never commit an API key or a cookie in a fixture.
 
+No partner free text either (comments, narratives, conditions, access notes, photos,
+tracks): a fixture only holds the paths the adapter reads (`REQUIRED_PATHS`). The
+recorder enforces it, and `test_fixtures_have_no_free_text` checks the committed files.
+Fixture mode refuses a `synthetic: true` manifest unless `partners.allow_synthetic` is true (dev only).
+
 ## Real recordings of error answers
 
 `skitour_no_key/` and `skitour_bad_key/` (`synthetic: false`) are curl

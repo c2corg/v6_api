@@ -95,10 +95,14 @@ partners.enabled = {partners_enabled}
 partners.sources = {partners_sources}
 partners.interval_minutes = {partners_interval}
 partners.retention_days = {partners_retention}
+# days a partner_lookups row is kept
+partners.lookup_retention_days = {partners_lookup_retention}
 # http | fixtures
 partners.transport = {partners_transport}
 # empty: c2corg_api/tests/partners/fixtures
 partners.fixtures_dir = {partners_fixtures_dir}
+# fixture mode accepts synthetic fixtures (dev only)
+partners.allow_synthetic = {partners_allow_synthetic}
 
 ui.url = {ui_url}
 

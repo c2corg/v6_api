@@ -43,6 +43,7 @@ SETTINGS = {
     'partners.retention_days': '31',
     'partners.transport': 'http',
     'partners.fixtures_dir': '',
+    'partners.allow_synthetic': 'true',
 }
 EARTH = 6378137.0
 
@@ -384,6 +385,42 @@ def test_purge_job(db, db_connection):
     assert outings_of(db) == []
 
 
+def put_lookup(db, key, days_old):
+    db.add(
+        PartnerLookup(
+            source='fake',
+            key=key,
+            data={'k': key},
+            fetched_at=datetime.datetime.now(UTC) - datetime.timedelta(days=days_old),
+        )
+    )
+    db.flush()
+
+
+def lookup_keys(db):
+    db.expire_all()
+    return sorted(db.scalars(select(PartnerLookup.key)))
+
+
+def test_purge_lookups(db):
+    put_lookup(db, 'old', 31)
+    put_lookup(db, 'recent', 29)
+    assert job.purge_partner_lookups(db, datetime.datetime.now(UTC), 30) == 1
+    assert lookup_keys(db) == ['recent']
+
+
+def test_purge_job_also_purges_the_lookups(db, db_connection):
+    put_lookup(db, 'old', 31)
+    put_lookup(db, 'recent', 1)
+    put_lookup(db, 'middle', 10)
+    db.commit()
+    job.purge_partner_outings_job(SETTINGS)
+    assert lookup_keys(db) == ['middle', 'recent']
+    # the retention is a setting (30 days by default)
+    job.purge_partner_outings_job({**SETTINGS, 'partners.lookup_retention_days': '5'})
+    assert lookup_keys(db) == ['recent']
+
+
 # ------------------------------------------------------------------ lookups
 
 
@@ -468,6 +505,40 @@ def test_disabled_by_missing_secret(db, monkeypatch):
     monkeypatch.setenv('FAKE_KEY', 's3cr3t-value')
     assert run(db, adapter) == 'ok'
     assert adapter.calls[-1].secrets == {'FAKE_KEY': 's3cr3t-value'}
+
+
+def test_secret_from_a_file(db, monkeypatch, tmp_path):
+    monkeypatch.delenv('FAKE_KEY', raising=False)
+    secret = tmp_path / 'fake_key'
+    secret.write_text('from-file\n')
+    monkeypatch.setenv('FAKE_KEY_FILE', str(secret))
+    adapter = make_adapter(fetch=ok_fetch, secrets=('FAKE_KEY',))
+    assert run(db, adapter) == 'ok'
+    assert adapter.calls[-1].secrets == {'FAKE_KEY': 'from-file'}
+    # the variable itself wins over the file
+    monkeypatch.setenv('FAKE_KEY', 'from-env')
+    run(db, adapter)
+    assert adapter.calls[-1].secrets == {'FAKE_KEY': 'from-env'}
+
+
+def test_unreadable_or_empty_secret_file_is_a_missing_secret(db, monkeypatch, tmp_path):
+    monkeypatch.delenv('FAKE_KEY', raising=False)
+    adapter = make_adapter(fetch=ok_fetch, secrets=('FAKE_KEY',))
+    monkeypatch.setenv('FAKE_KEY_FILE', str(tmp_path / 'missing'))
+    assert run(db, adapter) == 'disabled'
+    empty = tmp_path / 'empty'
+    empty.write_text('\n')
+    monkeypatch.setenv('FAKE_KEY_FILE', str(empty))
+    assert run(db, adapter) == 'disabled'
+    assert source_row(db).status_detail == 'FAKE_KEY not set'
+
+
+def test_skitour_key_file(monkeypatch, tmp_path):
+    monkeypatch.delenv('SKITOUR_API_KEY', raising=False)
+    secret = tmp_path / 'skitour_api_key'
+    secret.write_text('  file-key \n')
+    monkeypatch.setenv('SKITOUR_API_KEY_FILE', str(secret))
+    assert job._secrets(REGISTRY['skitour'], False) == {'SKITOUR_API_KEY': 'file-key'}
 
 
 def test_no_secret_in_the_detail(db, monkeypatch):
@@ -828,6 +899,38 @@ def test_fixture_mode_gives_the_adapter_the_recording_clock(db, fixtures_dir):
     assert outings_of(db)[0].date == later.date() - datetime.timedelta(days=1)
 
 
+def test_synthetic_fixtures_are_refused_unless_allowed(db, fixtures_dir, caplog):
+    adapter = make_adapter(fetch=ok_fetch)
+    settings = {**SETTINGS, 'partners.allow_synthetic': 'false'}
+    transport = fixture_transport(fixtures_dir, adapter)
+    assert transport.synthetic
+    with caplog.at_level('ERROR'):
+        status = run(db, adapter, settings=settings, transport=transport)
+    assert status == 'failing'
+    row = source_row(db)
+    assert 'synthetic' in row.status_detail
+    assert 'partners.allow_synthetic' in row.status_detail
+    assert row.consecutive_failures == 1
+    assert adapter.calls == []
+    assert outings_of(db) == []
+    assert [r for r in caplog.records if r.levelname == 'ERROR']
+    # the setting missing altogether is a refusal too
+    settings.pop('partners.allow_synthetic')
+    assert run(db, adapter, settings=settings, transport=transport) == 'failing'
+    # allowed (dev): runs
+    assert run(db, adapter, transport=transport) == 'ok'
+
+
+def test_recorded_fixtures_need_no_permission(db, fixtures_dir):
+    path = fixtures_dir / 'fake' / 'manifest.json'
+    manifest = json.loads(path.read_text())
+    path.write_text(json.dumps({**manifest, 'synthetic': False}))
+    adapter = make_adapter(fetch=ok_fetch)
+    settings = {**SETTINGS, 'partners.allow_synthetic': 'false'}
+    transport = fixture_transport(fixtures_dir, adapter)
+    assert run(db, adapter, settings=settings, transport=transport) == 'ok'
+
+
 def test_http_mode_never_shifts_the_dates(db):
     date = TODAY - datetime.timedelta(days=3)
     adapter = make_adapter(fetch=lambda ctx: FetchResult([outing('1', date=date)]))
@@ -946,6 +1049,52 @@ def test_harvest_records_a_source_that_cannot_start(
     assert row.consecutive_failures == 1
 
 
+def test_record_failure_masks_the_secrets(
+    db, db_connection, fake_registry, monkeypatch
+):
+    monkeypatch.setenv('FAKE_KEY', 's3cr3t-value')
+    fake_registry(make_adapter('fake', fetch=ok_fetch, secrets=('FAKE_KEY',)))
+
+    def broken(adapter_cls, settings):
+        raise RuntimeError('cannot reach https://x/?key=s3cr3t-value&k=s3cr3t%2Dvalue')
+
+    monkeypatch.setattr(job, 'transport_for', broken)
+    job.harvest_partner_outings({**SETTINGS, 'partners.sources': 'fake'}, now=NOW)
+    row = source_row(db)
+    assert row.status == 'failing'
+    assert 's3cr3t-value' not in row.status_detail
+    assert row.status_detail.startswith('RuntimeError: cannot reach https://x/?key=***')
+
+
+def test_record_failure_truncates(db):
+    job._record_failure(db, 'fake', NOW, ValueError('x' * 2000))
+    assert len(source_row(db).status_detail) == 500
+
+
+def test_sources_missing_from_the_configuration_are_disabled(
+    db, db_connection, fake_registry
+):
+    fake_registry(make_adapter('fake', fetch=ok_fetch))
+    fake_registry(make_adapter('other', fetch=ok_fetch))
+    both = {**SETTINGS, 'partners.sources': 'fake,other'}
+    job.harvest_partner_outings(both, now=NOW)
+    assert source_row(db, 'other').status == 'ok'
+    # `other` is dropped from the configuration; skitour and gulliver never were
+    job.harvest_partner_outings(
+        {**SETTINGS, 'partners.sources': 'fake'},
+        now=NOW + datetime.timedelta(hours=1),
+    )
+    assert source_row(db, 'fake').status == 'ok'
+    for name in ('other', 'skitour', 'gulliver'):
+        row = source_row(db, name)
+        assert (row.status, row.status_detail) == ('disabled', 'not configured')
+        assert row.consecutive_failures == 0
+    # configured again: it runs
+    job.harvest_partner_outings(both, now=NOW + datetime.timedelta(hours=2))
+    row = source_row(db, 'other')
+    assert (row.status, row.status_detail) == ('ok', None)
+
+
 def test_harvest_uses_the_lookup_cache(db, db_connection, fake_registry):
     def fetch(ctx):
         if ctx.lookups.get('route:1') is None:
@@ -982,11 +1131,18 @@ def scheduled_jobs(settings):
     }
 
 
-def test_scheduler_adds_the_jobs_only_when_enabled():
+def test_scheduler_adds_the_harvest_only_when_enabled():
     added = scheduled_jobs({'partners.enabled': 'false'})
     assert 'harvest_partner_outings' not in added
-    assert 'purge_partner_outings' not in added
     assert 'purge_token' in added
+
+
+def test_scheduler_always_purges_the_partner_rows():
+    # the licence: rows must not outlive the retention, harvest on or off
+    for settings in ({'partners.enabled': 'false'}, {}):
+        purge = scheduled_jobs(settings)['purge_partner_outings']
+        assert (purge['trigger'], purge['hour'], purge['minute']) == ('cron', 1, 40)
+        assert purge['kwargs'] == {'settings': settings}
 
 
 def test_scheduler_adds_the_partner_jobs():
@@ -1005,17 +1161,50 @@ def test_scheduler_adds_the_partner_jobs():
     assert purge['kwargs'] == {'settings': settings}
 
 
-def test_harvest_script_runs_the_job_once():
+def run_script(settings, argv, tmp_path=None):
     from c2corg_api.scripts.jobs import harvest_partners
 
     with (
         patch.object(harvest_partners, 'setup_logging'),
-        patch.object(harvest_partners, 'get_appsettings', return_value={'a': 1}),
+        patch.object(harvest_partners, 'get_appsettings', return_value=settings),
         patch.object(harvest_partners, 'engine_from_config'),
         patch.object(harvest_partners.DBSession, 'configure'),
         patch.object(harvest_partners, 'harvest_partner_outings') as harvest,
     ):
-        harvest_partners.main(['x', 'development.ini'])
-    harvest.assert_called_once_with({'a': 1})
+        harvest_partners.main(argv)
+    return harvest
+
+
+def test_harvest_script_runs_the_job_once():
+    settings = {'partners.enabled': 'true'}
+    harvest = run_script(settings, ['x', 'development.ini'])
+    harvest.assert_called_once_with(settings)
     with pytest.raises(SystemExit):
-        harvest_partners.main(['x'])
+        run_script(settings, ['x'])
+
+
+@pytest.mark.parametrize('enabled', ['false', '', None])
+def test_harvest_script_refuses_when_disabled(enabled, capsys):
+    settings = {} if enabled is None else {'partners.enabled': enabled}
+    from c2corg_api.scripts.jobs import harvest_partners
+
+    with (
+        patch.object(harvest_partners, 'setup_logging'),
+        patch.object(harvest_partners, 'get_appsettings', return_value=settings),
+        patch.object(harvest_partners, 'engine_from_config') as engine,
+        patch.object(harvest_partners, 'harvest_partner_outings') as harvest,
+        pytest.raises(SystemExit) as exit_info,
+    ):
+        harvest_partners.main(['x', 'development.ini'])
+    assert exit_info.value.code == 1
+    harvest.assert_not_called()
+    engine.assert_not_called()
+    err = capsys.readouterr().err
+    assert 'partners.enabled is not true' in err
+    assert '--force' in err
+
+
+def test_harvest_script_force_runs_anyway():
+    settings = {'partners.enabled': 'false'}
+    harvest = run_script(settings, ['x', 'development.ini', '--force'])
+    harvest.assert_called_once_with(settings)

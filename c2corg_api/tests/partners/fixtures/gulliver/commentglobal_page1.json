@@ -1,134 +1,98 @@
 [
-  {
-    "ID": 48213,
-    "user_nicename": "giovanni-bianchi",
-    "comment_date": "2026-11-23 18:42:10",
-    "comment_post_ID": "57949",
-    "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/#comment-48213",
-    "content": "<p>Giornata stupenda: neve polverosa sul versante nord&#8230; l&#8217;itinerario &egrave; in ottime condizioni.</p>",
-    "rating": 5,
-    "tracks": [],
-    "term": {
-      "code": "skimo",
-      "name": "skimo"
-    },
-    "meta": {
-      "access": "Strada aperta fino al parcheggio.",
-      "obs": "",
-      "snow_top": "40",
-      "snow_low": "5",
-      "snow_alt": "2100",
-      "skimo_equip": ""
-    }
+ {
+  "ID": 48213,
+  "user_nicename": "giovanni-bianchi",
+  "comment_date": "2026-11-23 18:42:10",
+  "comment_post_ID": "57949",
+  "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/#comment-48213",
+  "term": {
+   "code": "skimo",
+   "name": "skimo"
   },
-  {
-    "ID": 48210,
-    "user_nicename": "marta_r",
-    "comment_date": "2026-11-23 15:03:44",
-    "comment_post_ID": "61022",
-    "permalink": "https://www.gulliver.it/itinerari/colle-del-teodulo-invernale/#comment-48210",
-    "content": "<p>Gita classica, ma attenzione al vento a quota 3000 m &amp; oltre.</p>",
-    "rating": 4,
-    "tracks": [],
-    "term": {
-      "code": "skimo",
-      "name": "skimo"
-    },
-    "meta": {
-      "access": "Strada aperta fino al parcheggio.",
-      "obs": "",
-      "snow_top": 30,
-      "snow_low": 10,
-      "snow_alt": 1900,
-      "skimo_equip": ""
-    }
-  },
-  {
-    "ID": 48207,
-    "user_nicename": "ale.guida",
-    "comment_date": "2026-11-23 09:12:01",
-    "comment_post_ID": "55310",
-    "permalink": "https://www.gulliver.it/itinerari/canalone-nord-est-del-monte-emilius/#comment-48207",
-    "content": "<p>Canale ripido, pendenza fino a 45&deg;. Neve trasformata, sicuro solo al mattino presto.</p>",
-    "rating": 5,
-    "tracks": [],
-    "term": {
-      "code": "skisteep",
-      "name": "skisteep"
-    },
-    "meta": {
-      "access": "Strada aperta fino al parcheggio.",
-      "obs": "",
-      "snow_top": "25",
-      "snow_low": "0",
-      "snow_alt": "1800",
-      "skimo_equip": ""
-    }
-  },
-  {
-    "ID": 48204,
-    "user_nicename": "famiglia-ciaspole",
-    "comment_date": "2026-11-22 16:20:00",
-    "comment_post_ID": "60118",
-    "permalink": "https://www.gulliver.it/itinerari/ciaspolata-al-lago-d-arpy/#comment-48204",
-    "content": "<p>Prima neve della stagione, ciaspolata tranquilla con i bambini.</p>",
-    "rating": 4,
-    "tracks": [],
-    "term": {
-      "code": "snowshoe",
-      "name": "snowshoe"
-    },
-    "meta": {
-      "access": "Strada aperta fino al parcheggio.",
-      "obs": "",
-      "snow_top": "15",
-      "snow_low": "",
-      "snow_alt": "",
-      "skimo_equip": ""
-    }
-  },
-  {
-    "ID": 48199,
-    "user_nicename": "luca-sciatore",
-    "comment_date": "2026-11-22 11:45:30",
-    "comment_post_ID": "57949",
-    "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/#comment-48199",
-    "content": "<p>Ripetuta oggi: tracce ovunque, neve ventata in cresta.</p>",
-    "rating": 4,
-    "tracks": [],
-    "term": {
-      "code": "skimo",
-      "name": "skimo"
-    },
-    "meta": {
-      "access": "Strada aperta fino al parcheggio.",
-      "obs": "",
-      "snow_top": "n.d.",
-      "snow_low": "",
-      "snow_alt": "",
-      "skimo_equip": ""
-    }
-  },
-  {
-    "ID": 48196,
-    "user_nicename": "sara-t",
-    "comment_date": "2026-11-21 19:00:12",
-    "comment_post_ID": "62001",
-    "permalink": "https://www.gulliver.it/itinerari/punta-della-valletta/#comment-48196",
-    "content": "<p>Bella gita, un po&#8217; di crosta sotto i 2000 m.</p>",
-    "rating": 3,
-    "tracks": [],
-    "term": {
-      "code": "skimo",
-      "name": "skimo"
-    },
-    "meta": {
-      "access": "Strada aperta fino al parcheggio.",
-      "obs": "",
-      "snow_top": 20,
-      "snow_low": 5,
-      "snow_alt": 2000,
-      "skimo_equip": ""
-    }
+  "meta": {
+   "snow_top": "40",
+   "snow_low": "5",
+   "snow_alt": "2100"
   }
+ },
+ {
+  "ID": 48210,
+  "user_nicename": "marta_r",
+  "comment_date": "2026-11-23 15:03:44",
+  "comment_post_ID": "61022",
+  "permalink": "https://www.gulliver.it/itinerari/colle-del-teodulo-invernale/#comment-48210",
+  "term": {
+   "code": "skimo",
+   "name": "skimo"
+  },
+  "meta": {
+   "snow_top": 30,
+   "snow_low": 10,
+   "snow_alt": 1900
+  }
+ },
+ {
+  "ID": 48207,
+  "user_nicename": "ale.guida",
+  "comment_date": "2026-11-23 09:12:01",
+  "comment_post_ID": "55310",
+  "permalink": "https://www.gulliver.it/itinerari/canalone-nord-est-del-monte-emilius/#comment-48207",
+  "term": {
+   "code": "skisteep",
+   "name": "skisteep"
+  },
+  "meta": {
+   "snow_top": "25",
+   "snow_low": "0",
+   "snow_alt": "1800"
+  }
+ },
+ {
+  "ID": 48204,
+  "user_nicename": "famiglia-ciaspole",
+  "comment_date": "2026-11-22 16:20:00",
+  "comment_post_ID": "60118",
+  "permalink": "https://www.gulliver.it/itinerari/ciaspolata-al-lago-d-arpy/#comment-48204",
+  "term": {
+   "code": "snowshoe",
+   "name": "snowshoe"
+  },
+  "meta": {
+   "snow_top": "15",
+   "snow_low": "",
+   "snow_alt": ""
+  }
+ },
+ {
+  "ID": 48199,
+  "user_nicename": "luca-sciatore",
+  "comment_date": "2026-11-22 11:45:30",
+  "comment_post_ID": "57949",
+  "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/#comment-48199",
+  "term": {
+   "code": "skimo",
+   "name": "skimo"
+  },
+  "meta": {
+   "snow_top": "n.d.",
+   "snow_low": "",
+   "snow_alt": ""
+  }
+ },
+ {
+  "ID": 48196,
+  "user_nicename": "sara-t",
+  "comment_date": "2026-11-21 19:00:12",
+  "comment_post_ID": "62001",
+  "permalink": "https://www.gulliver.it/itinerari/punta-della-valletta/#comment-48196",
+  "term": {
+   "code": "skimo",
+   "name": "skimo"
+  },
+  "meta": {
+   "snow_top": 20,
+   "snow_low": 5,
+   "snow_alt": 2000
+  }
+ }
 ]

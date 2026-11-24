@@ -106,8 +106,11 @@ class GulliverAdapter:
     site_url = 'https://www.gulliver.it'
     required_secrets = ()
     rate = RateLimit(2.0, 40, 20)
-    # file stem (endpoint) -> JSON paths read from it, checked by `python -m
-    # c2corg_api.partners shapes` and the live tests (`[]` = list items)
+    # file stem (endpoint) -> EVERY JSON path read from it (`[]` = list items).
+    # Checked by `python -m c2corg_api.partners shapes` and the live tests, and
+    # the allow-list of what a recording keeps: anything else (comment texts,
+    # access and observation notes, tracks...) is never written to a fixture.
+    # A path that ends on an object keeps the whole object.
     REQUIRED_PATHS: ClassVar[dict[str, list[str]]] = {
         'commentglobal': [
             '[].ID',
@@ -117,10 +120,17 @@ class GulliverAdapter:
             '[].term',
             '[].user_nicename',
             '[].meta.snow_top',
+            '[].meta.snow_low',
+            '[].meta.snow_alt',
         ],
         'routes': [
             'title',
-            'meta.data',
+            'region',
+            'district',
+            'meta.data.alt_top',
+            'meta.data.drop',
+            'meta.data.exposure',
+            'meta.data.grade_skimo',
             'meta.geo.coords.lat',
             'meta.geo.coords.lng',
         ],

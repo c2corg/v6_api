@@ -34,6 +34,7 @@ SETTINGS = {
     'partners.retention_days': '31',
     'partners.transport': 'fixtures',
     'partners.fixtures_dir': '',
+    'partners.allow_synthetic': 'true',
 }
 
 # what the fixtures hold, by external id (lon, lat of the point; date as
