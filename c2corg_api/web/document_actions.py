@@ -22,6 +22,7 @@ from c2corg_api.views.document_trash import (
     restore_deleted_document,
 )
 from c2corg_api.views.document_version_mask import mask_version, unmask_version
+from c2corg_api.views.image_embeds import read_broken_embeds
 from c2corg_api.views.image_orphans import read_orphan_images
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.checks import permission_check
@@ -60,6 +61,7 @@ def include(app):
         ('/documents/deleted', deleted_documents),
         ('/documents/deleted/{id:int}', deleted_document),
         ('/images/orphans', orphan_images),
+        ('/images/broken-embeds', broken_embeds),
         ('/documents/delete/{id:int}/images', images_of_deletion),
     ):
         app.add_api_route(
@@ -143,6 +145,22 @@ def orphan_images(
     return serve_read(request, user, [typed_values(validated)], read_orphan_images)
 
 
+def broken_embeds(
+    request: Request,
+    user: User,
+    _: Moderator,
+    offset: Annotated[
+        Offset | None, Query(description='The first embed, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many: 30 by default, 100 at most.')
+    ] = None,
+):
+    """Return the images shown in texts ([img=ID]) that do not show."""
+    validated = {'offset': offset, 'limit': limit}
+    return serve_read(request, user, [typed_values(validated)], read_broken_embeds)
+
+
 def images_of_deletion(request: Request, user: User, id: Id):
     """Return how many images a deletion takes along, and leaves orphan."""
     # the checks of the deletion: who may delete this document
@@ -160,7 +178,12 @@ images_of_deletion.permission = 'authenticated'
 images_of_deletion.described = True
 
 # read by the route inventory of the contract tests (routes.txt)
-for _endpoint in (deleted_documents, deleted_document, orphan_images):
+for _endpoint in (
+    deleted_documents,
+    deleted_document,
+    orphan_images,
+    broken_embeds,
+):
     _endpoint.permission = 'moderator'
     # described in the OpenAPI document (see web.openapi)
     _endpoint.described = True

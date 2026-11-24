@@ -822,3 +822,29 @@ def test_images_of_deletion_of_an_image(client, docs):  # noqa: F811
         'deleted': 0,
         'orphaned': {'collaborative': 0, 'personal': 0, 'copyright': 0},
     }
+
+
+def test_personal_image_shown_elsewhere_kept(
+    client,
+    session,
+    outing_images,
+    docs,  # noqa: F811
+):
+    from c2corg_api.tests.views.test_image_orphans import _embed
+
+    photo_id = outing_images['photo'].document_id
+    # shown in the text of the outing itself: deleted with it all the same
+    _embed(session, docs.outing2, photo_id)
+    url = f'/documents/delete/{docs.outing2.document_id}/images'
+    assert client.get(url, headers=_moderator()).json['deleted'] == 1
+    # shown in the text of a route: kept, orphan
+    _embed(session, docs.route1, photo_id)
+    assert client.get(url, headers=_moderator()).json == {
+        'deleted': 0,
+        'orphaned': {'collaborative': 1, 'personal': 2, 'copyright': 0},
+    }
+
+    with HTTMock(_image_service):
+        _delete(client, docs.outing2.document_id)
+
+    assert _exists(session, photo_id)
