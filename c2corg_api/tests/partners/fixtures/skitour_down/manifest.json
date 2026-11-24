@@ -1,0 +1,14 @@
+{
+  "source": "skitour_down",
+  "recorded_at": "2026-11-24",
+  "synthetic": true,
+  "note": "skitour.fr as seen from the sandbox on 2026-11-24: an Apache 503 page on every URL.",
+  "entries": [
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "status": 503,
+      "content_type": "text/html; charset=iso-8859-1",
+      "file": "sorties_503.html"
+    }
+  ]
+}

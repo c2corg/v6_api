@@ -6,11 +6,12 @@ their adapter exists yet or not.
 """
 
 from c2corg_api.partners.adapter import Adapter
+from c2corg_api.partners.sources.gulliver import GulliverAdapter
+from c2corg_api.partners.sources.skitour import SkitourAdapter
 
 SOURCE_NAMES = ('skitour', 'gulliver')
 
-REGISTRY: dict[str, type[Adapter]] = {}
-
-from c2corg_api.partners.sources.gulliver import GulliverAdapter  # noqa: E402
-
-REGISTRY['gulliver'] = GulliverAdapter
+REGISTRY: dict[str, type[Adapter]] = {
+    'skitour': SkitourAdapter,
+    'gulliver': GulliverAdapter,
+}
