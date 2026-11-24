@@ -152,6 +152,7 @@ The API is a [FastAPI](https://fastapi.tiangolo.com/) application, served by uvi
 - `c2corg_api/schemas/`: the Pydantic schemas of the request bodies; `c2corg_api/models/`: the SQLAlchemy models.
 - `c2corg_api/security/`: tokens (`roles.py`), rate limiting, Discourse client; `c2corg_api/httpexceptions.py`: the HTTP errors the views raise.
 - `c2corg_api/scripts/`: the Elasticsearch syncer, the job scheduler and the maintenance scripts; they read the `.ini` file with `c2corg_api/config.py`.
+- `c2corg_api/harvest/` and `c2corg_api/avalanche_bulletins/`: the scheduler harvests the avalanche bulletins into PostgreSQL, the API reads them from there: see [docs/harvest.md](docs/harvest.md).
 
 ### Running tests
 

@@ -7,6 +7,10 @@ Published with GitHub Pages (Settings > Pages > Deploy from a branch: `master`, 
 - `architecture/src/<name>.json`: the source of each diagram.
 - `architecture/<name>.png`: a static export shown in the READMEs and wikis of the repositories, each linking to its interactive page.
 
+Other documentation:
+
+- [`harvest.md`](harvest.md): the background harvester and the stored avalanche bulletins.
+
 These pages are public: never put IP addresses, secrets or access policies in a diagram.
 
 ## Updating a diagram

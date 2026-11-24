@@ -148,7 +148,7 @@
       "sublabel": "JWT HS256 · token hashes",
       "pos": [
         760,
-        460
+        320
       ],
       "size": [
         170,
@@ -332,7 +332,7 @@
       "id": "scheduler",
       "type": "backend",
       "label": "scheduler",
-      "sublabel": "APScheduler purge jobs",
+      "sublabel": "APScheduler: purges · harvest",
       "tag": "workers VM",
       "pos": [
         760,
@@ -345,13 +345,163 @@
       "sources": [
         {
           "path": "c2corg_api/jobs/__init__.py",
-          "line": 17,
-          "end_line": 44
+          "line": 21,
+          "end_line": 104,
+          "label": "configure_scheduler_from_config"
         },
         {
           "path": "c2corg_api/jobs/purge_expired_tokens.py",
           "line": 19,
-          "end_line": 30
+          "end_line": 30,
+          "label": "purge_token"
+        },
+        {
+          "path": "c2corg_api/jobs/harvest.py",
+          "line": 12,
+          "end_line": 26,
+          "label": "prune_harvest, compact_avalanche_bulletins"
+        }
+      ]
+    },
+    {
+      "id": "bulletins",
+      "type": "backend",
+      "label": "avalanche_bulletins/",
+      "sublabel": "stored first · else on demand",
+      "pos": [
+        760,
+        460
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/web/avalanche_bulletins.py",
+          "line": 62,
+          "end_line": 83,
+          "label": "routes: latest, ratings, {day}"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/regions.py",
+          "line": 27,
+          "end_line": 57,
+          "label": "latest_bulletins, day_bulletins"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/cache.py",
+          "line": 40,
+          "end_line": 60,
+          "label": "on-demand cache"
+        }
+      ]
+    },
+    {
+      "id": "bulletin_services",
+      "type": "external",
+      "label": "Avalanche services",
+      "sublabel": "Météo-France · EAWS CAAML",
+      "pos": [
+        1240,
+        320
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/avalanche_bulletins/meteofrance.py",
+          "line": 63,
+          "end_line": 79,
+          "label": "Météo-France DPBRA"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/caaml.py",
+          "line": 47,
+          "end_line": 127,
+          "label": "SLF, ALBINA, lawinen-warnung, AINEVA..."
+        }
+      ]
+    },
+    {
+      "id": "harvest",
+      "type": "backend",
+      "label": "harvest runner",
+      "sublabel": "due sources · lanes by host",
+      "pos": [
+        1240,
+        800
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 64,
+          "end_line": 84,
+          "label": "harvest_tick"
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 134,
+          "end_line": 161,
+          "label": "claim (SKIP LOCKED)"
+        },
+        {
+          "path": "c2corg_api/harvest/policy.py",
+          "line": 48,
+          "end_line": 80,
+          "label": "next_run"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/harvesters.py",
+          "line": 16,
+          "end_line": 85,
+          "label": "the avalanche harvesters"
+        }
+      ]
+    },
+    {
+      "id": "bulletin_tables",
+      "type": "database",
+      "label": "bulletin tables (PG)",
+      "sublabel": "harvest · bulletins · weather",
+      "pos": [
+        1240,
+        940
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/models/harvest.py",
+          "line": 18,
+          "end_line": 78,
+          "label": "harvest_sources, harvest_payloads"
+        },
+        {
+          "path": "c2corg_api/models/avalanche_bulletin.py",
+          "line": 18,
+          "end_line": 113,
+          "label": "avalanche_bulletins, avalanche_bulletin_regions"
+        },
+        {
+          "path": "c2corg_api/models/region_weather.py",
+          "line": 14,
+          "end_line": 55,
+          "label": "region_weather_hours, region_weather_periods"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/store.py",
+          "line": 29,
+          "end_line": 63,
+          "label": "store.save"
         }
       ]
     },
@@ -496,7 +646,9 @@
       "from": "fastapi",
       "to": "security",
       "label": "verify JWT",
-      "variant": "security"
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "left"
     },
     {
       "id": "c-handlers",
@@ -583,6 +735,71 @@
       "from": "models",
       "to": "navitia",
       "label": "on save"
+    },
+    {
+      "id": "c-bulletins",
+      "from": "fastapi",
+      "to": "bulletins",
+      "label": "/avalanche-bulletins",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-bulletin-cache",
+      "from": "bulletins",
+      "to": "redis",
+      "label": "cache",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "c-bulletin-read",
+      "from": "bulletins",
+      "to": "bulletin_tables",
+      "label": "stored bulletins",
+      "fromSide": "right",
+      "toSide": "right"
+    },
+    {
+      "id": "c-bulletin-fallback",
+      "from": "bulletins",
+      "to": "bulletin_services",
+      "label": "on demand, not stored",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-tick",
+      "from": "scheduler",
+      "to": "harvest",
+      "label": "tick / minute",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-harvest-fetch",
+      "from": "harvest",
+      "to": "bulletin_services",
+      "label": "conditional GET",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "c-harvest-store",
+      "from": "harvest",
+      "to": "bulletin_tables",
+      "label": "claim · store",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "c-harvest-prune",
+      "from": "scheduler",
+      "to": "bulletin_tables",
+      "label": "prune · compact",
+      "fromSide": "bottom",
+      "toSide": "left"
     }
   ],
   "cards": [
@@ -594,6 +811,17 @@
         "gunicorn runs uvicorn workers; each worker serves server.threads requests at once",
         "Reads go through dogpile caches in Redis; writes notify the syncer after commit",
         "Searches query ES for ids, then load the documents from PostgreSQL"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Avalanche bulletins (harvest)",
+      "items": [
+        "The scheduler ticks every minute: harvest_sources says which sources are due (claimed FOR UPDATE SKIP LOCKED)",
+        "Météo-France DPBRA (35 massifs, METEOFRANCE_API_KEY) and the EAWS CAAML files (SLF, avalanche.report, lawinen-warnung, AINEVA...)",
+        "Tables: harvest_sources, harvest_payloads (30 days), avalanche_bulletins, avalanche_bulletin_regions (kept forever), region_weather_hours/_periods (SLF)",
+        "Reads: Redis, then PostgreSQL; a region not harvested is fetched on demand as before",
+        "Switched on by harvest.enabled (or harvest.<name>.enabled): see docs/harvest.md"
       ]
     },
     {
