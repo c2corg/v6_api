@@ -8,7 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from c2corg_api.partners.adapter import ParseError, SourceDisabled, SourceDown
+from c2corg_api.partners.adapter import (
+    ParseError,
+    SourceBlocked,
+    SourceDisabled,
+    SourceDown,
+)
 from c2corg_api.partners.lookups import MemoryLookupCache
 from c2corg_api.partners.model import FetchContext, HarvestedOuting
 from c2corg_api.partners.sources import REGISTRY
@@ -397,6 +402,39 @@ def test_503_page_is_source_down():
         SkitourAdapter().fetch(ctx(transport))
     # the key was sent: this is the site's answer, not a disabled source
     assert transport.calls[0][2] == {'cle': 'test-key'}
+
+
+@pytest.mark.parametrize(
+    'directory, message',
+    [
+        ('skitour_no_key', 'NO API KEY'),
+        ('skitour_bad_key', 'INVALID API KEY'),
+    ],
+)
+def test_key_errors_are_blocked(directory, message):
+    # real recordings: HTTP 200 with {"ERROR": ...} instead of a list
+    manifest = json.loads((FIXTURES / directory / 'manifest.json').read_text())
+    assert manifest['synthetic'] is False
+    transport = spy(directory)
+    with pytest.raises(SourceBlocked) as error:
+        SkitourAdapter().fetch(ctx(transport))
+    assert str(error.value) == f'skitour API error: {message}'
+    assert 'test-key' not in str(error.value)
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.parametrize(
+    'message', ['QUOTA EXCEEDED', 'ACCESS DENIED', 'too many requests', 'KEY EXPIRED']
+)
+def test_other_refusals_are_blocked(message):
+    with pytest.raises(SourceBlocked, match=message):
+        SkitourAdapter().fetch(ctx(stub({'ERROR': message})))
+
+
+@pytest.mark.parametrize('message', ['DATABASE UNAVAILABLE', 'BAD DAYS', '', None, 5])
+def test_unknown_error_messages_are_parse_errors(message):
+    with pytest.raises(ParseError, match='skitour API error'):
+        SkitourAdapter().fetch(ctx(stub({'ERROR': message})))
 
 
 def test_non_list_payload_is_a_parse_error():

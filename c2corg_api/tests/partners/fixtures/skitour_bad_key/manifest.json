@@ -1,0 +1,14 @@
+{
+  "source": "skitour_bad_key",
+  "recorded_at": "2026-11-24",
+  "synthetic": false,
+  "note": "Real answer of skitour.fr on 2026-11-24 to GET /api/sorties?j=1&l=2 with the header cle: invalid (a made-up value, not a key). HTTP 200 with a JSON error object (and a text/html content type), not a list. Recorded with curl; no key was sent or is stored here.",
+  "entries": [
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "sorties_error.json"
+    }
+  ]
+}
