@@ -146,7 +146,12 @@ exclude_also = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov=c2corg_api"
+# partner_live tests hit the real partner sites: opt in with
+# `PARTNER_LIVE=1 pytest -m partner_live` (the last -m wins over this one)
+addopts = "--cov=c2corg_api -m 'not partner_live'"
+markers = [
+    "partner_live: hits the real partner sites (PARTNER_LIVE=1)",
+]
 # a new warning fails the tests: fix it rather than hide it
 filterwarnings = [
     "error",
