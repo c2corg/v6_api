@@ -322,6 +322,7 @@ def test_scheduled_when_on(settings, switches, on):
     ids = [call.kwargs['id'] for call in scheduler.add_job.call_args_list]
     assert ('harvest_tick' in ids) is on
     assert ('prune_harvest' in ids) is on
+    assert ('compact_avalanche_bulletins' in ids) is on
 
 
 def test_enabled_harvesters():

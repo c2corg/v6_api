@@ -4,7 +4,7 @@
 
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 
 from c2corg_api.avalanche_bulletins import weather
@@ -21,6 +21,9 @@ ASPECTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 SUPERSEDED_RETENTION = timedelta(days=7)
 # the latest bulletins are of these last days at most
 RECENT_DAYS = timedelta(days=3)
+# the customData of the bulletins are removed after (months): what
+# the history of the danger needs is kept
+COMPACT_AFTER_MONTHS = 18
 
 
 def save(session, provider, lang, bulletins, source_id=None):
@@ -246,6 +249,57 @@ def prune_superseded(session, now=None):
     ).rowcount
 
 
+def compact(session, now=None, batch=500):
+    """Remove the customData of the bulletins older than 18 months."""
+    # at all levels, of all the services: the texts, ratings, problems,
+    # regions, times and ids are kept; the rows done are marked
+    now = now or datetime.now(UTC)
+    before = _months_before(now.astimezone(CET).date(), COMPACT_AFTER_MONTHS)
+    count = 0
+    while True:
+        rows = session.execute(
+            select(AvalancheBulletin.id, AvalancheBulletin.caaml)
+            .where(
+                AvalancheBulletin.compacted_at.is_(None),
+                AvalancheBulletin.main_date < before,
+            )
+            .order_by(AvalancheBulletin.id)
+            .limit(batch)
+        ).all()
+        if not rows:
+            return count
+        for id, caaml in rows:
+            session.execute(
+                update(AvalancheBulletin)
+                .where(AvalancheBulletin.id == id)
+                .values(caaml=_without_custom_data(caaml), compacted_at=now)
+            )
+        count += len(rows)
+
+
+def _without_custom_data(value):
+    if isinstance(value, dict):
+        return {
+            key: _without_custom_data(item)
+            for key, item in value.items()
+            if key != 'customData'
+        }
+    if isinstance(value, list):
+        return [_without_custom_data(item) for item in value]
+    return value
+
+
+def _months_before(day, months):
+    month = day.year * 12 + day.month - 1 - months
+    year, month = divmod(month, 12)
+    # the 31st of a shorter month: its last day
+    for last in (day.day, 30, 29, 28):
+        try:
+            return date(year, month + 1, min(day.day, last))
+        except ValueError:
+            continue
+
+
 def _row(provider, lang, bulletin, source_id):
     valid = bulletin['validTime']
     region_ids = sorted({r['regionID'] for r in bulletin['regions']})
@@ -267,6 +321,8 @@ def _row(provider, lang, bulletin, source_id):
         'region_keys': sorted({key for r in region_ids for key in region_keys(r)}),
         'caaml': bulletin,
         'source_id': source_id,
+        # a compacted publication published again is whole again
+        'compacted_at': None,
     }
 
 

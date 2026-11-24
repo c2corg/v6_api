@@ -1,10 +1,15 @@
 import copy
+import json
 from datetime import UTC, date, datetime
 
+import pytest
 from sqlalchemy import select
 
 from c2corg_api.avalanche_bulletins import caaml, store, weather
-from c2corg_api.models.avalanche_bulletin import AvalancheBulletin
+from c2corg_api.models.avalanche_bulletin import (
+    AvalancheBulletin,
+    AvalancheBulletinRegion,
+)
 from c2corg_api.models.region_weather import RegionWeatherHour, RegionWeatherPeriod
 from c2corg_api.tests.avalanche_bulletins.test_store import bra, content
 
@@ -101,3 +106,70 @@ def test_weather_of_days(session):
         'hours': [],
         'periods': [],
     }
+
+
+@pytest.mark.parametrize(
+    ('day', 'expected'),
+    [
+        (date(2028, 5, 22), date(2026, 11, 22)),
+        (date(2028, 8, 31), date(2027, 2, 28)),
+        (date(2027, 6, 30), date(2025, 12, 30)),
+        (date(2027, 1, 15), date(2025, 7, 15)),
+    ],
+)
+def test_months_before(day, expected):
+    assert store._months_before(day, 18) == expected
+
+
+def test_compact(session):
+    store.save(session, 'meteofrance', 'fr', bra(3))
+    store.save(session, 'CH', 'fr', slf())
+    [region] = session.scalars(
+        select(AvalancheBulletinRegion).where(
+            AvalancheBulletinRegion.region_id == 'FR-03'
+        )
+    ).all()
+    summary = (region.max_rating, region.bands, region.problems, region.aspects)
+    # the bulletin of Météo-France is for 2026-11-22: 18 months later, kept
+    assert store.compact(session, datetime(2028, 5, 22, 12, tzinfo=UTC)) == 0
+    now = datetime(2028, 5, 23, 12, tzinfo=UTC)
+    assert store.compact(session, now, batch=1) == 1
+    session.expire_all()
+    rows = {r.provider: r for r in session.scalars(select(AvalancheBulletin)).all()}
+    compacted = rows['meteofrance']
+    assert compacted.compacted_at == now
+    assert 'customData' not in json.dumps(compacted.caaml)
+    whole = bra(3)[0]
+    for key in (
+        'bulletinID',
+        'lang',
+        'publicationTime',
+        'validTime',
+        'regions',
+        'dangerRatings',
+        'avalancheProblems',
+        'avalancheActivity',
+        'snowpackStructure',
+    ):
+        assert compacted.caaml[key] == whole[key]
+    # at all levels
+    assert 'customData' not in compacted.caaml['tendency'][0]
+    assert rows['CH'].compacted_at is None
+    # once
+    assert store.compact(session, now) == 0
+    assert store.compact(session, datetime(2028, 5, 25, tzinfo=UTC)) == 2
+    session.expire_all()
+    assert (region.max_rating, region.bands, region.problems, region.aspects) == (
+        summary
+    )
+
+
+def test_compact_job(session):
+    from c2corg_api.jobs.harvest import compact_avalanche_bulletins
+
+    store.save(session, 'meteofrance', 'fr', bra(3))
+    session.commit()
+    # the recorded bulletin is not 18 months old yet
+    compact_avalanche_bulletins()
+    session.expire_all()
+    assert session.scalars(select(AvalancheBulletin.compacted_at)).all() == [None]

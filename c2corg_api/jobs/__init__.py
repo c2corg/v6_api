@@ -5,7 +5,7 @@ from apscheduler.events import EVENT_JOB_ERROR
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from c2corg_api.harvest.runner import enabled_harvesters, harvest_tick
-from c2corg_api.jobs.harvest import prune_harvest
+from c2corg_api.jobs.harvest import compact_avalanche_bulletins, prune_harvest
 from c2corg_api.jobs.process_removals import process_removals, removals_auto
 from c2corg_api.jobs.purge_deleted_documents import purge_deleted_documents
 from c2corg_api.jobs.purge_expired_tokens import purge_token
@@ -86,6 +86,16 @@ def configure_scheduler_from_config(settings):
             name='Prune the old harvest payloads and superseded bulletins',
             trigger='cron',
             hour=2,
+            minute=0,
+        )
+        # run `compact_avalanche_bulletins` the 1st of each month at 3:00
+        scheduler.add_job(
+            compact_avalanche_bulletins,
+            id='compact_avalanche_bulletins',
+            name='Remove the customData of the bulletins older than 18 months',
+            trigger='cron',
+            day=1,
+            hour=3,
             minute=0,
         )
 

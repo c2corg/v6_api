@@ -8,6 +8,7 @@ from sqlalchemy import (
     SmallInteger,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
@@ -20,7 +21,8 @@ class AvalancheBulletin(Base):
     # One row by publication and language, updated only when a service
     # changes a publication without changing its time. The publications
     # superseded the same day are pruned after a week (see
-    # avalanche_bulletins.store.prune_superseded). The weather of SLF
+    # avalanche_bulletins.store.prune_superseded), the customData of all
+    # removed after 18 months (store.compact). The weather of SLF
     # (customData.CH.weather) is stored apart (models.region_weather).
 
     __tablename__ = 'avalanche_bulletins'
@@ -43,6 +45,8 @@ class AvalancheBulletin(Base):
     source_id = Column(
         Text, ForeignKey(schema + '.harvest_sources.id', ondelete='SET NULL')
     )
+    # when its customData was removed, after COMPACT_AFTER (store.compact)
+    compacted_at = Column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint(
@@ -59,6 +63,12 @@ class AvalancheBulletin(Base):
         ),
         Index('ix_guidebook_avalanche_bulletins_main_date', 'main_date'),
         Index('ix_guidebook_avalanche_bulletins_source_id', 'source_id'),
+        # the rows left to compact
+        Index(
+            'ix_guidebook_avalanche_bulletins_not_compacted',
+            'main_date',
+            postgresql_where=text('compacted_at IS NULL'),
+        ),
         {'schema': schema},
     )
 

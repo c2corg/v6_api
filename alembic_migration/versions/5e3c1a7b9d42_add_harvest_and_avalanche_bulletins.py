@@ -79,6 +79,7 @@ def upgrade():
         sa.Column('region_keys', ARRAY(sa.Text()), nullable=False),
         sa.Column('caaml', JSONB(), nullable=False),
         sa.Column('source_id', sa.Text(), nullable=True),
+        sa.Column('compacted_at', sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ['source_id'], ['guidebook.harvest_sources.id'], ondelete='SET NULL'
         ),
@@ -110,6 +111,13 @@ def upgrade():
         'avalanche_bulletins',
         ['main_date'],
         schema='guidebook',
+    )
+    op.create_index(
+        'ix_guidebook_avalanche_bulletins_not_compacted',
+        'avalanche_bulletins',
+        ['main_date'],
+        schema='guidebook',
+        postgresql_where=sa.text('compacted_at IS NULL'),
     )
     op.create_table(
         'avalanche_bulletin_regions',
