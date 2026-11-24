@@ -88,6 +88,18 @@ discourse.category = {discourse_category}
 # the scheduler removes the accounts of the validated removal requests
 users.removals.auto = {removals_auto}
 
+# partner outings harvester (see jobs/harvest_partner_outings.py). The secrets
+# (SKITOUR_API_KEY) are read from the environment, never from here
+partners.enabled = {partners_enabled}
+# comma separated
+partners.sources = {partners_sources}
+partners.interval_minutes = {partners_interval}
+partners.retention_days = {partners_retention}
+# http | fixtures
+partners.transport = {partners_transport}
+# empty: c2corg_api/tests/partners/fixtures
+partners.fixtures_dir = {partners_fixtures_dir}
+
 ui.url = {ui_url}
 
 # Space separated list of origins allowed to make cross-origin (CORS)
