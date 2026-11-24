@@ -15,6 +15,8 @@ The code is in two parts:
   (`regions.py`, `cache.py`, routes in `c2corg_api/web/avalanche_bulletins.py`).
 
 The tables are created by the migration `5e3c1a7b9d42` (`alembic_migration/versions/`). See the
+[background jobs diagram](https://c2corg.github.io/v6_api/architecture/batch.html) (the scheduler, the harvest tick, the
+harvesters and where a new one plugs in) and the
 [backend diagram](https://c2corg.github.io/v6_api/architecture/backend.html).
 
 ## Scheduling
@@ -158,6 +160,9 @@ payloads older than `Harvester.keep_payloads_days` (30 days; 0 keeps none).
 - The language asked, else English, else the one published, by provider.
 
 ## Adding a harvester
+
+The *Next harvester*, *Next service* and *Next tables* boxes of the
+[background jobs diagram](https://c2corg.github.io/v6_api/architecture/batch.html) show where it plugs in.
 
 1. Subclass `Harvester` (`c2corg_api/harvest/harvester.py`) with a `name`, a `policy`, `sources()`, `url()`,
    `fetch()` and `store()`; set `requests_per_minute` if the service has a quota and `keep_payloads_days`.
