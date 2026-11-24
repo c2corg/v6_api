@@ -93,6 +93,17 @@ harvest.enabled = {harvest_enabled}
 # for one harvester, else (empty) as harvest.enabled
 harvest.avalanche.meteofrance.enabled = {harvest_meteofrance_enabled}
 harvest.avalanche.caaml.enabled = {harvest_caaml_enabled}
+# partner outings harvester (see jobs/harvest_partner_outings.py). The secrets
+# (SKITOUR_API_KEY) are read from the environment, never from here
+partners.enabled = {partners_enabled}
+# comma separated
+partners.sources = {partners_sources}
+partners.interval_minutes = {partners_interval}
+partners.retention_days = {partners_retention}
+# http | fixtures
+partners.transport = {partners_transport}
+# empty: c2corg_api/tests/partners/fixtures
+partners.fixtures_dir = {partners_fixtures_dir}
 
 # the scheduler checks the links to other sites (c2corg_api.linkcheck)
 link_checker.enabled = {link_checker_enabled}
