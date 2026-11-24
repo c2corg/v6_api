@@ -141,7 +141,9 @@ def get_shown_images(image_ids):
     """Map image ids to the (filename, width, height) of the image shown."""
     # A merged image redirects to its target and its own files are deleted,
     # so use the target. Merging an already redirected document is refused,
-    # there is at most one level of redirection. Unknown ids are left out.
+    # and merging a document points the documents redirecting to it to the
+    # target (views.document_merge): there is at most one level of
+    # redirection. Unknown ids are left out.
     # width and height are the original's, None when unknown.
     documents = Document.__table__
     images = Image.__table__
