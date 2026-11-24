@@ -160,6 +160,20 @@ def test_down_site_exits_2(monkeypatch, capsys):
     assert 'unreachable or down' in capsys.readouterr().err
 
 
+def test_rejected_key_exits_2_as_blocked(monkeypatch, capsys):
+    """skitour answers HTTP 200 + {"ERROR": ...}: blocked, not a shape diff."""
+    monkeypatch.setenv('SKITOUR_API_KEY', 'test-key')
+    monkeypatch.setattr(
+        cli,
+        'make_transport',
+        lambda adapter: FixtureTransport(FIXTURES, 'skitour_bad_key'),
+    )
+    assert cli.main(['shapes', 'skitour']) == 2
+    assert 'blocked by the site: skitour API error: INVALID API KEY' in (
+        capsys.readouterr().err
+    )
+
+
 def test_missing_key_exits_2(monkeypatch, capsys, tmp_path):
     monkeypatch.delenv('SKITOUR_API_KEY', raising=False)
 

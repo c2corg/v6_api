@@ -54,3 +54,12 @@ c2corg_api.partners shapes` to see what changed.
 | api.camptocamp.org | reachable | not needed |
 
 Never commit an API key or a cookie in a fixture.
+
+## Real recordings of error answers
+
+`skitour_no_key/` and `skitour_bad_key/` (`synthetic: false`) are curl
+recordings of what skitour.fr answers to a request without a key, or with a
+rejected one: HTTP 200 and `{"ERROR": "NO API KEY"}` / `{"ERROR": "INVALID API
+KEY"}` instead of a list. `SkitourAdapter` turns them into `SourceBlocked`
+(status `blocked`, detail `skitour API error: <message>`). They are separate
+directories so that `record skitour` never overwrites them.
