@@ -103,6 +103,8 @@ def test_broken_embeds(client, session, user_ids, docs, outing_images):  # noqa:
     assert first['deleted']['expires_at'] > first['deleted']['deleted_at']
     not_image = next(e for e in body['embeds'] if e['reason'] == 'not_image')
     assert not_image['image_document_type'] == 'w'
+    assert not_image['image_document_title'] == docs.waypoint1.locales[0].title
+    assert first['image_document_title'] is None
     assert not_image['deleted'] is None
 
     # restored: shown again

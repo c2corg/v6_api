@@ -163,7 +163,11 @@ def list_broken_embeds(offset, limit):
         .limit(limit)
     ).all()
     entries = _entries({row.entry_id for row in rows} - {None})
-    titles = document_titles({row.document_id for row in rows})
+    # the titles of the documents, and of those of the ids that are not images
+    titles = document_titles(
+        {row.document_id for row in rows}
+        | {row.image_id for row in rows if row.image_document_type is not None}
+    )
     return {
         'total': total,
         'embeds': [
@@ -176,6 +180,11 @@ def list_broken_embeds(offset, limit):
                 'reason': _reason(row),
                 # the document of this id when it is not an image
                 'image_document_type': row.image_document_type,
+                'image_document_title': (
+                    titles.get(row.image_id)
+                    if row.image_document_type is not None
+                    else None
+                ),
                 'deleted': entries.get(row.entry_id),
             }
             for row in rows
