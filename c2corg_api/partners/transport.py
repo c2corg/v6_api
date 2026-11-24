@@ -4,7 +4,7 @@ import datetime
 import json
 import re
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -246,6 +246,8 @@ class RecordingTransport:
     Writes `<out_dir>/<source>/manifest.json` and the body files; the CLI
     `record` command uses it. `trim(url, body) -> bytes` can shrink a body
     before it is written (e.g. drop the media of the gulliver comments).
+    Params in `ignore_params` are sent but not recorded (they change from run
+    to run, like a number of days: the fixture must match whatever the value).
     """
 
     def __init__(
@@ -254,7 +256,9 @@ class RecordingTransport:
         out_dir: Path,
         source: str,
         trim: Callable[[str, bytes], bytes] | None = None,
+        ignore_params: Collection[str] = (),
     ):
+        self.ignore_params = frozenset(ignore_params)
         self.inner = inner
         self.source = source
         self.directory = Path(out_dir) / source
@@ -270,7 +274,8 @@ class RecordingTransport:
         response = self.inner.get(url, params=params, headers=headers)
         body = self.trim(url, response.body) if self.trim else response.body
         content_type = response.header('content-type') or ''
-        name = self._file_name(url, params, content_type)
+        kept = {k: v for k, v in (params or {}).items() if k not in self.ignore_params}
+        name = self._file_name(url, kept, content_type)
         self.directory.mkdir(parents=True, exist_ok=True)
         (self.directory / name).write_bytes(body)
         entry: dict[str, Any] = {
@@ -279,8 +284,8 @@ class RecordingTransport:
             'content_type': content_type,
             'file': name,
         }
-        if params:
-            entry['params'] = {k: str(v) for k, v in params.items()}
+        if kept:
+            entry['params'] = {k: str(v) for k, v in kept.items()}
         self.entries.append(entry)
         self._write_manifest()
         return response
