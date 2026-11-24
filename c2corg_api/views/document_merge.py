@@ -120,7 +120,8 @@ def merge_documents(request):
     - The association log entries are rewritten to the target document.
     - The time of the log entries is updated, so that the ES syncer will
       pick up the new associations of the target document.
-    - The attribute `redirects_to` of the source document is set.
+    - The attribute `redirects_to` of the source document is set, and of the
+      documents merged into the source before.
     - A new version is created for the source document. This makes sure
       that the ES syncer removes the document from ES index.
     - Update the cache version of the source document.
@@ -151,6 +152,11 @@ def merge_documents(request):
     if source_doc.type == WAYPOINT_TYPE:
         _transfer_main_waypoint(source_document_id, target_document_id)
 
+    # the documents merged into the source before now redirect to the target:
+    # one level of redirection only (a merged image shows the files of its
+    # target, those of the source are deleted below)
+    redirected_ids = _redirect_merged_documents(source_document_id, target_document_id)
+
     # set redirection and create a new version
     source_doc.redirects_to = target_document_id
     update_version(
@@ -163,6 +169,8 @@ def merge_documents(request):
 
     # update the cache version for the source and target document
     update_cache_version_direct(source_document_id)
+    for document_id in redirected_ids:
+        update_cache_version_direct(document_id)
     update_cache_version_full(target_document_id, source_doc.type)
 
     _remove_feed_entry(source_document_id)
@@ -173,6 +181,21 @@ def merge_documents(request):
     notify_es_syncer(request.registry.queue_config)
 
     return {}
+
+
+def _redirect_merged_documents(source_document_id, target_document_id):
+    """Point the documents redirecting to the source to the target."""
+    redirected_ids = (
+        DBSession.query(Document.document_id)
+        .filter(Document.redirects_to == source_document_id)
+        .all()
+    )
+    redirected_ids = [document_id for (document_id,) in redirected_ids]
+    if redirected_ids:
+        DBSession.query(Document).filter(
+            Document.document_id.in_(redirected_ids)
+        ).update({Document.redirects_to: target_document_id}, synchronize_session=False)
+    return redirected_ids
 
 
 def transfer_associations(source_document_id, target_document_id):
