@@ -14,7 +14,9 @@ partner site -> adapter (c2corg_api/partners/sources/<name>.py, pure) -> job (jo
 - An adapter only turns the answers of the site into `HarvestedOuting` objects. It gets its HTTP transport and its
   lookup cache from the job, so it runs unchanged on recorded fixtures.
 - The job stores the rows (one per source and external id), assigns the c2c areas that contain the point of each
-  outing, records the health of each source, and a second job purges the outings older than the retention.
+  outing, records the health of each source, and a second job purges the outings and the lookups older than the retention.
+  That purge job is scheduled even when the harvest is off (`partners_enabled="false"`): the rows must not outlive the
+  retention.
 - The design is in `doc/meta/A2_HARVESTER.md` of c2corg/metaskirando-archive.
 
 ## Configuration
@@ -24,16 +26,21 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 
 | env key | ini key | default | meaning |
 | --- | --- | --- | --- |
-| `partners_enabled` | `partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests (`make harvest-partners` also needs it) |
+| `partners_enabled` | `partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests; `make harvest-partners` refuses to run unless it is true or `--force` is given |
 | `partners_sources` | `partners.sources` | `skitour,gulliver` | adapters to run |
 | `partners_interval` | `partners.interval_minutes` | `15` | scheduler period; base of the backoff |
 | `partners_retention` | `partners.retention_days` | `31` | outings older than that are not stored, and purged |
+| `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route lookups) older than that are purged |
 | `partners_transport` | `partners.transport` | `http` (`fixtures` in `env.dev`) | `http`: the real sites; `fixtures`: recorded answers, no network |
 | `partners_fixtures_dir` | `partners.fixtures_dir` | empty | empty: `c2corg_api/tests/partners/fixtures` |
+| `partners_allow_synthetic` | `partners.allow_synthetic` | `false` (`true` in `env.dev` only) | fixture mode may run on a manifest with `synthetic: true`. Otherwise the source is `failing` (ERROR log, detail says why) and nothing is stored: hand-made data can never be published by accident |
 
-Secrets come from the environment only (`.env` locally, Docker secrets in production), never from the ini files:
+Secrets come from the environment only, never from the ini files. Each secret `NAME` is read from `$NAME`; when that
+is not set, from the file named by `$NAME_FILE` (the Docker secrets convention, e.g.
+`SKITOUR_API_KEY_FILE=/run/secrets/skitour_api_key`; the content is stripped of surrounding whitespace). `$NAME` wins
+when both are set.
 
-- `SKITOUR_API_KEY`: the key of the skitour.fr API. Without it the source is `disabled`. Ask skitour.fr for a key; do
+- `SKITOUR_API_KEY` or `SKITOUR_API_KEY_FILE`: the key of the skitour.fr API. Without it the source is `disabled`. Ask skitour.fr for a key; do
   not reuse any key found in old code.
 - Gulliver needs none today.
 - In fixture mode no secret is needed.
@@ -44,13 +51,13 @@ Secrets come from the environment only (`.env` locally, Docker secrets in produc
 
 | status | meaning | counts as a failure |
 | --- | --- | --- |
-| `never_run` | no run yet (a source of `partners.sources` without a row) | no |
+| `never_run` | no row yet: the job has not run since the source exists (`/partner-outings/sources` lists every known source, with or without a row) | no |
 | `ok` | the run went through, nothing skipped for an error | no |
 | `degraded` | the run stored its outings, but some items could not be parsed (below the failure threshold) | no |
 | `failing` | a bug, too many unparsable items (more than 3 and 10%), or a storage error: nothing stored | yes |
 | `blocked` | the site refuses us: 401/403/429 or an anti-bot challenge page (Cloudflare) | yes |
 | `down` | the site does not answer: 5xx, timeout, or the request budget of the run is spent | yes |
-| `disabled` | the source cannot run by choice: a secret is missing (`status_detail` says which) | no |
+| `disabled` | the source does not run by choice: a secret is missing, or it is missing from `partners.sources` (`status_detail` says which: `not configured`) | no |
 
 After 3 failed runs in a row (`failing`, `blocked`, `down`) the job waits 2 x, 4 x, ... the interval (at most 16 x)
 before trying again. `blocked` is not `down`: a blocked source needs an agreement or an allowlisting from the
@@ -67,7 +74,8 @@ not parse on purpose: both sources end `degraded`, which is the expected demo st
 are shifted so that the newest fixture outings are dated today.
 
 With the dev stack of the README (`scripts/sandbox-up.sh`, or the dev container, with the anonymized dev
-database): `config/env.dev` already has `partners_enabled="true"` and `partners_transport="fixtures"`.
+database): `config/env.dev` already has `partners_enabled="true"`, `partners_transport="fixtures"` and
+`partners_allow_synthetic="true"` (the demo fixtures are synthetic; without it the sources end `failing`).
 
 ```bash
 # in the app container (docker compose ... exec app bash), from the repository
@@ -77,7 +85,7 @@ make harvest-partners                          # runs the job once: skitour.fr a
 make serve                                     # API on :6543 (already running after sandbox-up.sh)
 ```
 
-`make harvest-partners` logs a lot of SQL; the last lines tell the status of each source
+`make harvest-partners` needs `partners.enabled` (it exits with a message otherwise; `--force` overrides). It logs a lot of SQL; the last lines tell the status of each source
 (`Partner source skitour: degraded (10 upserted)`). Then:
 
 ```bash
@@ -101,7 +109,8 @@ Notes:
   (country, department, range). Rows without a point (or outside any area) have `areas: []`.
 - Run the job again whenever you like: it is idempotent (upsert), and shifts the dates to the current day.
   `make run-background-jobs` starts the scheduler, which re-harvests every `partners.interval_minutes`.
-- The answers are cached for 2 minutes (Redis): after a new harvest, wait or flush with `make flush-redis`.
+- The answers are cached twice: 120 s in Redis and 120 s by the clients (`Cache-Control: max-age=120`), so a new
+  harvest can take about 4 minutes to show: wait, or flush with `make flush-redis` (and reload without cache).
 - Another port (the main API already uses 6543): `C2C_API_CONFIG=development.ini uv run uvicorn c2corg_api.asgi:app --port 6544`.
 
 The UI (c2c_ui checkout, Node 22):
@@ -144,10 +153,12 @@ the real transport, through a `RecordingTransport`, and writes into
 - `shape.json`: the shape (keys and value types) of every recorded JSON file,
   keyed by file name. `shapes` compares with it.
 
-Payloads are trimmed before they are written: lists are cut to 30 items, and
-fields the adapters never read are dropped. Those are the skitour texts and
-photos (`conditions`, `recit`, `photos`: their licence forbids reusing them),
-the gulliver comment texts and the route media. Secrets come from the
+Payloads are trimmed before they are written, by an **allow-list**: only the
+paths an adapter lists in its `REQUIRED_PATHS` are kept, everything else is
+dropped, and lists are cut to 30 items. No partner free text (skitour
+`conditions`, `recit`, `photos`; gulliver `content`, `meta.access`, `meta.obs`,
+`tracks`...) reaches a fixture, whatever new fields the site adds: their licence
+forbids reusing it. A test scans the committed fixtures for such keys. Secrets come from the
 environment (`SKITOUR_API_KEY`) and are never written.
 
 The recording is made aside and installed only when it succeeded: a blocked or
@@ -165,9 +176,10 @@ Runs the adapter live (nothing is written) and prints the differences between
 the shapes of the answers and the `shape.json` of the fixtures, one line per
 path: `+ path: type` added, `- path` removed, `~ path: old -> new` retyped.
 Only what the adapter reads can make it fail: each adapter declares
-`REQUIRED_PATHS` (endpoint -> JSON paths, `[]` for list items, for example
-`sorties: [].sommets[].latlon`). Added fields and changes to other fields are
-reported, not fatal. A required path under an empty list of the sample is
+`REQUIRED_PATHS` (every path it reads, also the allow-list of the recorder) (endpoint -> JSON paths, `[]` for list items, for example
+`sorties: [].sommets[].latlon`). Fields the adapter does not read are ignored on both sides (the
+same allow-list trims the live answers), so a new field of the site is not
+reported: the adapter does not use it. A required path under an empty list of the sample is
 listed as `unchecked`.
 
 `--offline` replays the fixtures instead of calling the site: a self-check

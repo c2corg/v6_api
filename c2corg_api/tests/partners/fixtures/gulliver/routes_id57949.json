@@ -1,26 +1,21 @@
 {
-  "id": 57949,
-  "title": "Cima Bianca da Cheneil",
-  "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/",
-  "region": {
-    "name": "Valle d&#8217;Aosta"
+ "title": "Cima Bianca da Cheneil",
+ "region": {
+  "name": "Valle d&#8217;Aosta"
+ },
+ "district": "Valtournenche",
+ "meta": {
+  "data": {
+   "drop": "1400",
+   "alt_top": "3009",
+   "exposure": "N-NE",
+   "grade_skimo": "BSA"
   },
-  "city": "Valtournenche",
-  "district": "Valtournenche",
-  "meta": {
-    "data": {
-      "drop": "1400",
-      "alt_start": "1609",
-      "alt_top": "3009",
-      "exposure": "N-NE",
-      "type_route": "skimo",
-      "grade_skimo": "BSA"
-    },
-    "geo": {
-      "coords": {
-        "lat": "45.9181",
-        "lng": "7.6483"
-      }
-    }
+  "geo": {
+   "coords": {
+    "lat": "45.9181",
+    "lng": "7.6483"
+   }
   }
+ }
 }

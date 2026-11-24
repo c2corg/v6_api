@@ -1,435 +1,264 @@
 [
-  {
-    "id": 112345,
-    "titre": "Pointe de la Sana, face NE",
-    "date": 1795417920,
-    "auteur": {
-      "id": 4019,
-      "pseudo": "montagnard38"
-    },
-    "massif": {
-      "id": 14,
-      "nom": "Vanoise"
-    },
-    "sommets": [
-      {
-        "id": 5101,
-        "nom": "Pointe de la Sana",
-        "altitude": 3436,
-        "latlon": [
-          45.4372,
-          6.9181
-        ]
-      }
-    ],
-    "topos": [
-      {
-        "id": 77
-      }
-    ],
-    "orientation": "NE",
-    "denivele": 1150,
-    "dif_ski": "3.2",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
-    ]
+ {
+  "id": 112345,
+  "titre": "Pointe de la Sana, face NE",
+  "date": 1795417920,
+  "auteur": {
+   "pseudo": "montagnard38"
   },
-  {
-    "id": 112346,
-    "titre": "Couloir nord de la Pointe de Chalance",
-    "date": 1795473600,
-    "auteur": {
-      "id": 4020,
-      "pseudo": "Cedric_B"
-    },
-    "massif": {
-      "id": 9,
-      "nom": "Oisans"
-    },
-    "sommets": [
-      {
-        "id": 5102,
-        "nom": "Pointe de Chalance",
-        "altitude": 3205,
-        "latlon": [
-          44.9511,
-          6.2874
-        ]
-      }
-    ],
-    "topos": [],
-    "orientation": "N",
-    "denivele": 1400,
-    "dif_ski": "4.2",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
-    ]
+  "massif": {
+   "nom": "Vanoise"
   },
-  {
-    "id": 112347,
-    "titre": "Petite sortie sans cotation",
-    "date": 1795334700,
-    "auteur": {
-      "id": 4021,
-      "pseudo": "lea.ski"
-    },
-    "massif": null,
-    "sommets": [],
-    "topos": [],
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
+  "sommets": [
+   {
+    "altitude": 3436,
+    "latlon": [
+     45.4372,
+     6.9181
     ]
+   }
+  ],
+  "orientation": "NE",
+  "denivele": 1150,
+  "dif_ski": "3.2"
+ },
+ {
+  "id": 112346,
+  "titre": "Couloir nord de la Pointe de Chalance",
+  "date": 1795473600,
+  "auteur": {
+   "pseudo": "Cedric_B"
   },
-  {
-    "id": 112348,
-    "titre": "Traversee Col de la Vanoise - Pointe de la Réchasse",
-    "date": 1795329000,
-    "auteur": {
-      "id": 4022,
-      "pseudo": "alp_marmotte"
-    },
-    "massif": {
-      "id": 14,
-      "nom": "Vanoise"
-    },
-    "sommets": [
-      {
-        "id": 5103,
-        "nom": "Col de la Vanoise",
-        "altitude": 2517,
-        "latlon": [
-          45.3855,
-          6.8397
-        ]
-      },
-      {
-        "id": 5104,
-        "nom": "Pointe de la Réchasse",
-        "altitude": 3212,
-        "latlon": [
-          45.3921,
-          6.8745
-        ]
-      },
-      {
-        "id": 5105,
-        "nom": "Dôme de Chasseforêt",
-        "altitude": "3586",
-        "latlon": [
-          45.3604,
-          6.8988
-        ]
-      }
-    ],
-    "topos": [],
-    "orientation": "E-SE",
-    "denivele": 1080,
-    "dif_ski": "3.1",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
-    ]
+  "massif": {
+   "nom": "Oisans"
   },
-  {
-    "id": 112349,
-    "titre": "Aiguille de Scolette depuis le refuge",
-    "date": 1795499400,
-    "auteur": {
-      "id": 4023,
-      "pseudo": "pdupont"
-    },
-    "massif": {
-      "id": 5,
-      "nom": "Haute-Maurienne"
-    },
-    "sommets": [
-      {
-        "id": 5106,
-        "nom": "Aiguille de Scolette",
-        "altitude": 3506
-      }
-    ],
-    "topos": [],
-    "orientation": "S",
-    "denivele": 960,
-    "dif_ski": "2.3",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
+  "sommets": [
+   {
+    "altitude": 3205,
+    "latlon": [
+     44.9511,
+     6.2874
     ]
+   }
+  ],
+  "orientation": "N",
+  "denivele": 1400,
+  "dif_ski": "4.2"
+ },
+ {
+  "id": 112347,
+  "titre": "Petite sortie sans cotation",
+  "date": 1795334700,
+  "auteur": {
+   "pseudo": "lea.ski"
   },
-  {
-    "id": 112350,
-    "titre": "Rando du matin vers le Mont Thabor",
-    "date": 1795424400,
-    "auteur": {
-      "id": 4024,
-      "pseudo": "Vero73"
-    },
-    "massif": {
-      "id": 6,
-      "nom": "Thabor"
-    },
-    "sommets": [
-      {
-        "id": 5107,
-        "nom": "Mont Thabor",
-        "altitude": 3178,
-        "latlon": [
-          0,
-          0
-        ]
-      }
-    ],
-    "topos": [],
-    "orientation": "NO",
-    "denivele": 1020,
-    "dif_ski": "3.3",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
-    ]
+  "massif": null,
+  "sommets": []
+ },
+ {
+  "id": 112348,
+  "titre": "Traversee Col de la Vanoise - Pointe de la Réchasse",
+  "date": 1795329000,
+  "auteur": {
+   "pseudo": "alp_marmotte"
   },
-  {
-    "id": 112351,
-    "titre": "<b>Dôme</b> des Platières &amp; l&#039;aller-retour &quot;express&quot;",
-    "date": 1795495500,
-    "auteur": {
-      "id": 4025,
-      "pseudo": "g&eacute;rard"
-    },
-    "massif": {
-      "id": 14,
-      "nom": "Vanoise"
-    },
-    "sommets": [
-      {
-        "id": 5108,
-        "nom": "Dôme des Platières",
-        "altitude": 3004,
-        "latlon": [
-          45.3012,
-          6.7733
-        ]
-      }
-    ],
-    "topos": [],
-    "orientation": "N-NW",
-    "denivele": "870",
-    "dif_ski": "2.2",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
-    ]
+  "massif": {
+   "nom": "Vanoise"
   },
-  {
-    "id": 112352,
-    "titre": "Sortie rando dans le brouillard",
-    "date": 1795508100,
-    "auteur": {
-      "id": 4026,
-      "pseudo": "skieur_fou"
-    },
-    "massif": {
-      "id": 3,
-      "nom": "Belledonne"
-    },
-    "sommets": [
-      {
-        "id": 5109,
-        "nom": "Grand Pic de Belledonne",
-        "altitude": 2977,
-        "latlon": [
-          45.2142,
-          6.0231
-        ]
-      }
-    ],
-    "topos": [],
-    "orientation": "W",
-    "denivele": 700,
-    "dif_ski": "ski 3",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
+  "sommets": [
+   {
+    "altitude": 2517,
+    "latlon": [
+     45.3855,
+     6.8397
     ]
+   },
+   {
+    "altitude": 3212,
+    "latlon": [
+     45.3921,
+     6.8745
+    ]
+   },
+   {
+    "altitude": "3586",
+    "latlon": [
+     45.3604,
+     6.8988
+    ]
+   }
+  ],
+  "orientation": "E-SE",
+  "denivele": 1080,
+  "dif_ski": "3.1"
+ },
+ {
+  "id": 112349,
+  "titre": "Aiguille de Scolette depuis le refuge",
+  "date": 1795499400,
+  "auteur": {
+   "pseudo": "pdupont"
   },
-  {
-    "id": 112210,
-    "titre": "Vieille sortie de debut novembre",
-    "date": 1794294000,
-    "auteur": {
-      "id": 4078,
-      "pseudo": "ancien"
-    },
-    "massif": {
-      "id": 3,
-      "nom": "Belledonne"
-    },
-    "sommets": [
-      {
-        "id": 5110,
-        "nom": "Croix de Belledonne",
-        "altitude": 2926,
-        "latlon": [
-          45.1996,
-          6.0398
-        ]
-      }
-    ],
-    "topos": [],
-    "orientation": "S",
-    "denivele": 600,
-    "dif_ski": "2.1",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
-    ]
+  "massif": {
+   "nom": "Haute-Maurienne"
   },
-  {
-    "id": 112353,
-    "date": 1795428000,
-    "auteur": {
-      "id": 4210,
-      "pseudo": "anonyme"
-    },
-    "sommets": [],
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
-    ]
+  "sommets": [
+   {
+    "altitude": 3506
+   }
+  ],
+  "orientation": "S",
+  "denivele": 960,
+  "dif_ski": "2.3"
+ },
+ {
+  "id": 112350,
+  "titre": "Rando du matin vers le Mont Thabor",
+  "date": 1795424400,
+  "auteur": {
+   "pseudo": "Vero73"
   },
-  {
-    "id": 112354,
-    "titre": "Sortie avec date illisible",
-    "date": "hier",
-    "auteur": {
-      "id": 4028,
-      "pseudo": "brouillon"
-    },
-    "massif": {
-      "id": 14,
-      "nom": "Vanoise"
-    },
-    "sommets": [
-      {
-        "id": 5111,
-        "nom": "Mont Pourri",
-        "altitude": 3779,
-        "latlon": [
-          45.5028,
-          6.8352
-        ]
-      }
-    ],
-    "topos": [],
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
-    ]
+  "massif": {
+   "nom": "Thabor"
   },
-  {
-    "id": 112355,
-    "titre": "Le Grand Veymont par le Pas de la Ville",
-    "date": 1795419600,
-    "auteur": {
-      "id": 4029,
-      "pseudo": "vercors_fan"
-    },
-    "massif": {
-      "id": 21,
-      "nom": "Vercors"
-    },
-    "sommets": [
-      {
-        "id": 5112,
-        "nom": "Pas de la Ville",
-        "altitude": 1900,
-        "latlon": [
-          44.8421,
-          5.5502
-        ]
-      },
-      {
-        "id": 5113,
-        "nom": "Grand Veymont",
-        "altitude": 2341,
-        "latlon": [
-          44.8388,
-          5.5405
-        ]
-      }
-    ],
-    "topos": [],
-    "orientation": "N-NE",
-    "denivele": 640,
-    "dif_ski": "3.1",
-    "conditions": "<p>Neige <b>transformee</b> sous 2400 m, bonne poudre au-dessus. LICENSED-CONDITIONS-TEXT</p>",
-    "recit": "<p>Depart du parking a 6h30... LICENSED-RECIT-TEXT</p>",
-    "photos": [
-      {
-        "id": 9001,
-        "url": "https://skitour.fr/photos/9001.jpg",
-        "legende": "LICENSED-PHOTO"
-      }
+  "sommets": [
+   {
+    "altitude": 3178,
+    "latlon": [
+     0,
+     0
     ]
-  }
+   }
+  ],
+  "orientation": "NO",
+  "denivele": 1020,
+  "dif_ski": "3.3"
+ },
+ {
+  "id": 112351,
+  "titre": "<b>Dôme</b> des Platières &amp; l&#039;aller-retour &quot;express&quot;",
+  "date": 1795495500,
+  "auteur": {
+   "pseudo": "g&eacute;rard"
+  },
+  "massif": {
+   "nom": "Vanoise"
+  },
+  "sommets": [
+   {
+    "altitude": 3004,
+    "latlon": [
+     45.3012,
+     6.7733
+    ]
+   }
+  ],
+  "orientation": "N-NW",
+  "denivele": "870",
+  "dif_ski": "2.2"
+ },
+ {
+  "id": 112352,
+  "titre": "Sortie rando dans le brouillard",
+  "date": 1795508100,
+  "auteur": {
+   "pseudo": "skieur_fou"
+  },
+  "massif": {
+   "nom": "Belledonne"
+  },
+  "sommets": [
+   {
+    "altitude": 2977,
+    "latlon": [
+     45.2142,
+     6.0231
+    ]
+   }
+  ],
+  "orientation": "W",
+  "denivele": 700,
+  "dif_ski": "ski 3"
+ },
+ {
+  "id": 112210,
+  "titre": "Vieille sortie de debut novembre",
+  "date": 1794294000,
+  "auteur": {
+   "pseudo": "ancien"
+  },
+  "massif": {
+   "nom": "Belledonne"
+  },
+  "sommets": [
+   {
+    "altitude": 2926,
+    "latlon": [
+     45.1996,
+     6.0398
+    ]
+   }
+  ],
+  "orientation": "S",
+  "denivele": 600,
+  "dif_ski": "2.1"
+ },
+ {
+  "id": 112353,
+  "date": 1795428000,
+  "auteur": {
+   "pseudo": "anonyme"
+  },
+  "sommets": []
+ },
+ {
+  "id": 112354,
+  "titre": "Sortie avec date illisible",
+  "date": "hier",
+  "auteur": {
+   "pseudo": "brouillon"
+  },
+  "massif": {
+   "nom": "Vanoise"
+  },
+  "sommets": [
+   {
+    "altitude": 3779,
+    "latlon": [
+     45.5028,
+     6.8352
+    ]
+   }
+  ]
+ },
+ {
+  "id": 112355,
+  "titre": "Le Grand Veymont par le Pas de la Ville",
+  "date": 1795419600,
+  "auteur": {
+   "pseudo": "vercors_fan"
+  },
+  "massif": {
+   "nom": "Vercors"
+  },
+  "sommets": [
+   {
+    "altitude": 1900,
+    "latlon": [
+     44.8421,
+     5.5502
+    ]
+   },
+   {
+    "altitude": 2341,
+    "latlon": [
+     44.8388,
+     5.5405
+    ]
+   }
+  ],
+  "orientation": "N-NE",
+  "denivele": 640,
+  "dif_ski": "3.1"
+ }
 ]

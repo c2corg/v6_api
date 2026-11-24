@@ -3,7 +3,7 @@
 The adapters (`c2corg_api.partners`) are pure: this job gives them a transport
 and a lookup cache, stores what they return in `guidebook.partner_outings`,
 keeps the health of each source in `guidebook.partner_sources`, and purges the
-outings older than the retention.
+outings and the lookups older than the retention.
 """
 
 import dataclasses
@@ -49,6 +49,7 @@ MAX_ITEM_ERROR_RATIO = 0.1
 BACKOFF_AFTER = 3
 BACKOFF_MARGIN = timedelta(seconds=30)
 DETAIL_LENGTH = 500
+NOT_CONFIGURED = 'not configured'
 DEFAULT_FIXTURES_DIR = (
     Path(__file__).resolve().parent.parent / 'tests' / ('partners/fixtures')
 )
@@ -84,6 +85,19 @@ def enabled_sources(settings):
 
 def _retention_days(settings):
     return int(settings.get('partners.retention_days') or 31)
+
+
+def _lookup_retention_days(settings):
+    return int(settings.get('partners.lookup_retention_days') or 30)
+
+
+def synthetic_allowed(settings):
+    """Tell whether fixture mode may run on synthetic (hand-made) fixtures."""
+    return _setting_is_true(settings, 'partners.allow_synthetic')
+
+
+class SyntheticFixtures(Exception):
+    """Fixture mode on a synthetic manifest, where that is not allowed."""
 
 
 def _interval_minutes(settings):
@@ -231,6 +245,19 @@ def purge_partner_outings(session, now, retention_days):
     return deleted
 
 
+def purge_partner_lookups(session, now, retention_days):
+    """Delete the lookups not fetched for `retention_days`; return their number.
+
+    Does not commit.
+    """
+    limit = now - timedelta(days=retention_days)
+    deleted = session.execute(
+        delete(PartnerLookup).where(PartnerLookup.fetched_at < limit)
+    ).rowcount
+    log.info('Deleted %d partner lookups older than %s', deleted, limit.date())
+    return deleted
+
+
 def _clean_detail(message, secrets):
     # also the forms a secret takes in a URL (an error often quotes the URL)
     forms = {
@@ -277,10 +304,28 @@ def _since(row, now, settings):
     )
 
 
+def _secret(name):
+    """Return a secret: `$NAME`, else the content of the file `$NAME_FILE`.
+
+    The `*_FILE` form is the one of Docker secrets (`/run/secrets/...`).
+    """
+    value = os.getenv(name)
+    if value:
+        return value
+    path = os.getenv(f'{name}_FILE')
+    if not path:
+        return None
+    try:
+        return Path(path).read_text(encoding='utf-8').strip() or None
+    except OSError as e:
+        log.warning('Cannot read %s_FILE (%s): %s', name, path, type(e).__name__)
+        return None
+
+
 def _secrets(adapter, fixtures):
     if fixtures:
         return {name: 'fixture' for name in adapter.required_secrets}
-    values = {name: os.getenv(name) for name in adapter.required_secrets}
+    values = {name: _secret(name) for name in adapter.required_secrets}
     return {name: value for name, value in values.items() if value}
 
 
@@ -322,6 +367,11 @@ def _run_source(session, row, adapter, transport, lookups, now, settings):
     fetched = 0
     shift = _fixture_shift(name, transport, now)
     try:
+        if fixtures and transport.synthetic and not synthetic_allowed(settings):
+            raise SyntheticFixtures(
+                f'the fixtures of {name} are synthetic and partners.allow_synthetic'
+                ' is not true: refused, nothing stored'
+            )
         # in fixture mode the adapter lives on the day of the recording: its
         # `since` filter and relative dates ("yesterday") match the fixtures
         ctx = FetchContext(
@@ -333,6 +383,9 @@ def _run_source(session, row, adapter, transport, lookups, now, settings):
             secrets=secrets,
         )
         result = adapter.fetch(ctx)
+    except SyntheticFixtures as e:
+        log.error('Partner source %s: %s', name, e)
+        status, detail = 'failing', str(e)
     except SourceDisabled as e:
         status, detail = 'disabled', str(e)
     except SourceBlocked as e:
@@ -449,15 +502,41 @@ def harvest_partner_outings(settings, now=None):
                 )
             except Exception as e:
                 log.exception('Partner source %s could not start', name)
-                _record_failure(session, name, now, e)
+                _record_failure(session, name, now, e, _start_secrets(name))
+        _mark_unconfigured(session, enabled_sources(settings))
 
 
-def _record_failure(session, name, now, error):
+def _start_secrets(name):
+    adapter_cls = REGISTRY.get(name)
+    return _secrets(adapter_cls, False) if adapter_cls else {}
+
+
+def _mark_unconfigured(session, configured):
+    """Mark the sources missing from `partners.sources` as `disabled`.
+
+    Their outings stay listed until the retention purge. Never raises.
+    """
+    try:
+        names = set(REGISTRY) | set(session.scalars(select(PartnerSource.source)))
+        for name in sorted(names - set(configured)):
+            row = _get_source_row(session, name)
+            row.status = 'disabled'
+            row.status_detail = NOT_CONFIGURED
+            row.consecutive_failures = 0
+        session.commit()
+    except Exception:
+        log.exception('Partner sources: the unconfigured ones were not marked')
+        session.rollback()
+
+
+def _record_failure(session, name, now, error, secrets=None):
     try:
         session.rollback()
         row = _get_source_row(session, name)
         row.status = 'failing'
-        row.status_detail = f'{type(error).__name__}: {error}'[:DETAIL_LENGTH]
+        row.status_detail = _clean_detail(
+            f'{type(error).__name__}: {error}', secrets or {}
+        )
         row.last_run_at = row.last_error_at = now
         row.consecutive_failures = (row.consecutive_failures or 0) + 1
         session.commit()
@@ -467,10 +546,15 @@ def _record_failure(session, name, now, error):
 
 
 def purge_partner_outings_job(settings):
-    """Scheduler entry point: purge the old outings, recompute the areas."""
+    """Scheduler entry point: purge the old outings and lookups.
+
+    Scheduled even when the harvest is off: the rows must not outlive the
+    retention (licence).
+    """
     now = datetime.now(UTC)
     with Session(
         DBSession.get_bind(), join_transaction_mode='create_savepoint'
     ) as session:
         purge_partner_outings(session, now, _retention_days(settings))
+        purge_partner_lookups(session, now, _lookup_retention_days(settings))
         session.commit()
