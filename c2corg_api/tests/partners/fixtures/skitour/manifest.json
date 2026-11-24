@@ -1,0 +1,22 @@
+{
+  "source": "skitour",
+  "recorded_at": "2026-11-24",
+  "synthetic": true,
+  "note": "Hand-written from DATA_SOURCES.md 1.2 (GET /api/sorties?c=1). skitour.fr answered 503 on every URL from the sandbox and the API needs a key we do not have. Dates are relative to now=2026-11-24 12:00 UTC, since=2026-11-22. Re-record with `python -m c2corg_api.partners record skitour`.",
+  "entries": [
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {"c": "1", "p": "1"},
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_c1_l200_p1.json"
+    },
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {"c": "1", "p": "2"},
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_c1_l200_p2.json"
+    }
+  ]
+}
