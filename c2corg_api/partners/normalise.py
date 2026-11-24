@@ -119,9 +119,19 @@ def valid_lonlat(lon, lat) -> bool:
 def local_date(value, tz) -> datetime.date:
     """Return the local date of an epoch or a datetime in the time zone `tz`.
 
-    A naive datetime is taken to be local already.
+    Strings are accepted as the APIs send them: digits are an epoch
+    ('1764000000'), anything else an ISO date or datetime ('2026-11-23',
+    '2026-11-23 10:15:00', '2026-11-23T09:15:00Z'). A naive datetime is
+    taken to be local already. Raises TypeError or ValueError otherwise.
     """
     zone = ZoneInfo(tz) if isinstance(tz, str) else tz
+    if isinstance(value, str):
+        text = value.strip()
+        value = (
+            int(text)
+            if text.lstrip('-').isdigit()
+            else datetime.datetime.fromisoformat(text)
+        )
     if isinstance(value, datetime.datetime):
         if value.tzinfo is None:
             return value.date()

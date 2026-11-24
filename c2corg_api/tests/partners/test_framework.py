@@ -81,6 +81,18 @@ def test_rate_limit_is_frozen():
         rate.timeout_s = 1
 
 
+def test_fetch_context_now_must_be_aware():
+    with pytest.raises(ValueError, match='aware'):
+        FetchContext(
+            since=datetime.date(2026, 1, 1),
+            now=datetime.datetime(2026, 1, 2),
+            cursor=None,
+            transport=None,
+            lookups=MemoryLookupCache(),
+            secrets={},
+        )
+
+
 def test_require_secrets():
     require_secrets(context({'A': '1', 'B': '2'}), ('A', 'B'))
     with pytest.raises(SourceDisabled, match='^B not set$'):

@@ -67,6 +67,10 @@ class FetchContext:
     # e.g. {'SKITOUR_API_KEY': '...'}; a missing key means SourceDisabled
     secrets: Mapping[str, str]
 
+    def __post_init__(self):
+        if self.now.tzinfo is None or self.now.utcoffset() is None:
+            raise ValueError('FetchContext.now must be time zone aware')
+
 
 @dataclass(slots=True)
 class FetchResult:

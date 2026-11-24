@@ -197,9 +197,30 @@ def test_local_date_date_and_errors():
         2026, 3, 4
     )
     with pytest.raises(TypeError):
-        normalise.local_date('2026-03-04', 'UTC')
-    with pytest.raises(TypeError):
         normalise.local_date(True, 'UTC')
+    with pytest.raises(TypeError):
+        normalise.local_date(None, 'UTC')
+    with pytest.raises(ValueError):
+        normalise.local_date('yesterday', 'UTC')
+    with pytest.raises(ValueError):
+        normalise.local_date('', 'UTC')
+
+
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        # gulliver comment_date: local time already
+        ('2026-11-23 23:30:00', datetime.date(2026, 11, 23)),
+        ('2026-11-23', datetime.date(2026, 11, 23)),
+        # an explicit offset is converted
+        ('2026-11-23T23:30:00Z', datetime.date(2026, 11, 24)),
+        ('2026-11-23T23:30:00+00:00', datetime.date(2026, 11, 24)),
+        # an epoch sent as a string (2026-01-10 23:30 UTC)
+        (' 1768087800 ', datetime.date(2026, 1, 11)),
+    ],
+)
+def test_local_date_strings(value, expected):
+    assert normalise.local_date(value, 'Europe/Paris') == expected
 
 
 @pytest.mark.parametrize(
