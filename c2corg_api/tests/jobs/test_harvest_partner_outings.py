@@ -2,7 +2,6 @@
 
 import dataclasses
 import datetime
-import importlib
 import json
 import math
 from collections import Counter
@@ -13,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from c2corg_api import jobs
+from c2corg_api.jobs import harvest_partner_outings as job
 from c2corg_api.models.area import Area
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.partner_outing import (
@@ -32,8 +32,6 @@ from c2corg_api.partners.model import FetchResult, HarvestedOuting, RateLimit
 from c2corg_api.partners.sources import REGISTRY
 from c2corg_api.partners.transport import FixtureTransport
 
-# `c2corg_api.jobs` exports a function of the same name: no `from ... import`
-job = importlib.import_module('c2corg_api.jobs.harvest_partner_outings')
 UTC = datetime.UTC
 NOW = datetime.datetime(2026, 11, 24, 12, 0, tzinfo=UTC)
 TODAY = NOW.date()

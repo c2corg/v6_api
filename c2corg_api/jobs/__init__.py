@@ -5,11 +5,9 @@ from datetime import UTC, datetime, timedelta
 from apscheduler.events import EVENT_JOB_ERROR
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from c2corg_api.jobs.harvest_partner_outings import (
-    harvest_partner_outings,
-    partners_enabled,
-    purge_partner_outings_job,
-)
+# the module, not its function of the same name: importing the function here
+# would hide the submodule (`c2corg_api.jobs.harvest_partner_outings`)
+from c2corg_api.jobs import harvest_partner_outings as partner_outings
 from c2corg_api.jobs.process_removals import process_removals, removals_auto
 from c2corg_api.jobs.purge_deleted_documents import purge_deleted_documents
 from c2corg_api.jobs.purge_expired_tokens import purge_token
@@ -71,9 +69,9 @@ def configure_scheduler_from_config(settings):
 
     # harvest the outings of the partner sites, once switched on
     # (partners.enabled); the first run 30 s after the start
-    if partners_enabled(settings):
+    if partner_outings.partners_enabled(settings):
         scheduler.add_job(
-            harvest_partner_outings,
+            partner_outings.harvest_partner_outings,
             id='harvest_partner_outings',
             name='Harvest the outings of the partner sites',
             trigger='interval',
@@ -85,7 +83,7 @@ def configure_scheduler_from_config(settings):
         )
         # run `purge_partner_outings_job` at 1:40
         scheduler.add_job(
-            purge_partner_outings_job,
+            partner_outings.purge_partner_outings_job,
             id='purge_partner_outings',
             name='Purge the old partner outings',
             trigger='cron',
