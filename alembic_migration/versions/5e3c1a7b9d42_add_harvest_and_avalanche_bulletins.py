@@ -1,7 +1,7 @@
 """Add the harvest sources and payloads, the avalanche bulletins, the weather.
 
 Revision ID: 5e3c1a7b9d42
-Revises: 31b82bbbcecb
+Revises: d41c7e9a2b85
 Create Date: 2026-11-24 18:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 # revision identifiers, used by Alembic.
 revision = '5e3c1a7b9d42'
-down_revision = '31b82bbbcecb'
+down_revision = 'd41c7e9a2b85'
 branch_labels = None
 depends_on = None
 

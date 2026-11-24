@@ -74,3 +74,39 @@ def test_orphan_images_filter_and_page(client, docs, orphans):  # noqa: F811
 def test_orphan_images_reserved_to_the_moderators(client):
     _list(client, username='contributor', status=403)
     client.get('/images/orphans', status=403)
+
+
+def _embed(session, document, *image_ids):
+    """Show these images in the text of the first locale of a document."""
+    from c2corg_api.views.markdown import update_image_embeds
+
+    locale = document.locales[0]
+    locale.description = 'Text\n\n' + '\n\n'.join(
+        f'[img={image_id} right/]' for image_id in image_ids
+    )
+    session.flush()
+    update_image_embeds([locale])
+    session.flush()
+
+
+def test_orphan_images_embedded_in(client, session, docs, orphans):  # noqa: F811
+    first, second, unlinked = orphans
+    _embed(session, docs.route1, unlinked.document_id)
+    # the image itself and a merged document are not other shown documents
+    _embed(session, first, first.document_id)
+    _embed(session, docs.route2, first.document_id)
+    docs.route2.redirects_to = docs.route1.document_id
+    session.flush()
+
+    images = {i['document_id']: i for i in _list(client).json['images']}
+
+    assert images[unlinked.document_id]['embedded_in'] == [
+        {
+            'document_id': docs.route1.document_id,
+            'document_type': 'r',
+            'title': 'Mont Blanc from the air',
+            'langs': ['en'],
+        }
+    ]
+    assert images[first.document_id]['embedded_in'] == []
+    assert images[second.document_id]['embedded_in'] == []

@@ -12,11 +12,11 @@ from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, AssociationLog
-from c2corg_api.models.common.attributes import default_langs
-from c2corg_api.models.document import Document, DocumentLocale
+from c2corg_api.models.document import Document
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.image import Image
 from c2corg_api.views.document_trash import _user, _users
+from c2corg_api.views.image_embeds import document_titles, embedding_documents
 
 LIMIT_DEFAULT = 30
 LIMIT_MAX = 100
@@ -55,7 +55,9 @@ def list_orphan_images(offset, limit, image_type=None):
         [user_id for _, user_id in created.values()]
         + [unlink['user_id'] for unlink in unlinked.values()]
     )
-    titles = _titles(ids)
+    titles = document_titles(ids)
+    # an orphan shown in a text is used: link it again rather than delete it
+    embedded_in = embedding_documents(ids)
     return {
         'total': total,
         'images': [
@@ -67,6 +69,7 @@ def list_orphan_images(offset, limit, image_type=None):
                 'created_at': _iso(created.get(row.document_id, (None, None))[0]),
                 'author': _user(users, created.get(row.document_id, (None, None))[1]),
                 'last_unlink': _unlink(unlinked.get(row.document_id), users),
+                'embedded_in': embedded_in.get(row.document_id, []),
             }
             for row in rows
         ],
@@ -142,22 +145,6 @@ def _unlink(unlink, users):
         'document_type': unlink['document_type'],
         'by': _user(users, unlink['user_id']),
         'at': _iso(unlink['written_at']),
-    }
-
-
-def _titles(ids):
-    titles = {}
-    for document_id, lang, title in DBSession.execute(
-        select(
-            DocumentLocale.document_id, DocumentLocale.lang, DocumentLocale.title
-        ).where(DocumentLocale.document_id.in_(ids))
-    ):
-        titles.setdefault(document_id, {})[lang] = title
-    return {
-        document_id: next(
-            (by_lang[lang] for lang in default_langs if lang in by_lang), None
-        )
-        for document_id, by_lang in titles.items()
     }
 
 
