@@ -32,7 +32,8 @@ from c2corg_api.models.image_embed import ImageEmbed
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Seq
 from c2corg_api.views.document_trash import _user, _users
-from c2corg_api.views.image_orphans import _created, _iso, _titles
+from c2corg_api.views.image_embeds import document_titles
+from c2corg_api.views.image_orphans import _created, _iso
 from c2corg_api.views.resource import write
 
 LIMIT_DEFAULT = 30
@@ -118,7 +119,7 @@ def list_duplicate_images(offset, limit, same_document=False):
     links = _links(ids)
     embeds = _embeds(ids)
     users = _users([user_id for _, user_id in created.values()])
-    titles = _titles(
+    titles = document_titles(
         ids
         + [d['document_id'] for ds in links.values() for d in ds]
         + [e['document_id'] for es in embeds.values() for e in es]
@@ -264,7 +265,13 @@ def _embeds(ids):
             Document.type,
         )
         .join(Document, Document.document_id == ImageEmbed.document_id)
-        .where(ImageEmbed.image_id.in_(list(shown)))
+        .where(
+            ImageEmbed.image_id.in_(list(shown)),
+            # an image's own text is not another document
+            ImageEmbed.document_id != ImageEmbed.image_id,
+            # a merged document is not shown
+            Document.redirects_to.is_(None),
+        )
         .order_by(ImageEmbed.document_id, ImageEmbed.lang)
     )
     result = {}
