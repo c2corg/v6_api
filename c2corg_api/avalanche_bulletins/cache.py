@@ -28,6 +28,10 @@ TIMEOUT = (3, 10)
 
 USER_AGENT = 'camptocamp.org avalanche bulletins (+https://www.camptocamp.org)'
 
+# out of season, the latest file of a service keeps the last bulletin of the
+# previous season: older than that, it is not shown (as Yeti does)
+STALE_AFTER = timedelta(days=2)
+
 
 class UpstreamError(Exception):
     """The service did not answer, answered an invalid bulletin, or has no key."""

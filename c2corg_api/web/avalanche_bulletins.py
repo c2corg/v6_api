@@ -1,19 +1,27 @@
 """The avalanche bulletins of the EAWS regions, as CAAML v6 JSON."""
 # The French massifs from Météo-France (c2corg/v6_api#2681), whose numbers are
 # the EAWS region ids FR-01 to FR-74; the regions of the Alps and the Pyrenees
-# whose services publish CAAML v6 (#2683). The latest bulletin only, for now:
-# the bulletin of a day will be /regions/{region_id}/{YYYY-MM-DD} (#2686), the
-# day it is valid for, as the EAWS services name their files.
+# whose services publish CAAML v6 (#2683). Harvested by the scheduler (#2682):
+# the latest ones, those of a day (#2686), the day they are valid for as the
+# EAWS services name their files, and the danger of each day.
 
+from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import Path, Query, Response
 
-from c2corg_api.avalanche_bulletins import meteofrance
+from c2corg_api.avalanche_bulletins import meteofrance, store
 from c2corg_api.avalanche_bulletins.cache import UpstreamError
-from c2corg_api.avalanche_bulletins.regions import UnknownRegion, latest_bulletins
+from c2corg_api.avalanche_bulletins.regions import (
+    UnknownRegion,
+    day_bulletins,
+    is_over,
+    latest_bulletins,
+)
 from c2corg_api.httpexceptions import HTTPNotFound, HTTPServiceUnavailable
 from c2corg_api.web.answers import http_error
+from c2corg_api.web.db import request_session
+from c2corg_api.web.errors import error_response
 from c2corg_api.web.params import Lang
 
 RegionId = Annotated[
@@ -32,18 +40,39 @@ BulletinLang = Annotated[
     ),
 ]
 
+Day = Annotated[
+    str,
+    Path(
+        description='The day the bulletins are valid for (YYYY-MM-DD): the '
+        'bulletin published the evening before, maybe updated the morning.',
+        pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$',
+    ),
+]
+
 # the API cache follows the publications, the browsers keep a bulletin briefly
 CACHE_CONTROL = 'public, max-age=300'
+# the bulletins of a day over do not change anymore
+CACHE_CONTROL_OVER = 'public, max-age=604800, immutable'
+
+# the days of the danger by default, and at most
+RATINGS_DAYS = 7
+RATINGS_MAX_DAYS = 366
 
 
 def include(app):
     """Add the routes of this module to the FastAPI application."""
+    # the day last: `latest` and `ratings` are not days
     for path, endpoint in (
         ('/avalanche-bulletins/regions/{region_id}/latest', avalanche_bulletin),
         (
             '/avalanche-bulletins/regions/{region_id}/latest/pdf',
             avalanche_bulletin_pdf,
         ),
+        (
+            '/avalanche-bulletins/regions/{region_id}/ratings',
+            avalanche_bulletin_ratings,
+        ),
+        ('/avalanche-bulletins/regions/{region_id}/{day}', avalanche_bulletin_day),
     ):
         app.add_api_route(
             path,
@@ -59,7 +88,8 @@ def avalanche_bulletin(
 ):
     """Return the last bulletins published for a region, as CAAML v6."""
     try:
-        bulletins = latest_bulletins(region_id, lang)
+        with request_session() as session:
+            bulletins = latest_bulletins(region_id, lang, session)
     except UnknownRegion:
         return http_error(HTTPNotFound('no avalanche bulletin for this region'))
     except UpstreamError:
@@ -89,6 +119,78 @@ def avalanche_bulletin_pdf(region_id: RegionId):
     )
 
 
-for endpoint in (avalanche_bulletin, avalanche_bulletin_pdf):
+def avalanche_bulletin_day(
+    region_id: RegionId, day: Day, response: Response, lang: BulletinLang = None
+):
+    """Return the bulletins of a region for a day, as CAAML v6."""
+    try:
+        day = date.fromisoformat(day)
+    except ValueError:
+        return error_response([('path', 'day', 'invalid date')])
+    with request_session() as session:
+        bulletins = day_bulletins(session, region_id, day, lang)
+    if not bulletins:
+        return http_error(HTTPNotFound('no avalanche bulletin for this region and day'))
+    response.headers['Cache-Control'] = (
+        CACHE_CONTROL_OVER if is_over(day) else CACHE_CONTROL
+    )
+    return {'bulletins': bulletins}
+
+
+def avalanche_bulletin_ratings(
+    region_id: RegionId,
+    response: Response,
+    date_from: Annotated[
+        str | None,
+        Query(
+            alias='from',
+            description='The first day (YYYY-MM-DD), by default 6 days before `to`.',
+        ),
+    ] = None,
+    date_to: Annotated[
+        str | None,
+        Query(alias='to', description='The last day (YYYY-MM-DD), by default today.'),
+    ] = None,
+):
+    """Return the danger of a region and of its sub-regions, day by day.
+
+    By day: the highest rating (1 low to 5 very high, null without) of the
+    region and its sub-regions, and the danger of each (ratings below and
+    above the elevation bound, all the bands, problems, aspects). The days
+    without bulletin are left out; at most a year.
+    """
+    try:
+        to = date.fromisoformat(date_to) if date_to else _today()
+        since = (
+            date.fromisoformat(date_from)
+            if date_from
+            else to - timedelta(days=RATINGS_DAYS - 1)
+        )
+    except ValueError:
+        return error_response([('querystring', 'from', 'invalid date')])
+    if since > to:
+        return error_response([('querystring', 'from', 'after to')])
+    if (to - since).days >= RATINGS_MAX_DAYS:
+        return error_response(
+            [('querystring', 'from', f'more than {RATINGS_MAX_DAYS} days')]
+        )
+    with request_session() as session:
+        days = store.ratings(session, region_id, since, to)
+    response.headers['Cache-Control'] = CACHE_CONTROL
+    return {'days': days}
+
+
+def _today():
+    from c2corg_api.avalanche_bulletins import regions
+
+    return regions._now().date()
+
+
+for endpoint in (
+    avalanche_bulletin,
+    avalanche_bulletin_pdf,
+    avalanche_bulletin_day,
+    avalanche_bulletin_ratings,
+):
     # described in the OpenAPI document (see web.openapi)
     endpoint.described = True

@@ -7,8 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 
-from c2corg_api.avalanche_bulletins.cache import CET, main_date
-from c2corg_api.avalanche_bulletins.regions import STALE_AFTER
+from c2corg_api.avalanche_bulletins.cache import CET, STALE_AFTER, main_date
 from c2corg_api.models.avalanche_bulletin import (
     AvalancheBulletin,
     AvalancheBulletinRegion,
@@ -113,19 +112,41 @@ def summary(bulletin):
 
 def latest_for_region(session, region_id, lang, now=None):
     """Return the latest bulletins covering a region, as CAAML (or [])."""
+    day = latest_day(session, region_id, now)
+    if day is None:
+        return []
+    return for_region_and_date(session, region_id, day, lang)
+
+
+def latest_day(session, region_id, now=None):
+    """Return the day of the latest bulletins of a region, None without."""
     # as regions.latest_bulletins: those of the latest day, not stale
     now = now or datetime.now(UTC)
     today = now.astimezone(CET).date()
-    day = session.scalar(
+    return session.scalar(
         select(func.max(AvalancheBulletin.main_date)).where(
             AvalancheBulletin.region_keys.contains([region_id]),
             AvalancheBulletin.main_date >= today - RECENT_DAYS,
             AvalancheBulletin.valid_end > now - STALE_AFTER,
         )
     )
-    if day is None:
-        return []
-    return for_region_and_date(session, region_id, day, lang)
+
+
+def version(session, region_id, day):
+    """Return what changes with a new publication of a region on a day."""
+    # the key of the bulletins in the cache: the last publication time and
+    # the rows (a row is added by each publication and language)
+    last, count, last_id = session.execute(
+        select(
+            func.max(AvalancheBulletin.publication_time),
+            func.count(),
+            func.max(AvalancheBulletin.id),
+        ).where(
+            AvalancheBulletin.region_keys.contains([region_id]),
+            AvalancheBulletin.main_date == day,
+        )
+    ).one()
+    return f'{last.isoformat()}:{count}:{last_id}' if count else None
 
 
 def for_region_and_date(session, region_id, day, lang):

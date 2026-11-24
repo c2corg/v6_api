@@ -1,0 +1,50 @@
+{
+  "body": {
+    "days": [
+      {
+        "date": "str",
+        "maxRating": "int",
+        "regions": [
+          {
+            "aspects": [
+              "str"
+            ],
+            "bands": [
+              {
+                "lower": {
+                  "any_of": [
+                    "\"null\"",
+                    "\"str\""
+                  ]
+                },
+                "period": "str",
+                "rating": "int",
+                "upper": {
+                  "any_of": [
+                    "\"null\"",
+                    "\"str\""
+                  ]
+                }
+              }
+            ],
+            "elevationBound": "str",
+            "maxRating": "int",
+            "problems": [
+              "str"
+            ],
+            "ratingHigh": "int",
+            "ratingLow": "int",
+            "regionId": "str"
+          }
+        ]
+      }
+    ]
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "public, max-age=300",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
