@@ -1,0 +1,54 @@
+# Partner fixtures
+
+Each partner source has a directory `fixtures/<source>/` read by
+`FixtureTransport` (`c2corg_api/partners/transport.py`). Tests and the local
+demo (`transport=fixtures`) never touch the network.
+
+## Layout
+
+```
+fixtures/<source>/manifest.json
+fixtures/<source>/<endpoint>_<distinguishing params>.<json|html>
+```
+
+File names are snake case: `sorties_j2_c1_l200.json`, `routes_id57949.json`,
+`verhaeltnisse.html`.
+
+`manifest.json`:
+
+```json
+{"source": "gulliver", "recorded_at": "2026-11-24", "synthetic": true,
+ "note": "built from DATA_SOURCES.md 1.3; site behind a Cloudflare challenge from the sandbox",
+ "entries": [{"url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+              "params": {"page": "1"}, "status": 200,
+              "content_type": "application/json", "file": "commentglobal_page1.json"}]}
+```
+
+Matching: same scheme, host and path, and every param of the entry (compared
+as strings) present in the request. The first matching entry wins. No match
+raises `SourceDown('no fixture for ...')`, so a test fails loudly. The entry
+`status` is honoured and classified like a live response: an entry with
+`"status": 403` (and a Cloudflare body) simulates a block, `503` a down site.
+
+## The `synthetic` flag
+
+`"synthetic": true` means the files were written by hand from the documented
+field lists (DATA_SOURCES.md 1.2 and 1.3), because the site could not be
+reached when the fixtures were made. A synthetic fixture proves that the
+adapter parses the documented format, not that the live format is the same.
+Re-record it with `python -m c2corg_api.partners record <source>` from a
+machine that reaches the site (recorded manifests have `"synthetic": false`
+and the recording date), then review the diff and run `python -m
+c2corg_api.partners shapes` to see what changed.
+
+## Network status (design section 2, 2026-11-24)
+
+| Source | From the dev sandbox | Fixtures in M1 |
+|---|---|---|
+| skitour.fr | proxy passes, site answers 503 on every URL; API needs a key we lack | synthetic |
+| gulliver.it | 403 Cloudflare "Just a moment..." JS challenge | synthetic |
+| gipfelbuch.ch, bivouak.net | reachable | recorded (M2) |
+| skitourenportal.eu, on-ice.it | blocked by the sandbox proxy | synthetic or recorded elsewhere (M2) |
+| api.camptocamp.org | reachable | not needed |
+
+Never commit an API key or a cookie in a fixture.
