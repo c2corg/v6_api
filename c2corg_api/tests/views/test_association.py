@@ -984,3 +984,34 @@ def test_delete_association_ro_last_route(client, docs):
 
     # now, the first route can be unlinked
     client.delete_json(PREFIX, request_body1, headers=headers)
+
+
+def test_delete_association_uo_last_user(client, docs, user_ids):
+    request_body1 = {
+        'parent_document_id': user_ids['contributor'],
+        'child_document_id': docs.outing.document_id,
+    }
+
+    # the user of the outing can not leave it alone, nor a moderator remove them
+    for username in ('contributor', 'moderator'):
+        response = client.delete_json(
+            PREFIX, request_body1, headers=auth_headers(username=username), status=400
+        )
+        errors = response.json.get('errors')
+        assert len(errors) == 1
+        assert_error(
+            errors,
+            'Bad Request',
+            'as the last user of the outing, this user can not be disassociated',
+        )
+
+    # add a second user
+    request_body2 = {
+        'parent_document_id': user_ids['contributor2'],
+        'child_document_id': docs.outing.document_id,
+    }
+    headers = auth_headers(username='contributor')
+    send_json(client, 'post', PREFIX, request_body2, headers=headers, status=200)
+
+    # now, the first user can leave the outing
+    client.delete_json(PREFIX, request_body1, headers=headers)

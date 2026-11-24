@@ -12,6 +12,7 @@ from c2corg_api.models.document import Document
 from c2corg_api.models.feed import update_feed_association_update
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE, Route
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.schemas.association import AssociationSchema, association_schema
 from c2corg_api.schemas.base import body_validator
@@ -184,13 +185,17 @@ def _check_required_associations(association):
         raise HTTPBadRequest(
             'as the main waypoint of the route, this waypoint can not be disassociated'
         )
-    elif _is_last_waypoint_of_route(association):
+    elif _is_last_parent(association, WAYPOINT_TYPE, ROUTE_TYPE):
         raise HTTPBadRequest(
             'as the last waypoint of the route, this waypoint can not be disassociated'
         )
-    elif _is_last_route_of_outing(association):
+    elif _is_last_parent(association, ROUTE_TYPE, OUTING_TYPE):
         raise HTTPBadRequest(
             'as the last route of the outing, this route can not be disassociated'
+        )
+    elif _is_last_parent(association, USERPROFILE_TYPE, OUTING_TYPE):
+        raise HTTPBadRequest(
+            'as the last user of the outing, this user can not be disassociated'
         )
 
 
@@ -202,42 +207,24 @@ def _is_main_waypoint_association(association):
     ).scalar()
 
 
-def _is_last_waypoint_of_route(association):
+def _is_last_parent(association, parent_type, child_type):
+    """Tell whether the association links the child to its last parent of this type."""
     if not (
-        association.parent_document_type == WAYPOINT_TYPE
-        and association.child_document_type == ROUTE_TYPE
+        association.parent_document_type == parent_type
+        and association.child_document_type == child_type
     ):
         # other association type, nothing to check
         return False
 
-    route_has_other_waypoints = (
+    child_has_other_parents = (
         exists()
-        .where(Association.parent_document_type == WAYPOINT_TYPE)
-        .where(Association.child_document_type == ROUTE_TYPE)
+        .where(Association.parent_document_type == parent_type)
+        .where(Association.child_document_type == child_type)
         .where(Association.parent_document_id != association.parent_document_id)
         .where(Association.child_document_id == association.child_document_id)
     )
 
-    return not DBSession.query(route_has_other_waypoints).scalar()
-
-
-def _is_last_route_of_outing(association):
-    if not (
-        association.parent_document_type == ROUTE_TYPE
-        and association.child_document_type == OUTING_TYPE
-    ):
-        # other association type, nothing to check
-        return False
-
-    outing_has_other_routes = (
-        exists()
-        .where(Association.parent_document_type == ROUTE_TYPE)
-        .where(Association.child_document_type == OUTING_TYPE)
-        .where(Association.parent_document_id != association.parent_document_id)
-        .where(Association.child_document_id == association.child_document_id)
-    )
-
-    return not DBSession.query(outing_has_other_routes).scalar()
+    return not DBSession.query(child_has_other_parents).scalar()
 
 
 def notify_es_syncer_if_needed(association, request):
