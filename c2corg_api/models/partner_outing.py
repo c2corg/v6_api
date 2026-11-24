@@ -57,7 +57,6 @@ class PartnerOuting(Base):
         Index('partner_outings_date_idx', text('date DESC')),
         Index('partner_outings_geom_idx', 'geom', postgresql_using='gist'),
         Index('partner_outings_area_ids_idx', 'area_ids', postgresql_using='gin'),
-        Index('partner_outings_activities_idx', 'activities', postgresql_using='gin'),
         {'schema': schema},
     )
 
