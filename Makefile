@@ -33,6 +33,7 @@ help:
 	@echo "  bootstrap            Bootstrap the project for the first time"
 	@echo "  run-syncer           Run the ElasticSearch syncer script"
 	@echo "  run-background-jobs  Run the background jobs"
+	@echo "  harvest-partners     Harvest the partner outings once"
 	@echo
 	@echo "  test                 Run the unit tests"
 	@echo "  format               Format the Python code with ruff (and apply safe lint fixes)"
@@ -55,7 +56,7 @@ help:
 	@echo "                       (make CONFIG=<env file> load-env adds an env file)"
 
 .PHONY: bootstrap start stop serve lint test init-database init-test-database \
-		init-elastic install run-syncer run-background-jobs flush-redis load-env
+		init-elastic install run-syncer run-background-jobs harvest-partners flush-redis load-env
 
 bootstrap:
 		$(MAKE) start
@@ -150,6 +151,9 @@ run-syncer:
 
 run-background-jobs:
 		$(UV_RUN) python c2corg_api/scripts/jobs/scheduler.py development.ini
+
+harvest-partners:
+		$(UV_RUN) python c2corg_api/scripts/jobs/harvest_partners.py development.ini
 
 flush-redis:
 		$(UV_RUN) python c2corg_api/scripts/redis-flushdb.py development.ini
