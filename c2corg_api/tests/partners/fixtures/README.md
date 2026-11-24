@@ -25,7 +25,9 @@ File names are snake case: `sorties_j2_c1_l200.json`, `routes_id57949.json`,
 ```
 
 Matching: same scheme, host and path, and every param of the entry (compared
-as strings) present in the request. The first matching entry wins. No match
+as strings) present in the request. The matching entry with the most params
+wins, so an entry without params is a fallback for that path; on a tie, the
+first one. No match
 raises `SourceDown('no fixture for ...')`, so a test fails loudly. The entry
 `status` is honoured and classified like a live response: an entry with
 `"status": 403` (and a Cloudflare body) simulates a block, `503` a down site.

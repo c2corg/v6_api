@@ -171,12 +171,18 @@ class FixtureTransport:
 
     Never touches the network. An entry matches a request with the same
     scheme, host and path, when all the entry params (as strings) are among the
-    request params. The first matching entry wins. The entry status is
-    honoured and goes through the same classification as a live response.
+    request params. The matching entry with the most params wins (so an entry
+    without params is a fallback whatever its position); on a tie, the first
+    one. The entry status is honoured and goes through the same classification
+    as a live response.
+
+    With `rate`, the request budget is enforced like `HttpTransport` does, so
+    an adapter that pages forever on a fallback entry fails instead of hanging.
     """
 
-    def __init__(self, fixtures_dir: Path, source: str):
+    def __init__(self, fixtures_dir: Path, source: str, rate: RateLimit | None = None):
         self.source = source
+        self.rate = rate
         self.directory = Path(fixtures_dir) / source
         self.manifest: dict[str, Any] = json.loads(
             (self.directory / 'manifest.json').read_text(encoding='utf-8')
@@ -196,8 +202,11 @@ class FixtureTransport:
         return self._count
 
     def get(self, url, *, params=None, headers=None) -> HttpResponse:
+        if self.rate is not None and self._count >= self.rate.max_requests_per_run:
+            raise SourceDown('request budget exhausted')
         self._count += 1
         target, request_params = _split_url(url, params)
+        best, best_size = None, -1
         for entry in self.manifest.get('entries', []):
             entry_target, entry_params = _split_url(entry['url'], entry.get('params'))
             if entry_target != target:
@@ -206,8 +215,11 @@ class FixtureTransport:
                 request_params.get(key) != value for key, value in entry_params.items()
             ):
                 continue
-            return classify(self._response(entry, url))
-        raise SourceDown(f'no fixture for {url} {dict(params or {})}')
+            if len(entry_params) > best_size:
+                best, best_size = entry, len(entry_params)
+        if best is None:
+            raise SourceDown(f'no fixture for {url} {dict(params or {})}')
+        return classify(self._response(best, url))
 
     def _response(self, entry, url) -> HttpResponse:
         body = b''

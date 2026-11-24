@@ -251,21 +251,23 @@ def test_fixture_manifest_flags_default(tmp_path):
     assert transport.recorded_at is None
 
 
-def test_fixture_subset_matching_and_first_wins(tmp_path):
+def test_fixture_subset_matching_and_most_specific_wins(tmp_path):
     root = write_fixtures(
         tmp_path,
         [
+            # a fallback listed first does not shadow the specific entries
+            {'url': LIST_URL, 'file': 'any.txt'},
             {'url': LIST_URL, 'params': {'page': '2'}, 'file': 'two.txt'},
             {'url': LIST_URL, 'params': {'page': '1'}, 'file': 'one.txt'},
-            {'url': LIST_URL, 'file': 'any.txt'},
+            {'url': LIST_URL, 'params': {'page': '1'}, 'file': 'dup.txt'},
         ],
-        {'one.txt': b'one', 'two.txt': b'two', 'any.txt': b'any'},
+        {'one.txt': b'one', 'two.txt': b'two', 'any.txt': b'any', 'dup.txt': b''},
     )
     transport = FixtureTransport(root, 'demo')
     # the request may have more params than the entry
     assert transport.get(LIST_URL, params={'page': 1, 'x': 'y'}).body == b'one'
     assert transport.get(LIST_URL, params={'page': '2'}).body == b'two'
-    # an entry without params matches anything on that path
+    # an entry without params matches anything else on that path
     assert transport.get(LIST_URL, params={'page': 3}).body == b'any'
     assert transport.get(LIST_URL).body == b'any'
     # params in the URL itself count
@@ -331,6 +333,20 @@ def test_fixture_status_goes_through_classification(tmp_path):
     response = transport.get('https://s.example/404')
     assert (response.status, response.body) == (404, b'not found')
     assert transport.request_count == 6
+
+
+def test_fixture_budget(tmp_path):
+    root = write_fixtures(
+        tmp_path, [{'url': LIST_URL, 'file': 'a.txt'}], {'a.txt': b'a'}
+    )
+    transport = FixtureTransport(root, 'demo', rate=RATE)
+    for _ in range(3):
+        transport.get(LIST_URL)
+    with pytest.raises(SourceDown, match='request budget exhausted'):
+        transport.get(LIST_URL)
+    unlimited = FixtureTransport(root, 'demo')
+    for _ in range(10):
+        unlimited.get(LIST_URL)
 
 
 def test_fixture_no_match_counts_and_raises(tmp_path):
