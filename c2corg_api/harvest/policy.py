@@ -25,8 +25,9 @@ class Policy:
     season: tuple | None = None
     windows: tuple = ()
     default_every: int = 60
-    # once a window saw a new publication, wait for the next window
-    sleep_once_published: bool = True
+    # once a window saw a new publication, an update is still possible but
+    # rarer: this slower poll until the window ends (None: no slowdown)
+    after_publication_every: int | None = 60
     # after errors, in minutes: min, doubled at each error up to max
     backoff_min: int = 15
     backoff_max: int = 240
@@ -44,11 +45,11 @@ class Policy:
         return md >= start or md <= end
 
 
-def next_run(policy, now, published=False, error_count=0, rand=0.0):
+def next_run(policy, now, last_publication=None, error_count=0, rand=0.0):
     """Return when to fetch a source again (UTC), after a fetch at `now`.
 
-    `published`: the fetch found a new publication; `rand` in [0, 1) picks
-    the jitter (random.random() by the runner, fixed by the tests).
+    `last_publication`: when a new publication was last seen; `rand` in
+    [0, 1) picks the jitter (random.random() by the runner, fixed by tests).
     """
     # the additions in UTC: a time of PARIS + timedelta is a wall-clock time,
     # wrong across a change of time
@@ -62,15 +63,16 @@ def next_run(policy, now, published=False, error_count=0, rand=0.0):
         window = next(
             (w for w in policy.windows if w.start <= local.time() < w.end), None
         )
+        every = window.every_minutes if window else policy.default_every
+        if window and policy.after_publication_every and last_publication:
+            start = datetime.combine(local.date(), window.start, tzinfo=policy.tz)
+            if last_publication >= start:
+                every = policy.after_publication_every
+        when = now + timedelta(minutes=every)
+        # not past the start of a window
         following = _next_local(policy, now, [w.start for w in policy.windows])
-        if window and published and policy.sleep_once_published:
-            when = following
-        else:
-            every = window.every_minutes if window else policy.default_every
-            when = now + timedelta(minutes=every)
-            # not past the start of a window
-            if following is not None:
-                when = min(when, following)
+        if following is not None:
+            when = min(when, following)
     if error_count:
         backoff = policy.backoff_min * 2 ** min(error_count - 1, 16)
         # errors never bring the next fetch closer

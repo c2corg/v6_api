@@ -58,6 +58,15 @@ class Payload:
         )
 
 
+@dataclass(frozen=True)
+class Stored:
+    """What storing a content did: a new publication? the state to keep."""
+
+    published: bool = False
+    # written to harvest_sources.state when not None
+    state: dict | None = None
+
+
 class Harvester:
     """The sources of a kind of data, fetched by the runner (harvest.runner).
 
@@ -67,6 +76,10 @@ class Harvester:
 
     name = None
     policy = Policy()
+    # the days the payloads (the contents fetched) are kept, 0: not kept
+    keep_payloads_days = 30
+    # the quota of the service, if any: the sources fetched by a tick at most
+    requests_per_minute = None
 
     def sources(self):
         """Return the keys of the sources (synced into harvest_sources)."""
@@ -84,7 +97,11 @@ class Harvester:
         raise NotImplementedError
 
     def store(self, session, source, payload):
-        """Store a new content of a source: tell if it holds a new publication."""
+        """Store a new content of a source, return a Stored.
+
+        Only with `session`, never DBSession: the runner commits it with the
+        state of the source, or rolls both back.
+        """
         raise NotImplementedError
 
     def source_id(self, source):

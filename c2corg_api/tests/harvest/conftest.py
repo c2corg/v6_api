@@ -20,8 +20,9 @@ class Clock:
 def clock(monkeypatch):
     clock = Clock(datetime(2026, 11, 24, 11, tzinfo=UTC))
     monkeypatch.setattr(runner, '_now', clock)
-    # no jitter
+    # no jitter; the sources synced at the first tick
     monkeypatch.setattr(runner.random, 'random', lambda: 0.0)
+    monkeypatch.setattr(runner, '_last_sync', None)
     return clock
 
 

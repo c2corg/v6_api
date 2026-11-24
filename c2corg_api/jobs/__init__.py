@@ -4,7 +4,7 @@ import logging
 from apscheduler.events import EVENT_JOB_ERROR
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from c2corg_api.harvest.runner import harvest_enabled, harvest_tick
+from c2corg_api.harvest.runner import enabled_harvesters, harvest_tick
 from c2corg_api.jobs.harvest import prune_harvest
 from c2corg_api.jobs.process_removals import process_removals, removals_auto
 from c2corg_api.jobs.purge_deleted_documents import purge_deleted_documents
@@ -65,9 +65,10 @@ def configure_scheduler_from_config(settings):
             kwargs={'settings': settings},
         )
 
-    # harvest the sources (avalanche bulletins...) once switched on: each
-    # source says when it is due; a tick still running makes the next wait
-    if harvest_enabled(settings):
+    # harvest the sources (avalanche bulletins...) once switched on
+    # (harvest.enabled, harvest.<name>.enabled): each source says when it is
+    # due; a tick still running makes the next wait
+    if enabled_harvesters(settings):
         scheduler.add_job(
             harvest_tick,
             id='harvest_tick',
@@ -76,6 +77,7 @@ def configure_scheduler_from_config(settings):
             minutes=1,
             max_instances=1,
             coalesce=True,
+            kwargs={'settings': settings},
         )
         # run `prune_harvest` at 2:00
         scheduler.add_job(

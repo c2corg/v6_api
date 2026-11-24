@@ -3,12 +3,10 @@
 import gzip
 import logging
 import random
-import threading
-from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -26,16 +24,19 @@ PER_HOST = 2
 CLAIMS = 60
 # a claimed source whose run died (a crash, a restart) is fetched again after
 LEASE = timedelta(minutes=10)
-PAYLOAD_RETENTION = timedelta(days=30)
+# the sources of the harvesters change with a deployment: checked this often
+SYNC_EVERY = timedelta(minutes=10)
+# a source no longer listed is kept this long (its history, if it comes back)
+DISABLED_RETENTION = timedelta(days=30)
 # what is kept of an error message
 ERROR_LENGTH = 1000
 
-_hosts_lock = threading.Lock()
-_hosts = defaultdict(lambda: threading.BoundedSemaphore(PER_HOST))
+# the last sync of this process
+_last_sync = None
 
 
 def harvesters():
-    """Return the harvesters run by the scheduler."""
+    """Return all the harvesters."""
     from c2corg_api.avalanche_bulletins.harvesters import (
         CaamlHarvester,
         MeteoFranceHarvester,
@@ -44,89 +45,127 @@ def harvesters():
     return [MeteoFranceHarvester(), CaamlHarvester()]
 
 
-def harvest_enabled(settings):
-    """Tell whether the scheduler harvests (`harvest.enabled`)."""
-    value = str(settings.get('harvest.enabled', 'false')).strip().lower()
-    return value in ('true', '1', 'yes', 'on')
+def harvest_enabled(settings, name=None):
+    """Tell whether the scheduler harvests (`harvest.enabled`).
+
+    For a harvester: `harvest.<name>.enabled`, else `harvest.enabled`.
+    """
+    value = settings.get('harvest.enabled', 'false')
+    if name is not None:
+        value = settings.get(f'harvest.{name}.enabled', value)
+    return str(value).strip().lower() in ('true', '1', 'yes', 'on')
 
 
-def harvest_tick(all_harvesters=None, workers=WORKERS):
+def enabled_harvesters(settings):
+    """Return the harvesters the settings switch on."""
+    return [h for h in harvesters() if harvest_enabled(settings, h.name)]
+
+
+def harvest_tick(settings=None, all_harvesters=None, workers=WORKERS):
     """Fetch the sources whose time has come (the job of every minute)."""
-    by_name = {h.name: h for h in (all_harvesters or harvesters())}
+    global _last_sync
+    if all_harvesters is None:
+        all_harvesters = enabled_harvesters(settings or {})
+    by_name = {h.name: h for h in all_harvesters}
     # A plain session on the engine configured on DBSession, as the other
     # jobs; each source then stores in its own session, in its thread.
     with Session(DBSession.get_bind()) as session:
-        sync_sources(session, by_name.values())
+        if _last_sync is None or _now() - _last_sync >= SYNC_EVERY:
+            sync_sources(session, by_name.values())
+            _last_sync = _now()
         claimed = claim(session, by_name)
-    tasks = [(by_name[name], id, state) for name, id, state in claimed]
+    lanes = _lanes([(by_name[name], id, state) for name, id, state in claimed])
     if workers <= 1:
-        for task in tasks:
-            run_source(*task)
+        for lane in lanes:
+            _run_lane(lane)
         return
     with ThreadPoolExecutor(workers, thread_name_prefix='harvest') as executor:
         # run_source records its errors: nothing to collect
-        list(executor.map(lambda task: run_source(*task), tasks))
+        list(executor.map(_run_lane, lanes))
 
 
 def sync_sources(session, all_harvesters):
-    """Add the new sources of the harvesters (due now), remove the gone ones."""
+    """Add the new sources of the harvesters, disable the ones gone."""
+    # a disabled source comes back with its state; deleted after a while
+    now = _now()
     for harvester in all_harvesters:
         wanted = {harvester.source_id(source) for source in harvester.sources()}
-        known = set(
-            session.scalars(
-                select(HarvestSource.id).where(
+        known = dict(
+            session.execute(
+                select(HarvestSource.id, HarvestSource.disabled_at).where(
                     HarvestSource.harvester == harvester.name
                 )
-            )
+            ).all()
         )
-        if wanted - known:
+        if wanted - set(known):
             session.execute(
                 insert(HarvestSource)
                 .values(
                     [
-                        {'id': id, 'harvester': harvester.name, 'next_run_at': _now()}
-                        for id in sorted(wanted - known)
+                        {'id': id, 'harvester': harvester.name, 'next_run_at': now}
+                        for id in sorted(wanted - set(known))
                     ]
                 )
                 .on_conflict_do_nothing()
             )
-        if known - wanted:
+        back = [id for id in wanted & set(known) if known[id] is not None]
+        gone = [id for id in set(known) - wanted if known[id] is None]
+        if back:
             session.execute(
-                delete(HarvestSource).where(HarvestSource.id.in_(known - wanted))
+                update(HarvestSource)
+                .where(HarvestSource.id.in_(back))
+                .values(disabled_at=None, next_run_at=now)
             )
+        if gone:
+            session.execute(
+                update(HarvestSource)
+                .where(HarvestSource.id.in_(gone))
+                .values(disabled_at=now)
+            )
+        session.execute(
+            delete(HarvestSource).where(
+                HarvestSource.harvester == harvester.name,
+                HarvestSource.disabled_at < now - DISABLED_RETENTION,
+            )
+        )
     session.commit()
 
 
 def claim(session, by_name, limit=CLAIMS):
     """Claim the due sources: (harvester name, source id, state), committed."""
     # SKIP LOCKED: the sources claimed meanwhile by another scheduler are left
-    # to it; LEASE: the run of each source moves next_run_at again
+    # to it; LEASE: the run of each source moves next_run_at again. A tick a
+    # minute (never two at once): requests_per_minute bounds each tick.
     now = _now()
-    sources = session.scalars(
-        select(HarvestSource)
-        .where(
-            HarvestSource.harvester.in_(list(by_name)),
-            HarvestSource.next_run_at <= now,
-        )
-        .order_by(HarvestSource.next_run_at)
-        .limit(limit)
-        .with_for_update(skip_locked=True)
-    ).all()
     claimed = []
-    for source in sources:
-        source.next_run_at = now + LEASE
-        source.last_attempt = now
-        claimed.append((source.harvester, source.id, _state_of(source)))
+    for name, harvester in by_name.items():
+        count = min(limit - len(claimed), harvester.requests_per_minute or limit)
+        if count <= 0:
+            break
+        sources = session.scalars(
+            select(HarvestSource)
+            .where(
+                HarvestSource.harvester == name,
+                HarvestSource.disabled_at.is_(None),
+                HarvestSource.next_run_at <= now,
+            )
+            .order_by(HarvestSource.next_run_at)
+            .limit(count)
+            .with_for_update(skip_locked=True)
+        ).all()
+        for source in sources:
+            source.next_run_at = now + LEASE
+            source.last_attempt = now
+            claimed.append((source.harvester, source.id, _state_of(source)))
     session.commit()
     return claimed
 
 
 def run_source(harvester, source_id, state):
     """Fetch a source, store what is new, and record when to come back."""
-    source = source_id.removeprefix(f'{harvester.name}:')
+    source = _source_of(harvester, source_id)
     try:
-        with _host_slot(harvester.host(source)):
-            payload = harvester.fetch(source, state)
+        payload = harvester.fetch(source, state)
     except NotModified:
         payload = None
     except Exception as e:
@@ -134,49 +173,64 @@ def run_source(harvester, source_id, state):
         return
     try:
         with Session(DBSession.get_bind()) as session:
-            published = False
             row = session.get(HarvestSource, source_id)
+            now = _now()
             if payload is not None:
                 # the conditional GET of next time
                 row.etag, row.last_modified = payload.etag, payload.last_modified
                 if payload.sha256 != state.content_sha256:
-                    _keep(session, source_id, payload)
-                    published = harvester.store(session, source, payload)
+                    if harvester.keep_payloads_days:
+                        _keep(session, source_id, payload)
+                    stored = harvester.store(session, source, payload)
+                    if stored.state is not None:
+                        row.state = stored.state
+                    if stored.published:
+                        row.last_publication = now
                     row.content_sha256 = payload.sha256
-                    row.last_change = _now()
-            now = _now()
+                    row.last_change = now
             row.last_success = now
             row.error_count = 0
             row.last_error = None
             row.next_run_at = next_run(
-                harvester.policy, now, published, 0, random.random()
+                harvester.policy, now, row.last_publication, 0, random.random()
             )
             session.commit()
     except Exception as e:
         _record_error(harvester, source_id, e)
 
 
-def prune_payloads():
-    """Delete the payloads older than the retention (the job of every day)."""
+def prune_payloads(all_harvesters=None):
+    """Delete the payloads older than their harvester keeps them (daily)."""
     with Session(DBSession.get_bind()) as session:
-        count = session.execute(
-            delete(HarvestPayload).where(
-                HarvestPayload.fetched_at < _now() - PAYLOAD_RETENTION
+        count = 0
+        for harvester in all_harvesters or harvesters():
+            sources = select(HarvestSource.id).where(
+                HarvestSource.harvester == harvester.name
             )
-        ).rowcount
+            before = _now() - timedelta(days=harvester.keep_payloads_days)
+            count += session.execute(
+                delete(HarvestPayload).where(
+                    HarvestPayload.source_id.in_(sources),
+                    HarvestPayload.fetched_at < before,
+                )
+            ).rowcount
         log.info('Pruning %d harvest payloads', count)
         session.commit()
 
 
-def status(session):
+def status(session, names=None):
     """Return the state of each harvester, for the health check."""
+    # the enabled sources of the harvesters of this code (not of an older one)
+    names = names or [h.name for h in harvesters()]
     rows = session.execute(
         select(
             HarvestSource.harvester,
             func.count(),
             func.count().filter(HarvestSource.error_count > 0),
             func.max(HarvestSource.last_success),
-        ).group_by(HarvestSource.harvester)
+        )
+        .where(HarvestSource.harvester.in_(names), HarvestSource.disabled_at.is_(None))
+        .group_by(HarvestSource.harvester)
     )
     return {
         name: {
@@ -189,17 +243,19 @@ def status(session):
 
 
 def _keep(session, source_id, payload):
-    # the same content seen before (A, B, then A again) is kept once
+    # a content seen before (A, B, then A again) is kept once, as fetched now
+    insertion = insert(HarvestPayload).values(
+        source_id=source_id,
+        fetched_at=_now(),
+        sha256=payload.sha256,
+        content_type=payload.content_type,
+        content=gzip.compress(payload.content),
+    )
     session.execute(
-        insert(HarvestPayload)
-        .values(
-            source_id=source_id,
-            fetched_at=_now(),
-            sha256=payload.sha256,
-            content_type=payload.content_type,
-            content=gzip.compress(payload.content),
+        insertion.on_conflict_do_update(
+            constraint='uq_harvest_payloads_content',
+            set_={'fetched_at': insertion.excluded.fetched_at},
         )
-        .on_conflict_do_nothing(index_elements=['sha256'])
     )
 
 
@@ -215,7 +271,11 @@ def _record_error(harvester, source_id, error):
             row.error_count += 1
             row.last_error = repr(error)[:ERROR_LENGTH]
             row.next_run_at = next_run(
-                harvester.policy, now, False, row.error_count, random.random()
+                harvester.policy,
+                now,
+                row.last_publication,
+                row.error_count,
+                random.random(),
             )
             session.commit()
     except Exception:
@@ -223,9 +283,28 @@ def _record_error(harvester, source_id, error):
         log.exception('Recording the error of %s failed', source_id)
 
 
-def _host_slot(host):
-    with _hosts_lock:
-        return _hosts[host]
+def _lanes(tasks):
+    # PER_HOST lanes by host at most, each run in turn by a worker: a worker
+    # never waits for a host busy with others
+    by_host = {}
+    for task in tasks:
+        harvester, source_id, _ = task
+        host = harvester.host(_source_of(harvester, source_id))
+        by_host.setdefault(host, []).append(task)
+    lanes = []
+    for host_tasks in by_host.values():
+        count = min(PER_HOST, len(host_tasks))
+        lanes += [host_tasks[i::count] for i in range(count)]
+    return lanes
+
+
+def _run_lane(lane):
+    for task in lane:
+        run_source(*task)
+
+
+def _source_of(harvester, source_id):
+    return source_id.removeprefix(f'{harvester.name}:')
 
 
 def _state_of(source):

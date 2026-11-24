@@ -77,6 +77,30 @@ def slf(lang='fr'):
             ],
             (None, None, None, '1800'),
         ),
+        # three bands: only the bands tell
+        (
+            [
+                {'mainValue': 'low', 'elevation': {'upperBound': '1800'}},
+                {
+                    'mainValue': 'considerable',
+                    'elevation': {'lowerBound': '1800', 'upperBound': '2400'},
+                },
+                {'mainValue': 'moderate', 'elevation': {'lowerBound': '2400'}},
+            ],
+            (3, None, None, None),
+        ),
+        # another bound in the afternoon
+        (
+            [
+                {'mainValue': 'low', 'elevation': {'upperBound': '2000'}},
+                {
+                    'mainValue': 'high',
+                    'elevation': {'lowerBound': '2400'},
+                    'validTimePeriod': 'later',
+                },
+            ],
+            (4, None, None, None),
+        ),
         ([], (None, None, None, None)),
     ],
 )
@@ -112,9 +136,27 @@ def test_summary_of_meteofrance():
         'rating_low': 3,
         'rating_high': 4,
         'elevation_bound': '2200',
+        'bands': [
+            {'lower': None, 'upper': '2200', 'rating': 3, 'period': 'all_day'},
+            {'lower': '2200', 'upper': None, 'rating': 4, 'period': 'all_day'},
+        ],
         'problems': ['new_snow', 'wet_snow'],
         'aspects': ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
     }
+
+
+@pytest.mark.parametrize(
+    ('region_id', 'keys'),
+    [
+        ('FR-03', ['FR', 'FR-03']),
+        ('CH-4231', ['CH', 'CH-4', 'CH-42', 'CH-423', 'CH-4231']),
+        ('AT-07-14-01', ['AT', 'AT-07', 'AT-07-14', 'AT-07-14-01']),
+        ('IT-32-BZ-01', ['IT', 'IT-32', 'IT-32-BZ', 'IT-32-BZ-01']),
+        ('SI', ['SI']),
+    ],
+)
+def test_region_keys(region_id, keys):
+    assert store.region_keys(region_id) == keys
 
 
 def test_save_meteofrance(session):
@@ -126,6 +168,7 @@ def test_save_meteofrance(session):
     assert row.lang == 'fr'
     assert row.main_date == DAY
     assert row.region_ids == ['FR-03']
+    assert row.region_keys == ['FR', 'FR-03']
     assert row.valid_end == datetime(2026, 11, 22, 17, tzinfo=UTC)
     [region] = session.scalars(select(AvalancheBulletinRegion)).all()
     assert (region.region_id, region.main_date, region.bulletin) == (
@@ -134,6 +177,21 @@ def test_save_meteofrance(session):
         row.id,
     )
     assert (region.max_rating, region.rating_low, region.rating_high) == (4, 3, 4)
+    assert region.region_keys == ['FR', 'FR-03']
+    assert len(region.bands) == 2
+
+
+def test_publication_changed_at_the_same_time(session):
+    store.save(session, 'meteofrance', 'fr', bra(3))
+    [changed] = bra(3)
+    changed['dangerRatings'] = [{'mainValue': 'moderate'}]
+    assert store.save(session, 'meteofrance', 'fr', [changed]) is True
+    [row] = session.scalars(select(AvalancheBulletin)).all()
+    session.refresh(row)
+    assert row.caaml['dangerRatings'] == [{'mainValue': 'moderate'}]
+    [region] = session.scalars(select(AvalancheBulletinRegion)).all()
+    session.refresh(region)
+    assert (region.max_rating, region.elevation_bound) == (2, None)
 
 
 def test_save_caaml(session):
@@ -192,7 +250,11 @@ def test_latest_for_region(session):
     # Météo-France publishes in French only; the prefix is a whole part
     [bulletin] = store.latest_for_region(session, 'FR-03', 'de', now)
     assert bulletin['lang'] == 'fr'
-    assert store.latest_for_region(session, 'CH-111', 'fr', now) == []
+    assert store.latest_for_region(session, 'FR', 'fr', now)[0]['lang'] == 'fr'
+    assert store.latest_for_region(session, 'CH-112', 'fr', now) == []
+    assert store.latest_for_region(session, 'FR-0', 'fr', now) == []
+    # the micro-regions of SLF nest by digit
+    assert len(store.latest_for_region(session, 'CH-111', 'fr', now)) == 2
     # too old
     later = now + timedelta(days=3)
     assert store.latest_for_region(session, 'CH-1112', 'fr', later) == []
@@ -213,18 +275,50 @@ def test_latest_publication_only(session):
 def test_ratings(session):
     store.save(session, 'meteofrance', 'fr', bra(3))
     store.save(session, 'CH', 'fr', slf())
-    assert store.ratings(session, 'FR-03', date(2026, 11, 1), date(2026, 11, 30)) == [
+    next_day = later(slf(), 24, 'high', 'next')
+    for b in next_day:
+        b['customData']['ALBINA']['mainDate'] = '2026-11-23'
+    store.save(session, 'CH', 'fr', next_day)
+    november = (date(2026, 11, 1), date(2026, 11, 30))
+    assert store.ratings(session, 'FR-03', *november) == [
         {
             'date': '2026-11-22',
             'maxRating': 4,
-            'ratingLow': 3,
-            'ratingHigh': 4,
-            'elevationBound': '2200',
-            'problems': ['new_snow', 'wet_snow'],
-            'aspects': ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+            'regions': [
+                {
+                    'regionId': 'FR-03',
+                    'maxRating': 4,
+                    'ratingLow': 3,
+                    'ratingHigh': 4,
+                    'elevationBound': '2200',
+                    'bands': [
+                        {
+                            'lower': None,
+                            'upper': '2200',
+                            'rating': 3,
+                            'period': 'all_day',
+                        },
+                        {
+                            'lower': '2200',
+                            'upper': None,
+                            'rating': 4,
+                            'period': 'all_day',
+                        },
+                    ],
+                    'problems': ['new_snow', 'wet_snow'],
+                    'aspects': ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
+                }
+            ],
         }
     ]
     assert store.ratings(session, 'FR-03', date(2026, 11, 23), date(2026, 11, 30)) == []
+    # a region holding others: the highest of the day, and each
+    found = store.ratings(session, 'CH', *november)
+    assert [(day['date'], day['maxRating']) for day in found] == [
+        ('2026-11-22', 3),
+        ('2026-11-23', 4),
+    ]
+    assert [r['regionId'] for r in found[0]['regions']] == ['CH-1112', 'CH-1113']
 
 
 def test_prune_superseded(session):
@@ -250,6 +344,25 @@ def test_prune_superseded(session):
         )
     ).all()
     assert region.bulletin is not None
+
+
+def test_prune_superseded_under_other_ids(session):
+    # SLF: the evening one has a bulletin for both regions, the update of
+    # the morning one for each, under new ids
+    [both, other] = slf()
+    both['regions'] += other['regions']
+    store.save(session, 'CH', 'fr', [both])
+    [update, _] = later(slf(), 1, 'high', 'update')
+    store.save(session, 'CH', 'fr', [update])
+    published = datetime(2026, 11, 22, 7, tzinfo=UTC)
+    # CH-1113 not published again
+    assert store.prune_superseded(session, published + timedelta(days=8)) == 0
+    store.save(session, 'CH', 'fr', later(slf(), 2, 'low', 'last'))
+    assert store.prune_superseded(session, published + timedelta(days=8)) == 2
+    kept = session.scalars(
+        select(AvalancheBulletin.bulletin_id).order_by(AvalancheBulletin.bulletin_id)
+    ).all()
+    assert kept == ['last-CH-1112', 'last-CH-1113']
 
 
 def test_prune_job(session):

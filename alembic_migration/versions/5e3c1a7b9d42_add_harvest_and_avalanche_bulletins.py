@@ -27,12 +27,14 @@ def upgrade():
         sa.Column('last_attempt', sa.DateTime(timezone=True), nullable=True),
         sa.Column('last_success', sa.DateTime(timezone=True), nullable=True),
         sa.Column('last_change', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('last_publication', sa.DateTime(timezone=True), nullable=True),
         sa.Column('last_error', sa.Text(), nullable=True),
         sa.Column('error_count', sa.Integer(), server_default='0', nullable=False),
         sa.Column('etag', sa.Text(), nullable=True),
         sa.Column('last_modified', sa.Text(), nullable=True),
         sa.Column('content_sha256', sa.LargeBinary(), nullable=True),
         sa.Column('state', JSONB(), nullable=True),
+        sa.Column('disabled_at', sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint('id'),
         schema='guidebook',
     )
@@ -54,13 +56,7 @@ def upgrade():
             ['source_id'], ['guidebook.harvest_sources.id'], ondelete='CASCADE'
         ),
         sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('sha256'),
-        schema='guidebook',
-    )
-    op.create_index(
-        'ix_guidebook_harvest_payloads_source_id',
-        'harvest_payloads',
-        ['source_id'],
+        sa.UniqueConstraint('source_id', 'sha256', name='uq_harvest_payloads_content'),
         schema='guidebook',
     )
     op.create_index(
@@ -80,6 +76,7 @@ def upgrade():
         sa.Column('valid_end', sa.DateTime(timezone=True), nullable=False),
         sa.Column('main_date', sa.Date(), nullable=False),
         sa.Column('region_ids', ARRAY(sa.Text()), nullable=False),
+        sa.Column('region_keys', ARRAY(sa.Text()), nullable=False),
         sa.Column('caaml', JSONB(), nullable=False),
         sa.Column('source_id', sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(
@@ -96,11 +93,17 @@ def upgrade():
         schema='guidebook',
     )
     op.create_index(
-        'ix_guidebook_avalanche_bulletins_region_ids',
+        'ix_guidebook_avalanche_bulletins_region_keys',
         'avalanche_bulletins',
-        ['region_ids'],
+        ['region_keys'],
         schema='guidebook',
         postgresql_using='gin',
+    )
+    op.create_index(
+        'ix_guidebook_avalanche_bulletins_source_id',
+        'avalanche_bulletins',
+        ['source_id'],
+        schema='guidebook',
     )
     op.create_index(
         'ix_guidebook_avalanche_bulletins_main_date',
@@ -112,11 +115,13 @@ def upgrade():
         'avalanche_bulletin_regions',
         sa.Column('region_id', sa.Text(), nullable=False),
         sa.Column('main_date', sa.Date(), nullable=False),
+        sa.Column('region_keys', ARRAY(sa.Text()), nullable=False),
         sa.Column('bulletin', sa.BigInteger(), nullable=True),
         sa.Column('max_rating', sa.SmallInteger(), nullable=True),
         sa.Column('rating_low', sa.SmallInteger(), nullable=True),
         sa.Column('rating_high', sa.SmallInteger(), nullable=True),
         sa.Column('elevation_bound', sa.Text(), nullable=True),
+        sa.Column('bands', JSONB(), nullable=False),
         sa.Column('problems', ARRAY(sa.Text()), nullable=False),
         sa.Column('aspects', ARRAY(sa.Text()), nullable=False),
         sa.Column('publication_time', sa.DateTime(timezone=True), nullable=False),
@@ -124,6 +129,19 @@ def upgrade():
             ['bulletin'], ['guidebook.avalanche_bulletins.id'], ondelete='SET NULL'
         ),
         sa.PrimaryKeyConstraint('region_id', 'main_date'),
+        schema='guidebook',
+    )
+    op.create_index(
+        'ix_guidebook_avalanche_bulletin_regions_region_keys',
+        'avalanche_bulletin_regions',
+        ['region_keys'],
+        schema='guidebook',
+        postgresql_using='gin',
+    )
+    op.create_index(
+        'ix_guidebook_avalanche_bulletin_regions_bulletin',
+        'avalanche_bulletin_regions',
+        ['bulletin'],
         schema='guidebook',
     )
 

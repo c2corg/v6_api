@@ -13,11 +13,11 @@ def paris(*args, **kwargs):
 @pytest.mark.parametrize(
     ('now', 'published', 'expected'),
     [
-        # in a window: every 15 minutes until a new publication
+        # in a window: every 15 minutes until a new publication, then hourly
         (paris(2026, 11, 24, 8), False, paris(2026, 11, 24, 8, 15)),
         (paris(2026, 11, 24, 9, 55), False, paris(2026, 11, 24, 10, 10)),
-        (paris(2026, 11, 24, 8), True, paris(2026, 11, 24, 15, 30)),
-        (paris(2026, 11, 24, 16), True, paris(2026, 11, 25, 7)),
+        (paris(2026, 11, 24, 8), True, paris(2026, 11, 24, 9)),
+        (paris(2026, 11, 24, 16), True, paris(2026, 11, 24, 17)),
         # hourly outside, up to the start of the next window
         (paris(2026, 11, 24, 11), False, paris(2026, 11, 24, 12)),
         (paris(2026, 11, 24, 11), True, paris(2026, 11, 24, 12)),
@@ -34,18 +34,42 @@ def paris(*args, **kwargs):
         (paris(2026, 7, 15, 7), True, paris(2026, 7, 16, 7)),
         # the first day of the season (and of winter time)
         (paris(2026, 10, 31, 7), False, paris(2026, 11, 1, 7)),
-        # the day of summer time: 7:00 is 5:00 UTC
-        (paris(2026, 3, 28, 16), True, paris(2026, 3, 29, 7)),
+        # the night of summer time: 7:00 is 5:00 UTC
+        (paris(2026, 3, 29, 6, 30), False, paris(2026, 3, 29, 7)),
     ],
 )
 def test_next_run(now, published, expected):
-    when = next_run(AVALANCHE_POLICY, now, published)
+    when = next_run(AVALANCHE_POLICY, now, now if published else None)
     assert when == expected
     assert when.tzinfo == UTC
 
 
+@pytest.mark.parametrize(
+    ('last_publication', 'expected'),
+    [
+        # earlier in the window: still hourly
+        (paris(2026, 11, 24, 7, 10), paris(2026, 11, 24, 9, 30)),
+        # in the window of the day before, or the one of the morning: not this one
+        (paris(2026, 11, 23, 8), paris(2026, 11, 24, 8, 45)),
+        (paris(2026, 11, 23, 16), paris(2026, 11, 24, 8, 45)),
+    ],
+)
+def test_slower_after_a_publication(last_publication, expected):
+    now = paris(2026, 11, 24, 8, 30)
+    assert next_run(AVALANCHE_POLICY, now, last_publication) == expected
+
+
+def test_new_window_after_a_publication():
+    published = paris(2026, 11, 24, 8)
+    now = paris(2026, 11, 24, 16)
+    assert next_run(AVALANCHE_POLICY, now, published) == paris(2026, 11, 24, 16, 15)
+
+
 def test_summer_time_in_utc():
-    assert next_run(AVALANCHE_POLICY, paris(2026, 3, 28, 16), True) == datetime(
+    # 1:30 + 1 hour: 3:30 of summer time
+    now = paris(2026, 3, 29, 1, 30)
+    assert next_run(AVALANCHE_POLICY, now) == datetime(2026, 3, 29, 1, 30, tzinfo=UTC)
+    assert next_run(AVALANCHE_POLICY, paris(2026, 3, 29, 6, 30)) == datetime(
         2026, 3, 29, 5, tzinfo=UTC
     )
 
@@ -57,21 +81,23 @@ def test_winter_time_hour_repeated():
     assert first.astimezone(PARIS).time() == time(2, 30)
     assert next_run(policy, first) == datetime(2026, 10, 25, 1, 30, tzinfo=UTC)
     # the next window, in winter time
-    assert next_run(policy, paris(2026, 10, 24, 8), True) == datetime(
+    assert next_run(policy, paris(2026, 10, 25, 6, 30)) == datetime(
         2026, 10, 25, 6, tzinfo=UTC
     )
 
 
 def test_without_windows():
     policy = Policy(default_every=30)
-    assert next_run(policy, paris(2026, 11, 24, 8), True) == paris(2026, 11, 24, 8, 30)
+    now = paris(2026, 11, 24, 8)
+    assert next_run(policy, now, now) == paris(2026, 11, 24, 8, 30)
 
 
-def test_without_sleep():
+def test_without_slowdown():
     policy = Policy(
-        windows=(Window(time(7), time(10), 15),), sleep_once_published=False
+        windows=(Window(time(7), time(10), 15),), after_publication_every=None
     )
-    assert next_run(policy, paris(2026, 11, 24, 8), True) == paris(2026, 11, 24, 8, 15)
+    now = paris(2026, 11, 24, 8)
+    assert next_run(policy, now, now) == paris(2026, 11, 24, 8, 15)
 
 
 @pytest.mark.parametrize(
@@ -85,7 +111,7 @@ def test_without_sleep():
     ],
 )
 def test_backoff_doubles_up_to_max(error_count, expected):
-    assert next_run(AVALANCHE_POLICY, paris(2026, 11, 24, 8), False, error_count) == (
+    assert next_run(AVALANCHE_POLICY, paris(2026, 11, 24, 8), None, error_count) == (
         expected
     )
 
@@ -93,7 +119,7 @@ def test_backoff_doubles_up_to_max(error_count, expected):
 def test_backoff_never_sooner():
     # out of season, the next check stays the next day
     now = paris(2026, 7, 15, 8)
-    assert next_run(AVALANCHE_POLICY, now, False, 1) == paris(2026, 7, 16, 7)
+    assert next_run(AVALANCHE_POLICY, now, None, 1) == paris(2026, 7, 16, 7)
 
 
 def test_jitter():

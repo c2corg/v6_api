@@ -2,12 +2,10 @@
 # The bulletins as published (CAAML v6, normalized as on demand), one row by
 # publication and language, and the danger of each region on each day.
 
-import re
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import and_, delete, exists, func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import aliased
 
 from c2corg_api.avalanche_bulletins.cache import CET, main_date
 from c2corg_api.avalanche_bulletins.regions import STALE_AFTER
@@ -21,47 +19,78 @@ ASPECTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
 # the publications superseded the same day are kept this long
 SUPERSEDED_RETENTION = timedelta(days=7)
+# the latest bulletins are of these last days at most
+RECENT_DAYS = timedelta(days=3)
 
 
 def save(session, provider, lang, bulletins, source_id=None):
-    """Store the bulletins not stored yet: tell if there was any."""
+    """Store the bulletins new or changed: tell if there was any."""
     new = False
     for bulletin in bulletins:
         row = _row(provider, lang, bulletin, source_id)
+        insertion = insert(AvalancheBulletin).values(**row)
+        # a service may change a publication without changing its time
+        changed = {
+            name: insertion.excluded[name]
+            for name in row
+            if name not in ('provider', 'bulletin_id', 'lang', 'publication_time')
+        }
         id = session.scalar(
-            insert(AvalancheBulletin)
-            .values(**row)
-            .on_conflict_do_nothing(constraint='uq_avalanche_bulletins_publication')
-            .returning(AvalancheBulletin.id)
+            insertion.on_conflict_do_update(
+                constraint='uq_avalanche_bulletins_publication',
+                set_=changed,
+                where=AvalancheBulletin.caaml != insertion.excluded.caaml,
+            ).returning(AvalancheBulletin.id)
         )
         if id is None:
             continue
         new = True
+        danger = summary(bulletin)
         for region_id in row['region_ids']:
-            _save_region(session, region_id, row, id, summary(bulletin))
+            _save_region(session, region_id, row, id, danger)
     return new
+
+
+def region_keys(region_id):
+    """Return a region id and the ids of the regions holding it."""
+    # AT-07-14-01: AT-07-14, AT-07, AT; the micro-regions of SLF nest by
+    # digit too: CH-4231 is in CH-423, CH-42, CH-4
+    parts = region_id.split('-')
+    keys = ['-'.join(parts[:i]) for i in range(1, len(parts) + 1)]
+    if parts[0] == 'CH' and len(parts) == 2:
+        keys += [f'CH-{parts[1][:i]}' for i in range(1, len(parts[1]))]
+    return sorted(keys)
 
 
 def summary(bulletin):
     """Return the danger of a bulletin: ratings (1-5), problems and aspects."""
-    # Up to two elevation bands: a rating with a lower bound is the one above,
-    # with an upper bound the one below, without bound both (a band between
-    # two bounds is in both). The ratings of the morning and afternoon count
-    # alike: the maximum of the day.
-    low, high, all_ratings, bound = [], [], [], None
+    # All the ratings go to bands, as given. With one elevation bound, a
+    # rating with a lower bound is the one above, with an upper bound the
+    # one below, without bound both; with more bounds (three bands), only
+    # the bands tell. The morning and afternoon count alike: the maximum.
+    bands, values, bounds = [], [], set()
     for rating in bulletin.get('dangerRatings') or []:
         elevation = rating.get('elevation') or {}
-        lower, upper = elevation.get('lowerBound'), elevation.get('upperBound')
-        bound = bound or lower or upper
         # no_rating, no_snow: no rating
-        value = RATINGS.get(rating.get('mainValue'))
-        if value is None:
-            continue
-        all_ratings.append(value)
-        if lower or not upper:
-            high.append(value)
-        if upper or not lower:
-            low.append(value)
+        band = {
+            'lower': elevation.get('lowerBound'),
+            'upper': elevation.get('upperBound'),
+            'rating': RATINGS.get(rating.get('mainValue')),
+            'period': rating.get('validTimePeriod'),
+        }
+        bands.append(band)
+        bounds.update(b for b in (band['lower'], band['upper']) if b)
+        if band['rating'] is not None:
+            values.append(band['rating'])
+    max_rating = max(values, default=None)
+    low = high = bound = None
+    if not bounds:
+        low = high = max_rating
+    elif len(bounds) == 1:
+        [bound] = bounds
+        rated = [b for b in bands if b['rating'] is not None]
+        low = max((b['rating'] for b in rated if not b['lower']), default=None)
+        high = max((b['rating'] for b in rated if not b['upper']), default=None)
     problems = []
     aspects = set()
     for problem in bulletin.get('avalancheProblems') or []:
@@ -72,10 +101,11 @@ def summary(bulletin):
     meteofrance = (bulletin.get('customData') or {}).get('MeteoFrance') or {}
     aspects.update((meteofrance.get('avalancheProneLocation') or {}).get('aspects', []))
     return {
-        'max_rating': max(all_ratings, default=None),
-        'rating_low': max(low, default=None),
-        'rating_high': max(high, default=None),
+        'max_rating': max_rating,
+        'rating_low': low,
+        'rating_high': high,
         'elevation_bound': bound,
+        'bands': bands,
         'problems': problems,
         'aspects': [aspect for aspect in ASPECTS if aspect in aspects],
     }
@@ -85,10 +115,12 @@ def latest_for_region(session, region_id, lang, now=None):
     """Return the latest bulletins covering a region, as CAAML (or [])."""
     # as regions.latest_bulletins: those of the latest day, not stale
     now = now or datetime.now(UTC)
-    covering = _covering(region_id)
+    today = now.astimezone(CET).date()
     day = session.scalar(
         select(func.max(AvalancheBulletin.main_date)).where(
-            covering, AvalancheBulletin.valid_end > now - STALE_AFTER
+            AvalancheBulletin.region_keys.contains([region_id]),
+            AvalancheBulletin.main_date >= today - RECENT_DAYS,
+            AvalancheBulletin.valid_end > now - STALE_AFTER,
         )
     )
     if day is None:
@@ -105,59 +137,87 @@ def for_region_and_date(session, region_id, day, lang):
             AvalancheBulletin.region_ids,
             AvalancheBulletin.caaml,
         )
-        .where(_covering(region_id), AvalancheBulletin.main_date == day)
+        .where(
+            AvalancheBulletin.region_keys.contains([region_id]),
+            AvalancheBulletin.main_date == day,
+        )
         .order_by(AvalancheBulletin.publication_time.desc(), AvalancheBulletin.id)
     ).all()
     return _latest(rows, region_id, lang)
 
 
 def ratings(session, region_id, date_from, date_to):
-    """Return the danger of a region each day of a period (both included)."""
+    """Return the danger of a region and its sub-regions each day of a period.
+
+    By day (both dates included, the days without bulletin left out): the
+    highest rating of the regions, for a chart of the region, and the danger
+    of each (micro-)region covered.
+    """
     found = session.scalars(
         select(AvalancheBulletinRegion)
         .where(
-            AvalancheBulletinRegion.region_id == region_id,
+            AvalancheBulletinRegion.region_keys.contains([region_id]),
             AvalancheBulletinRegion.main_date.between(date_from, date_to),
         )
-        .order_by(AvalancheBulletinRegion.main_date)
+        .order_by(AvalancheBulletinRegion.main_date, AvalancheBulletinRegion.region_id)
     )
+    days = {}
+    for row in found:
+        days.setdefault(row.main_date, []).append(
+            {
+                'regionId': row.region_id,
+                'maxRating': row.max_rating,
+                'ratingLow': row.rating_low,
+                'ratingHigh': row.rating_high,
+                'elevationBound': row.elevation_bound,
+                'bands': row.bands,
+                'problems': row.problems,
+                'aspects': row.aspects,
+            }
+        )
     return [
         {
-            'date': row.main_date.isoformat(),
-            'maxRating': row.max_rating,
-            'ratingLow': row.rating_low,
-            'ratingHigh': row.rating_high,
-            'elevationBound': row.elevation_bound,
-            'problems': row.problems,
-            'aspects': row.aspects,
+            'date': day.isoformat(),
+            'maxRating': max(
+                (r['maxRating'] for r in regions if r['maxRating']), default=None
+            ),
+            'regions': regions,
         }
-        for row in found
+        for day, regions in days.items()
     ]
 
 
 def prune_superseded(session, now=None):
     """Delete the publications superseded the same day, after a week."""
-    # the last publication of each bulletin, language and day is kept
+    # superseded: each of its regions is in a later publication of the
+    # provider, in the language, for the day (SLF changes the ids of its
+    # bulletins at each publication, and how it groups the regions)
     now = now or datetime.now(UTC)
-    newer = aliased(AvalancheBulletin)
     return session.execute(
-        delete(AvalancheBulletin).where(
-            AvalancheBulletin.publication_time < now - SUPERSEDED_RETENTION,
-            exists().where(
-                and_(
-                    newer.provider == AvalancheBulletin.provider,
-                    newer.bulletin_id == AvalancheBulletin.bulletin_id,
-                    newer.lang == AvalancheBulletin.lang,
-                    newer.main_date == AvalancheBulletin.main_date,
-                    newer.publication_time > AvalancheBulletin.publication_time,
+        text(
+            """
+            DELETE FROM guidebook.avalanche_bulletins b
+            WHERE b.publication_time < :before
+            AND NOT EXISTS (
+                SELECT 1 FROM unnest(b.region_ids) AS r(region_id)
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM guidebook.avalanche_bulletins n
+                    WHERE n.provider = b.provider
+                    AND n.lang = b.lang
+                    AND n.main_date = b.main_date
+                    AND n.publication_time > b.publication_time
+                    AND n.region_ids @> ARRAY[r.region_id]
                 )
-            ),
-        )
+            )
+            """
+        ),
+        {'before': now - SUPERSEDED_RETENTION},
     ).rowcount
 
 
 def _row(provider, lang, bulletin, source_id):
     valid = bulletin['validTime']
+    region_ids = sorted({r['regionID'] for r in bulletin['regions']})
     day = ((bulletin.get('customData') or {}).get('ALBINA') or {}).get(
         'mainDate'
     ) or main_date(valid)
@@ -172,17 +232,19 @@ def _row(provider, lang, bulletin, source_id):
         'valid_start': _time(valid['startTime']),
         'valid_end': _time(valid['endTime']),
         'main_date': date.fromisoformat(day),
-        'region_ids': sorted({r['regionID'] for r in bulletin['regions']}),
+        'region_ids': region_ids,
+        'region_keys': sorted({key for r in region_ids for key in region_keys(r)}),
         'caaml': bulletin,
         'source_id': source_id,
     }
 
 
 def _save_region(session, region_id, row, bulletin_id, danger):
-    # the latest publication of the day wins; the other languages of the
-    # same publication leave it as it is
+    # the latest publication of the day wins (a publication changed at the
+    # same time too, then the other languages of it rewrite the same)
     insertion = insert(AvalancheBulletinRegion).values(
         region_id=region_id,
+        region_keys=region_keys(region_id),
         main_date=row['main_date'],
         bulletin=bulletin_id,
         publication_time=row['publication_time'],
@@ -196,16 +258,9 @@ def _save_region(session, region_id, row, bulletin_id, danger):
                 name: excluded[name]
                 for name in ('bulletin', 'publication_time', *danger)
             },
-            where=AvalancheBulletinRegion.publication_time < excluded.publication_time,
+            where=AvalancheBulletinRegion.publication_time <= excluded.publication_time,
         )
     )
-
-
-def _covering(region_id):
-    # the region or one of its sub-regions (CH: CH-4231), on the rows of a
-    # few days (the callers filter on the dates)
-    pattern = f'(^|,){re.escape(region_id)}(-[^,]*)?(,|$)'
-    return func.array_to_string(AvalancheBulletin.region_ids, ',').regexp_match(pattern)
 
 
 def _latest(rows, region_id, lang):
@@ -222,9 +277,7 @@ def _latest(rows, region_id, lang):
     for row in rows:
         if row.lang != chosen[row.provider]:
             continue
-        regions = {
-            r for r in row.region_ids if r == region_id or r.startswith(f'{region_id}-')
-        }
+        regions = {r for r in row.region_ids if region_id in region_keys(r)}
         if regions - covered:
             found.append(row.caaml)
             covered |= regions

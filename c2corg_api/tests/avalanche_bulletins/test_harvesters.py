@@ -104,6 +104,8 @@ def test_fetch_errors(failure):
 
 def test_without_key(monkeypatch):
     monkeypatch.delenv('METEOFRANCE_API_KEY')
+    # its sources are disabled
+    assert MeteoFranceHarvester().sources() == []
     with pytest.raises(UpstreamError):
         MeteoFranceHarvester().fetch('FR-03', State())
 
@@ -135,7 +137,7 @@ def test_harvest(harvest_session, clock):  # noqa: F811
         Few(CaamlHarvester(), ['CH:fr', 'CH:de', 'IT-23:fr']).harvester,
     ]
     with patch(MF_GET, side_effect=fake_get), patch(CAAML_GET, side_effect=fake_get):
-        runner.harvest_tick(harvesters, workers=1)
+        runner.harvest_tick(all_harvesters=harvesters, workers=1)
     harvest_session.expire_all()
     rows = harvest_session.scalars(
         select(AvalancheBulletin).order_by(AvalancheBulletin.region_ids)
@@ -152,10 +154,10 @@ def test_harvest(harvest_session, clock):  # noqa: F811
     ).all()
     assert regions == ['CH-1112', 'CH-1113', 'FR-03']
     sources = {s.id: s for s in harvest_session.scalars(select(HarvestSource))}
-    paris_7 = datetime(2026, 11, 22, 6, tzinfo=UTC)
-    # a new publication: until the next window
-    assert sources['avalanche.meteofrance:FR-03'].next_run_at == paris_7
-    assert sources['avalanche.caaml:CH:fr'].next_run_at == paris_7
+    # a new publication: hourly until the end of the window
+    for id in ('avalanche.meteofrance:FR-03', 'avalanche.caaml:CH:fr'):
+        assert sources[id].last_publication == clock.now
+        assert sources[id].next_run_at == datetime(2026, 11, 21, 17, 30, tzinfo=UTC)
     assert sources['avalanche.caaml:CH:fr'].etag == '"slf"'
     # no bulletin: 15 minutes later
     for id in ('avalanche.meteofrance:FR-41', 'avalanche.caaml:CH:de'):
@@ -164,6 +166,6 @@ def test_harvest(harvest_session, clock):  # noqa: F811
     invalid = sources['avalanche.caaml:IT-23:fr']
     assert invalid.error_count == 1
     assert 'not CAAML' in invalid.last_error
-    # the contents (an empty one for both bulletins missing)
-    assert harvest_session.query(HarvestPayload).count() == 3
+    # the contents (an empty one for each source without bulletin)
+    assert harvest_session.query(HarvestPayload).count() == 4
     assert {r.main_date for r in rows} == {date(2026, 11, 22)}
