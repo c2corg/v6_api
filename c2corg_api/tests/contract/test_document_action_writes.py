@@ -87,6 +87,7 @@ DELETED_DOCUMENT_ROUTES = [
     ('GET', '/documents/deleted/{id}'),
     ('POST', '/documents/deleted/{id}/restore'),
     ('GET', '/images/orphans'),
+    ('GET', '/images/broken-embeds'),
 ]
 
 
@@ -119,6 +120,12 @@ def test_images_of_deletion_unknown(browser):
 def test_orphan_images(browser):
     response = browser.get('/images/orphans', user='moderator')
     check_snapshot('images_orphans', response)
+
+
+@contract(('GET', '/images/broken-embeds'))
+def test_broken_embeds(browser):
+    response = browser.get('/images/broken-embeds', user='moderator')
+    check_snapshot('images_broken_embeds', response)
 
 
 @contract(
