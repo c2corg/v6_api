@@ -35,6 +35,12 @@ ERROR_LENGTH = 1000
 _last_sync = None
 
 
+def _jitter():
+    """Return a number in [0, 1) that spreads the next runs of the sources."""
+    # not a secret: only spreads the requests in time (Bandit B311)
+    return random.random()  # nosec B311
+
+
 def harvesters():
     """Return all the harvesters."""
     from c2corg_api.avalanche_bulletins.harvesters import (
@@ -193,7 +199,7 @@ def run_source(harvester, source_id, state):
             row.error_count = 0
             row.last_error = None
             row.next_run_at = next_run(
-                harvester.policy, now, row.last_publication, 0, random.random()
+                harvester.policy, now, row.last_publication, 0, _jitter()
             )
             session.commit()
     except Exception as e:
@@ -276,7 +282,7 @@ def _record_error(harvester, source_id, error):
                 now,
                 row.last_publication,
                 row.error_count,
-                random.random(),
+                _jitter(),
             )
             session.commit()
     except Exception:
