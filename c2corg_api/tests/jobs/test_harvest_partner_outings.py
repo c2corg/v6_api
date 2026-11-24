@@ -852,6 +852,24 @@ def test_fixture_mode_end_to_end(db, db_connection, fixtures_dir, fake_registry)
     assert source_row(db).status == 'ok'
 
 
+@pytest.mark.parametrize('days_after', [0, 40])
+def test_fixture_mode_with_the_real_adapters(db, db_connection, days_after):
+    # the local demo: the recorded fixtures of every source, even weeks later
+    settings = {
+        **SETTINGS,
+        'partners.sources': 'skitour,gulliver',
+        'partners.transport': 'fixtures',
+    }
+    now = NOW + datetime.timedelta(days=days_after)
+    job.harvest_partner_outings(settings, now=now)
+    for name in ('skitour', 'gulliver'):
+        assert source_row(db, name).status in ('ok', 'degraded')
+        rows = outings_of(db, name)
+        assert rows
+        assert max(r.date for r in rows) <= now.date()
+        assert max(r.date for r in rows) >= now.date() - datetime.timedelta(days=2)
+
+
 # ------------------------------------------------------------ the whole job
 
 
