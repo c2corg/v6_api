@@ -65,9 +65,16 @@ class Transport(Protocol):
 
 
 def is_challenge(response: HttpResponse) -> bool:
-    """Whether the response is an anti-bot challenge page (Cloudflare...)."""
+    """Whether the response is an anti-bot challenge page (Cloudflare...).
+
+    The `cf-mitigated` header is trusted on any status. The body is only
+    searched on an error status: a 200 page or JSON may quote the markers in
+    user text (a title "Just a moment..."), and challenges come with 403/503.
+    """
     if (response.header('cf-mitigated') or '').lower() == 'challenge':
         return True
+    if response.status < 400:
+        return False
     head = response.body[:CHALLENGE_SCAN_BYTES].decode('utf-8', errors='replace')
     return any(marker in head for marker in CHALLENGE_MARKERS)
 
@@ -136,6 +143,9 @@ class HttpTransport:
             raise SourceDown(f'timeout on {url}') from e
         except requests.ConnectionError as e:
             raise SourceDown(f'connection error on {url}') from e
+        except requests.RequestException as e:
+            # truncated body, too many redirects...: availability, not parsing
+            raise SourceDown(f'{type(e).__name__} on {url}') from e
         # the interval counts from the end of the request
         self._last_request[host] = self._clock()
         return classify(

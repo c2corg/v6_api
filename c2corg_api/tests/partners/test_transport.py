@@ -144,8 +144,9 @@ def test_cloudflare_403_body_is_a_challenge():
     [
         (200, {'cf-mitigated': 'challenge'}, b'<html/>'),
         (403, {'CF-Mitigated': 'challenge'}, b''),
-        (200, {}, b'<script src="/cdn-cgi/challenge-platform/cf-chl-bypass">'),
+        (403, {}, b'<script src="/cdn-cgi/challenge-platform/cf-chl-bypass">'),
         (503, {}, CLOUDFLARE_BODY),
+        (429, {}, CLOUDFLARE_BODY),
     ],
 )
 def test_challenge_detection(status, headers, body):
@@ -159,6 +160,12 @@ def test_ordinary_pages_are_not_challenges():
         FakeRaw(body=b'<html>a normal page</html>', headers={'cf-mitigated': 'other'})
     )
     assert transport.get(URL).status == 200
+
+
+def test_markers_in_a_successful_body_are_user_text():
+    body = b'[{"title": "Just a moment... before the cf-chl couloir"}]'
+    transport, _, _ = make(FakeRaw(body=body))
+    assert transport.get(URL).json()[0]['title'].startswith('Just a moment')
 
 
 @pytest.mark.parametrize('status', [500, 502, 503, 504])
@@ -178,6 +185,15 @@ def test_timeout_is_down():
 def test_connection_error_is_down():
     transport, _, _ = make(requests.ConnectionError('refused'))
     with pytest.raises(SourceDown, match='connection'):
+        transport.get(URL)
+
+
+@pytest.mark.parametrize(
+    'error', [requests.exceptions.ChunkedEncodingError, requests.TooManyRedirects]
+)
+def test_other_request_errors_are_down(error):
+    transport, _, _ = make(error('broken'))
+    with pytest.raises(SourceDown, match=error.__name__):
         transport.get(URL)
 
 
