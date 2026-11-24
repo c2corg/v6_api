@@ -73,9 +73,11 @@ requests a minute, shared with the PDFs the API fetches on demand. The CAAML ser
 
 ### Switching it on
 
-- `harvest.enabled` (`.ini`, from `harvest_enabled` in `config/env.default`, `false` by default) switches on all the
-  harvesters; `harvest.<name>.enabled` (`harvest.avalanche.meteofrance.enabled`, `harvest.avalanche.caaml.enabled`)
-  overrides it for one harvester.
+- `harvest.enabled` (`common.ini.in`, from `harvest_enabled` in `config/env.default`, `false` by default) switches on
+  all the harvesters; `harvest.<name>.enabled` (`harvest.avalanche.meteofrance.enabled` from
+  `harvest_meteofrance_enabled`, `harvest.avalanche.caaml.enabled` from `harvest_caaml_enabled`) overrides it for one
+  harvester: `true` or `false`, empty (the default) to follow `harvest.enabled`. Set them in an env file
+  (`config/env.local`, or the one given with `make CONFIG=... load-env`), then `make load-env`.
 - With no harvester switched on, the scheduler registers none of the harvest jobs (tick, pruning, compaction).
 - Without `METEOFRANCE_API_KEY`, the Météo-France harvester lists no source: its sources get disabled.
 
@@ -118,30 +120,42 @@ payloads older than `Harvester.keep_payloads_days` (30 days; 0 keeps none).
   A few hundred rows a day, **kept forever** for the history of the danger.
 - **Superseded publications**: a publication whose regions are all in a later publication of the same provider,
   language and day is deleted after **7 days** (`prune_harvest`, 02:00).
-- **Compaction**: the 1st of each month at 03:00, `compact_avalanche_bulletins` removes the `customData` (all levels,
-  all services) of the bulletins whose day is more than **18 months** old, and sets `compacted_at`. The texts, ratings,
-  problems, regions and times stay.
+- **Compaction**: the 1st of each month at 03:00, `compact_avalanche_bulletins` removes the bulky `customData` of the
+  bulletins whose day is more than **18 months** old, and sets `compacted_at` (a partial index finds the others; a
+  batch of 500 is committed at a time). Only the paths of `store.COMPACTED` go: `customData.MeteoFrance.weather`,
+  `snowCover`, `newSnow` and `history` (the numbers and series), `customData.CH.aggregation`, `dangerRatingEvolution`
+  and `weather`. The texts stay, with the ratings, problems, regions and times: the texts of Météo-France are in
+  `customData.MeteoFrance` (`headline`, `dangerComment`, `naturalAvalanches`, `triggeredAvalanches`,
+  `avalancheProneLocation`...), as `customData.ALBINA.mainDate`, the `dangerPatterns` of the Euregio and the
+  `customData` of the ratings and tendencies (`maxDangerRating`). `avalanche_bulletin_regions` is untouched.
 - **SLF weather**: SLF sends the weather of each micro-region (`customData.CH.weather`: 13 of the 17 kB of a
-  bulletin), the same in every language. It is stored once, apart, and not answered with the bulletins:
-  `region_weather_hours` (temperature and snowfall limit by hour) and `region_weather_periods` (wind and new snow by
-  day), the latest publication winning, a forecast hour becoming an observed one.
+  bulletin), the same in every language. It is stored apart, and answered with the bulletins neither from the database
+  nor on demand: `region_weather_hours` (temperature and snowfall limit by hour) and `region_weather_periods` (wind and
+  new snow by day). The latest publication wins, a forecast hour becoming an observed one; a correction at the same
+  publication time too; the other languages, the same, write nothing. `weather.weather()` reads it (no route yet).
 
 ## Read path and caching
 
 | Route | Reads |
 | --- | --- |
-| `GET /avalanche-bulletins/regions/{region_id}/latest` | the stored bulletins of the latest day (at most 3 days ago, not stale), else on demand |
+| `GET /avalanche-bulletins/regions/{region_id}/latest` | the stored bulletins of the latest day still valid (at most 3 days ago), else on demand |
 | `GET /avalanche-bulletins/regions/{region_id}/latest/pdf` | the PDF of Météo-France, always on demand |
-| `GET /avalanche-bulletins/regions/{region_id}/{date}` | the stored bulletins of a day (`YYYY-MM-DD`), 404 without |
+| `GET /avalanche-bulletins/regions/{region_id}/{date}` | the stored bulletins of a day (`YYYY-MM-DD`, else 400), 404 without |
 | `GET /avalanche-bulletins/regions/{region_id}/ratings?from&to` | the danger by day from `avalanche_bulletin_regions` (7 days by default, a year at most) |
 
 - **Stored bulletins** go through Redis (`cache_avalanche_bulletin`) under a key holding a version of the region and
-  day (last publication time, row count, last id): a new publication changes the key at once. Kept 10 minutes for a
-  day not over, without expiry for a day over (answered with `Cache-Control: immutable`, a week).
-- **On demand**: a region with nothing stored (not harvested yet, harvest off) or a database error falls back to the
-  services, as before the harvester, cached in Redis 10 minutes around the publications and an hour otherwise; the last
-  copy is answered while the service fails.
-- The language asked, else English, else the one published, by provider. `ratings` reads PostgreSQL directly.
+  day (`store.version`: the rows, the last id, the last `updated_at`, set at each insert and change): a new
+  publication, a correction at the same time or a pruning changes the key at once. Kept 10 minutes for a day not
+  over, without expiry for a day over (answered with `Cache-Control: immutable`, a week).
+- **Ratings** too, keyed by region, period and `store.ratings_version` (the rows and the last `updated_at` of
+  `avalanche_bulletin_regions`): without expiry for a period over, 10 minutes otherwise.
+- **On demand**: a region with nothing stored still valid (not harvested yet, harvest off, the next bulletin not
+  harvested yet) or a database error falls back to the services, as before the harvester, cached in Redis 10 minutes
+  around the publications and an hour otherwise; the last copy is answered while the service fails. The database
+  session is ended before: a slow service holds no connection. The answer has the shape of the stored one (without
+  the weather of SLF), and a region holds its sub-regions the same way (`store.region_keys`: `CH-4` holds
+  `CH-4231`).
+- The language asked, else English, else the one published, by provider.
 
 ## Adding a harvester
 
@@ -151,7 +165,8 @@ payloads older than `Harvester.keep_payloads_days` (30 days; 0 keeps none).
    or rolls both back. Return `Stored(published=True)` when there was a new publication (it slows the polling down).
 3. Add it to `runner.harvesters()`.
 4. Add its tables to `c2corg_api/models/` (imported by `models/__init__.py`) and an alembic migration.
-5. Switch it on with `harvest.<name>.enabled` in the `.ini` files (`common.ini.in`, `config/env.default`).
+5. Add `harvest.<name>.enabled = {harvest_<name>_enabled}` to `common.ini.in` and `harvest_<name>_enabled=""` to
+   `config/env.default` (empty: as `harvest.enabled`).
 6. Test it with a fake service (see `c2corg_api/tests/harvest/`), and add its pruning to a job if its data grows.
 
 ```python
