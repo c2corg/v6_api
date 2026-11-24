@@ -119,6 +119,18 @@ def configure_scheduler_from_config(settings):
             kwargs={'settings': settings},
         )
 
+    # run `purge_partner_outings_job` at 1:40, whether the harvest is on or not:
+    # the partner rows must not outlive the retention (licence)
+    scheduler.add_job(
+        partner_outings.purge_partner_outings_job,
+        id='purge_partner_outings',
+        name='Purge the old partner outings and lookups',
+        trigger='cron',
+        hour=1,
+        minute=40,
+        kwargs={'settings': settings},
+    )
+
     # harvest the outings of the partner sites, once switched on
     # (partners.enabled); the first run 30 s after the start
     if partner_outings.partners_enabled(settings):
@@ -131,16 +143,6 @@ def configure_scheduler_from_config(settings):
             max_instances=1,
             coalesce=True,
             next_run_time=datetime.now(UTC) + timedelta(seconds=30),
-            kwargs={'settings': settings},
-        )
-        # run `purge_partner_outings_job` at 1:40
-        scheduler.add_job(
-            partner_outings.purge_partner_outings_job,
-            id='purge_partner_outings',
-            name='Purge the old partner outings',
-            trigger='cron',
-            hour=1,
-            minute=40,
             kwargs={'settings': settings},
         )
 

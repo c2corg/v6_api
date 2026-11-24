@@ -1,26 +1,21 @@
 {
-  "id": 55310,
-  "title": "Canalone Nord-Est del Monte Emilius &#8211; variante diretta",
-  "permalink": "https://www.gulliver.it/itinerari/canalone-nord-est-del-monte-emilius/",
-  "region": {
-    "name": "Valle d&#8217;Aosta"
+ "title": "Canalone Nord-Est del Monte Emilius &#8211; variante diretta",
+ "region": {
+  "name": "Valle d&#8217;Aosta"
+ },
+ "district": "",
+ "meta": {
+  "data": {
+   "drop": "1500",
+   "alt_top": "3559",
+   "exposure": "NE",
+   "grade_skimo": "OS"
   },
-  "city": "Pollein",
-  "district": "",
-  "meta": {
-    "data": {
-      "drop": "1500",
-      "alt_start": "2059",
-      "alt_top": "3559",
-      "exposure": "NE",
-      "type_route": "skisteep",
-      "grade_skimo": "OS"
-    },
-    "geo": {
-      "coords": {
-        "lat": 45.6911,
-        "lng": 7.3547
-      }
-    }
+  "geo": {
+   "coords": {
+    "lat": 45.6911,
+    "lng": 7.3547
+   }
   }
+ }
 }

@@ -15,15 +15,16 @@ from sqlalchemy import text
 from c2corg_api import caching
 from c2corg_api.caching import cache_partner_outings, get_or_create
 from c2corg_api.models.common import attributes
-from c2corg_api.partners.sources import SOURCE_NAMES
+from c2corg_api.partners.sources import REGISTRY, SOURCE_NAMES
 
 C2C = 'c2c'
 
-# name, url and credit of the sites
+# name and url of the credit of the sites: the partners come from their
+# adapters (one source of truth), c2c is ours
+C2C_SITE = ('camptocamp.org', 'https://www.camptocamp.org')
 SITES = {
-    C2C: ('camptocamp.org', 'https://www.camptocamp.org'),
-    'skitour': ('skitour.fr', 'https://skitour.fr'),
-    'gulliver': ('gulliver.it', 'https://www.gulliver.it'),
+    C2C: C2C_SITE,
+    **{name: (cls.site_name, cls.site_url) for name, cls in REGISTRY.items()},
 }
 
 # the window of the listing, in days, when `date` is not given; the longest
@@ -592,7 +593,7 @@ def _list(session, params):
 
 
 def list_partner_outings(session, params):
-    """Return {total, items, sources}, cached for two minutes."""
+    """Return {total, items, sources}, cached for `CACHE_EXPIRATION` seconds."""
     return get_or_create(
         cache_partner_outings,
         cache_key(params),

@@ -5,9 +5,6 @@
    "comment_date": "str",
    "comment_post_ID": "str",
    "meta": {
-    "access": "str",
-    "obs": "str",
-    "skimo_equip": "str",
     "snow_alt": {
      "any_of": [
       "\"int\"",
@@ -28,12 +25,10 @@
     }
    },
    "permalink": "str",
-   "rating": "int",
    "term": {
     "code": "str",
     "name": "str"
    },
-   "tracks": [],
    "user_nicename": "str"
   }
  ],
@@ -43,9 +38,6 @@
    "comment_date": "str",
    "comment_post_ID": "str",
    "meta": {
-    "access": "str",
-    "obs": "str",
-    "skimo_equip": "str",
     "snow_alt": {
      "any_of": [
       "\"int\"",
@@ -66,27 +58,21 @@
     }
    },
    "permalink": "str",
-   "rating": "int",
    "term": {
     "code": "str",
     "name": "str"
    },
-   "tracks": [],
    "user_nicename": "str"
   }
  ],
  "commentglobal_page3.json": [],
  "routes_id44871.json": {
-  "city": "str",
   "district": "str",
-  "id": "int",
   "meta": {
    "data": {
-    "alt_start": "str",
     "alt_top": "str",
     "drop": "str",
-    "exposure": "str",
-    "type_route": "str"
+    "exposure": "str"
    },
    "geo": {
     "coords": {
@@ -95,24 +81,19 @@
     }
    }
   },
-  "permalink": "str",
   "region": {
    "name": "str"
   },
   "title": "str"
  },
  "routes_id52980.json": {
-  "city": "str",
   "district": "str",
-  "id": "int",
   "meta": {
    "data": {
-    "alt_start": "str",
     "alt_top": "str",
     "drop": "str",
     "exposure": "str",
-    "grade_skimo": "str",
-    "type_route": "str"
+    "grade_skimo": "str"
    },
    "geo": {
     "coords": {
@@ -121,24 +102,19 @@
     }
    }
   },
-  "permalink": "str",
   "region": {
    "name": "str"
   },
   "title": "str"
  },
  "routes_id55310.json": {
-  "city": "str",
   "district": "str",
-  "id": "int",
   "meta": {
    "data": {
-    "alt_start": "str",
     "alt_top": "str",
     "drop": "str",
     "exposure": "str",
-    "grade_skimo": "str",
-    "type_route": "str"
+    "grade_skimo": "str"
    },
    "geo": {
     "coords": {
@@ -147,24 +123,19 @@
     }
    }
   },
-  "permalink": "str",
   "region": {
    "name": "str"
   },
   "title": "str"
  },
  "routes_id57949.json": {
-  "city": "str",
   "district": "str",
-  "id": "int",
   "meta": {
    "data": {
-    "alt_start": "str",
     "alt_top": "str",
     "drop": "str",
     "exposure": "str",
-    "grade_skimo": "str",
-    "type_route": "str"
+    "grade_skimo": "str"
    },
    "geo": {
     "coords": {
@@ -173,23 +144,18 @@
     }
    }
   },
-  "permalink": "str",
   "region": {
    "name": "str"
   },
   "title": "str"
  },
  "routes_id59407.json": {
-  "city": "str",
   "district": "str",
-  "id": "int",
   "meta": {
    "data": {
-    "alt_start": "str",
     "alt_top": "str",
     "drop": "str",
-    "exposure": "str",
-    "type_route": "str"
+    "exposure": "str"
    },
    "geo": {
     "coords": {
@@ -198,23 +164,18 @@
     }
    }
   },
-  "permalink": "str",
   "region": {
    "name": "str"
   },
   "title": "str"
  },
  "routes_id60118.json": {
-  "city": "str",
   "district": "str",
-  "id": "int",
   "meta": {
    "data": {
-    "alt_start": "str",
     "alt_top": "str",
     "drop": "str",
-    "exposure": "str",
-    "type_route": "str"
+    "exposure": "str"
    },
    "geo": {
     "coords": {
@@ -223,24 +184,19 @@
     }
    }
   },
-  "permalink": "str",
   "region": {
    "name": "str"
   },
   "title": "str"
  },
  "routes_id62001.json": {
-  "city": "str",
   "district": "str",
-  "id": "int",
   "meta": {
    "data": {
-    "alt_start": "str",
     "alt_top": "str",
     "drop": "str",
     "exposure": "str",
-    "grade_skimo": "str",
-    "type_route": "str"
+    "grade_skimo": "str"
    },
    "geo": {
     "coords": {
@@ -249,7 +205,6 @@
     }
    }
   },
-  "permalink": "str",
   "region": {
    "name": "str"
   },

@@ -1,26 +1,21 @@
 {
-  "id": 52980,
-  "title": "Mont Fall&egrave;re da Bosses",
-  "permalink": "https://www.gulliver.it/itinerari/mont-fallere-da-bosses/",
-  "region": {
-    "name": "Valle d&#8217;Aosta"
+ "title": "Mont Fall&egrave;re da Bosses",
+ "region": {
+  "name": "Valle d&#8217;Aosta"
+ },
+ "district": "Saint-Rh&eacute;my-en-Bosses",
+ "meta": {
+  "data": {
+   "drop": "1250",
+   "alt_top": "3061",
+   "exposure": "E/SE",
+   "grade_skimo": "BS"
   },
-  "city": "Saint-Rh&eacute;my-en-Bosses",
-  "district": "Saint-Rh&eacute;my-en-Bosses",
-  "meta": {
-    "data": {
-      "drop": "1250",
-      "alt_start": "1811",
-      "alt_top": "3061",
-      "exposure": "E/SE",
-      "type_route": "skimo",
-      "grade_skimo": "BS"
-    },
-    "geo": {
-      "coords": {
-        "lat": 45.824,
-        "lng": 7.186
-      }
-    }
+  "geo": {
+   "coords": {
+    "lat": 45.824,
+    "lng": 7.186
+   }
   }
+ }
 }
