@@ -1,0 +1,92 @@
+{
+  "body": {
+    "items": [
+      {
+        "activities": [
+          "str"
+        ],
+        "areas": [
+          {
+            "area_type": "str",
+            "document_id": "int",
+            "title": "str"
+          }
+        ],
+        "author": {
+          "name": "str",
+          "url": "null"
+        },
+        "credit": {
+          "site": "str",
+          "site_url": "str"
+        },
+        "date": "str",
+        "document_id": {
+          "any_of": [
+            "\"int\"",
+            "\"null\""
+          ]
+        },
+        "elevation_max": "int",
+        "geometry": {
+          "geom": "str",
+          "quality": "str"
+        },
+        "height_diff_up": "null",
+        "id": "str",
+        "lang": "str",
+        "orientations": [
+          "str"
+        ],
+        "rating": {
+          "raw": "str",
+          "ski_rating_max": "str",
+          "ski_rating_min": "str",
+          "system": "str"
+        },
+        "region": {
+          "any_of": [
+            "\"null\"",
+            "\"str\""
+          ]
+        },
+        "snow": {
+          "any_of": [
+            "\"null\"",
+            "{\"top_cm\": \"int\"}"
+          ]
+        },
+        "source": "str",
+        "source_activity": "null",
+        "steep": "bool",
+        "title": "str",
+        "url": {
+          "any_of": [
+            "\"null\"",
+            "\"str\""
+          ]
+        }
+      }
+    ],
+    "sources": [
+      {
+        "last_success_at": {
+          "any_of": [
+            "\"null\"",
+            "\"str\""
+          ]
+        },
+        "source": "str",
+        "status": "str"
+      }
+    ],
+    "total": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "public, max-age=120",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
