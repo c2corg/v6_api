@@ -1,6 +1,6 @@
 import copy
-import json
 from datetime import UTC, date, datetime
+from unittest.mock import Mock, patch
 
 import pytest
 from sqlalchemy import select
@@ -63,23 +63,52 @@ def test_stored_apart(session):
     assert session.query(RegionWeatherPeriod).count() == 6
 
 
-def test_written_once_by_publication(session):
+def speeds(session):
+    session.expire_all()
+    return session.scalars(select(RegionWeatherPeriod.wind_speed_kmh)).all()
+
+
+def test_latest_publication_wins(session):
     store.save(session, 'CH', 'fr', slf())
-    other = slf('de')
-    for b in other:
+    first = speeds(session)
+    # the other languages: the same
+    store.save(session, 'CH', 'de', slf('de'))
+    assert speeds(session) == first
+    # an earlier one changes nothing
+    earlier = slf()
+    for b in earlier:
+        b['publicationTime'] = '2026-11-23T07:00:00Z'
+        b['customData']['CH']['weather'][0]['wind']['speedKmh'] = 98
+    store.save(session, 'CH', 'fr', earlier)
+    assert 98 not in speeds(session)
+    # corrected at the same time, the bulletins unchanged
+    corrected = slf()
+    for b in corrected:
         b['customData']['CH']['weather'][0]['wind']['speedKmh'] = 99
-    store.save(session, 'CH', 'de', other)
-    speeds = session.scalars(select(RegionWeatherPeriod.wind_speed_kmh)).all()
-    assert 99 not in speeds
-    # a later publication wins
+    assert store.save(session, 'CH', 'fr', corrected) is False
+    assert speeds(session).count(99) == 2
+    # a later publication
     later = slf()
     for b in later:
         b['publicationTime'] = '2026-11-24T07:00:00Z'
-        b['customData']['CH']['weather'][0]['wind']['speedKmh'] = 99
+        b['customData']['CH']['weather'][0]['wind']['speedKmh'] = 97
     store.save(session, 'CH', 'fr', later)
-    session.expire_all()
-    speeds = session.scalars(select(RegionWeatherPeriod.wind_speed_kmh)).all()
-    assert speeds.count(99) == 2
+    assert speeds(session).count(97) == 2
+
+
+def test_not_answered_on_demand():
+    # as stored: the same answer
+    response = Mock(status_code=200, ok=True, content=content('CH_fr_weather.json'))
+    with (
+        patch(
+            'c2corg_api.avalanche_bulletins.caaml.requests.get', return_value=response
+        ),
+        # without the cache
+        patch('c2corg_api.avalanche_bulletins.caaml.cached', lambda key, f: f()),
+    ):
+        bulletins = caaml.bulletins('CH', 'fr')
+    assert len(bulletins) == 2
+    assert all('weather' not in b['customData']['CH'] for b in bulletins)
 
 
 def test_weather_of_days(session):
@@ -138,27 +167,41 @@ def test_compact(session):
     rows = {r.provider: r for r in session.scalars(select(AvalancheBulletin)).all()}
     compacted = rows['meteofrance']
     assert compacted.compacted_at == now
-    assert 'customData' not in json.dumps(compacted.caaml)
     whole = bra(3)[0]
-    for key in (
-        'bulletinID',
-        'lang',
-        'publicationTime',
-        'validTime',
-        'regions',
-        'dangerRatings',
-        'avalancheProblems',
-        'avalancheActivity',
-        'snowpackStructure',
-    ):
-        assert compacted.caaml[key] == whole[key]
-    # at all levels
-    assert 'customData' not in compacted.caaml['tendency'][0]
+    # the texts stay, with the ratings, problems, regions, times
+    meteofrance = dict(whole['customData']['MeteoFrance'])
+    for path in ('weather', 'snowCover', 'newSnow', 'history'):
+        assert meteofrance.pop(path)
+    assert compacted.caaml['customData'] == {
+        'ALBINA': whole['customData']['ALBINA'],
+        'MeteoFrance': meteofrance,
+    }
+    assert set(meteofrance) >= {
+        'headline',
+        'dangerComment',
+        'naturalAvalanches',
+        'triggeredAvalanches',
+        'avalancheProneLocation',
+        'maxDangerRating',
+    }
+    assert {
+        key: value for key, value in compacted.caaml.items() if key != 'customData'
+    } == {key: value for key, value in whole.items() if key != 'customData'}
+    # the tendency keeps its danger
+    assert compacted.caaml['tendency'][0]['customData']['MeteoFrance'] == {
+        'maxDangerRating': 'high'
+    }
     assert rows['CH'].compacted_at is None
     # once
     assert store.compact(session, now) == 0
     assert store.compact(session, datetime(2028, 5, 25, tzinfo=UTC)) == 2
     session.expire_all()
+    slf_compacted = session.scalars(
+        select(AvalancheBulletin.caaml).where(AvalancheBulletin.provider == 'CH')
+    ).all()
+    for caaml_ in slf_compacted:
+        assert set(caaml_['customData']['CH']) == set()
+        assert caaml_['customData']['ALBINA']['mainDate'] == '2026-11-24'
     assert (region.max_rating, region.bands, region.problems, region.aspects) == (
         summary
     )

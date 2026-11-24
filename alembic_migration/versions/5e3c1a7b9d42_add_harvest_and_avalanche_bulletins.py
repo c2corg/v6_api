@@ -79,6 +79,12 @@ def upgrade():
         sa.Column('region_keys', ARRAY(sa.Text()), nullable=False),
         sa.Column('caaml', JSONB(), nullable=False),
         sa.Column('source_id', sa.Text(), nullable=True),
+        sa.Column(
+            'updated_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
         sa.Column('compacted_at', sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ['source_id'], ['guidebook.harvest_sources.id'], ondelete='SET NULL'
@@ -130,6 +136,12 @@ def upgrade():
         sa.Column('rating_high', sa.SmallInteger(), nullable=True),
         sa.Column('elevation_bound', sa.Text(), nullable=True),
         sa.Column('bands', JSONB(), nullable=False),
+        sa.Column(
+            'updated_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
         sa.Column('problems', ARRAY(sa.Text()), nullable=False),
         sa.Column('aspects', ARRAY(sa.Text()), nullable=False),
         sa.Column('publication_time', sa.DateTime(timezone=True), nullable=False),
@@ -150,6 +162,12 @@ def upgrade():
         'ix_guidebook_avalanche_bulletin_regions_bulletin',
         'avalanche_bulletin_regions',
         ['bulletin'],
+        schema='guidebook',
+    )
+    op.create_index(
+        'ix_guidebook_avalanche_bulletin_regions_main_date',
+        'avalanche_bulletin_regions',
+        ['main_date'],
         schema='guidebook',
     )
     op.create_table(

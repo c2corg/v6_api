@@ -52,7 +52,8 @@ def harvest_enabled(settings, name=None):
     """
     value = settings.get('harvest.enabled', 'false')
     if name is not None:
-        value = settings.get(f'harvest.{name}.enabled', value)
+        # empty (the .ini templates): as harvest.enabled
+        value = str(settings.get(f'harvest.{name}.enabled', '')).strip() or value
     return str(value).strip().lower() in ('true', '1', 'yes', 'on')
 
 

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 import requests
 
+from c2corg_api.avalanche_bulletins import weather
 from c2corg_api.avalanche_bulletins.cache import (
     TIMEOUT,
     USER_AGENT,
@@ -145,7 +146,10 @@ def bulletins(service_id, lang):
         # no file out of season
         if response.status_code == 404:
             return []
-        return parse(response.content, service_id, lang)
+        # as stored: without the weather of SLF (weather.extract)
+        return [
+            weather.extract(b)[0] for b in parse(response.content, service_id, lang)
+        ]
 
     return cached(f'caaml:{service_id}:{lang}', fetch)
 

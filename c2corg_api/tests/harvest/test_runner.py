@@ -298,6 +298,9 @@ def test_status(harvest_session, clock):
         ({'harvest.enabled': '1'}, True),
         ({'harvest.enabled': 'true', 'harvest.fake.enabled': 'false'}, False),
         ({'harvest.enabled': 'false', 'harvest.fake.enabled': 'true'}, True),
+        # empty in the .ini: as harvest.enabled
+        ({'harvest.enabled': 'true', 'harvest.fake.enabled': ''}, True),
+        ({'harvest.enabled': 'false', 'harvest.fake.enabled': ' '}, False),
     ],
 )
 def test_enabled(settings, enabled):

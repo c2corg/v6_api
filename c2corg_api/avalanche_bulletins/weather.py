@@ -2,11 +2,12 @@
 # SLF gives the weather of each micro-region (customData.CH.weather): the
 # 2 days before and the forecast day, temperature and snowfall limit by
 # hour, wind and new snow by day. The same in every language: stored once,
-# out of the CAAML (13 of the 17 kB of a bulletin), not answered with it.
+# out of the CAAML (13 of the 17 kB of a bulletin), not answered with it,
+# on demand neither (caaml.bulletins).
 
 from datetime import datetime, time, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import and_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 
 from c2corg_api.avalanche_bulletins.cache import CET
@@ -63,13 +64,25 @@ def save(session, provider, region_ids, publication_time, weather):
                 [{**row, **common, 'region_id': region_id} for row in rows]
             )
             excluded = insertion.excluded
-            names = {name for row in rows for name in row} | set(common)
+            names = sorted(
+                ({name for row in rows for name in row} | set(common)) - {key}
+            )
+            # a later publication of the same values changes nothing either
+            values = [name for name in names if name not in common]
             session.execute(
                 insertion.on_conflict_do_update(
                     index_elements=['region_id', key],
-                    set_={name: excluded[name] for name in names - {key}},
-                    # the other languages of the publication change nothing
-                    where=model.publication_time < excluded.publication_time,
+                    set_={name: excluded[name] for name in names},
+                    # the latest publication wins, a correction at the same
+                    # time too; the other languages change nothing
+                    where=and_(
+                        model.publication_time <= excluded.publication_time,
+                        tuple_(
+                            *(getattr(model, name) for name in values)
+                        ).is_distinct_from(
+                            tuple_(*(excluded[name] for name in values))
+                        ),
+                    ),
                 )
             )
 

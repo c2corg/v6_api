@@ -11,6 +11,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import Base, schema
 
@@ -21,7 +22,7 @@ class AvalancheBulletin(Base):
     # One row by publication and language, updated only when a service
     # changes a publication without changing its time. The publications
     # superseded the same day are pruned after a week (see
-    # avalanche_bulletins.store.prune_superseded), the customData of all
+    # avalanche_bulletins.store.prune_superseded), the bulky customData
     # removed after 18 months (store.compact). The weather of SLF
     # (customData.CH.weather) is stored apart (models.region_weather).
 
@@ -45,7 +46,11 @@ class AvalancheBulletin(Base):
     source_id = Column(
         Text, ForeignKey(schema + '.harvest_sources.id', ondelete='SET NULL')
     )
-    # when its customData was removed, after COMPACT_AFTER (store.compact)
+    # the last insert or change (store.save): in the key of the cache
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    # when its bulky customData were removed, after 18 months (store.compact)
     compacted_at = Column(DateTime(timezone=True))
 
     __table_args__ = (
@@ -101,6 +106,10 @@ class AvalancheBulletinRegion(Base):
     problems = Column(ARRAY(Text), nullable=False)
     aspects = Column(ARRAY(Text), nullable=False)
     publication_time = Column(DateTime(timezone=True), nullable=False)
+    # the last change: in the key of the cache (store.ratings_version)
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
     __table_args__ = (
         Index(
@@ -109,5 +118,7 @@ class AvalancheBulletinRegion(Base):
             postgresql_using='gin',
         ),
         Index('ix_guidebook_avalanche_bulletin_regions_bulletin', 'bulletin'),
+        # with region_keys (GIN), the days of a period
+        Index('ix_guidebook_avalanche_bulletin_regions_main_date', 'main_date'),
         {'schema': schema},
     )

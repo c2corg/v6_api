@@ -5,18 +5,21 @@
 # the latest ones, those of a day (#2686), the day they are valid for as the
 # EAWS services name their files, and the danger of each day.
 
+import re
 from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import Path, Query, Response
 
-from c2corg_api.avalanche_bulletins import meteofrance, store
+from c2corg_api.avalanche_bulletins import meteofrance
 from c2corg_api.avalanche_bulletins.cache import UpstreamError
 from c2corg_api.avalanche_bulletins.regions import (
     UnknownRegion,
     day_bulletins,
     is_over,
     latest_bulletins,
+    ratings,
+    stored_latest,
 )
 from c2corg_api.httpexceptions import HTTPNotFound, HTTPServiceUnavailable
 from c2corg_api.web.answers import http_error
@@ -40,14 +43,16 @@ BulletinLang = Annotated[
     ),
 ]
 
+# checked by the view (400, as the dates of /ratings): a pattern would answer
+# FastAPI's 422
 Day = Annotated[
     str,
     Path(
         description='The day the bulletins are valid for (YYYY-MM-DD): the '
         'bulletin published the evening before, maybe updated the morning.',
-        pattern=r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$',
     ),
 ]
+DATE = re.compile(r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
 
 # the API cache follows the publications, the browsers keep a bulletin briefly
 CACHE_CONTROL = 'public, max-age=300'
@@ -87,9 +92,12 @@ def avalanche_bulletin(
     region_id: RegionId, response: Response, lang: BulletinLang = None
 ):
     """Return the last bulletins published for a region, as CAAML v6."""
+    # the session ended before a fetch: a slow service holds no connection
+    with request_session() as session:
+        bulletins = stored_latest(session, region_id, lang)
     try:
-        with request_session() as session:
-            bulletins = latest_bulletins(region_id, lang, session)
+        if not bulletins:
+            bulletins = latest_bulletins(region_id, lang)
     except UnknownRegion:
         return http_error(HTTPNotFound('no avalanche bulletin for this region'))
     except UpstreamError:
@@ -123,10 +131,9 @@ def avalanche_bulletin_day(
     region_id: RegionId, day: Day, response: Response, lang: BulletinLang = None
 ):
     """Return the bulletins of a region for a day, as CAAML v6."""
-    try:
-        day = date.fromisoformat(day)
-    except ValueError:
-        return error_response([('path', 'day', 'invalid date')])
+    day = _date(day)
+    if day is None:
+        return error_response([('path', 'day', 'invalid date (YYYY-MM-DD)')])
     with request_session() as session:
         bulletins = day_bulletins(session, region_id, day, lang)
     if not bulletins:
@@ -159,15 +166,12 @@ def avalanche_bulletin_ratings(
     above the elevation bound, all the bands, problems, aspects). The days
     without bulletin are left out; at most a year.
     """
-    try:
-        to = date.fromisoformat(date_to) if date_to else _today()
-        since = (
-            date.fromisoformat(date_from)
-            if date_from
-            else to - timedelta(days=RATINGS_DAYS - 1)
-        )
-    except ValueError:
-        return error_response([('querystring', 'from', 'invalid date')])
+    to = _date(date_to) if date_to else _today()
+    if to is None:
+        return error_response([('querystring', 'to', 'invalid date (YYYY-MM-DD)')])
+    since = _date(date_from) if date_from else to - timedelta(days=RATINGS_DAYS - 1)
+    if since is None:
+        return error_response([('querystring', 'from', 'invalid date (YYYY-MM-DD)')])
     if since > to:
         return error_response([('querystring', 'from', 'after to')])
     if (to - since).days >= RATINGS_MAX_DAYS:
@@ -175,9 +179,19 @@ def avalanche_bulletin_ratings(
             [('querystring', 'from', f'more than {RATINGS_MAX_DAYS} days')]
         )
     with request_session() as session:
-        days = store.ratings(session, region_id, since, to)
+        days = ratings(session, region_id, since, to)
     response.headers['Cache-Control'] = CACHE_CONTROL
     return {'days': days}
+
+
+def _date(value):
+    # YYYY-MM-DD only: fromisoformat takes 20261122 and 2026-W47 too
+    if not DATE.match(value):
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 def _today():

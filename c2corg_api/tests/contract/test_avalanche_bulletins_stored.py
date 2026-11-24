@@ -8,6 +8,8 @@ import pytest
 from sqlalchemy.exc import OperationalError
 
 from c2corg_api.avalanche_bulletins import caaml, meteofrance, store
+from c2corg_api.avalanche_bulletins.cache import CET
+from c2corg_api.models import DBSession
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_avalanche_bulletins import (  # noqa: F401
     BULLETIN,
@@ -117,6 +119,32 @@ class TestLatestStored:
         assert response.json == {'bulletins': []}
 
     @contract(BULLETIN)
+    def test_fetched_when_no_longer_valid(self, browser, session, monkeypatch):
+        store.save(session, 'meteofrance', 'fr', massif())
+        session.flush()
+        # after the end of its validity (18:00), the next one not harvested yet
+        monkeypatch.setattr(
+            'c2corg_api.avalanche_bulletins.regions._now',
+            lambda: datetime(2026, 11, 22, 18, 30, tzinfo=CET),
+        )
+        with patch(GET, return_value=answer(200, bra(3))) as get:
+            response = browser.get('/avalanche-bulletins/regions/FR-03/latest')
+        get.assert_called_once()
+        # still within the staleness of the on-demand fetch
+        assert len(response.json['bulletins']) == 1
+
+    @contract(BULLETIN)
+    def test_no_session_while_fetching(self, browser):
+        def fetch(*args, **kwargs):
+            # the connection went back to the pool
+            assert not DBSession.registry.has()
+            return answer(200, bra(3))
+
+        with patch(GET, side_effect=fetch) as get:
+            browser.get('/avalanche-bulletins/regions/FR-03/latest')
+        get.assert_called_once()
+
+    @contract(BULLETIN)
     def test_fetched_when_the_database_fails(self, browser):
         failure = OperationalError('SELECT', {}, Exception('down'))
         with (
@@ -162,11 +190,38 @@ class TestDay:
         browser.get('/avalanche-bulletins/regions/FR-03/2026-11-22', status=404)
 
     @contract(DAY)
-    def test_invalid_day(self, browser):
-        browser.get('/avalanche-bulletins/regions/CH-1112/2026-02-30', status=400)
-        browser.get('/avalanche-bulletins/regions/CH-1112/22-11-2026', status=422)
-        browser.get('/avalanche-bulletins/regions/CH-1112/today', status=422)
+    @pytest.mark.parametrize('day', ['2026-02-30', '22-11-2026', 'today', '20261122'])
+    def test_invalid_day(self, browser, day):
+        response = browser.get(
+            f'/avalanche-bulletins/regions/CH-1112/{day}', status=400
+        )
+        assert response.json['errors'] == [
+            {
+                'location': 'path',
+                'name': 'day',
+                'description': 'invalid date (YYYY-MM-DD)',
+            }
+        ]
+
+    @contract(DAY)
+    def test_invalid_region(self, browser):
         browser.get('/avalanche-bulletins/regions/ch-1112/2026-11-22', status=422)
+
+    @contract(DAY)
+    def test_corrected_day_over(self, browser, session):
+        day_before = moved(slf(), -24, '2026-11-21')
+        store.save(session, 'CH', 'fr', day_before)
+        session.flush()
+        url = '/avalanche-bulletins/regions/CH-1112/2026-11-21'
+        assert 'immutable' in browser.get(url).headers['Cache-Control']
+        # corrected without a new publication time
+        corrected = copy.deepcopy(day_before)
+        for b in corrected:
+            b['dangerRatings'] = [{'mainValue': 'low'}]
+        store.save(session, 'CH', 'fr', corrected)
+        session.flush()
+        [bulletin] = browser.get(url).json['bulletins']
+        assert bulletin['dangerRatings'] == [{'mainValue': 'low'}]
 
 
 @pytest.mark.usefixtures('client')
@@ -203,15 +258,37 @@ class TestRatings:
 
     @contract(RATINGS)
     @pytest.mark.parametrize(
-        'params',
+        ('params', 'name'),
         [
-            {'from': '2026-11-31'},
-            {'to': 'today'},
-            {'from': '2026-11-22', 'to': '2026-11-21'},
-            {'from': '2025-11-20', 'to': '2026-11-22'},
+            ({'from': '2026-11-31'}, 'from'),
+            ({'from': '2026-W47'}, 'from'),
+            ({'to': 'today'}, 'to'),
+            ({'from': '2026-11-22', 'to': '2026-11-21'}, 'from'),
+            ({'from': '2025-11-20', 'to': '2026-11-22'}, 'from'),
         ],
     )
-    def test_invalid_period(self, browser, params):
-        browser.get(
+    def test_invalid_period(self, browser, params, name):
+        response = browser.get(
             '/avalanche-bulletins/regions/CH/ratings', params=params, status=400
         )
+        [error] = response.json['errors']
+        assert (error['location'], error['name']) == ('querystring', name)
+
+    @contract(RATINGS)
+    def test_cached_and_corrected(self, browser, session):
+        store.save(session, 'meteofrance', 'fr', massif())
+        session.flush()
+        url = '/avalanche-bulletins/regions/FR-03/ratings'
+        params = {'from': '2026-11-20', 'to': '2026-11-21'}
+        assert browser.get(url, params=params).json == {'days': []}
+        # the day before, harvested late (a key of its own: no stale answer)
+        store.save(session, 'meteofrance', 'fr', moved(massif(), -24, '2026-11-21'))
+        session.flush()
+        [day] = browser.get(url, params=params).json['days']
+        assert day['maxRating'] == 4
+        # corrected at the same time
+        corrected = moved(massif(), -24, '2026-11-21', 'low')
+        store.save(session, 'meteofrance', 'fr', corrected)
+        session.flush()
+        [day] = browser.get(url, params=params).json['days']
+        assert day['maxRating'] == 1

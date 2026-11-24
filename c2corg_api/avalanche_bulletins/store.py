@@ -4,8 +4,8 @@
 
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import func, select, text, update
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import Text, and_, func, literal, select, text, tuple_, update
+from sqlalchemy.dialects.postgresql import ARRAY, insert
 
 from c2corg_api.avalanche_bulletins import weather
 from c2corg_api.avalanche_bulletins.cache import CET, STALE_AFTER, main_date
@@ -21,9 +21,26 @@ ASPECTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 SUPERSEDED_RETENTION = timedelta(days=7)
 # the latest bulletins are of these last days at most
 RECENT_DAYS = timedelta(days=3)
-# the customData of the bulletins are removed after (months): what
-# the history of the danger needs is kept
+# after (months), the bulletins lose their bulky customData: the numbers
+# and series no page shows for an old bulletin. Their texts stay (the
+# texts of Météo-France are in customData.MeteoFrance: headline,
+# dangerComment, naturalAvalanches, triggeredAvalanches,
+# avalancheProneLocation...), as ALBINA.mainDate, the dangerPatterns of
+# the Euregio and the customData of the ratings and tendencies.
 COMPACT_AFTER_MONTHS = 18
+COMPACTED = [
+    # Météo-France: the weather forecast, the snow cover and new snow, the
+    # danger and snow of the 7 days before
+    ['customData', 'MeteoFrance', 'weather'],
+    ['customData', 'MeteoFrance', 'snowCover'],
+    ['customData', 'MeteoFrance', 'newSnow'],
+    ['customData', 'MeteoFrance', 'history'],
+    # SLF: how the regions are grouped, the danger hour by hour, the weather
+    # (stored apart, weather.extract)
+    ['customData', 'CH', 'aggregation'],
+    ['customData', 'CH', 'dangerRatingEvolution'],
+    ['customData', 'CH', 'weather'],
+]
 
 
 def save(session, provider, lang, bulletins, source_id=None):
@@ -32,11 +49,14 @@ def save(session, provider, lang, bulletins, source_id=None):
     for bulletin in bulletins:
         bulletin, region_weather = weather.extract(bulletin)
         row = _row(provider, lang, bulletin, source_id)
-        insertion = insert(AvalancheBulletin).values(**row)
+        # clock_timestamp: changes within a transaction too (the tests)
+        insertion = insert(AvalancheBulletin).values(
+            **row, updated_at=func.clock_timestamp()
+        )
         # a service may change a publication without changing its time
         changed = {
             name: insertion.excluded[name]
-            for name in row
+            for name in (*row, 'updated_at')
             if name not in ('provider', 'bulletin_id', 'lang', 'publication_time')
         }
         id = session.scalar(
@@ -46,12 +66,7 @@ def save(session, provider, lang, bulletins, source_id=None):
                 where=AvalancheBulletin.caaml != insertion.excluded.caaml,
             ).returning(AvalancheBulletin.id)
         )
-        if id is None:
-            continue
-        new = True
-        danger = summary(bulletin)
-        for region_id in row['region_ids']:
-            _save_region(session, region_id, row, id, danger)
+        # the weather may be corrected alone
         if region_weather:
             weather.save(
                 session,
@@ -60,6 +75,12 @@ def save(session, provider, lang, bulletins, source_id=None):
                 row['publication_time'],
                 region_weather,
             )
+        if id is None:
+            continue
+        new = True
+        danger = summary(bulletin)
+        for region_id in row['region_ids']:
+            _save_region(session, region_id, row, id, danger)
     return new
 
 
@@ -131,35 +152,49 @@ def latest_for_region(session, region_id, lang, now=None):
     return for_region_and_date(session, region_id, day, lang)
 
 
-def latest_day(session, region_id, now=None):
-    """Return the day of the latest bulletins of a region, None without."""
-    # as regions.latest_bulletins: those of the latest day, not stale
+def latest_day(session, region_id, now=None, current=False):
+    """Return the day of the latest bulletins of a region, None without.
+
+    Those of the latest day, not stale (as regions.latest_bulletins), or
+    still valid if `current`.
+    """
     now = now or datetime.now(UTC)
     today = now.astimezone(CET).date()
     return session.scalar(
         select(func.max(AvalancheBulletin.main_date)).where(
             AvalancheBulletin.region_keys.contains([region_id]),
             AvalancheBulletin.main_date >= today - RECENT_DAYS,
-            AvalancheBulletin.valid_end > now - STALE_AFTER,
+            AvalancheBulletin.valid_end > (now if current else now - STALE_AFTER),
         )
     )
 
 
 def version(session, region_id, day):
-    """Return what changes with a new publication of a region on a day."""
-    # the key of the bulletins in the cache: the last publication time and
-    # the rows (a row is added by each publication and language)
-    last, count, last_id = session.execute(
+    """Return what changes with a new or changed bulletin of a region on a day."""
+    # the key of the bulletins in the cache: the rows (one by publication
+    # and language), the last added, the last change (pruned rows too)
+    count, last_id, updated = session.execute(
         select(
-            func.max(AvalancheBulletin.publication_time),
             func.count(),
             func.max(AvalancheBulletin.id),
+            func.max(AvalancheBulletin.updated_at),
         ).where(
             AvalancheBulletin.region_keys.contains([region_id]),
             AvalancheBulletin.main_date == day,
         )
     ).one()
-    return f'{last.isoformat()}:{count}:{last_id}' if count else None
+    return f'{count}:{last_id}:{updated.isoformat()}' if count else None
+
+
+def ratings_version(session, region_id, date_from, date_to):
+    """Return what changes with the danger of a region over days."""
+    count, last = session.execute(
+        select(func.count(), func.max(AvalancheBulletinRegion.updated_at)).where(
+            AvalancheBulletinRegion.region_keys.contains([region_id]),
+            AvalancheBulletinRegion.main_date.between(date_from, date_to),
+        )
+    ).one()
+    return f'{count}:{last.isoformat()}' if count else 'none'
 
 
 def for_region_and_date(session, region_id, day, lang):
@@ -250,43 +285,37 @@ def prune_superseded(session, now=None):
 
 
 def compact(session, now=None, batch=500):
-    """Remove the customData of the bulletins older than 18 months."""
-    # at all levels, of all the services: the texts, ratings, problems,
-    # regions, times and ids are kept; the rows done are marked
+    """Remove the bulky customData of the bulletins older than 18 months.
+
+    The texts stay, with the ratings, problems, regions and times: only the
+    paths of COMPACTED are removed. A batch is committed at a time.
+    """
     now = now or datetime.now(UTC)
     before = _months_before(now.astimezone(CET).date(), COMPACT_AFTER_MONTHS)
+    caaml = AvalancheBulletin.caaml
+    for path in COMPACTED:
+        caaml = caaml.op('#-')(literal(path, ARRAY(Text)))
     count = 0
     while True:
-        rows = session.execute(
-            select(AvalancheBulletin.id, AvalancheBulletin.caaml)
+        batch_ids = (
+            select(AvalancheBulletin.id)
             .where(
                 AvalancheBulletin.compacted_at.is_(None),
                 AvalancheBulletin.main_date < before,
             )
             .order_by(AvalancheBulletin.id)
             .limit(batch)
-        ).all()
-        if not rows:
+            .scalar_subquery()
+        )
+        done = session.execute(
+            update(AvalancheBulletin)
+            .where(AvalancheBulletin.id.in_(batch_ids))
+            .values(caaml=caaml, compacted_at=now)
+        ).rowcount
+        session.commit()
+        if not done:
             return count
-        for id, caaml in rows:
-            session.execute(
-                update(AvalancheBulletin)
-                .where(AvalancheBulletin.id == id)
-                .values(caaml=_without_custom_data(caaml), compacted_at=now)
-            )
-        count += len(rows)
-
-
-def _without_custom_data(value):
-    if isinstance(value, dict):
-        return {
-            key: _without_custom_data(item)
-            for key, item in value.items()
-            if key != 'customData'
-        }
-    if isinstance(value, list):
-        return [_without_custom_data(item) for item in value]
-    return value
+        count += done
 
 
 def _months_before(day, months):
@@ -327,9 +356,10 @@ def _row(provider, lang, bulletin, source_id):
 
 
 def _save_region(session, region_id, row, bulletin_id, danger):
-    # the latest publication of the day wins (a publication changed at the
-    # same time too, then the other languages of it rewrite the same)
+    # the latest publication of the day wins, and a publication changed at
+    # the same time
     insertion = insert(AvalancheBulletinRegion).values(
+        updated_at=func.clock_timestamp(),
         region_id=region_id,
         region_keys=region_keys(region_id),
         main_date=row['main_date'],
@@ -338,14 +368,21 @@ def _save_region(session, region_id, row, bulletin_id, danger):
         **danger,
     )
     excluded = insertion.excluded
+    compared = ('publication_time', *danger)
     session.execute(
         insertion.on_conflict_do_update(
             index_elements=['region_id', 'main_date'],
             set_={
                 name: excluded[name]
-                for name in ('bulletin', 'publication_time', *danger)
+                for name in ('bulletin', 'publication_time', 'updated_at', *danger)
             },
-            where=AvalancheBulletinRegion.publication_time <= excluded.publication_time,
+            # the other languages of the publication: no change
+            where=and_(
+                AvalancheBulletinRegion.publication_time <= excluded.publication_time,
+                tuple_(
+                    *(getattr(AvalancheBulletinRegion, name) for name in compared)
+                ).is_distinct_from(tuple_(*(excluded[name] for name in compared))),
+            ),
         )
     )
 
