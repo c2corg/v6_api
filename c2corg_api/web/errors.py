@@ -2,6 +2,7 @@
 
 import logging
 
+from elasticsearch.exceptions import ConnectionError as ElasticsearchConnectionError
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -37,6 +38,12 @@ class UnexpectedErrorMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         try:
             return await call_next(request)
+        except ElasticsearchConnectionError as e:
+            # ES unreachable: only the search is unavailable, say so
+            log.error(f'Search unavailable: {e}')
+            return error_response(
+                [('body', 'search unavailable', 'please retry later')], 503
+            )
         except Exception as e:
             log.exception(f'Unexpected error: {e}')
             return error_response(

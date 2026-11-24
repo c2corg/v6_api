@@ -42,3 +42,21 @@ def test_es_alias(monkeypatch, client):
     r = client.get('/health', status=200)
     assert r.json['es'] == 'ok'
     assert r.json['es_indexed_docs'] == 42
+
+
+def test_es_down(monkeypatch, client):
+    # the documents are still served without ES: the health check passes (the
+    # load balancer keeps the server) and a search answers 503
+    from elasticsearch import Elasticsearch
+
+    from c2corg_api.search import elasticsearch_config
+
+    unreachable = Elasticsearch(['localhost:1'], max_retries=0, timeout=1)
+    monkeypatch.setitem(elasticsearch_config, 'client', unreachable)
+
+    r = client.get('/health', status=200)
+    assert r.json['es'] == 'error'
+    assert r.json['es_indexed_docs'] is None
+
+    r = client.get('/outings?act=skitouring', status=503)
+    assert r.json['errors'][0]['name'] == 'search unavailable'
