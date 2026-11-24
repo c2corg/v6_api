@@ -119,3 +119,11 @@ def test_memory_lookup_cache():
     assert cache.get('k') == {'a': [1]}
     cache.put('k', {'b': 1})
     assert cache.get('k') == {'b': 1}
+
+
+def test_memory_lookup_cache_behaves_like_jsonb():
+    cache = MemoryLookupCache()
+    cache.put('k', {'coords': (6.8, 45.8)})
+    assert cache.get('k') == {'coords': [6.8, 45.8]}
+    with pytest.raises(TypeError):
+        cache.put('k', {'when': datetime.date(2026, 1, 1)})

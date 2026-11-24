@@ -77,8 +77,10 @@ class FetchResult:
     """What `Adapter.fetch` returns."""
 
     outings: list[HarvestedOuting]
+    # stored as is (JSON) and handed back next run; None clears it
     cursor: dict[str, Any] | None = None
-    # 'unmapped_activity:<code>', 'too_old', 'parse_error', ...
+    # items left out on purpose: 'unmapped_activity:<code>', 'too_old', ...
     skipped: Counter[str] = field(default_factory=Counter)
-    # items that failed to parse (logged with their external id)
+    # items that failed to parse (logged with their external id); counted
+    # here only, not in `skipped`: the job's error budget reads this
     item_errors: int = 0
