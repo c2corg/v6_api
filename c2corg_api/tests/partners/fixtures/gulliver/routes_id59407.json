@@ -1,0 +1,25 @@
+{
+  "id": 59407,
+  "title": "Anello del Monte Fall&egrave;re",
+  "permalink": "https://www.gulliver.it/itinerari/anello-del-monte-fallere/",
+  "region": {
+    "name": "Valle d&#8217;Aosta"
+  },
+  "city": "Saint-Pierre",
+  "district": "Saint-Pierre",
+  "meta": {
+    "data": {
+      "drop": "900",
+      "alt_start": "1500",
+      "alt_top": "2400",
+      "exposure": "S",
+      "type_route": "hike"
+    },
+    "geo": {
+      "coords": {
+        "lat": 45.7466,
+        "lng": 7.2563
+      }
+    }
+  }
+}
