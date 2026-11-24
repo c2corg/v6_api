@@ -1,0 +1,127 @@
+[
+  {
+    "ID": 48190,
+    "user_nicename": "trekker68",
+    "comment_date": "2026-11-20 14:10:00",
+    "comment_post_ID": "59407",
+    "permalink": "https://www.gulliver.it/itinerari/anello-del-monte-fallere/#comment-48190",
+    "content": "<p>Sentiero ben segnato, niente neve fino a 2000 m.</p>",
+    "rating": 4,
+    "tracks": [],
+    "term": {
+      "code": "hike",
+      "name": "hike"
+    },
+    "meta": {
+      "access": "Strada aperta fino al parcheggio.",
+      "obs": "",
+      "snow_top": null,
+      "snow_low": null,
+      "snow_alt": null,
+      "skimo_equip": ""
+    }
+  },
+  {
+    "ID": 48188,
+    "user_nicename": "roccia-e-sole",
+    "comment_date": "2026-11-19 17:30:45",
+    "comment_post_ID": "44871",
+    "permalink": "https://www.gulliver.it/itinerari/parete-dei-militi-via-normale/#comment-48188",
+    "content": "<p>Roccia asciutta e calda, via &quot;facile&quot; ma da non sottovalutare.</p>",
+    "rating": 3,
+    "tracks": [],
+    "term": {
+      "code": "climb",
+      "name": "climb"
+    },
+    "meta": {
+      "access": "Strada aperta fino al parcheggio.",
+      "obs": "",
+      "snow_top": null,
+      "snow_low": null,
+      "snow_alt": null,
+      "skimo_equip": ""
+    }
+  },
+  {
+    "ID": 48185,
+    "user_nicename": "canoista",
+    "comment_date": "2026-11-19 10:00:00",
+    "comment_post_ID": "3333",
+    "permalink": "https://www.gulliver.it/itinerari/discesa-della-dora-baltea/#comment-48185",
+    "content": "<p>Portata bassa.</p>",
+    "rating": 2,
+    "tracks": [],
+    "term": {
+      "code": "kayak",
+      "name": "kayak"
+    },
+    "meta": {
+      "access": "Strada aperta fino al parcheggio.",
+      "obs": "",
+      "snow_top": null,
+      "snow_low": null,
+      "snow_alt": null,
+      "skimo_equip": ""
+    }
+  },
+  {
+    "ID": 48181,
+    "user_nicename": "enrico-m",
+    "comment_date": "2026-11-18 08:55:20",
+    "comment_post_ID": "52980",
+    "permalink": "https://www.gulliver.it/itinerari/mont-fallere-da-bosses/#comment-48181",
+    "content": "<p>Uscita mattutina: neve ottima fino in vetta.</p>",
+    "rating": 5,
+    "tracks": [],
+    "term": {
+      "code": "skimo",
+      "name": "skimo"
+    },
+    "meta": {
+      "access": "Strada aperta fino al parcheggio.",
+      "obs": "",
+      "snow_top": 35,
+      "snow_low": 15,
+      "snow_alt": 1950,
+      "skimo_equip": ""
+    }
+  },
+  {
+    "ID": 48177,
+    "user_nicename": "anonimo",
+    "comment_date": "ieri sera",
+    "comment_post_ID": "57949",
+    "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/#comment-48177",
+    "content": "<p>Data non valida.</p>",
+    "rating": 3,
+    "tracks": [],
+    "term": {
+      "code": "skimo",
+      "name": "skimo"
+    },
+    "meta": {}
+  },
+  {
+    "ID": 48102,
+    "user_nicename": "vecchio-socio",
+    "comment_date": "2026-10-02 12:00:00",
+    "comment_post_ID": "57949",
+    "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/#comment-48102",
+    "content": "<p>Gita di inizio ottobre, troppo vecchia per la finestra.</p>",
+    "rating": 3,
+    "tracks": [],
+    "term": {
+      "code": "skimo",
+      "name": "skimo"
+    },
+    "meta": {
+      "access": "Strada aperta fino al parcheggio.",
+      "obs": "",
+      "snow_top": 5,
+      "snow_low": 0,
+      "snow_alt": 3000,
+      "skimo_equip": ""
+    }
+  }
+]

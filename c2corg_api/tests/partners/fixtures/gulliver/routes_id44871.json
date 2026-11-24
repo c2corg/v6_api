@@ -1,0 +1,25 @@
+{
+  "id": 44871,
+  "title": "Parete dei Militi &#8211; via normale",
+  "permalink": "https://www.gulliver.it/itinerari/parete-dei-militi-via-normale/",
+  "region": {
+    "name": "Liguria"
+  },
+  "city": "Finale Ligure",
+  "district": "",
+  "meta": {
+    "data": {
+      "drop": "0",
+      "alt_start": "230",
+      "alt_top": "230",
+      "exposure": "",
+      "type_route": "climb"
+    },
+    "geo": {
+      "coords": {
+        "lat": 44.17,
+        "lng": 8.317
+      }
+    }
+  }
+}
