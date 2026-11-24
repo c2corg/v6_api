@@ -1,26 +1,21 @@
 {
-  "id": 62001,
-  "title": "Punta della Valletta",
-  "permalink": "https://www.gulliver.it/itinerari/punta-della-valletta/",
-  "region": {
-    "name": "Piemonte"
+ "title": "Punta della Valletta",
+ "region": {
+  "name": "Piemonte"
+ },
+ "district": "Val Chisone",
+ "meta": {
+  "data": {
+   "drop": "1100",
+   "alt_top": "2830",
+   "exposure": "E-SE",
+   "grade_skimo": "BS"
   },
-  "city": "Pragelato",
-  "district": "Val Chisone",
-  "meta": {
-    "data": {
-      "drop": "1100",
-      "alt_start": "1730",
-      "alt_top": "2830",
-      "exposure": "E-SE",
-      "type_route": "skimo",
-      "grade_skimo": "BS"
-    },
-    "geo": {
-      "coords": {
-        "lat": null,
-        "lng": null
-      }
-    }
+  "geo": {
+   "coords": {
+    "lat": null,
+    "lng": null
+   }
   }
+ }
 }

@@ -46,8 +46,10 @@ class SkitourAdapter:
     # the API allows 60 requests/min and 1000/day
     rate: ClassVar[RateLimit] = RateLimit(1.1, 10, 20)
 
-    # file stem (endpoint) -> JSON paths read from it, checked by `python -m
-    # c2corg_api.partners shapes` and the live tests (`[]` = list items)
+    # file stem (endpoint) -> EVERY JSON path read from it (`[]` = list items).
+    # Checked by `python -m c2corg_api.partners shapes` and the live tests, and
+    # the allow-list of what a recording keeps: the licensed texts and photos
+    # (`conditions`, `recit`, `photos`) are never listed, so never written.
     REQUIRED_PATHS: ClassVar[dict[str, list[str]]] = {
         'sorties': [
             '[].id',

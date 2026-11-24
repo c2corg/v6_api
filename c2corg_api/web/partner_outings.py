@@ -74,7 +74,12 @@ def partner_outings(
     ] = None,
     offset: Annotated[Text, Query(description='The first result, from 0.')] = None,
 ):
-    """Return the outings of the partner sites and of c2c, newest first."""
+    """Return the outings of the partner sites and of c2c, newest first.
+
+    The answer is cached twice, in Redis (120 s) and by the clients
+    (`Cache-Control: max-age=120`): a new harvest can take up to about 4
+    minutes to show.
+    """
     raw = {
         'a': a,
         'bbox': bbox,

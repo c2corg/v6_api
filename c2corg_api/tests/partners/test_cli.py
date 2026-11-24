@@ -10,7 +10,7 @@ from c2corg_api.partners import __main__ as cli
 from c2corg_api.partners import contract
 from c2corg_api.partners.adapter import SourceBlocked
 from c2corg_api.partners.sources import REGISTRY
-from c2corg_api.partners.transport import FixtureTransport
+from c2corg_api.partners.transport import FixtureTransport, HttpResponse
 
 FIXTURES = cli.DEFAULT_FIXTURES
 
@@ -73,13 +73,17 @@ def test_shapes_live_no_diff(site, capsys):
     assert 'sorties: no change' in out and 'OK' in out
 
 
-def test_shapes_reports_added_key_without_failing(site, capsys):
+def test_shapes_ignores_fields_the_adapter_does_not_read(site, capsys):
+    """Added fields are dropped like in a recording: no diff, no failure."""
+
     def add(data):
         data[0]['nouveau'] = 1
 
     _edit(site / 'skitour/sorties_c1_l200_p1.json', add)
     assert cli.main(['shapes', 'skitour']) == 0
-    assert '+ [].nouveau: int' in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert 'nouveau' not in out
+    assert 'sorties: no change' in out
 
 
 def test_shapes_removed_key_is_breaking(site, capsys):
@@ -237,24 +241,104 @@ def test_record_writes_fixtures(site, tmp_path, capsys):
 
 
 def test_record_trims_payloads(site, tmp_path):
-    def bulk(data):
-        data['media'] = [{'url': 'x'}]
-        data['meta']['things'] = list(range(100))
-
-    _edit(site / 'gulliver/routes_id57949.json', bulk)
-
     def many(data):
         data[:] = [dict(data[0], ID=i) for i in range(1000, 1050)]
 
     _edit(site / 'gulliver/commentglobal_page1.json', many)
     out = tmp_path / 'recorded'
     assert cli.main(['record', 'gulliver', '--out', str(out)]) == 0
-    route = json.loads((out / 'gulliver/routes_id57949.json').read_text())
-    assert 'media' not in route
-    assert len(route['meta']['things']) == contract.MAX_ITEMS
     comments = json.loads((out / 'gulliver/commentglobal_page1.json').read_text())
     assert len(comments) == contract.MAX_ITEMS
-    assert 'content' not in comments[0]
+
+
+def test_record_drops_gulliver_free_text(site, tmp_path):
+    """Licence: nothing the adapter does not read is written, new fields included."""
+
+    def add_text(data):
+        for comment in data:
+            comment['content'] = '<p>COMMENT-TEXT</p>'
+            comment['tracks'] = [{'gpx': 'TRACK-DATA'}]
+            comment['new_field'] = 'NEW-FREE-TEXT'
+            comment['meta'].update(
+                access='ACCESS-TEXT', obs='OBS-TEXT', skimo_equip='EQUIP-TEXT'
+            )
+
+    def add_route_text(data):
+        data['media'] = [{'url': 'MEDIA'}]
+        data['description'] = 'ROUTE-DESCRIPTION'
+        data['meta']['data']['note'] = 'ROUTE-NOTE'
+
+    _edit(site / 'gulliver/commentglobal_page1.json', add_text)
+    _edit(site / 'gulliver/routes_id57949.json', add_route_text)
+    out = tmp_path / 'recorded'
+    assert cli.main(['record', 'gulliver', '--out', str(out)]) == 0
+    recorded = ''.join(p.read_text() for p in (out / 'gulliver').iterdir())
+    for text in (
+        'COMMENT-TEXT',
+        'TRACK-DATA',
+        'NEW-FREE-TEXT',
+        'ACCESS-TEXT',
+        'OBS-TEXT',
+        'EQUIP-TEXT',
+        'MEDIA',
+        'ROUTE-DESCRIPTION',
+        'ROUTE-NOTE',
+    ):
+        assert text not in recorded
+    # what the adapter reads is kept
+    comment = json.loads((out / 'gulliver/commentglobal_page1.json').read_text())[0]
+    assert set(comment) == {
+        'ID',
+        'comment_date',
+        'comment_post_ID',
+        'permalink',
+        'term',
+        'user_nicename',
+        'meta',
+    }
+    assert set(comment['meta']) == {'snow_top', 'snow_low', 'snow_alt'}
+    route = json.loads((out / 'gulliver/routes_id57949.json').read_text())
+    assert route['meta']['data']['grade_skimo']
+    assert route['meta']['data']['alt_top']
+    assert route['district'] is not None
+    assert route['region']
+
+
+def test_record_drops_skitour_free_text(site, tmp_path):
+    def add_text(data):
+        for item in data:
+            item['commentaires'] = 'COMMENTS-TEXT'
+            item['meteo'] = 'WEATHER-TEXT'
+            for summit in item['sommets']:
+                summit['description'] = 'SUMMIT-TEXT'
+
+    _edit(site / 'skitour/sorties_c1_l200_p1.json', add_text)
+    out = tmp_path / 'recorded'
+    assert cli.main(['record', 'skitour', '--out', str(out)]) == 0
+    recorded = (out / 'skitour/sorties_c1_l200_p1.json').read_text()
+    for text in ('COMMENTS-TEXT', 'WEATHER-TEXT', 'SUMMIT-TEXT'):
+        assert text not in recorded
+    first = json.loads(recorded)[0]
+    assert first['sommets'][0]['latlon'] and first['dif_ski'] == '3.2'
+
+
+def test_trim_keeps_nothing_of_an_unknown_endpoint():
+    assert contract.trim_data('skitour', 'other', [{'a': 1}]) == []
+    assert contract.trim_data('nope', 'sorties', {'a': 1}) == {}
+
+
+def test_shapes_use_the_same_paths_as_the_recorder():
+    """The shapes of a live answer are compared after the same trimming."""
+    live = [{'id': 1, 'titre': 't', 'recit': 'TEXT', 'conditions': 'TEXT'}]
+    shape = contract.captured_shapes(
+        'skitour',
+        [
+            HttpResponse(
+                200, {}, json.dumps(live).encode(), 'https://skitour.fr/api/sorties'
+            )
+        ],
+    )
+    assert shape['sorties'] == [{'id': 'int', 'titre': 'str'}]
 
 
 def test_record_replaces_previous_recording_but_keeps_hand_made_files(site, tmp_path):
