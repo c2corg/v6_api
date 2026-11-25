@@ -183,6 +183,9 @@ never by position, and declares them in `REQUIRED_SELECTORS` (endpoint -> select
 ancestors' bare tags, no media, script or other text: the narratives of the reports never reach a fixture), and
 `shapes` / the live test check that each selector that matched in the fixtures still matches. The endpoint of a URL is
 its last path segment without extension and without an id (`sortie-30061-x.html` is `sortie`).
+The elements holding a partner user's identity (author name and profile link) are listed in `PSEUDONYMISE_SELECTORS`:
+the recorder replaces their text and the last segment of their link by `user1`, `user2`... (stable within a recording),
+as `PSEUDONYMISE_PATHS` does for JSON, and `test_fixtures_licence.py` fails on any other value in a real recording.
 
 bivouak.net: one list per sport (`liste_des_sorties.php?id_sport=1|2|8|4|16`: ski, hiking, snowshoeing, mountain
 biking, paragliding; `data-sport` of a card is a bit mask, an outing can have several), then the detail page of an outing

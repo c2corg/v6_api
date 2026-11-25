@@ -182,8 +182,9 @@ def test_located_ski_outing():
         title='Belle Descente ! (Vallée Blanche)',
         date=datetime.date(2026, 4, 10),
         activities=('skitouring',),
-        author='Michel Pila',
-        author_url='https://www.bivouak.net/membres/profile-44-pila.html',
+        # the recording holds pseudonyms (PSEUDONYMISE_SELECTORS)
+        author='user1',
+        author_url='https://www.bivouak.net/membres/user1.html',
         lang='fr',
         region='Mont-Blanc',
         source_activity='ski',
@@ -554,6 +555,39 @@ def test_trim_drops_narratives_and_media():
     assert htmlparse.trim(out, selectors) == out  # idempotent
     assert htmlparse.matches(out, selectors) == dict.fromkeys(selectors, 'str')
     assert htmlparse.matches(out, ['.nothing']) == {}
+
+
+def test_trim_pseudonymises_the_authors():
+    card = (
+        '<article class="post_sortie" id="sortie_{n}">'
+        '<a class="bk-author" href="../membres/profile-{n}-{slug}.html" title="{name}">'
+        '<span class="bk-av"><img src="a.jpg">{initials}</span>{name}</a>'
+        '<span class="bk-pill">Ski</span></article>'
+    )
+    page = '<html><body><main>{}</main></body></html>'.format(
+        card.format(n=44, slug='pila', name='Michel Pila', initials='MP')
+        + card.format(n=1, slug='luc', name='Luc', initials='L')
+        + card.format(n=45, slug='pila', name='Michel Pila', initials='MP')
+    )
+    selectors = ['article.post_sortie .bk-pill', 'article.post_sortie a.bk-author']
+    names = {}
+    out = htmlparse.trim(page, selectors, selectors[1:], names)
+    assert 'Pila' not in out and 'Luc' not in out and 'pila' not in out
+    assert 'MP' not in out and 'title=' not in out
+    authors = htmlparse.parse(out).select('a.bk-author')
+    assert [htmlparse.text_of(a) for a in authors] == ['user1', 'user2', 'user1']
+    assert [a['href'] for a in authors] == [
+        '../membres/user1.html',
+        '../membres/user2.html',
+        '../membres/user1.html',
+    ]
+    # idempotent, and the names are shared by the pages of a recording
+    assert htmlparse.trim(out, selectors, selectors[1:], {}) == out
+    other = htmlparse.trim(page.replace('Luc', 'Anne'), selectors, selectors[1:], names)
+    assert 'user3' in other
+    # through the recorder: the selectors of the adapter
+    body = contract.trim_body('bivouak', LIST, page.encode(), {}).decode()
+    assert 'Pila' not in body and 'user2' in body
 
 
 def test_trim_body_keeps_other_bodies_as_they_are():

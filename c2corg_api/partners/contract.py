@@ -143,19 +143,33 @@ def pseudonymise_data(source: str, endpoint: str, data, names: dict | None = Non
     return _replace(data, _tree(paths), names)
 
 
+def pseudonymise_selectors(source: str, endpoint: str) -> list[str]:
+    """Return the CSS selectors of the elements holding a partner user's identity."""
+    from c2corg_api.partners.sources import REGISTRY
+
+    adapter = REGISTRY.get(source)
+    selectors = getattr(adapter, 'PSEUDONYMISE_SELECTORS', {}) if adapter else {}
+    return list(selectors.get(endpoint, ()))
+
+
 def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> bytes:
     """Trim a JSON body (`trim_data`, then `pseudonymise_data`) or an HTML one.
 
-    An HTML body is trimmed (`htmlparse.trim`) when the source declares
-    selectors for the endpoint; anything else is returned as is.
+    An HTML body is trimmed (`htmlparse.trim`, with the pseudonyms of
+    `PSEUDONYMISE_SELECTORS`) when the source declares selectors for the
+    endpoint; anything else is returned as is.
     """
     try:
         data = json.loads(body)
     except ValueError:  # includes bad UTF-8
-        selectors = read_selectors(source, endpoint_of(url))
+        endpoint = endpoint_of(url)
+        selectors = read_selectors(source, endpoint)
         if selectors:
             return htmlparse.trim(
-                body.decode('utf-8', errors='replace'), selectors
+                body.decode('utf-8', errors='replace'),
+                selectors,
+                pseudonymise_selectors(source, endpoint),
+                names,
             ).encode()
         return body
     endpoint = endpoint_of(url)

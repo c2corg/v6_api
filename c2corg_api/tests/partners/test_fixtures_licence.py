@@ -145,3 +145,32 @@ def test_html_fixtures_only_hold_the_selectors_the_adapter_reads(source, file, u
 
 def test_there_is_an_html_fixture_to_check():
     assert any(p.values[0] == 'bivouak' for p in _html_fixtures())
+
+
+@pytest.mark.parametrize(('source', 'file', 'url'), _html_fixtures())
+def test_html_author_identities_are_pseudonymised(source, file, url):
+    """The HTML counterpart of `PSEUDONYMISE_PATHS`: "user1", "user2"... only."""
+    directory = FIXTURES / source
+    manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf-8'))
+    if manifest['synthetic']:
+        pytest.skip('synthetic fixtures hold invented names')
+    endpoint = contract.endpoint_of(url)
+    soup = htmlparse.parse((directory / file).read_text(encoding='utf-8'))
+    for selector in contract.pseudonymise_selectors(source, endpoint):
+        for tag in soup.select(selector):
+            text = htmlparse.text_of(tag)
+            assert not text or htmlparse.PSEUDONYM.fullmatch(text), (file, text)
+            for attr in ('href', 'data-href'):
+                if tag.get(attr):
+                    last = tag[attr].rstrip('/').rsplit('/', 1)[-1]
+                    assert re.fullmatch(r'user\d+(\.\w+)?', last), (file, tag[attr])
+
+
+def test_html_sources_with_authors_pseudonymise_them():
+    """An HTML adapter that reads an author link lists it to pseudonymise."""
+    for source, adapter in REGISTRY.items():
+        selectors = getattr(adapter, 'REQUIRED_SELECTORS', {})
+        for endpoint, wanted in selectors.items():
+            authors = [s for s in wanted if 'author' in s or 'autor' in s]
+            pseudonymised = contract.pseudonymise_selectors(source, endpoint)
+            assert set(authors) <= set(pseudonymised), (source, endpoint)

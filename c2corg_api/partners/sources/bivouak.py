@@ -121,6 +121,12 @@ class BivouakAdapter:
         ],
     }
 
+    # the elements holding a member's identity (name, profile link): a
+    # recording replaces them by "user1", "user2"... (`htmlparse.trim`)
+    PSEUDONYMISE_SELECTORS: ClassVar[dict[str, list[str]]] = {
+        'liste_des_sorties': [f'{CARD} a.bk-author'],
+    }
+
     def fetch(self, ctx: FetchContext) -> FetchResult:
         result = FetchResult(outings=[], skipped=Counter())
         _Run(ctx, result).harvest()

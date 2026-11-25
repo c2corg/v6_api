@@ -77,7 +77,7 @@ skitour`, 1 request, trimmed to `REQUIRED_PATHS`: no `recit`, `cond`, `photos`,
 `participants`, `topos`, `gpx`; the `cle` header is never recorded). Real format:
 every value is a string, `date` an epoch at 00:00 Paris time, coordinates
 `lat`/`lng`, the start point `depart`, `sommets` may be missing or null.
-The author pseudos and titles it holds are what the adapter reads and credits.
+The author pseudos are replaced by `user1`, `user2`... (`PSEUDONYMISE_PATHS`); the titles are what the adapter reads.
 
 `skitour_synthetic/` (`synthetic: true`, note starts with `SYNTHETIC EDGE CASES`)
 is hand-written in the same format for what the recording does not hold: broken
@@ -87,7 +87,8 @@ used by `tests/partners/test_skitour.py`; it is not a recording, never re-record
 ## HTML fixtures (bivouak)
 
 `fixtures/bivouak/` holds HTML pages, trimmed by `htmlparse.trim` to what `REQUIRED_SELECTORS` match: no excerpt, no
-photo, no script. `shape.json` lists, per file, the selectors that matched. The recording was made once (15 requests,
+photo, no script. The authors (`PSEUDONYMISE_SELECTORS`: name and profile link) are replaced by `user1`, `user2`...
+(the HTML counterpart of `PSEUDONYMISE_PATHS`). `shape.json` lists, per file, the selectors that matched. The recording was made once (15 requests,
 10 s apart, with the camptocamp User-Agent; robots.txt allows these paths) and parsed offline. One file,
 `sortie_30886.html`, comes from a copy of the page saved during the same session (the first recording stopped on an
 untitled outing: the adapter was fixed to give it a title and its detail page was then added by hand, trimmed the same
