@@ -131,15 +131,26 @@ def _html_fixtures():
 
 @pytest.mark.parametrize(('source', 'file', 'url'), _html_fixtures())
 def test_html_fixtures_only_hold_the_selectors_the_adapter_reads(source, file, url):
-    """Same allow-list for HTML: trimming changes nothing, and no media or script."""
+    """Same allow-list for HTML: trimming changes nothing, no media, no other script."""
     text = (FIXTURES / source / file).read_text(encoding='utf-8')
     selectors = contract.read_selectors(source, contract.endpoint_of(url))
     assert selectors, file
     assert htmlparse.trim(text, selectors) == text
     soup = htmlparse.parse(text)
-    assert not soup.find(['img', 'script', 'style', 'iframe', 'video', 'audio'])
+    assert not soup.find(['img', 'style', 'iframe', 'video', 'audio'])
+    # a script only when the adapter reads it (the map markers of a page)
+    read = {id(tag) for selector in selectors for tag in soup.select(selector)}
+    scripts = soup.find_all('script')
+    assert all(id(tag) in read for tag in scripts), file
     # texts are short fields (a title, a name, a number), never a narrative
-    longest = max((len(t.strip()) for t in soup.stripped_strings), default=0)
+    longest = max(
+        (
+            len(t.strip())
+            for t in soup.find_all(string=True)
+            if t.parent.name != 'script'
+        ),
+        default=0,
+    )
     assert longest <= 200, file
 
 

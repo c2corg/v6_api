@@ -1,0 +1,40 @@
+{
+  "source": "skitourenportal",
+  "countries": {
+    "AT": 14257
+  },
+  "regions": {
+    "Salzburg": {
+      "country": "AT",
+      "area_ids": [282687],
+      "range_ids": [14447, 14448, 14449]
+    },
+    "Oberösterreich": {
+      "country": "AT",
+      "area_ids": [282688],
+      "range_ids": [14449]
+    },
+    "Niederösterreich": {
+      "country": "AT",
+      "area_ids": [282689],
+      "range_ids": [14445]
+    },
+    "Kärnten": {
+      "country": "AT",
+      "area_ids": [282690],
+      "range_ids": [14451, 14447, 14452]
+    },
+    "Steiermark": {
+      "country": "AT",
+      "area_ids": [282686],
+      "range_ids": [14446, 14450, 14445]
+    }
+  },
+  "coverage": {
+    "checked": "2026-11-25, against the demo database (anonymised copy of production)",
+    "site": "skitourenportal.eu publishes 5 regions, the Austrian Bundesländer of its 5 portal pages (the 'Bundesland' column of the listing): Salzburg, Oberösterreich, Niederösterreich, Kärnten, Steiermark. All 5 are in this table. Tirol, Vorarlberg, Wien and Burgenland are not on the site; a new region text is not guessed, the outing keeps its region text and country only.",
+    "area_ids": "the administrative area (area_type admin_limits) of the Bundesland. It is the area of the outing and the one whose centroid stands for its position (geom_quality area_centroid). The country area (area_type country) is in 'countries'.",
+    "range_ids": "the mountain ranges (area_type range) covering at least 15% of the Bundesland, largest share first: Salzburg 14447 Hohe Tauern 37%, 14448 Chiemgauer - Kitzbüheler Alpen 25%, 14449 Dachstein 20%; Oberösterreich 14449 Dachstein 30%; Niederösterreich 14445 Steirisch-Niederösterreichische Kalkalpen 41%; Kärnten 14451 Steirisch-Kärntnerische Alpen 46%, 14447 Hohe Tauern 20%, 14452 Karnische Alpen / Gailtaler Alpen 17%; Steiermark 14446 Steirisches Randgebirge 35%, 14450 Niedere Tauern 19%, 14445 Kalkalpen 18%. Information only: a range is not assigned to an outing of the region, as the region spans several.",
+    "not_covered": "the part of a Bundesland in no listed range (under 15% each, e.g. Kärnten's 14453 Steiner Alpen und Karawanken, 12%) has no range id; the outing is still in the Bundesland area."
+  }
+}
