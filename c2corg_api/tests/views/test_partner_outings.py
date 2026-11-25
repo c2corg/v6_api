@@ -633,6 +633,11 @@ class TestSources:
                 'status': 'ok',
                 'last_success_at': '2026-11-24T10:15:00+00:00',
             },
+            {
+                'source': 'skitourenportal',
+                'status': 'never_run',
+                'last_success_at': None,
+            },
         ]
 
     def test_unconfigured_source_is_listed_as_disabled(self, client, session):
@@ -701,6 +706,17 @@ class TestSources:
                     'source': 'skitour',
                     'site_name': 'skitour.fr',
                     'site_url': 'https://skitour.fr',
+                    'status': 'never_run',
+                    'status_detail': None,
+                    'last_success_at': None,
+                    'last_run_at': None,
+                    'last_fetched': None,
+                    'last_skipped': {},
+                },
+                {
+                    'source': 'skitourenportal',
+                    'site_name': 'skitourenportal.eu',
+                    'site_url': 'https://skitourenportal.eu',
                     'status': 'never_run',
                     'status_detail': None,
                     'last_success_at': None,
