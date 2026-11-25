@@ -8,9 +8,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from c2corg_api.harvest.runner import enabled_harvesters, harvest_tick
 from c2corg_api.jobs.harvest import compact_avalanche_bulletins, prune_harvest
 from c2corg_api.jobs.link_checker import check_links, link_checker_enabled
+
 # the module, not its function of the same name: importing the function here
 # would hide the submodule (`c2corg_api.jobs.harvest_partner_outings`)
 from c2corg_api.jobs import harvest_partner_outings as partner_outings
+from c2corg_api.jobs.harvest import compact_avalanche_bulletins, prune_harvest
 from c2corg_api.jobs.process_removals import process_removals, removals_auto
 from c2corg_api.jobs.purge_deleted_documents import purge_deleted_documents
 from c2corg_api.jobs.purge_expired_tokens import purge_token
