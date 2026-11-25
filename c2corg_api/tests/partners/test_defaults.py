@@ -49,3 +49,16 @@ def test_new_sources_are_off_by_default():
     for name in ('bivouak',):
         assert env[f'harvest_partners_{name}_enabled'] == 'false', name
         assert dev[f'harvest_partners_{name}_enabled'] == 'true', name
+
+
+def test_the_test_config_switches_every_partner_source_off():
+    # the CI renders env.default, env.dev then env.test: a source env.dev
+    # switches on must be reset there, or the scheduler tests see it on
+    rendered = {
+        **read_env('env.default'),
+        **read_env('env.dev'),
+        **read_env('env.test'),
+    }
+    for key, value in rendered.items():
+        if key.startswith('harvest_partners_') and key.endswith('_enabled'):
+            assert value in ('', 'false'), key
