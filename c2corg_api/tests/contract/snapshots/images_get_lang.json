@@ -85,6 +85,7 @@
     "camera_name": "null",
     "categories": "null",
     "creator": {
+      "created_at": "str",
       "name": "str",
       "user_id": "int"
     },

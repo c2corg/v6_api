@@ -475,6 +475,9 @@ def test_put_success_all(client, session, docs):
 
 
 def test_put_success_all_as_moderator(client, session, docs):
+    # the image keeps a document: unlinked from the area (see the test below)
+    session.add(Association.create(docs.route, docs.image))
+    session.flush()
     body = {
         'message': 'Update',
         'document': {
@@ -534,6 +537,33 @@ def test_put_success_all_as_moderator(client, session, docs):
         Association, (area.document_id, docs.image.document_id)
     )
     assert association_image is None
+
+
+def test_put_last_document_of_image(client, docs):
+    area = client.get(f'/areas/{docs.area1.document_id}', status=200).json
+    body = {
+        'message': 'Update',
+        'document': {
+            'document_id': area['document_id'],
+            'version': area['version'],
+            'area_type': area['area_type'],
+            'locales': area['locales'],
+            'associations': {'images': []},
+        },
+    }
+
+    # the area is the only document of the image: it would be lost
+    response = client.put_json(
+        f'/areas/{docs.area1.document_id}',
+        body,
+        headers=auth_headers(username='moderator'),
+        status=400,
+    )
+
+    assert (
+        'as the last document of the image'
+        in (response.json['errors'][0]['description'])
+    )
 
 
 def test_put_success_figures_only(client, session, docs):

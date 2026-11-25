@@ -135,6 +135,11 @@
       ],
       "xreports": []
     },
+    "author": {
+      "created_at": "str",
+      "name": "str",
+      "user_id": "int"
+    },
     "available_langs": [
       "str"
     ],

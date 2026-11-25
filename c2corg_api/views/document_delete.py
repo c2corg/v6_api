@@ -22,7 +22,7 @@ from c2corg_api.models.document_history import (
     HistoryMetaData,
     get_creators,
     has_been_created_by,
-    is_less_than_24h_old,
+    is_in_deletion_period,
 )
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
@@ -44,6 +44,7 @@ from c2corg_api.models.route import (
     RouteLocale,
 )
 from c2corg_api.models.topo_map_association import TopoMapAssociation
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
     ArchiveWaypoint,
@@ -149,6 +150,17 @@ def validate_document(request, **kwargs):
             return
 
 
+def _has_other_users(outing_id, user_id):
+    """Tell whether other users than this one are linked to the outing."""
+    return DBSession.query(
+        exists().where(
+            Association.parent_document_type == USERPROFILE_TYPE,
+            Association.child_document_id == outing_id,
+            Association.parent_document_id != user_id,
+        )
+    ).scalar()
+
+
 def _is_main_waypoint_of_route(document_id):
     return DBSession.query(
         exists().where(Route.main_waypoint_id == document_id)
@@ -224,11 +236,11 @@ def validate_requestor(request, **kwargs):
         )
         return
 
-    if not is_less_than_24h_old(document_id):
+    if not is_in_deletion_period(document_id):
         request.errors.add(
             'querystring',
             'document_id',
-            'Only document less than 24h old can be deleted',
+            'Only documents less than 30 days old can be deleted',
         )
         return
 
@@ -240,6 +252,13 @@ def validate_requestor(request, **kwargs):
                 'querystring',
                 'document_id',
                 'Only the initial author can delete this document',
+            )
+        elif document_type == OUTING_TYPE and _has_other_users(document_id, user_id):
+            # the outing is theirs too: its author unlinks them first
+            request.errors.add(
+                'querystring',
+                'document_id',
+                'This outing has other participants: unlink them first',
             )
         return
 
@@ -343,7 +362,7 @@ def personal_images_deleted_with(request, document_id, document_type, images=Non
     ]
     if not request.has_permission('moderator'):
         # only the images the user could delete (see validate_requestor)
-        image_ids = [i for i in image_ids if is_less_than_24h_old(i)]
+        image_ids = [i for i in image_ids if is_in_deletion_period(i)]
     # an image shown in the text of another document ([img=ID]) stays
     embedded = images_embedded_elsewhere(image_ids, document_id)
     return sorted(i for i in image_ids if i not in embedded)
