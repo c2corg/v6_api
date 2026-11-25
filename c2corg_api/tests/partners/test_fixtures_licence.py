@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from c2corg_api.partners import contract
+from c2corg_api.partners import contract, htmlparse
 from c2corg_api.partners.sources import REGISTRY
 from c2corg_api.tests.partners.test_cli import FIXTURES
 
@@ -74,7 +74,7 @@ def test_recorded_fixtures_only_hold_the_paths_the_adapter_reads(source):
         assert endpoint in REGISTRY[source].REQUIRED_PATHS, entry['file']
         assert contract.trim_data(source, endpoint, data) == data, entry['file']
         checked += 1
-    assert checked
+    assert checked or REGISTRY[source].REQUIRED_SELECTORS  # an HTML source
 
 
 @pytest.mark.parametrize('source', sorted(REGISTRY))
@@ -113,3 +113,64 @@ def test_recorded_author_identities_are_pseudonymised(source):
                 assert re.fullmatch(r'user\d+', str(value)), (entry['file'], path)
                 checked += 1
     assert checked or source != 'skitour'
+
+
+def _html_fixtures():
+    return [
+        pytest.param(
+            source, entry['file'], entry['url'], id=f'{source}/{entry["file"]}'
+        )
+        for source in sorted(REGISTRY)
+        if getattr(REGISTRY[source], 'REQUIRED_SELECTORS', None)
+        for entry in json.loads(
+            (FIXTURES / source / 'manifest.json').read_text(encoding='utf-8')
+        )['entries']
+        if entry['file'].endswith('.html') and int(entry.get('status', 200)) == 200
+    ]
+
+
+@pytest.mark.parametrize(('source', 'file', 'url'), _html_fixtures())
+def test_html_fixtures_only_hold_the_selectors_the_adapter_reads(source, file, url):
+    """Same allow-list for HTML: trimming changes nothing, and no media or script."""
+    text = (FIXTURES / source / file).read_text(encoding='utf-8')
+    selectors = contract.read_selectors(source, contract.endpoint_of(url))
+    assert selectors, file
+    assert htmlparse.trim(text, selectors) == text
+    soup = htmlparse.parse(text)
+    assert not soup.find(['img', 'script', 'style', 'iframe', 'video', 'audio'])
+    # texts are short fields (a title, a name, a number), never a narrative
+    longest = max((len(t.strip()) for t in soup.stripped_strings), default=0)
+    assert longest <= 200, file
+
+
+def test_there_is_an_html_fixture_to_check():
+    assert any(p.values[0] == 'bivouak' for p in _html_fixtures())
+
+
+@pytest.mark.parametrize(('source', 'file', 'url'), _html_fixtures())
+def test_html_author_identities_are_pseudonymised(source, file, url):
+    """The HTML counterpart of `PSEUDONYMISE_PATHS`: "user1", "user2"... only."""
+    directory = FIXTURES / source
+    manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf-8'))
+    if manifest['synthetic']:
+        pytest.skip('synthetic fixtures hold invented names')
+    endpoint = contract.endpoint_of(url)
+    soup = htmlparse.parse((directory / file).read_text(encoding='utf-8'))
+    for selector in contract.pseudonymise_selectors(source, endpoint):
+        for tag in soup.select(selector):
+            text = htmlparse.text_of(tag)
+            assert not text or htmlparse.PSEUDONYM.fullmatch(text), (file, text)
+            for attr in ('href', 'data-href'):
+                if tag.get(attr):
+                    last = tag[attr].rstrip('/').rsplit('/', 1)[-1]
+                    assert re.fullmatch(r'user\d+(\.\w+)?', last), (file, tag[attr])
+
+
+def test_html_sources_with_authors_pseudonymise_them():
+    """An HTML adapter that reads an author link lists it to pseudonymise."""
+    for source, adapter in REGISTRY.items():
+        selectors = getattr(adapter, 'REQUIRED_SELECTORS', {})
+        for endpoint, wanted in selectors.items():
+            authors = [s for s in wanted if 'author' in s or 'autor' in s]
+            pseudonymised = contract.pseudonymise_selectors(source, endpoint)
+            assert set(authors) <= set(pseudonymised), (source, endpoint)

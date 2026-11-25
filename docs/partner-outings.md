@@ -1,9 +1,10 @@
 # Partner outings
 
 The `/metaskirando` view of the UI shows, next to the outings of Camptocamp, the outings reported on partner
-sites ([skitour.fr](https://skitour.fr), [gulliver.it](https://www.gulliver.it)). The API does not proxy the
-partner sites at request time: the harvester of [docs/harvest.md](harvest.md) runs each source every 15 minutes into
-its own tables, and `GET /partner-outings` merges those rows with the c2c outings of the same period.
+sites ([skitour.fr](https://skitour.fr), [gulliver.it](https://www.gulliver.it), and [bivouak.net](https://www.bivouak.net),
+off by default). The API does not proxy the partner sites at request time: the harvester of [docs/harvest.md](harvest.md)
+runs each source every 15 minutes into its own tables, and `GET /partner-outings` merges those rows with the c2c
+outings of the same period.
 
 ```
 harvest_tick (c2corg_api/harvest) -> PartnerHarvester partners.<name> (jobs/harvest_partner_outings.py)
@@ -31,7 +32,7 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 | env key | ini key | default | meaning |
 | --- | --- | --- | --- |
 | `harvest_partners_enabled` | `harvest.partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests the partner sources, whatever `harvest.enabled`; `make harvest-partners` refuses to run unless a source is on or `--force` is given |
-| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty | one source: `true`/`false`, empty as `harvest.partners.enabled` (a new adapter needs no line: absent is empty) |
+| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
 | `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
 | `partners_retention` | `partners.retention_days` | `31` | outings older than that are not stored, and purged |
 | `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route lookups) older than that are purged |
@@ -151,7 +152,7 @@ them refresh the fixtures. Run them from a machine that reaches the sites.
 python -m c2corg_api.partners record <source> [--out DIR] [--since YYYY-MM-DD]
 ```
 
-`<source>` is `skitour` or `gulliver`. The command runs the real adapter with
+`<source>` is `skitour`, `gulliver` or `bivouak`. The command runs the real adapter with
 the real transport, through a `RecordingTransport`, and writes into
 `<out>/<source>/` (default: the tests fixtures directory):
 
@@ -173,6 +174,25 @@ The recording is made aside and installed only when it succeeded: a blocked or
 down site leaves the existing fixtures untouched. Review `git diff`, run the
 tests, and commit. The synthetic fixtures of M1 are replaced this way, from a
 machine the sites do not block.
+
+### Sources that publish HTML (bivouak.net)
+
+An adapter of an HTML site reads the page through CSS selectors (BeautifulSoup, `c2corg_api/partners/htmlparse.py`),
+never by position, and declares them in `REQUIRED_SELECTORS` (endpoint -> selectors), next to the (empty)
+`REQUIRED_PATHS`. They have the same two roles: the recorder keeps of a page only the elements they match (with their
+ancestors' bare tags, no media, script or other text: the narratives of the reports never reach a fixture), and
+`shapes` / the live test check that each selector that matched in the fixtures still matches. The endpoint of a URL is
+its last path segment without extension and without an id (`sortie-30061-x.html` is `sortie`).
+The elements holding a partner user's identity (author name and profile link) are listed in `PSEUDONYMISE_SELECTORS`:
+the recorder replaces their text and the last segment of their link by `user1`, `user2`... (stable within a recording),
+as `PSEUDONYMISE_PATHS` does for JSON, and `test_fixtures_licence.py` fails on any other value in a real recording.
+
+bivouak.net: one list per sport (`liste_des_sorties.php?id_sport=1|2|8|4|16`: ski, hiking, snowshoeing, mountain
+biking, paragliding; `data-sport` of a card is a bit mask, an outing can have several), then the detail page of an outing
+for its coordinates (`data-lat`, `data-lng` of the map): at most 10 new detail pages per run, the sports taking turns,
+each answer kept in the lookup cache (`sortie:<id>`). Outings over the cap keep the massif (`region`), the country and the
+summit named in the title, and are located by the job. `robots.txt` asks the crawlers for 10 s between two requests: the
+adapter waits that long (5 lists + 10 pages = 15 requests, about 2.5 minutes per run at most).
 
 ### Checking for changes: `shapes`
 
@@ -220,6 +240,7 @@ contract change. Use `-rs` to see the reasons.
 |---|---|---|
 | skitour.fr | no key, so exit 2 / skip "disabled: SKITOUR_API_KEY not set"; unreachable from the dev container ("down") | needs `SKITOUR_API_KEY` |
 | gulliver.it | Cloudflare challenge (403): "blocked", exit 2 / skip | needs an allowed network or a Gulliver allow-list |
+| bivouak.net | reachable | `record` makes up to 15 requests, 10 s apart |
 
 Run them from a workstation or from production infrastructure; in the sandbox
 they only report why they could not run.
@@ -235,7 +256,7 @@ they only report why they could not run.
   source is `blocked` (403 with a challenge page). Ask Gulliver to allowlist our egress address or user agent (or to
   give a token: it would be `GULLIVER_API_TOKEN`, read like `SKITOUR_API_KEY`). Never try to bypass the challenge.
 - **Rate limits.** Each adapter declares its politeness (`rate` in `partners/sources/*.py`): a minimum delay between
-  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 40 requests). A spent budget
+  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 40 requests; bivouak: 10 s, 15 requests). A spent budget
   makes the run `down`.
 - **Enabling.** Keep `harvest_partners_enabled="false"` and `partners_transport="http"` (the defaults) until the
   agreements are there; then set `harvest_partners_enabled="true"` (or one source with
