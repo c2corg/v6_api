@@ -13,6 +13,7 @@ from c2corg_api.views.document_delete import (
     validate_document_type,
     validate_requestor,
 )
+from c2corg_api.views.document_links import read_broken_links
 from c2corg_api.views.document_merge import merge_documents
 from c2corg_api.views.document_protect import protect_document, unprotect_document
 from c2corg_api.views.document_revert import revert_document
@@ -67,6 +68,7 @@ def include(app):
         ('/documents/deleted/{id:int}', deleted_document),
         ('/images/orphans', orphan_images),
         ('/images/broken-embeds', broken_embeds),
+        ('/documents/broken-links', broken_links),
         ('/images/duplicates', duplicate_images),
         ('/documents/delete/{id:int}/images', images_of_deletion),
     ):
@@ -167,6 +169,22 @@ def broken_embeds(
     return serve_read(request, user, [typed_values(validated)], read_broken_embeds)
 
 
+def broken_links(
+    request: Request,
+    user: User,
+    _: Moderator,
+    offset: Annotated[
+        Offset | None, Query(description='The first link, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many: 30 by default, 100 at most.')
+    ] = None,
+):
+    """Return the broken links in the texts of the collaborative documents."""
+    validated = {'offset': offset, 'limit': limit}
+    return serve_read(request, user, [typed_values(validated)], read_broken_links)
+
+
 def duplicate_images(
     request: Request,
     user: User,
@@ -209,6 +227,7 @@ for _endpoint in (
     deleted_document,
     orphan_images,
     broken_embeds,
+    broken_links,
     duplicate_images,
 ):
     _endpoint.permission = 'moderator'

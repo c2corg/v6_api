@@ -60,6 +60,7 @@ from c2corg_api.models.xreport import (
     XreportLocale,
 )
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.views.document_links import linking_documents
 from c2corg_api.views.document_trash import keep_deleted_document, keep_deleted_locale
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.image_embeds import images_embedded_elsewhere
@@ -363,9 +364,12 @@ def personal_images_deleted_with(request, document_id, document_type, images=Non
     if not request.has_permission('moderator'):
         # only the images the user could delete (see validate_requestor)
         image_ids = [i for i in image_ids if is_in_deletion_period(i)]
-    # an image shown in the text of another document ([img=ID]) stays
-    embedded = images_embedded_elsewhere(image_ids, document_id)
-    return sorted(i for i in image_ids if i not in embedded)
+    # an image shown in the text of another document ([img=ID]), or linked
+    # from it ([[images/ID|label]]), stays
+    kept = images_embedded_elsewhere(image_ids, document_id) | set(
+        linking_documents(image_ids, IMAGE_TYPE, excluded_document_id=document_id)
+    )
+    return sorted(i for i in image_ids if i not in kept)
 
 
 def read_images_of_deletion(request):
