@@ -1,0 +1,22 @@
+{
+  "source": "skitour_synthetic",
+  "recorded_at": "2026-11-24",
+  "synthetic": true,
+  "note": "SYNTHETIC EDGE CASES, not a recording: hand-written in the REAL skitour format (all values are strings, lat/lng, depart, sommet) to cover cases the real recording does not hold (broken items, odd dates, entities, invalid coordinates, ties). The real recording is fixtures/skitour/. Dates are relative to now=2026-11-24 12:00 UTC, since=2026-11-22.",
+  "entries": [
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {"c": "1", "p": "1"},
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_c1_l200_p1.json"
+    },
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {"c": "1", "p": "2"},
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_c1_l200_p2.json"
+    }
+  ]
+}

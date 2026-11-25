@@ -45,12 +45,24 @@ def make_transport(adapter) -> Transport:
     return HttpTransport(adapter.rate)
 
 
+def _secret(name: str) -> str | None:
+    """Return `$NAME`, else the content of the file `$NAME_FILE` (never logged)."""
+    value = os.environ.get(name)
+    if value:
+        return value
+    path = os.environ.get(f'{name}_FILE')
+    if not path:
+        return None
+    try:
+        return Path(path).read_text(encoding='utf-8').strip() or None
+    except OSError:
+        return None
+
+
 def secrets_from_env(adapter) -> dict[str, str]:
-    return {
-        name: os.environ[name]
-        for name in adapter.required_secrets
-        if os.environ.get(name)
-    }
+    """Read the adapter secrets from the environment or the `*_FILE` files."""
+    values = {name: _secret(name) for name in adapter.required_secrets}
+    return {name: value for name, value in values.items() if value}
 
 
 def _date(text: str) -> datetime.date:
@@ -139,7 +151,7 @@ def cmd_record(args) -> int:
             make_transport(adapter),
             work,
             args.source,
-            trim=partial(contract.trim_body, args.source),
+            trim=partial(contract.trim_body, args.source, names={}),
             ignore_params=contract.VOLATILE_PARAMS.get(args.source, ()),
         )
         result = contract.run_adapter(

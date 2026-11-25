@@ -47,7 +47,7 @@ c2corg_api.partners shapes` to see what changed.
 
 | Source | From the dev sandbox | Fixtures in M1 |
 |---|---|---|
-| skitour.fr | proxy passes, site answers 503 on every URL; API needs a key we lack | synthetic |
+| skitour.fr | reachable with an API key (`cle` header, `SKITOUR_API_KEY` or `SKITOUR_API_KEY_FILE`) | recorded 2026-11-25 (`skitour/`, `synthetic: false`) |
 | gulliver.it | 403 Cloudflare "Just a moment..." JS challenge | synthetic |
 | gipfelbuch.ch, bivouak.net | reachable | recorded (M2) |
 | skitourenportal.eu, on-ice.it | blocked by the sandbox proxy | synthetic or recorded elsewhere (M2) |
@@ -68,3 +68,17 @@ rejected one: HTTP 200 and `{"ERROR": "NO API KEY"}` / `{"ERROR": "INVALID API
 KEY"}` instead of a list. `SkitourAdapter` turns them into `SourceBlocked`
 (status `blocked`, detail `skitour API error: <message>`). They are separate
 directories so that `record skitour` never overwrites them.
+
+## skitour: real recording and synthetic edge cases
+
+`skitour/` is a real recording (2026-11-25, `python -m c2corg_api.partners record
+skitour`, 1 request, trimmed to `REQUIRED_PATHS`: no `recit`, `cond`, `photos`,
+`participants`, `topos`, `gpx`; the `cle` header is never recorded). Real format:
+every value is a string, `date` an epoch at 00:00 Paris time, coordinates
+`lat`/`lng`, the start point `depart`, `sommets` may be missing or null.
+The author pseudos and titles it holds are what the adapter reads and credits.
+
+`skitour_synthetic/` (`synthetic: true`, note starts with `SYNTHETIC EDGE CASES`)
+is hand-written in the same format for what the recording does not hold: broken
+items, odd dates, HTML entities, invalid coordinates, ties, paging. It is only
+used by `tests/partners/test_skitour.py`; it is not a recording, never re-record it.
