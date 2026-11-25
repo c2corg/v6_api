@@ -39,7 +39,7 @@ _ANCESTOR_ATTRS = ('id', 'class', 'data-sport')
 PSEUDONYM = re.compile(r'user\d+')
 _LINK_ATTRS = ('href', 'data-href')
 # attributes that may repeat a name: dropped from a pseudonymised element
-_NAME_ATTRS = ('title', 'alt', 'aria-label', 'data-name')
+_NAME_ATTRS = ('title', 'alt', 'aria-label', 'data-name', 'data-tooltip')
 
 
 def parse(text: str) -> BeautifulSoup:

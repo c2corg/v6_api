@@ -626,6 +626,7 @@ class TestSources:
         session.flush()
         assert listing(client).json['sources'] == [
             {'source': 'bivouak', 'status': 'never_run', 'last_success_at': None},
+            {'source': 'gipfelbuch', 'status': 'never_run', 'last_success_at': None},
             {'source': 'gulliver', 'status': 'never_run', 'last_success_at': None},
             {
                 'source': 'skitour',
@@ -667,6 +668,17 @@ class TestSources:
                     'source': 'bivouak',
                     'site_name': 'bivouak.net',
                     'site_url': 'https://www.bivouak.net',
+                    'status': 'never_run',
+                    'status_detail': None,
+                    'last_success_at': None,
+                    'last_run_at': None,
+                    'last_fetched': None,
+                    'last_skipped': {},
+                },
+                {
+                    'source': 'gipfelbuch',
+                    'site_name': 'gipfelbuch.ch',
+                    'site_url': 'https://www.gipfelbuch.ch',
                     'status': 'never_run',
                     'status_detail': None,
                     'last_success_at': None,

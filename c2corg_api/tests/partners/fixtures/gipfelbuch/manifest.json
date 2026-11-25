@@ -1,0 +1,103 @@
+{
+  "source": "gipfelbuch",
+  "recorded_at": "2026-11-25",
+  "synthetic": false,
+  "entries": [
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/uebersicht",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "uebersicht.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355583",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355583.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355569",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355569.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355522",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355522.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355428",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355428.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355404",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355404.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355403",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355403.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355399",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355399.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355394",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355394.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355384",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355384.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355353",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355353.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355347",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355347.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355344",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355344.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355342",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355342.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355201",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355201.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2355191",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2355191.html"
+    }
+  ]
+}
