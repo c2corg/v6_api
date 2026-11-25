@@ -40,8 +40,8 @@ recommended.
 - Optional: [VS Code](https://code.visualstudio.com/) with the
   [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
 
-On Apple Silicon, the published database and Elasticsearch images run under amd64 emulation
-(the Python container is native): it works, the index rebuild is just slower.
+On Apple Silicon, the published database image runs under amd64 emulation (the Python container
+and Elasticsearch 8 are native): it works, the first start is just slower.
 
 ### With VS Code
 
@@ -72,8 +72,9 @@ dc stop                                     # stop, keeping the data
 
 It installs the locked Python dependencies (in `/opt/venv`, outside the workspace) and the git
 pre-commit hook, generates the `*.ini` files, migrates the dev database to the alembic revision of
-your checkout, creates the test database, and keeps the prebuilt search index if it matches the
-indexing code of your checkout (otherwise rebuilds it). It is idempotent: re-run it after pulling
+your checkout, creates the test database, and builds the search indices (one per document type)
+from the dev database, or keeps the ones of the `es_data` volume if they match the indexing code of
+your checkout. It is idempotent: re-run it after pulling
 or switching branches; it keeps your data.
 
 ### Where the commands run
@@ -203,10 +204,16 @@ app container: commit from the dev container (VS Code does), or install `pre-com
 ### Other
 
 - Flush the Redis cache: `make flush-redis`.
-- Rebuild the whole index without interrupting the search (production): `reindex_es production.ini`.
-  A new timestamped index is built next to the live one, then `elasticsearch.index` is switched to it
-  as an alias, atomically. The first time, if it is still a real index, run once with
-  `--replace-index` (short search gap). `--keep-old` keeps the previous index instead of deleting it.
+- The indices are named `<elasticsearch_index>_<document type>` (e.g. `c2corg_w` for the waypoints). Their
+  settings and mappings are the JSON files of `c2corg_api/search/es_mappings`. To re-create them, run
+  `python -m c2corg_api.scripts.es.create_index development.ini` (it deletes the existing ones), then
+  `fill_es_index` again. If Elasticsearch has authentication enabled, set `elasticsearch_scheme`,
+  `elasticsearch_user` and `elasticsearch_passwd` in `config/env.local`.
+- Rebuild all the indices without interrupting the search (production): `reindex_es production.ini`.
+  New timestamped indices (`<elasticsearch_index>_<type>_<timestamp>`) are built next to the live ones,
+  then the names of the document types (`c2corg_w`...) are switched to them as aliases, atomically.
+  The first time, if they are still real indices, run once with `--replace-index` (short search gap).
+  `--keep-old` keeps the previous indices instead of deleting them.
 - Compute again the quality ("complétude") of the outings, after the rules of the UI changed (see
   [c2corg_api/scripts/outings/README.md](c2corg_api/scripts/outings/README.md)): `recompute_outing_quality development.ini --dry-run`.
 
@@ -217,15 +224,14 @@ app container: commit from the dev container (VS Code does), or install `pre-com
 | Python        | 3.15, dependencies managed with uv                                                     | |
 | Web framework | FastAPI, served by uvicorn                                                             | |
 | PostgreSQL    | Dev: PostgreSQL 18 + PostGIS 3.6, image `ghcr.io/c2corg/c2corg-dev-db` (anonymized extract) | Production servers to PostgreSQL 18 + PostGIS 3.6: branch `pg18-postgis36-migration` of the infra repository |
-| Elasticsearch | dev image `ghcr.io/c2corg/c2corg-dev-es` with the index built | **8.19**: branch [`feat/elasticsearch-8`](https://github.com/c2corg/v6_api/tree/feat/elasticsearch-8), not merged |
+| Elasticsearch | **8.19** (+ analysis-icu, `docker/Dockerfile.elasticsearch`), the index built locally | this branch: [`feat/elasticsearch-8`](https://github.com/c2corg/v6_api/tree/feat/elasticsearch-8), not merged |
 | Redis         | 7.2                                                                                    | |
 
 **One source for the dev services.** The dev container (`.devcontainer/docker-compose.yml`) and the manual setup
-(`docker-compose.yml`) use the same two images, published together with the same tag by
-[`scripts/dev-database/publish.sh`](scripts/dev-database/README.md). Changing the version of PostgreSQL or
-Elasticsearch is done there (`scripts/dev-database/Dockerfile*`), followed by a new publication: both setups then
-follow, with no Dockerfile of their own. Until the Elasticsearch 8 images are published, `feat/elasticsearch-8` has
-to build its index locally (`make init-elastic`).
+(`docker-compose.yml`) use the same database image, published by
+[`scripts/dev-database/publish.sh`](scripts/dev-database/README.md), and the same Elasticsearch 8 image, built from
+`docker/Dockerfile.elasticsearch`. There is no prebuilt index: both setups build it from the database
+(`make init-elastic`, about 5 minutes) and keep it in their `es_data` volume.
 
 ## Useful links
 

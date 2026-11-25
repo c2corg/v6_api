@@ -85,13 +85,9 @@ lint:
 		$(UV_RUN) ruff format --check $(SRC_DIRS)
 		@echo "Wonderful, python style is Ok!"
 
-# Known vulnerabilities that cannot be fixed yet. Re-check each one when the
-# reason goes away:
-# - urllib3 1.26: elasticsearch 2.4.1 requires urllib3<2 (goes away with the
-#   Elasticsearch 8 migration). The API only talks to trusted hosts with it.
-AUDIT_IGNORE = \
-		PYSEC-2026-141 PYSEC-2026-1994 PYSEC-2026-1996 PYSEC-2026-1998 \
-		PYSEC-2026-1999 PYSEC-2026-4175 PYSEC-2026-4177
+# Known vulnerabilities that cannot be fixed yet, as `PYSEC-...` ids. Re-check each
+# one when the reason goes away.
+AUDIT_IGNORE =
 
 .PHONY: audit
 audit:
@@ -117,18 +113,21 @@ init-test-database:
 		$(DB_EXEC) /v6_api/scripts/database/create_test_schema.sh
 
 # Same logic as .devcontainer/setup.sh: create the index with its mappings (without them the search silently
-# finds nothing), keep the index of the image ghcr.io/c2corg/c2corg-dev-es if it was built by the indexing code
-# of this checkout, otherwise rebuild it from the database (about 5 minutes).
+# finds nothing), keep the indices (one per document type, c2corg_<type>) already in the Elasticsearch volume if
+# they were built by the indexing code of this checkout, otherwise rebuild them from the database (about 5 minutes).
+# ES_INDEX_URL is the URL of the index prefix.
 ES_INDEX_URL ?= http://localhost:9200/c2corg
 init-elastic:
 		$(UV_RUN) initialize_c2corg_api_es development.ini
 		@set -e; \
-		count=$$(curl -fsS "$(ES_INDEX_URL)/_count" | $(UV_RUN) python -c "import json, sys; print(json.load(sys.stdin)['count'])"); \
-		if [ "$$count" -gt 0 ] && $(UV_RUN) es_index_fingerprint check development.ini; then \
+		count=$$(curl -sS "$(ES_INDEX_URL)_*/_count" | sed -n 's/.*"count":\([0-9]*\).*/\1/p'); \
+		if [ "$${count:-0}" -gt 0 ] && $(UV_RUN) es_index_fingerprint check development.ini; then \
 			echo "The index contains $$count documents and is up to date"; \
 		else \
 			echo "Rebuilding the index with the current indexing code"; \
-			curl -fsS -X DELETE "$(ES_INDEX_URL)" > /dev/null; \
+			for doc_type in a b c i m o r u w x; do \
+				curl -sS -X DELETE "$(ES_INDEX_URL)_$$doc_type" > /dev/null; \
+			done; \
 			$(UV_RUN) initialize_c2corg_api_es development.ini; \
 			for attempt in 1 2 3; do \
 				$(UV_RUN) fill_es_index development.ini && break; \

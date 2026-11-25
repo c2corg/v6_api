@@ -27,7 +27,7 @@ def search(url_params, meta_params, doc_type):
     # only request the document ids from ES
     response = query.execute()
     document_ids = [int(doc.meta.id) for doc in response]
-    total = response.hits.total
+    total = response.hits.total.value
 
     return document_ids, total
 
@@ -59,7 +59,7 @@ def search_with_ids(url_params, meta_params, doc_type, id_chunk=None):
 
     response = query.execute()
     document_ids = [int(doc.meta.id) for doc in response]
-    total = response.hits.total
+    total = response.hits.total.value
 
     return document_ids, total
 
@@ -75,7 +75,7 @@ def get_filtered_docs_page(params, meta_params, ids, doc_type):
     query = query.filter('terms', _id=[str(doc_id) for doc_id in ids])
     if offset + limit <= ES_MAX_RESULT_WINDOW:
         response = query.execute()
-        return [int(doc.meta.id) for doc in response], response.hits.total
+        return [int(doc.meta.id) for doc in response], response.hits.total.value
 
     # beyond the result window of ElasticSearch: scroll through the sorted
     # documents up to the end of the page
@@ -85,7 +85,7 @@ def get_filtered_docs_page(params, meta_params, ids, doc_type):
         doc_ids.append(int(hit.meta.id))
         if len(doc_ids) >= offset + limit:
             break
-    total = query.extra(from_=0, size=0).execute().hits.total
+    total = query.extra(from_=0, size=0).execute().hits.total.value
     return doc_ids[offset : offset + limit], total
 
 

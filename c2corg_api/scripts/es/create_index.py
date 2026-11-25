@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Creates (or recreates) the ES index with the correct mappings.
+"""Creates (or recreates) the ES indices with the correct mappings.
 
 Must be run before fill_index.py when building the index from scratch.
 
@@ -10,12 +10,8 @@ import logging
 import sys
 
 from c2corg_api.config import get_appsettings, parse_vars, setup_logging
-from c2corg_api.search import (
-    configure_es_from_config,
-    elasticsearch_config,
-    search_documents,
-)
-from c2corg_api.search.mapping import analysis_settings
+from c2corg_api.scripts import initializees
+from c2corg_api.search import configure_es_from_config
 
 
 def main(argv=sys.argv):
@@ -31,29 +27,17 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     configure_es_from_config(settings)
 
-    client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
+    # Delete the indices if they exist (to fix potentially wrong mappings)
+    print('Deleting the existing indices')
+    initializees.drop_index(silent=False)
 
-    # Delete index if it exists (to fix potentially wrong mappings)
-    if client.indices.exists(index=index_name):
-        print(f'Deleting existing index: {index_name}')
-        client.indices.delete(index=index_name)
-
-    # Create index with analysis settings
-    print(f'Creating index: {index_name}')
-    client.indices.create(
-        index=index_name, body={'settings': {'analysis': analysis_settings}}
-    )
-
-    # Apply the correct mapping for every document type
-    # (if we let ES infer types by directly running fill_index.py,
-    # we could run into type errors on some fields like
+    # Create the indices with the analysis settings and the correct mapping for
+    # every document type (if we let ES infer types by directly running
+    # fill_index.py, we could run into type errors on some fields like
     # a mapping geom -> double instead of geo_point).
-    for doc_type, search_class in search_documents.items():
-        print(f'Applying mapping for doc_type: {doc_type}')
-        search_class._doc_type.mapping.save(index_name)
+    initializees.setup_es()
 
-    print(f'Done. Index "{index_name}" created with correct mappings.')
+    print('Done. The indices are created with the correct mappings.')
     print('You can now run fill_index.py safely.')
 
 

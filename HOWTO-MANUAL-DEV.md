@@ -66,4 +66,5 @@ make bootstrap
 ```
 
 The volume `postgres_data` of the former setup (PostGIS 16 and the 2018 Elasticsearch image) is no
-longer used and can be removed.
+longer used and can be removed. An `es_data` volume of Elasticsearch 2.4 cannot be read by Elasticsearch 8:
+remove it (`docker compose down -v` above) before the first start.

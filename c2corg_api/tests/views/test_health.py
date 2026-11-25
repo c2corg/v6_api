@@ -51,7 +51,7 @@ def test_es_down(monkeypatch, client):
 
     from c2corg_api.search import elasticsearch_config
 
-    unreachable = Elasticsearch(['localhost:1'], max_retries=0, timeout=1)
+    unreachable = Elasticsearch('http://localhost:1', max_retries=0, request_timeout=1)
     monkeypatch.setitem(elasticsearch_config, 'client', unreachable)
 
     r = client.get('/health', status=200)

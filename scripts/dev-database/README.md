@@ -17,9 +17,8 @@ docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=test c2corg-dev-db
 Database `c2corg`, user `www-data` (password `www-data`) or `postgres`. It is already at the latest
 alembic revision of the code at the time it was built.
 
-The matching Elasticsearch, with the index already built from this database, is the image
-`ghcr.io/c2corg/c2corg-dev-es` (same tag, always published together with the database; its data is in
-`/esdata`). To build the index yourself instead, run these commands **in this order** (without the
+There is no prebuilt Elasticsearch image: the dev container builds the index from this database when it
+starts. To build the index yourself, run these commands **in this order** (without the
 first one, Elasticsearch creates the index on its own without the search sub-fields, and the search
 silently returns nothing):
 
@@ -32,7 +31,7 @@ fill_es_index development.ini               # about 5 minutes, 44,000 documents
 your checkout (see below).
 
 Everything (PostgreSQL, Elasticsearch, Redis, the API) fits in about 1.5 GB of memory
-(`ES_HEAP_SIZE=512m` is enough for Elasticsearch).
+(512 MB of heap is enough for Elasticsearch).
 
 Accounts (password `c2c` for all): `moderator`, `user`, `blocked`, `unvalidated`. Logging in works
 without a forum; the API only logs `Could not request nonce` when it cannot reach Discourse.
@@ -100,19 +99,14 @@ scripts/dev-database/publish.sh c2corg-dev-pg96.dump 2026-07-19
 ```
 
 It builds the database image, restores it in a throwaway container and runs `60-verify.sql` (nothing is
-pushed if personal data is left). It then fills an Elasticsearch from that database with the indexing
-code of the checkout it is run from (a few minutes, about 1.5 GB of memory more), builds the
-Elasticsearch image from it and checks it. After a confirmation, both images are pushed with the same
-tag and `latest` to `ghcr.io/c2corg/c2corg-dev-db` and `ghcr.io/c2corg/c2corg-dev-es` (`IMAGE=` and
-`ES_IMAGE=` to change them, `DRY_RUN=1` to stop before the push). A package created by a push is
-private; making it public is done in its settings on GitHub.
+pushed if personal data is left). After a confirmation, it pushes the image with the tag and `latest` to
+`ghcr.io/c2corg/c2corg-dev-db` (`IMAGE=` to change it, `DRY_RUN=1` to stop before the push). A package
+created by a push is private; making it public is done in its settings on GitHub.
 
-Publishing both images in one run keeps the index in step with the database. The index also has to
-follow the *code*: `fill_es_index` and the mappings change with the API. The image therefore stores a
-fingerprint of the indexing code (`c2corg_api/search`, `c2corg_api/scripts/es`; see
-`c2corg_api/scripts/es/fingerprint.py`), and the dev container setup compares it with the one of the
-checkout: if they differ, it rebuilds the index from the database instead of keeping a stale one.
-Publish again from a recent checkout when the indexing code changed, to avoid that rebuild.
+The index is not published: the dev container setup builds it from the database (about 5 minutes) and
+stores a fingerprint of the indexing code with it (`c2corg_api/search`, `c2corg_api/scripts/es`; see
+`c2corg_api/scripts/es/fingerprint.py`). On the next start it keeps the index if the fingerprint matches
+the checkout, and rebuilds it otherwise.
 
 ## Attribution
 

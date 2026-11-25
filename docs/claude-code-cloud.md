@@ -22,7 +22,7 @@ with `moderator` or `user`, password `c2c`. The first run pulls ~2 GB of images 
 
 | Symptom | Cause | Fix in `docker-compose.sandbox.yml` |
 | --- | --- | --- |
-| `error setting rlimit type 7: operation not permitted` when starting elasticsearch | the sandbox refuses the raised `nofile` ulimit | `ulimits` reset (Elasticsearch 2.4 only warns) |
+| `error setting rlimit type 7: operation not permitted` when starting elasticsearch | the sandbox refuses the raised `nofile` ulimit | `ulimits` reset (Elasticsearch only warns: `discovery.type=single-node` skips the bootstrap checks) |
 | `uv`: `invalid peer certificate: UnknownIssuer` in `setup.sh` | the egress proxy re-signs TLS | mounts the CA bundle (`CCR_CA_BUNDLE`, default `/root/.ccr/ca-bundle.crt`) and sets `SSL_CERT_FILE` (and similar variables) |
 
 Other containers named `c2c-db` / `c2c-es` may already exist in the environment: they are unrelated

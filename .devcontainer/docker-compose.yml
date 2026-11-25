@@ -57,16 +57,17 @@ services:
       start_period: 10m
 
   elasticsearch:
-    # Elasticsearch 2.4 with the index of the dev database (built with it by scripts/dev-database/publish.sh,
-    # same tag). The data is in /esdata, a volume which starts from the content of the image.
-    image: ghcr.io/c2corg/c2corg-dev-es:latest
-    # Skip the image's old gosu binary, which fails under amd64 emulation on Apple Silicon.
-    user: elasticsearch
-    command: elasticsearch -Des.path.data=/esdata -Des.index.number_of_replicas=0 -Des.script.inline=true
+    # Elasticsearch 8 (+ analysis-icu). The index of the dev database is built at the first start
+    # (.devcontainer/setup.sh, `make init-elastic`) and kept in the es_data volume.
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.elasticsearch
     environment:
-      ES_HEAP_SIZE: 512m
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
-      - es_data:/esdata
+      - es_data:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=4s"]
       interval: 5s
