@@ -4,47 +4,27 @@
    "auteur": {
     "pseudo": "str"
    },
-   "date": {
-    "any_of": [
-     "\"int\"",
-     "\"str\""
-    ]
-   },
-   "denivele": {
-    "any_of": [
-     "\"int\"",
-     "\"str\""
-    ]
+   "date": "str",
+   "denivele": "str",
+   "depart": {
+    "lat": "str",
+    "lng": "str"
    },
    "dif_ski": "str",
-   "id": "int",
+   "id": "str",
    "massif": {
-    "any_of": [
-     "\"null\"",
-     "{\"nom\": \"str\"}"
-    ]
+    "nom": "str"
    },
    "orientation": "str",
    "sommets": [
     {
-     "altitude": {
-      "any_of": [
-       "\"int\"",
-       "\"str\""
-      ]
-     },
-     "latlon": [
-      {
-       "any_of": [
-        "\"float\"",
-        "\"int\""
-       ]
-      }
-     ]
+     "altitude": "str",
+     "lat": "str",
+     "lng": "str",
+     "sommet": "str"
     }
    ],
    "titre": "str"
   }
- ],
- "sorties_c1_l200_p2.json": []
+ ]
 }

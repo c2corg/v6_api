@@ -1,0 +1,50 @@
+{
+ "sorties_c1_l200_p1.json": [
+  {
+   "auteur": {
+    "pseudo": "str"
+   },
+   "date": {
+    "any_of": [
+     "\"int\"",
+     "\"str\""
+    ]
+   },
+   "denivele": {
+    "any_of": [
+     "\"int\"",
+     "\"str\""
+    ]
+   },
+   "dif_ski": "str",
+   "id": "int",
+   "massif": {
+    "any_of": [
+     "\"null\"",
+     "{\"nom\": \"str\"}"
+    ]
+   },
+   "orientation": "str",
+   "sommets": [
+    {
+     "altitude": {
+      "any_of": [
+       "\"int\"",
+       "\"str\""
+      ]
+     },
+     "latlon": [
+      {
+       "any_of": [
+        "\"float\"",
+        "\"int\""
+       ]
+      }
+     ]
+    }
+   ],
+   "titre": "str"
+  }
+ ],
+ "sorties_c1_l200_p2.json": []
+}

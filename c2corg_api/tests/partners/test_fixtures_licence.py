@@ -28,6 +28,10 @@ FORBIDDEN_KEYS = {
     'texte',
     'body',
     'legende',
+    'cond',
+    'participants',
+    'gpx',
+    'topos',
 }
 
 

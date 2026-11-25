@@ -1,8 +1,16 @@
 """skitour.fr: the `/api/sorties` listing (design sections 5 and 6).
 
-Only the structured fields are read. `conditions`, `recit` and `photos` are
-under a licence that forbids reusing them out of context, so they are never
-looked at.
+Only the structured fields are read. `cond` (conditions), `recit` and `photos`
+(and the participants, topos, gpx...) are under a licence that forbids reusing
+them out of context, so they are never looked at.
+
+The real format (recorded 2026-11-25): every value is a string, even the ids,
+the altitudes and the coordinates. `date` is an epoch at 00:00 Paris time,
+`auteur` is `{id, pseudo}`, `massif` `{id, nom}`, `sommets` a list (or null) of
+`{id, sommet, altitude, lat, lng}`, `depart` the start point
+`{id, depart, altitude_dep, lat, lng}`, `orientation` one of N, NE... or `T`
+(all) or empty, `dif_ski` a c2c ski rating ("2.1") or empty. `skiabilite`
+(1 to 5) is a skier level, not a route rating: not read.
 """
 
 import logging
@@ -25,6 +33,26 @@ log = logging.getLogger(__name__)
 API_URL = 'https://skitour.fr/api/sorties'
 OUTING_URL = 'https://skitour.fr/sorties/{}'
 TIMEZONE = 'Europe/Paris'
+
+# massif name -> country, for the massifs wholly in one country. The massifs that
+# straddle a border (Mont Blanc, Alpes Grees N, Alpes Cozie, Mercantour - Alpes
+# Maritimes Italiennes, Cerces - Thabor - Mont Cenis...) and any unknown massif
+# give no country: the job then resolves the area from the coordinates.
+MASSIF_COUNTRY = {
+    'Alpes Vaudoises': 'CH',
+    'Bauges': 'FR',
+    'Beaufortain': 'FR',
+    'Belledonne': 'FR',
+    'Bornes - Aravis': 'FR',
+    'Chartreuse': 'FR',
+    'Ecrins': 'FR',
+    'Grandes Rousses - Arves': 'FR',
+    'Haut Giffre - Aiguilles Rouges': 'FR',
+    'Lauzière - Cheval Noir': 'FR',
+    'Préalpes de Digne': 'FR',
+    'Vanoise': 'FR',
+    'Vercors': 'FR',
+}
 
 # skitour answers HTTP 200 with `{"ERROR": "<message>"}` (observed:
 # "NO API KEY", "INVALID API KEY"). A message about the key, the rights or a
@@ -49,7 +77,8 @@ class SkitourAdapter:
     # file stem (endpoint) -> EVERY JSON path read from it (`[]` = list items).
     # Checked by `python -m c2corg_api.partners shapes` and the live tests, and
     # the allow-list of what a recording keeps: the licensed texts and photos
-    # (`conditions`, `recit`, `photos`) are never listed, so never written.
+    # (`cond`, `recit`, `photos`, `participants`...) are never listed, so never
+    # written.
     REQUIRED_PATHS: ClassVar[dict[str, list[str]]] = {
         'sorties': [
             '[].id',
@@ -57,8 +86,12 @@ class SkitourAdapter:
             '[].date',
             '[].auteur.pseudo',
             '[].massif.nom',
+            '[].sommets[].sommet',
             '[].sommets[].altitude',
-            '[].sommets[].latlon',
+            '[].sommets[].lat',
+            '[].sommets[].lng',
+            '[].depart.lat',
+            '[].depart.lng',
             '[].orientation',
             '[].denivele',
             '[].dif_ski',
@@ -148,12 +181,17 @@ class SkitourAdapter:
         altitudes = [
             a for a in (normalise.to_int(s.get('altitude')) for s in summits) if a
         ]
+        region = (
+            normalise.clean_text(massif.get('nom'), 200) or None
+            if isinstance(massif, dict)
+            else None
+        )
 
         raw_rating = item.get('dif_ski')
         raw_rating = None if raw_rating is None else str(raw_rating).strip() or None
         rating = normalise.ski_rating(raw_rating)
 
-        lon, lat, quality = self._geometry(summits)
+        lon, lat, quality = self._geometry(summits, item.get('depart'))
         return HarvestedOuting(
             source=self.name,
             external_id=str(item_id),
@@ -167,11 +205,9 @@ class SkitourAdapter:
                 else None
             ),
             lang='fr',
-            region=(
-                normalise.clean_text(massif.get('nom'), 200) or None
-                if isinstance(massif, dict)
-                else None
-            ),
+            region=region,
+            country=MASSIF_COUNTRY.get(region) if region else None,
+            summit_name=_summit_name(summits),
             ski_rating_min=rating,
             ski_rating_max=rating,
             rating_raw=raw_rating,
@@ -186,23 +222,45 @@ class SkitourAdapter:
         )
 
     @staticmethod
-    def _geometry(summits):
-        """Return the highest summit with usable coordinates, else no geometry."""
+    def _geometry(summits, start):
+        """Return the highest summit with usable coordinates, else the start point."""
         best = None
         for summit in summits:
-            latlon = summit.get('latlon')
-            if not isinstance(latlon, list | tuple) or len(latlon) != 2:
-                continue
-            lat, lon = latlon
+            lat, lon = _coordinate(summit.get('lat')), _coordinate(summit.get('lng'))
             if not normalise.valid_lonlat(lon, lat):
                 continue
             altitude = normalise.to_int(summit.get('altitude'))
             altitude = altitude if altitude is not None else -1
             if best is None or altitude > best[0]:
                 best = (altitude, lon, lat)
-        if best is None:
-            return None, None, 'none'
-        return best[1], best[2], 'summit'
+        if best is not None:
+            return best[1], best[2], 'summit'
+        if isinstance(start, dict):
+            lat, lon = _coordinate(start.get('lat')), _coordinate(start.get('lng'))
+            if normalise.valid_lonlat(lon, lat):
+                return lon, lat, 'start'
+        return None, None, 'none'
+
+
+def _coordinate(value) -> float | None:
+    """Return a coordinate as float; skitour sends strings ("45.423")."""
+    if isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except TypeError, ValueError:
+        return None
+
+
+def _summit_name(summits) -> str | None:
+    """Return the name of the highest summit (the first one on a tie)."""
+    best = None
+    for summit in summits:
+        name = normalise.clean_text(summit.get('sommet'), 200)
+        altitude = normalise.to_int(summit.get('altitude'))
+        if name and (best is None or (altitude or -1) > best[0]):
+            best = ((altitude if altitude is not None else -1), name)
+    return best[1] if best else None
 
 
 def _last_id(cursor) -> int | None:
