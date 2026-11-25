@@ -25,6 +25,12 @@ NOT_MARKDOWN_PROPERTY = {
     'participants',
 }
 
+# a text that may show images or link documents: parsed to know (a loose
+# pattern; the parser finds the links of the site, see wikilinks.SITE_URL_RE)
+_REFERENCES_HINT_RE = re.compile(
+    r'\[img=|\[\[|https?://(?:www\.|m\.)?camptocamp\.org/', re.IGNORECASE
+)
+
 # loose pattern of the ids of the [[type/id|label]] links, before parsing
 WIKILINK_ID_RE = re.compile(r'\[\[[a-z]+/(\d+)')
 
@@ -121,9 +127,7 @@ def get_locale_references(locale):
         if key in NOT_MARKDOWN_PROPERTY or key == 'type':
             continue
         # no image tag nor link: skip the parser, the costly part
-        if isinstance(value, str) and (
-            '[img=' in value or '[[' in value or 'camptocamp.org' in value
-        ):
+        if isinstance(value, str) and _REFERENCES_HINT_RE.search(value):
             ids, text_links = get_text_references(value)
             image_ids.update(ids)
             for target_type, target_id, is_url in text_links:
