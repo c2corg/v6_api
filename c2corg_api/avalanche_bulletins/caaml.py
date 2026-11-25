@@ -4,10 +4,12 @@
 # outline_properties). A file holds the bulletins of all the regions of its
 # service (Euregio's, of the three regions of Euregio).
 
+import json
 from dataclasses import dataclass
 
 import requests
 
+from c2corg_api.avalanche_bulletins import weather
 from c2corg_api.avalanche_bulletins.cache import (
     TIMEOUT,
     USER_AGENT,
@@ -140,30 +142,48 @@ def bulletins(service_id, lang):
     lang = service.lang_for(lang)
 
     def fetch():
-        url = service.url_for(service_id, lang)
-        try:
-            response = requests.get(
-                url, headers={'User-Agent': USER_AGENT}, timeout=TIMEOUT
-            )
-        except requests.exceptions.RequestException as e:
-            raise UpstreamError(str(e)) from e
+        response = request(service_id, lang)
         # no file out of season
         if response.status_code == 404:
             return []
-        if not response.ok:
-            raise UpstreamError(f'{url} answered {response.status_code}')
-        try:
-            data = response.json()
-        except ValueError as e:
-            raise UpstreamError(f'{url} is not JSON') from e
-        found = _checked(data, url)
-        try:
-            return [_normalized(b, service) for b in found]
-        except AttributeError as e:
-            # a source or customData that is not an object
-            raise UpstreamError(f'{url} is not CAAML v6: {e!r}') from e
+        # as stored: without the weather of SLF (weather.extract)
+        return [
+            weather.extract(b)[0] for b in parse(response.content, service_id, lang)
+        ]
 
     return cached(f'caaml:{service_id}:{lang}', fetch)
+
+
+def request(service_id, lang, headers=None):
+    """GET the latest file of a service: an answer 2xx, 304 or 404 (no file)."""
+    url = SERVICES[service_id].url_for(service_id, lang)
+    try:
+        response = requests.get(
+            url,
+            headers={**(headers or {}), 'User-Agent': USER_AGENT},
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.RequestException as e:
+        raise UpstreamError(str(e)) from e
+    if response.status_code not in (304, 404) and not response.ok:
+        raise UpstreamError(f'{url} answered {response.status_code}')
+    return response
+
+
+def parse(content, service_id, lang):
+    """Return the normalized bulletins of the latest file of a service."""
+    service = SERVICES[service_id]
+    url = service.url_for(service_id, lang)
+    try:
+        data = json.loads(content)
+    except ValueError as e:
+        raise UpstreamError(f'{url} is not JSON') from e
+    found = _checked(data, url)
+    try:
+        return [_normalized(b, service) for b in found]
+    except AttributeError as e:
+        # a source or customData that is not an object
+        raise UpstreamError(f'{url} is not CAAML v6: {e!r}') from e
 
 
 def _checked(data, url):

@@ -59,7 +59,7 @@
       ]
     },
     {
-      "id": "scheduler", "type": "backend", "label": "Job scheduler", "sublabel": "make run-background-jobs",
+      "id": "scheduler", "type": "backend", "label": "Job scheduler", "sublabel": "make run-background-jobs", "href": "batch.html",
       "pos": [470, 540], "size": [170, 64],
       "sources": [ { "path": "Makefile", "line": 151, "end_line": 152 } ]
     },
@@ -128,7 +128,8 @@
       "items": [
         "No Discourse locally: discourse_enabled=false, comments answer 503",
         "c2c_images: STORAGE_BACKEND=local; it listens on 8080 like Vite, so set SERVICE_PORT; S3 tests use an in-memory Scality server on :9000",
-        "c2c_tracking (Node 26+): its compose PostgreSQL also publishes 5432, so move one of them; it needs the API's JWT secret, and provider webhooks need a public URL (ngrok)"
+        "c2c_tracking (Node 26+): its compose PostgreSQL also publishes 5432, so move one of them; it needs the API's JWT secret, and provider webhooks need a public URL (ngrok)",
+        "Avalanche bulletin harvest (off by default): harvest_enabled=\"true\" in config/env.local, make load-env, then the scheduler fetches the EAWS CAAML services, and Météo-France with METEOFRANCE_API_KEY (docs/harvest.md, batch.html)"
       ]
     },
     {

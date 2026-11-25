@@ -573,6 +573,20 @@
      "end_line": 13
     }
    ]
+  },
+  {
+   "id": "avalanche",
+   "type": "external",
+   "label": "Avalanche services",
+   "sublabel": "Météo-France, EAWS CAAML",
+   "pos": [
+    180,
+    500
+   ],
+   "size": [
+    150,
+    60
+   ]
   }
  ],
  "boundaries": [
@@ -700,6 +714,11 @@
    "label": "index"
   },
   {
+   "from": "workers",
+   "to": "avalanche",
+   "label": "harvest, HTTPS"
+  },
+  {
    "from": "images",
    "to": "sos",
    "label": "S3 put"
@@ -769,7 +788,8 @@
     "No mail (no SMTP credentials); reCAPTCHA uses Google's test keys",
     "A v6_api PR preview (-e preprod_api_version=<tag>) runs against these data",
     "Writes never reach production: own buckets, own keys, forum off by default",
-    "With the replica VM, preprod-data also archives its WAL (WAL-G) to c2corg-preprod-backups"
+    "With the replica VM, preprod-data also archives its WAL (WAL-G) to c2corg-preprod-backups",
+    "The scheduler harvests the avalanche bulletins (HARVEST_ENABLED, on for preprod only for now) into its own PostgreSQL tables: see v6_api docs/harvest.md"
    ]
   },
   {

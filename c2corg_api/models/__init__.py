@@ -62,6 +62,9 @@ from c2corg_api.models import account_removal  # noqa
 from c2corg_api.models import deleted_document  # noqa
 from c2corg_api.models import image_embed  # noqa
 from c2corg_api.models import image_duplicate  # noqa
+from c2corg_api.models import harvest  # noqa
+from c2corg_api.models import avalanche_bulletin  # noqa
+from c2corg_api.models import region_weather  # noqa
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,

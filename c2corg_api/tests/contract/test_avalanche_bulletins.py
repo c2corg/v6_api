@@ -199,6 +199,13 @@ class TestCaamlBulletin:
         ]
 
     @contract(BULLETIN)
+    def test_region_holding_others(self, browser):
+        # as the stored ones: CH-11 holds CH-1112 and CH-1113
+        with patch(CAAML_GET, return_value=json_answer(200, caaml('CH_fr.json'))):
+            response = browser.get('/avalanche-bulletins/regions/CH-11/latest')
+        assert len(response.json['bulletins']) == 2
+
+    @contract(BULLETIN)
     def test_all_the_bulletins_of_a_service(self, browser):
         with patch(CAAML_GET, return_value=json_answer(200, caaml('IT-23_fr.json'))):
             response = browser.get(

@@ -9,6 +9,7 @@ from os.path import isfile
 from fastapi import Request, Response
 
 from c2corg_api.caching import cache_document_detail
+from c2corg_api.harvest import runner
 from c2corg_api.models import es_sync
 from c2corg_api.search import elasticsearch_config
 from c2corg_api.web.cors import origin_allowed
@@ -36,8 +37,9 @@ def include(app):
 
 def health(request: Request, response: Response):
     """Return the API version and the status of its components."""
-    # the git revision, PostgreSQL, the last run of the ES syncer, ES and its
-    # number of documents, Redis and its number of keys, the maintenance mode
+    # the git revision, PostgreSQL, the last run of the ES syncer, the harvest
+    # sources, ES and its number of documents, Redis and its number of keys,
+    # the maintenance mode
     origin = request.headers.get('Origin')
     if origin and not origin_allowed(origin):
         # as the other routes (see web.checks.validate_origin)
@@ -46,6 +48,7 @@ def health(request: Request, response: Response):
     with request_session() as session:
         if not _add_database_status(status, session):
             response.status_code = 500
+        _add_harvest_status(status, session)
     _add_es_status(status)
     _add_redis_status(status)
     if _add_maintenance_mode_status(status):
@@ -66,6 +69,17 @@ def _add_database_status(status, session):
         last_es_syncer_run.isoformat() if last_es_syncer_run else ''
     )
     return success
+
+
+def _add_harvest_status(status, session):
+    # by harvester: its sources, those failing and the last success; a
+    # failing source does not fail the health check (the last data is read)
+    try:
+        status['harvest'] = runner.status(session)
+    except Exception:
+        log.exception('Getting the harvest status failed')
+        session.rollback()
+        status['harvest'] = None
 
 
 def _add_es_status(status):
