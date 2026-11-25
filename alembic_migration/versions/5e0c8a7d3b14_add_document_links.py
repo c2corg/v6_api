@@ -1,7 +1,7 @@
 """Track the documents linked in the texts of the locales.
 
 Revision ID: 5e0c8a7d3b14
-Revises: d41c7e9a2b85
+Revises: 5e3c1a7b9d42
 Create Date: 2026-11-25 10:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '5e0c8a7d3b14'
-down_revision = 'd41c7e9a2b85'
+down_revision = '5e3c1a7b9d42'
 branch_labels = None
 depends_on = None
 
