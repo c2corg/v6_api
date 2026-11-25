@@ -1,10 +1,10 @@
 # Partner outings
 
 The `/metaskirando` view of the UI shows, next to the outings of Camptocamp, the outings reported on partner
-sites ([skitour.fr](https://skitour.fr), [gulliver.it](https://www.gulliver.it), and [bivouak.net](https://www.bivouak.net),
-off by default). The API does not proxy the partner sites at request time: the harvester of [docs/harvest.md](harvest.md)
-runs each source every 15 minutes into its own tables, and `GET /partner-outings` merges those rows with the c2c
-outings of the same period.
+sites ([skitour.fr](https://skitour.fr), [gulliver.it](https://www.gulliver.it), [bivouak.net](https://www.bivouak.net)
+and [gipfelbuch.ch](https://www.gipfelbuch.ch), the last two off by default). The API does not proxy the partner sites
+at request time: the harvester of [docs/harvest.md](harvest.md) runs each source every 15 minutes into its own tables,
+and `GET /partner-outings` merges those rows with the c2c outings of the same period.
 
 ```
 harvest_tick (c2corg_api/harvest) -> PartnerHarvester partners.<name> (jobs/harvest_partner_outings.py)
@@ -32,7 +32,7 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 | env key | ini key | default | meaning |
 | --- | --- | --- | --- |
 | `harvest_partners_enabled` | `harvest.partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests the partner sources, whatever `harvest.enabled`; `make harvest-partners` refuses to run unless a source is on or `--force` is given |
-| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
+| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak` and `gipfelbuch`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
 | `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
 | `partners_retention` | `partners.retention_days` | `31` | outings older than that are not stored, and purged |
 | `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route lookups) older than that are purged |
@@ -152,7 +152,7 @@ them refresh the fixtures. Run them from a machine that reaches the sites.
 python -m c2corg_api.partners record <source> [--out DIR] [--since YYYY-MM-DD]
 ```
 
-`<source>` is `skitour`, `gulliver` or `bivouak`. The command runs the real adapter with
+`<source>` is `skitour`, `gulliver`, `bivouak` or `gipfelbuch`. The command runs the real adapter with
 the real transport, through a `RecordingTransport`, and writes into
 `<out>/<source>/` (default: the tests fixtures directory):
 
@@ -241,6 +241,7 @@ contract change. Use `-rs` to see the reasons.
 | skitour.fr | no key, so exit 2 / skip "disabled: SKITOUR_API_KEY not set"; unreachable from the dev container ("down") | needs `SKITOUR_API_KEY` |
 | gulliver.it | Cloudflare challenge (403): "blocked", exit 2 / skip | needs an allowed network or a Gulliver allow-list |
 | bivouak.net | reachable | `record` makes up to 15 requests, 10 s apart |
+| gipfelbuch.ch | reachable (robots.txt allows all) | `record` makes up to 17 requests, 2 s apart |
 
 Run them from a workstation or from production infrastructure; in the sandbox
 they only report why they could not run.
@@ -256,7 +257,7 @@ they only report why they could not run.
   source is `blocked` (403 with a challenge page). Ask Gulliver to allowlist our egress address or user agent (or to
   give a token: it would be `GULLIVER_API_TOKEN`, read like `SKITOUR_API_KEY`). Never try to bypass the challenge.
 - **Rate limits.** Each adapter declares its politeness (`rate` in `partners/sources/*.py`): a minimum delay between
-  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 40 requests; bivouak: 10 s, 15 requests). A spent budget
+  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 40 requests; bivouak: 10 s, 15 requests; gipfelbuch: 2 s, 18 requests). A spent budget
   makes the run `down`.
 - **Enabling.** Keep `harvest_partners_enabled="false"` and `partners_transport="http"` (the defaults) until the
   agreements are there; then set `harvest_partners_enabled="true"` (or one source with
@@ -267,3 +268,23 @@ they only report why they could not run.
 - **Fixtures.** The recorded fixtures are synthetic (`manifest.json` says `synthetic: true`): the partner sites are not
   reachable from the sandboxes. Replace them with real recordings when the agreements allow it, and keep the
   adapters tested against them (`c2corg_api/tests/partners`).
+
+## gipfelbuch.ch
+
+The "Verhältnisse" (conditions reports) of Switzerland, Austria, Germany, Italy and France: one listing page
+(`/verhaeltnisse/uebersicht`, about 66 reports of every activity, newest first; the old `/gipfelbuch/verhaeltnisse`
+URL redirects there, and the `src_conditions_type` filter is not a GET parameter, so every activity comes back).
+
+- **Activities.** Read from the label of the activity icon (`Skitour`, `Wanderung`, ...). Mapped: skitour and
+  freeride to `skitouring`, schneeschuhtour to `snowshoeing`, wanderung to `hiking`, klettertour to `rock_climbing`,
+  eisklettern to `ice_climbing`, klettersteig to `via_ferrata`, hochtour to `mountain_climbing`, bike to
+  `mountain_biking`. Canyoning, "Anderer Routentyp" and reports without a route type are counted in
+  `last_skipped` as `unmapped_activity:<code>`.
+- **Location.** The listing has no coordinates: only the summit name and altitude (`Regenflüeli (1582m)`), the region
+  (`CH - Zentralschweiz`) and the country. The adapter gives them as `summit_name`, `elevation_max`, `region` and
+  `country` (`CH`, `AT`, `DE`, `IT`, `FR`, `LI`). The page of a report holds a map element with WGS 84 `data-lat` /
+  `data-lon` (the point of the route's summit, entered by the contributors). It is read once per summit and kept in
+  `partner_lookups` (`summit:<name>_<altitude>`), at most 15 new summits per run (`summit_lookup_deferred` in `last_skipped`
+  counts the rest, which come on the next runs); such outings get `geom_quality = 'summit'`. The others keep the
+  hints for the job's resolver.
+- **Parsing.** By labelled element (`REQUIRED_SELECTORS`, via `htmlparse`), never by position.

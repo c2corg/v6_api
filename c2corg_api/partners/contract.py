@@ -48,6 +48,8 @@ def endpoint_of(url: str) -> str:
     """
     segment = urlsplit(url).path.rstrip('/').rsplit('/', 1)[-1].lower()
     segment = re.sub(r'\.(?:php|html?|json)$', '', segment)
+    if segment.isdigit():  # '/verhaeltnisse/2355428': the page of one item
+        return 'detail'
     segment = re.sub(r'[-_]\d.*$', '', segment)
     return re.sub(r'[^a-z0-9]+', '_', segment).strip('_') or 'index'
 
