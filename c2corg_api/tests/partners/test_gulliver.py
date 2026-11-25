@@ -354,6 +354,50 @@ def test_prefilled_cache_means_no_route_request():
     assert result.skipped.get('route_lookup_deferred') is None
 
 
+class FailingRoutes:
+    """The fixtures, but the routes in `fail` raise `error`."""
+
+    def __init__(self, error, fail=None):
+        self.inner = FixtureTransport(FIXTURES, 'gulliver', GulliverAdapter.rate)
+        self.error = error
+        self.fail = fail
+
+    @property
+    def request_count(self):
+        return self.inner.request_count
+
+    def get(self, url, *, params=None, headers=None):
+        if url == f'{BASE}/routes' and (
+            self.fail is None or str(params['id']) in self.fail
+        ):
+            raise self.error
+        return self.inner.get(url, params=params, headers=headers)
+
+
+def test_a_failing_route_fails_its_outing_only():
+    result, spy, lookups = run(FailingRoutes(SourceDown('HTTP 502'), {'57949'}))
+    assert len(result.outings) == 9
+    outing = by_id(result)['48210']
+    assert outing.geom_quality == 'none'
+    assert outing.title  # from the permalink
+    assert result.skipped['lookup_failed'] == 1
+    assert lookups.get('route:57949') is None  # asked again next run
+    assert spy.route_ids().count('57949') == 1  # once per run
+    assert any(o.geom_quality == 'start' for o in result.outings)
+
+
+def test_routes_stop_after_three_failures_in_a_row():
+    result, spy, _ = run(FailingRoutes(SourceDown('timeout')))
+    assert len(result.outings) == 9
+    assert len(spy.route_ids()) == 3
+    assert result.skipped['lookup_failed'] == 3
+
+
+def test_a_blocked_route_stops_the_run():
+    with pytest.raises(SourceBlocked):
+        run(FailingRoutes(SourceBlocked('HTTP 429'), {'57949'}))
+
+
 def test_route_lookup_cap(monkeypatch):
     monkeypatch.setattr(gulliver, 'MAX_ROUTE_FETCHES', 2)
     result, spy, lookups = run()

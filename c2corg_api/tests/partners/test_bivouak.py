@@ -325,8 +325,41 @@ def test_failing_detail_page_is_not_cached(tmp_path):
         if entry['file'] == 'sortie_30061_belle_descente.html':
             entry['status'] = 404 + 96  # 500: not a page, try again next run
     path.write_text(json.dumps(manifest))
-    # a 5xx is `down` for the whole run, like for the other adapters
-    with pytest.raises(SourceDown):
+    # a 5xx on a detail page fails that outing only: it keeps its hints
+    result, _, lookups = run_copy(tmp_path)
+    outing = by_id(result)['30061']
+    assert (outing.lat, outing.geom_quality) == (None, 'none')
+    assert outing.region
+    assert result.skipped['lookup_failed'] == 1
+    assert lookups.get('sortie:30061') is None
+    # the other detail pages were read
+    assert any(o.geom_quality != 'none' for o in result.outings)
+
+
+def test_missing_detail_fixture_fails_the_outing_only(tmp_path):
+    fixture_copy(tmp_path)
+    path = tmp_path / 'bivouak' / 'manifest.json'
+    manifest = json.loads(path.read_text())
+    manifest['entries'] = [
+        e
+        for e in manifest['entries']
+        if e['file'] != 'sortie_30061_belle_descente.html'
+    ]
+    path.write_text(json.dumps(manifest))
+    result, _, _ = run_copy(tmp_path)  # "no fixture": SourceDown for that page
+    assert by_id(result)['30061'].lat is None
+    assert result.skipped['lookup_failed'] == 1
+
+
+def test_blocked_detail_page_stops_the_run(tmp_path):
+    fixture_copy(tmp_path)
+    path = tmp_path / 'bivouak' / 'manifest.json'
+    manifest = json.loads(path.read_text())
+    for entry in manifest['entries']:
+        if entry['file'] == 'sortie_30061_belle_descente.html':
+            entry['status'] = 429
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(SourceBlocked):
         run_copy(tmp_path)
 
 
