@@ -25,6 +25,15 @@ ACTIVITY_MAP: dict[str, dict[str, tuple[tuple[str, ...], bool]]] = {
         'ferrata': (('via_ferrata',), False),
         'mtb': (('mountain_biking',), False),
     },
+    # the sports of bivouak.net (bit of `data-sport`): there is no climbing,
+    # alpinism or ice sport on the site
+    'bivouak': {
+        'ski': (('skitouring',), False),  # steep from the rating
+        'rando': (('hiking',), False),  # "Rando / Trail"
+        'raquettes': (('snowshoeing',), False),
+        'vtt': (('mountain_biking',), False),
+        'parapente': (('paragliding',), False),
+    },
 }
 
 # Blachere grade -> (min, max) c2c ski ratings

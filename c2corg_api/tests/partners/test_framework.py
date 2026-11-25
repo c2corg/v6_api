@@ -45,7 +45,7 @@ def outing(**kwargs):
 
 
 def test_source_names_come_from_the_registry():
-    assert SOURCE_NAMES == tuple(REGISTRY) == ('skitour', 'gulliver')
+    assert SOURCE_NAMES == tuple(REGISTRY) == ('skitour', 'gulliver', 'bivouak')
 
 
 @pytest.mark.parametrize('name', sorted(REGISTRY))

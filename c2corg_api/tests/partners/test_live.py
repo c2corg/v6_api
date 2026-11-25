@@ -37,7 +37,7 @@ def test_live_contract(source):
 
     actual = contract.captured_shapes(source, capture.responses)
     if not actual:
-        pytest.skip(f'{source}: no JSON answer to check')
+        pytest.skip(f'{source}: no answer to check')
     expected = contract.fixture_shapes(DEFAULT_FIXTURES / source)
     report = contract.compare(adapter, expected, actual)
     for diff in report.diff.values():  # shown with -s or on failure

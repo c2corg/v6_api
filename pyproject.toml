@@ -49,6 +49,7 @@ dependencies = [
     # parses the XML of the Météo-France avalanche bulletins
     "defusedxml==0.7.1",
     "tldextract==5.4.0",
+    "beautifulsoup4==4.14.3",
 ]
 
 [dependency-groups]

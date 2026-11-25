@@ -102,6 +102,7 @@ harvest.avalanche.caaml.enabled = {harvest_caaml_enabled}
 harvest.partners.enabled = {harvest_partners_enabled}
 harvest.partners.skitour.enabled = {harvest_partners_skitour_enabled}
 harvest.partners.gulliver.enabled = {harvest_partners_gulliver_enabled}
+harvest.partners.bivouak.enabled = {harvest_partners_bivouak_enabled}
 # minutes between two runs of a source, and the base of its backoff
 partners.interval_minutes = {partners_interval}
 partners.retention_days = {partners_retention}

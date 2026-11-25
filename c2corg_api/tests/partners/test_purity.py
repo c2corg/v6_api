@@ -1,8 +1,9 @@
 """The partners package stays free of the web framework and the database.
 
 An allow-list, not a deny-list: besides the standard library, the package may
-only import `requests`, itself and the attribute constants. Anything new
-(sqlalchemy, c2corg_api.jobs, c2corg_api.caching, elasticsearch...) fails.
+only import `requests`, `bs4` (the HTML parser), itself and the attribute
+constants. Anything new (sqlalchemy, c2corg_api.jobs, c2corg_api.caching,
+elasticsearch...) fails.
 """
 
 import ast
@@ -13,6 +14,7 @@ import c2corg_api.partners
 
 ALLOWED = (
     'requests',
+    'bs4',
     'c2corg_api.partners',
     'c2corg_api.models.common.attributes',
 )
