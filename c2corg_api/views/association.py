@@ -20,6 +20,7 @@ from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
+    check_image_keeps_a_document,
     check_permission_for_association_removal,
     validate_association_permission,
 )
@@ -197,6 +198,7 @@ def _check_required_associations(association):
         raise HTTPBadRequest(
             'as the last user of the outing, this user can not be disassociated'
         )
+    check_image_keeps_a_document(association)
 
 
 def _is_main_waypoint_association(association):

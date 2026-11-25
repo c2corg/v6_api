@@ -1015,3 +1015,81 @@ def test_delete_association_uo_last_user(client, docs, user_ids):
 
     # now, the first user can leave the outing
     client.delete_json(PREFIX, request_body1, headers=headers)
+
+
+def _link(client, parent_id, child_id, status=200, username='moderator'):
+    send_json(
+        client,
+        'post',
+        PREFIX,
+        {'parent_document_id': parent_id, 'child_document_id': child_id},
+        headers=auth_headers(username=username),
+        status=status,
+    )
+
+
+def _unlink(client, parent_id, child_id, status=200, username='moderator'):
+    return client.delete_json(
+        PREFIX,
+        {'parent_document_id': parent_id, 'child_document_id': child_id},
+        headers=auth_headers(username=username),
+        status=status,
+    )
+
+
+LAST_DOCUMENT_OF_IMAGE = (
+    'as the last document of the image, this document can not be '
+    'disassociated: delete the image instead'
+)
+
+
+def test_delete_association_last_collaborative_document_of_image(client, docs):
+    image_id = docs.image1.document_id
+    route_id = docs.route1.document_id
+    waypoint_id = docs.waypoint1.document_id
+    _link(client, route_id, image_id)
+
+    # an orphan image is lost: not even a moderator leaves it alone
+    response = _unlink(client, route_id, image_id, status=400)
+    assert_error(response.json['errors'], 'Bad Request', LAST_DOCUMENT_OF_IMAGE)
+
+    # with another document, it can be unlinked
+    _link(client, waypoint_id, image_id)
+    _unlink(client, route_id, image_id)
+    _unlink(client, waypoint_id, image_id, status=400)
+    # also from a collaborative article
+    _link(client, docs.article1.document_id, image_id)
+    _unlink(client, waypoint_id, image_id)
+    _unlink(client, docs.article1.document_id, image_id, status=400)
+
+
+def test_delete_association_last_outing_or_personal_document_of_image(client, docs):
+    image_id = docs.image1.document_id
+    # outings and personal documents are their authors': unlinked all the same
+    _link(client, docs.outing.document_id, image_id)
+    _unlink(client, docs.outing.document_id, image_id, username='contributor')
+    _link(client, docs.article2.document_id, image_id)
+    _unlink(client, docs.article2.document_id, image_id)
+
+
+def test_update_image_last_collaborative_document(client, docs):
+    image_id = docs.image1.document_id
+    _link(client, docs.route1.document_id, image_id)
+    image = client.get(f'/images/{image_id}', status=200).json
+    document = {
+        'document_id': image_id,
+        'version': image['version'],
+        'filename': image['filename'],
+        'image_type': 'collaborative',
+        'locales': image['locales'],
+        'associations': {'routes': []},
+    }
+
+    response = client.put_json(
+        f'/images/{image_id}',
+        {'message': 'Unlink', 'document': document},
+        headers=auth_headers(username='moderator'),
+        status=400,
+    )
+
+    assert_error(response.json['errors'], 'Bad Request', LAST_DOCUMENT_OF_IMAGE)
