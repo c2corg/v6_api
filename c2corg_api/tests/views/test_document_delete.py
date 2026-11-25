@@ -1085,6 +1085,53 @@ def test_delete_personal_doc_author_more_24h(client, docs):
     )
 
 
+def test_delete_outing_with_other_users(client, session, user_ids, docs):
+    from c2corg_api.models.user_profile import UserProfile
+
+    outing_id = docs.outing1.document_id
+    contributor = session.get(UserProfile, user_ids['contributor'])
+    contributor2 = session.get(UserProfile, user_ids['contributor2'])
+    _add_association(session, user_ids, contributor, docs.outing1)
+    _add_association(session, user_ids, contributor2, docs.outing1)
+    session.flush()
+    headers = auth_headers(username='contributor')
+
+    # the outing is also the one of contributor2: not deleted by its author
+    response = client.delete_json(
+        PREFIX + str(outing_id), {}, headers=headers, status=400
+    )
+    assert response.json['errors'][0]['description'] == (
+        'This outing has other participants: unlink them first'
+    )
+
+    # once alone, it is
+    client.delete_json(
+        '/associations',
+        {
+            'parent_document_id': user_ids['contributor2'],
+            'child_document_id': outing_id,
+        },
+        headers=headers,
+        status=200,
+    )
+    client.delete_json(PREFIX + str(outing_id), {}, headers=headers, status=200)
+
+
+def test_delete_outing_with_other_users_by_a_moderator(client, session, user_ids, docs):
+    from c2corg_api.models.user_profile import UserProfile
+
+    contributor2 = session.get(UserProfile, user_ids['contributor2'])
+    _add_association(session, user_ids, contributor2, docs.outing1)
+    session.flush()
+
+    client.delete_json(
+        PREFIX + str(docs.outing1.document_id),
+        {},
+        headers=auth_headers(username='moderator'),
+        status=200,
+    )
+
+
 def test_delete_locale_non_unauthorized(client, docs):
     client.delete_json(PREFIX + str(docs.waypoint1.document_id) + '/fr', {}, status=403)
 

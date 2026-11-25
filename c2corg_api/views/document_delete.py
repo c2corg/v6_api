@@ -44,6 +44,7 @@ from c2corg_api.models.route import (
     RouteLocale,
 )
 from c2corg_api.models.topo_map_association import TopoMapAssociation
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
     ArchiveWaypoint,
@@ -149,6 +150,17 @@ def validate_document(request, **kwargs):
             return
 
 
+def _has_other_users(outing_id, user_id):
+    """Tell whether other users than this one are linked to the outing."""
+    return DBSession.query(
+        exists().where(
+            Association.parent_document_type == USERPROFILE_TYPE,
+            Association.child_document_id == outing_id,
+            Association.parent_document_id != user_id,
+        )
+    ).scalar()
+
+
 def _is_main_waypoint_of_route(document_id):
     return DBSession.query(
         exists().where(Route.main_waypoint_id == document_id)
@@ -240,6 +252,13 @@ def validate_requestor(request, **kwargs):
                 'querystring',
                 'document_id',
                 'Only the initial author can delete this document',
+            )
+        elif document_type == OUTING_TYPE and _has_other_users(document_id, user_id):
+            # the outing is theirs too: its author unlinks them first
+            request.errors.add(
+                'querystring',
+                'document_id',
+                'This outing has other participants: unlink them first',
             )
         return
 
