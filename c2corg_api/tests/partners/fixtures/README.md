@@ -49,7 +49,8 @@ c2corg_api.partners shapes` to see what changed.
 |---|---|---|
 | skitour.fr | reachable with an API key (`cle` header, `SKITOUR_API_KEY` or `SKITOUR_API_KEY_FILE`) | recorded 2026-11-25 (`skitour/`, `synthetic: false`) |
 | gulliver.it | 403 Cloudflare "Just a moment..." JS challenge | synthetic |
-| gipfelbuch.ch, bivouak.net | reachable | recorded (M2) |
+| gipfelbuch.ch | reachable | recorded (M2) |
+| bivouak.net | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
 | skitourenportal.eu, on-ice.it | blocked by the sandbox proxy | synthetic or recorded elsewhere (M2) |
 | api.camptocamp.org | reachable | not needed |
 
@@ -82,3 +83,13 @@ The author pseudos and titles it holds are what the adapter reads and credits.
 is hand-written in the same format for what the recording does not hold: broken
 items, odd dates, HTML entities, invalid coordinates, ties, paging. It is only
 used by `tests/partners/test_skitour.py`; it is not a recording, never re-record it.
+
+## HTML fixtures (bivouak)
+
+`fixtures/bivouak/` holds HTML pages, trimmed by `htmlparse.trim` to what `REQUIRED_SELECTORS` match: no excerpt, no
+photo, no script. `shape.json` lists, per file, the selectors that matched. The recording was made once (15 requests,
+10 s apart, with the camptocamp User-Agent; robots.txt allows these paths) and parsed offline. One file,
+`sortie_30886.html`, comes from a copy of the page saved during the same session (the first recording stopped on an
+untitled outing: the adapter was fixed to give it a title and its detail page was then added by hand, trimmed the same
+way). `record bivouak --since 2026-02-15` is how to refresh them; a recording from a later day has other outings, so the
+assertions of `test_bivouak.py` on counts and ids change with it.
