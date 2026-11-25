@@ -817,6 +817,16 @@ def test_images_of_deletion(client, outing_images, docs):  # noqa: F811
     client.get('/documents/delete/9999999/images', headers=_moderator(), status=404)
 
 
+def test_images_of_deletion_refused_by_the_links(client, docs):  # noqa: F811
+    # route1 is the only route of outing1: not deletable, even by a moderator
+    url = f'/documents/delete/{docs.route1.document_id}/images'
+    body = client.get(url, headers=_moderator(), status=400).json
+    assert body['errors'][0]['description'] == (
+        'This route cannot be deleted because '
+        'it is the only route associated to some outings.'
+    )
+
+
 def test_images_of_deletion_of_an_image(client, docs):  # noqa: F811
     url = f'/documents/delete/{docs.image1.document_id}/images'
     body = client.get(url, headers=_moderator()).json
@@ -852,9 +862,13 @@ def test_images_of_deletion_texts(client, session, docs):  # noqa: F811
         [route_id, docs.route2.document_id], reverse=True
     )
 
-    # a route linked from another text
-    _write(session, docs.route3, f'[[routes/{route_id}|the route]]')
-    body = client.get(f'/documents/delete/{route_id}/images', headers=_moderator()).json
+    # a route linked from another text (route1, the only route of outing1,
+    # can not be deleted)
+    route2_id = docs.route2.document_id
+    _write(session, docs.route3, f'[[routes/{route2_id}|the route]]')
+    body = client.get(
+        f'/documents/delete/{route2_id}/images', headers=_moderator()
+    ).json
     assert body['embedded_in'] == []
     assert [d['document_id'] for d in body['linked_from']] == [docs.route3.document_id]
 

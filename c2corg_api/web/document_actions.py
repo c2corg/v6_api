@@ -10,6 +10,7 @@ from c2corg_api.views.document_delete import (
     delete_document,
     delete_document_locale,
     read_images_of_deletion,
+    validate_document,
     validate_document_type,
     validate_requestor,
 )
@@ -207,12 +208,18 @@ def duplicate_images(
 
 def images_of_deletion(request: Request, user: User, id: Id):
     """Return how many images a deletion takes along, and leaves orphan."""
-    # the checks of the deletion: who may delete this document
+    # the checks of the deletion: who may delete this document, and whether
+    # its links allow it (a main waypoint, the only route of an outing...)
     validated = {'id': id}
     return serve_read(
         request,
         user,
-        [typed_values(validated), validate_document_type, validate_requestor],
+        [
+            typed_values(validated),
+            validate_document_type,
+            validate_document,
+            validate_requestor,
+        ],
         read_images_of_deletion,
         permission='authenticated',
     )
