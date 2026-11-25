@@ -281,10 +281,10 @@ def test_sources_are_degraded_on_purpose(client, world):
     # set has an item that does not parse: its run is `degraded`
     answer = client.get('/partner-outings/sources', status=200).json
     sources = {s['source']: s for s in answer['sources']}
-    # bivouak and gipfelbuch are switched off (harvest.partners.<name>.enabled):
-    # off by default
-    assert set(sources) == {'skitour', 'gulliver', 'bivouak', 'gipfelbuch'}
-    for name in ('bivouak', 'gipfelbuch'):
+    # the sources switched off (harvest.partners.<name>.enabled): off by default
+    off = ('bivouak', 'gipfelbuch', 'skitourenportal')
+    assert set(sources) == {'skitour', 'gulliver', *off}
+    for name in off:
         assert sources[name]['status'] == 'disabled'
         assert sources[name]['status_detail'] == 'not configured'
     assert sources['skitour']['status'] == 'ok'
@@ -309,6 +309,7 @@ def test_sources_are_degraded_on_purpose(client, world):
         'gulliver': 'degraded',
         'bivouak': 'disabled',
         'gipfelbuch': 'disabled',
+        'skitourenportal': 'disabled',
     }
 
 
