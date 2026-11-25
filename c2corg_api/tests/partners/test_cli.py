@@ -432,3 +432,26 @@ def test_secrets_from_env_or_key_file(monkeypatch, tmp_path):
     monkeypatch.delenv('SKITOUR_API_KEY')
     monkeypatch.setenv('SKITOUR_API_KEY_FILE', str(tmp_path / 'missing'))
     assert cli.secrets_from_env(adapter) == {}
+
+
+def test_record_pseudonymises_authors_consistently(site, tmp_path):
+    def authors(data):
+        for i, item in enumerate(data):
+            item['auteur'] = {'id': str(i), 'pseudo': 'Alice' if i % 2 else 'Bob'}
+
+    _edit(site / 'skitour/sorties_c1_l200_p1.json', authors)
+    out = tmp_path / 'recorded'
+    assert cli.main(['record', 'skitour', '--out', str(out)]) == 0
+    recorded = json.loads((out / 'skitour/sorties_c1_l200_p1.json').read_text())
+    pseudos = [item['auteur']['pseudo'] for item in recorded]
+    assert pseudos[:3] == ['user1', 'user2', 'user1']
+    assert 'Alice' not in json.dumps(recorded) and 'Bob' not in json.dumps(recorded)
+
+
+def test_pseudonymise_keeps_the_type_of_ids():
+    names = {}
+    data = [{'a': {'id': 77, 'n': 'x'}}, {'a': {'id': 77, 'n': 'y'}}]
+    out = contract._replace(data, contract._tree(['[].a.id']), names)
+    assert out[0]['a']['id'] == out[1]['a']['id']
+    assert isinstance(out[0]['a']['id'], int)
+    assert out[0]['a']['n'] == 'x'

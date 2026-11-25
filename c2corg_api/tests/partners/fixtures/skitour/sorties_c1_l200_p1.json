@@ -7,7 +7,7 @@
   "dif_ski": "2.1",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "Laurent B..."
+   "pseudo": "user1"
   },
   "massif": {
    "nom": "Grandes Rousses - Arves"
@@ -33,7 +33,7 @@
   "dif_ski": "3.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "Géraud"
+   "pseudo": "user2"
   },
   "massif": {
    "nom": "Lauzière - Cheval Noir"
@@ -59,7 +59,7 @@
   "dif_ski": "1.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "MH 05600"
+   "pseudo": "user3"
   },
   "massif": {
    "nom": "Queyras - Alpes Cozie N"
@@ -97,7 +97,7 @@
   "dif_ski": "2.1",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "cm38660"
+   "pseudo": "user4"
   },
   "massif": {
    "nom": "Belledonne"
@@ -115,7 +115,7 @@
   "dif_ski": "2.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "ThibsR"
+   "pseudo": "user5"
   },
   "massif": {
    "nom": "Belledonne"
@@ -153,7 +153,7 @@
   "dif_ski": "2.1",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "Glad38"
+   "pseudo": "user6"
   },
   "massif": {
    "nom": "Beaufortain"
@@ -191,7 +191,7 @@
   "dif_ski": "2.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "cassien vanoise"
+   "pseudo": "user7"
   },
   "massif": {
    "nom": "Vanoise"
@@ -217,7 +217,7 @@
   "dif_ski": "3.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "Marxo"
+   "pseudo": "user8"
   },
   "massif": {
    "nom": "Bauges"
@@ -243,7 +243,7 @@
   "dif_ski": "2.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "Hugues"
+   "pseudo": "user9"
   },
   "massif": {
    "nom": "Bornes - Aravis"
@@ -269,7 +269,7 @@
   "dif_ski": "1.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "Météo-France Alpes du Sud"
+   "pseudo": "user10"
   },
   "massif": {
    "nom": "Ecrins"
@@ -295,7 +295,7 @@
   "dif_ski": "2.1",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "chris-altitude-adventures"
+   "pseudo": "user11"
   },
   "massif": {
    "nom": "Belledonne"
@@ -313,7 +313,7 @@
   "dif_ski": "2.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "cricri38"
+   "pseudo": "user12"
   },
   "massif": {
    "nom": "Grandes Rousses - Arves"
@@ -339,7 +339,7 @@
   "dif_ski": "2.1",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "loulou738"
+   "pseudo": "user13"
   },
   "massif": {
    "nom": "Belledonne"
@@ -357,7 +357,7 @@
   "dif_ski": "3.1",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "Ajen Zenith"
+   "pseudo": "user14"
   },
   "massif": {
    "nom": "Alpes Vaudoises"
@@ -383,7 +383,7 @@
   "dif_ski": "2.2",
   "date": "1795474800",
   "auteur": {
-   "pseudo": "Norman"
+   "pseudo": "user15"
   },
   "massif": {
    "nom": "Bornes - Aravis"
@@ -409,7 +409,7 @@
   "dif_ski": "3.2",
   "date": "1795388400",
   "auteur": {
-   "pseudo": "Tomach"
+   "pseudo": "user16"
   },
   "massif": {
    "nom": "Ecrins"
@@ -427,7 +427,7 @@
   "dif_ski": "2.2",
   "date": "1795388400",
   "auteur": {
-   "pseudo": "RémiL73"
+   "pseudo": "user17"
   },
   "massif": {
    "nom": "Cerces - Thabor - Mont Cenis"
@@ -445,7 +445,7 @@
   "dif_ski": "2.1",
   "date": "1795388400",
   "auteur": {
-   "pseudo": "cricri38"
+   "pseudo": "user12"
   },
   "massif": {
    "nom": "Grandes Rousses - Arves"
@@ -471,7 +471,7 @@
   "dif_ski": "4.3",
   "date": "1795388400",
   "auteur": {
-   "pseudo": "cissoubalou"
+   "pseudo": "user18"
   },
   "massif": {
    "nom": "Ubaye - Parpaillon - Alpes Cozie S"
@@ -497,7 +497,7 @@
   "dif_ski": "2.1",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "MH 05600"
+   "pseudo": "user3"
   },
   "massif": {
    "nom": "Ubaye - Parpaillon - Alpes Cozie S"
@@ -541,7 +541,7 @@
   "dif_ski": "3.1",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "Adrien B"
+   "pseudo": "user19"
   },
   "massif": {
    "nom": "Vanoise"
@@ -567,7 +567,7 @@
   "dif_ski": "2.3",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "zahl"
+   "pseudo": "user20"
   },
   "massif": {
    "nom": "Alpes Grées N"
@@ -585,7 +585,7 @@
   "dif_ski": "2.1",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "rafale38"
+   "pseudo": "user21"
   },
   "massif": {
    "nom": "Vanoise"
@@ -611,7 +611,7 @@
   "dif_ski": "3.1",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "ghyslain"
+   "pseudo": "user22"
   },
   "massif": {
    "nom": "Beaufortain"
@@ -637,7 +637,7 @@
   "dif_ski": "",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "genepy04"
+   "pseudo": "user23"
   },
   "massif": {
    "nom": "Préalpes de Digne"
@@ -663,7 +663,7 @@
   "dif_ski": "",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "Daft Gum"
+   "pseudo": "user24"
   },
   "massif": {
    "nom": "Grandes Rousses - Arves"
@@ -689,7 +689,7 @@
   "dif_ski": "",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "florian05"
+   "pseudo": "user25"
   },
   "massif": {
    "nom": "Ecrins"
@@ -715,7 +715,7 @@
   "dif_ski": "2.3",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "sdxmountainer"
+   "pseudo": "user26"
   },
   "massif": {
    "nom": "Grandes Rousses - Arves"
@@ -741,7 +741,7 @@
   "dif_ski": "3.3",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "Hosanniere"
+   "pseudo": "user27"
   },
   "massif": {
    "nom": "Beaufortain"
@@ -759,7 +759,7 @@
   "dif_ski": "2.3",
   "date": "1795215600",
   "auteur": {
-   "pseudo": "thouthou"
+   "pseudo": "user28"
   },
   "massif": {
    "nom": "Haut Giffre - Aiguilles Rouges"

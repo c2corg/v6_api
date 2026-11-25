@@ -623,7 +623,7 @@ def test_real_outing_with_a_summit(real):
         title='Roc Rouge > Sarvatan et Crêt Maxet',
         date=datetime.date(2026, 11, 24),
         activities=('skitouring',),
-        author='Géraud',
+        author='user2',
         lang='fr',
         region='Lauzière - Cheval Noir',
         country='FR',

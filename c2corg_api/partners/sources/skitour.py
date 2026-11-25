@@ -98,6 +98,12 @@ class SkitourAdapter:
         ]
     }
 
+    # JSON paths holding a partner user's identity: a recording replaces them by
+    # "user1", "user2"... (public repository: no real identity in a fixture).
+    PSEUDONYMISE_PATHS: ClassVar[dict[str, list[str]]] = {
+        'sorties': ['[].auteur.pseudo']
+    }
+
     PAGE_SIZE: ClassVar[int] = 200
     MAX_DAYS: ClassVar[int] = 31
 

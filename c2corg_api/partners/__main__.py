@@ -151,7 +151,7 @@ def cmd_record(args) -> int:
             make_transport(adapter),
             work,
             args.source,
-            trim=partial(contract.trim_body, args.source),
+            trim=partial(contract.trim_body, args.source, names={}),
             ignore_params=contract.VOLATILE_PARAMS.get(args.source, ()),
         )
         result = contract.run_adapter(
