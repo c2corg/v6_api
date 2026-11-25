@@ -10,7 +10,7 @@ model.
 Create the migration script with:
 
 ```bash
-docker-compose exec api .build/venv/bin/alembic revision -m 'Add column x'
+alembic revision -m 'Add column x'   # in the venv (or: uv run alembic ...), from the root of the repository
 ```
 
 A new migration script is created in `alembic_migration/versions/`. Add the required database operations to
@@ -27,5 +27,5 @@ is used.
 A migration should be run each time the application code is updated or if you have just created a migration script.
 
 ```bash
-docker-compose exec api .build/venv/bin/alembic upgrade head
+alembic upgrade head   # in the venv (or: uv run alembic upgrade head; make init-database does it too)
 ```

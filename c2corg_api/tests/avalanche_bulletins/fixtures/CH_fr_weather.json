@@ -1,0 +1,2011 @@
+{
+ "bulletins": [
+  {
+   "bulletinID": "4512b8d8-e77d-4896-818f-5fc0a45a13cc",
+   "lang": "fr",
+   "validTime": {
+    "startTime": "2026-11-23T16:00:00Z",
+    "endTime": "2026-11-24T16:00:00Z"
+   },
+   "nextUpdate": "2026-11-24T16:00:00Z",
+   "unscheduled": false,
+   "regions": [
+    {
+     "regionID": "CH-1227",
+     "name": "Engstligen"
+    }
+   ],
+   "dangerRatings": [
+    {
+     "mainValue": "considerable",
+     "validTimePeriod": "all_day",
+     "customData": {
+      "CH": {
+       "subdivision": "plus"
+      }
+     }
+    }
+   ],
+   "avalancheProblems": [
+    {
+     "comment": "Des amateurs de sports d'hiver seuls peuvent facilement déclencher des avalanches, pouvant atteindre une grande taille. Des avalanches spontanées sont encore possibles surtout pendant la nuit. Les avalanches peuvent se déclencher dans les différentes couches de neige fraîche et soufflée. En outre, des avalanches peuvent aussi se déclencher dans la neige ancienne. Ceci particulièrement sur les pentes exposées au nord et à l'est au-dessus d'environ 2600 m. <br/> Les randonnées demandent beaucoup d' expérience dans l'évaluation du danger d'avalanche et de la retenue.",
+     "dangerRatingValue": "considerable",
+     "validTimePeriod": "all_day",
+     "problemType": "new_snow",
+     "elevation": {
+      "lowerBound": "2000"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "subdivision": "plus",
+       "coreZoneText": "Degré de danger \"marqué\" (3+) à toutes les expositions au-dessus de 2000m.",
+       "problemID": "224"
+      }
+     }
+    },
+    {
+     "comment": "Des amateurs de sports d'hiver seuls peuvent facilement déclencher des avalanches, pouvant atteindre une grande taille. Des avalanches spontanées sont encore possibles surtout pendant la nuit. Les avalanches peuvent se déclencher dans les différentes couches de neige fraîche et soufflée. En outre, des avalanches peuvent aussi se déclencher dans la neige ancienne. Ceci particulièrement sur les pentes exposées au nord et à l'est au-dessus d'environ 2600 m. <br/> Les randonnées demandent beaucoup d' expérience dans l'évaluation du danger d'avalanche et de la retenue.",
+     "dangerRatingValue": "considerable",
+     "validTimePeriod": "all_day",
+     "problemType": "persistent_weak_layers",
+     "elevation": {
+      "lowerBound": "2000"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "subdivision": "plus",
+       "coreZoneText": "Degré de danger \"marqué\" (3+) à toutes les expositions au-dessus de 2000m.",
+       "problemID": "225"
+      }
+     }
+    },
+    {
+     "comment": "Sur les pentes raides herbeuses des avalanches de glissement très nombreuses sont à attendre, de manière isolée, également de grande taille. Prudence en présence de fissures de glissement.",
+     "dangerRatingValue": "moderate",
+     "validTimePeriod": "all_day",
+     "problemType": "gliding_snow",
+     "elevation": {
+      "upperBound": "2400"
+     },
+     "aspects": [
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W"
+     ],
+     "customData": {
+      "CH": {
+       "coreZoneText": "Degré de danger \"limité\" (2) aux expositions est à ouest en passant par le sud en dessous de 2400m.",
+       "problemID": "226"
+      }
+     }
+    }
+   ],
+   "customData": {
+    "CH": {
+     "aggregation": [
+      {
+       "category": "dry",
+       "validTimePeriod": "all_day",
+       "problemTypes": [
+        "new_snow",
+        "persistent_weak_layers"
+       ],
+       "problemIDs": [
+        "224",
+        "225"
+       ],
+       "title": "Avalanches sèches"
+      },
+      {
+       "category": "wet",
+       "validTimePeriod": "all_day",
+       "problemTypes": [
+        "gliding_snow"
+       ],
+       "problemIDs": [
+        "226"
+       ],
+       "title": "Avalanches de glissement"
+      }
+     ],
+     "weather": [
+      {
+       "wind": {
+        "speedKmh": 53,
+        "direction": "W",
+        "highlight": "medium"
+       },
+       "period": {
+        "end": "2026-11-22T16:00:00.000Z",
+        "start": "2026-11-21T16:00:00.000Z"
+       },
+       "newSnow": [
+        {
+         "snowCm": 0,
+         "elevationM": 1500,
+         "precipitationType": "rain"
+        },
+        {
+         "snowCm": 3,
+         "elevationM": 2500,
+         "precipitationType": "snow"
+        }
+       ],
+       "timeSeries": {
+        "temperatures": [
+         {
+          "valueC": 0.9,
+          "timestamp": "2026-11-21T17:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.4,
+          "timestamp": "2026-11-21T18:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.8,
+          "timestamp": "2026-11-21T19:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.4,
+          "timestamp": "2026-11-21T20:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.6,
+          "timestamp": "2026-11-21T21:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.1,
+          "timestamp": "2026-11-21T22:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.5,
+          "timestamp": "2026-11-21T23:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.7,
+          "timestamp": "2026-11-22T00:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.8,
+          "timestamp": "2026-11-22T01:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.3,
+          "timestamp": "2026-11-22T02:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.8,
+          "timestamp": "2026-11-22T03:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.5,
+          "timestamp": "2026-11-22T04:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.3,
+          "timestamp": "2026-11-22T05:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.1,
+          "timestamp": "2026-11-22T06:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0.7,
+          "timestamp": "2026-11-22T07:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.3,
+          "timestamp": "2026-11-22T08:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.4,
+          "timestamp": "2026-11-22T09:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1,
+          "timestamp": "2026-11-22T10:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0.7,
+          "timestamp": "2026-11-22T11:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0,
+          "timestamp": "2026-11-22T12:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.7,
+          "timestamp": "2026-11-22T13:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.8,
+          "timestamp": "2026-11-22T14:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.5,
+          "timestamp": "2026-11-22T15:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.6,
+          "timestamp": "2026-11-22T16:00:00.000Z",
+          "elevationM": 2000
+         }
+        ],
+        "snowfallLimit": [
+         {
+          "timestamp": "2026-11-21T17:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-21T18:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-21T19:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-21T20:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-21T21:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-21T22:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-21T23:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T00:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T01:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T02:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T03:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T04:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T05:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T06:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T07:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T08:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T09:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T10:00:00.000Z",
+          "elevationM": 1590,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T11:00:00.000Z",
+          "elevationM": 1660,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T12:00:00.000Z",
+          "elevationM": 1630,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T13:00:00.000Z",
+          "elevationM": 1530,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T14:00:00.000Z",
+          "elevationM": 1520,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T15:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T16:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         }
+        ]
+       }
+      },
+      {
+       "wind": {
+        "speedKmh": 55,
+        "direction": "W",
+        "highlight": "medium"
+       },
+       "period": {
+        "end": "2026-11-23T16:00:00.000Z",
+        "start": "2026-11-22T16:00:00.000Z"
+       },
+       "newSnow": [
+        {
+         "snowCm": 18,
+         "elevationM": 1500
+        },
+        {
+         "snowCm": 28,
+         "highlight": "medium",
+         "elevationM": 2500
+        }
+       ],
+       "timeSeries": {
+        "temperatures": [
+         {
+          "valueC": -1.9,
+          "timestamp": "2026-11-22T17:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.8,
+          "timestamp": "2026-11-22T18:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.3,
+          "timestamp": "2026-11-22T19:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.4,
+          "timestamp": "2026-11-22T20:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.9,
+          "timestamp": "2026-11-22T21:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.4,
+          "timestamp": "2026-11-22T22:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.4,
+          "timestamp": "2026-11-22T23:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.6,
+          "timestamp": "2026-11-23T00:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.3,
+          "timestamp": "2026-11-23T01:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.7,
+          "timestamp": "2026-11-23T02:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.9,
+          "timestamp": "2026-11-23T03:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3,
+          "timestamp": "2026-11-23T04:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.9,
+          "timestamp": "2026-11-23T05:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.2,
+          "timestamp": "2026-11-23T06:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4.1,
+          "timestamp": "2026-11-23T07:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.3,
+          "timestamp": "2026-11-23T08:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.3,
+          "timestamp": "2026-11-23T09:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.6,
+          "timestamp": "2026-11-23T10:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3,
+          "timestamp": "2026-11-23T11:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3,
+          "timestamp": "2026-11-23T12:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.4,
+          "timestamp": "2026-11-23T13:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.5,
+          "timestamp": "2026-11-23T14:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.5,
+          "timestamp": "2026-11-23T15:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.7,
+          "timestamp": "2026-11-23T16:00:00.000Z",
+          "elevationM": 2000
+         }
+        ],
+        "snowfallLimit": [
+         {
+          "timestamp": "2026-11-22T17:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T18:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T19:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T20:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T21:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T22:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-22T23:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T00:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T01:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T02:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T03:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T04:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T05:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T06:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T07:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T08:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T09:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T10:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T11:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T12:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T13:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T14:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T15:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T16:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         }
+        ]
+       }
+      },
+      {
+       "wind": {
+        "speedKmh": 21,
+        "direction": "W"
+       },
+       "period": {
+        "end": "2026-11-24T16:00:00.000Z",
+        "start": "2026-11-23T16:00:00.000Z"
+       },
+       "newSnow": [
+        {
+         "snowCm": 0,
+         "elevationM": 1500
+        },
+        {
+         "snowCm": 1,
+         "elevationM": 2500
+        }
+       ],
+       "timeSeries": {
+        "temperatures": [
+         {
+          "valueC": -3.5,
+          "timestamp": "2026-11-23T17:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.5,
+          "timestamp": "2026-11-23T18:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.5,
+          "timestamp": "2026-11-23T19:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.3,
+          "timestamp": "2026-11-23T20:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.2,
+          "timestamp": "2026-11-23T21:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.1,
+          "timestamp": "2026-11-23T22:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.2,
+          "timestamp": "2026-11-23T23:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.1,
+          "timestamp": "2026-11-24T00:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.1,
+          "timestamp": "2026-11-24T01:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.9,
+          "timestamp": "2026-11-24T02:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.6,
+          "timestamp": "2026-11-24T03:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.1,
+          "timestamp": "2026-11-24T04:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.6,
+          "timestamp": "2026-11-24T05:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.2,
+          "timestamp": "2026-11-24T06:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.8,
+          "timestamp": "2026-11-24T07:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.2,
+          "timestamp": "2026-11-24T08:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0.3,
+          "timestamp": "2026-11-24T09:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.1,
+          "timestamp": "2026-11-24T10:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.7,
+          "timestamp": "2026-11-24T11:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.2,
+          "timestamp": "2026-11-24T12:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.5,
+          "timestamp": "2026-11-24T13:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.9,
+          "timestamp": "2026-11-24T14:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.1,
+          "timestamp": "2026-11-24T15:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.3,
+          "timestamp": "2026-11-24T16:00:00.000Z",
+          "elevationM": 2000
+         }
+        ],
+        "snowfallLimit": [
+         {
+          "timestamp": "2026-11-23T17:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T18:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T19:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T20:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T21:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T22:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-23T23:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T00:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T01:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T02:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T03:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T04:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T05:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T06:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T07:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T08:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T09:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T10:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T11:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T12:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T13:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T14:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T15:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T16:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         }
+        ]
+       }
+      }
+     ],
+     "dangerRatingEvolution": [
+      {
+       "date": "2026-11-24",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "plus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-25",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-23",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "plus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-22",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-21",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "plus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-20",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "plus"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "publicationTime": "2026-11-23T16:00:00Z",
+   "weatherForecast": {
+    "comment": "<h2>23.11. 17:00 – 24.11. 17:00</h2><ul><li>Limite des chutes de neige: En dessous de 1460&nbsp;m</li><li>Température maximale à 2000&nbsp;m: 3.3&nbsp;°C</li><li>Neige fraîche à 1500&nbsp;m: 0&nbsp;cm</li><li>Neige fraîche à 2500&nbsp;m: 1&nbsp;cm</li><li>Vitesse du vent: 21&nbsp;km/h</li><li>Direction du vent: W</li></ul>"
+   },
+   "weatherReview": {
+    "comment": "<h2>21.11. 17:00 – 22.11. 17:00</h2><ul><li>Limite des chutes de neige: De moins de 1460&nbsp;m à 1660&nbsp;m</li><li>Température maximale à 2000&nbsp;m: 3.8&nbsp;°C</li><li>Neige fraîche à 1500&nbsp;m: Pluie</li><li>Neige fraîche à 2500&nbsp;m: 3&nbsp;cm</li><li>Vitesse du vent: 53&nbsp;km/h</li><li>Direction du vent: W</li></ul><h2>22.11. 17:00 – 23.11. 17:00</h2><ul><li>Limite des chutes de neige: En dessous de 1460&nbsp;m</li><li>Température maximale à 2000&nbsp;m: -1.3&nbsp;°C</li><li>Neige fraîche à 1500&nbsp;m: 18&nbsp;cm</li><li>Neige fraîche à 2500&nbsp;m: 28&nbsp;cm</li><li>Vitesse du vent: 55&nbsp;km/h</li><li>Direction du vent: W</li></ul>"
+   },
+   "snowpackStructure": {
+    "comment": "Des couches fragiles susceptibles de se rompre sont présentes d'une part dans les couches de neige fraîche et de neige soufflée des deux derniers jours. D'autre part, surtout sur les pentes exposées au nord et à l'est au-dessus d'environ 2600 m, il y a à la base du manteau neigeux de la neige ancienne fragile à gros grains. Celle-ci n'est généralement pas encore suffisamment recouverte et peut encore être déclenchée par des personnes. Ces couches fragiles ne se stabilisent que lentement."
+   },
+   "tendency": [
+    {
+     "comment": "<h2>Avalanches sèches</h2><p>Le danger d'avalanches sèches diminue lentement. Des amateurs de sports d'hiver même seuls peuvent toujours déclencher des avalanches, y compris dans des couches plus profondes. Les randonnées et descentes hors-piste demandent de l' expérience dans l'évaluation du danger d'avalanche et de la retenue.</p><h2>Avalanches mouillées</h2><p>À tout moment des avalanches de glissement sont possibles. Les zones présentant des fissures de glissement doivent être évitées dans la mesure du possible.</p>"
+    }
+   ]
+  },
+  {
+   "bulletinID": "c7a7d25f-b772-4512-942d-7d0f2c517eed",
+   "lang": "fr",
+   "validTime": {
+    "startTime": "2026-11-23T16:00:00Z",
+    "endTime": "2026-11-24T16:00:00Z"
+   },
+   "nextUpdate": "2026-11-24T16:00:00Z",
+   "unscheduled": false,
+   "regions": [
+    {
+     "regionID": "CH-1228",
+     "name": "Obersimmental"
+    }
+   ],
+   "dangerRatings": [
+    {
+     "mainValue": "considerable",
+     "validTimePeriod": "all_day",
+     "customData": {
+      "CH": {
+       "subdivision": "neutral"
+      }
+     }
+    }
+   ],
+   "avalancheProblems": [
+    {
+     "comment": "La neige fraîche abondante et la neige soufflée des deux derniers jours sont partiellement fragiles. Des amateurs de sports d'hiver seuls peuvent déclencher des avalanches. Celles-ci peuvent de manière isolée devenir grandes surtout sur les pentes exposées au nord et à l'est. <br/> Les randonnées demandent une expérience dans l'évaluation du danger d'avalanche.",
+     "dangerRatingValue": "considerable",
+     "validTimePeriod": "all_day",
+     "problemType": "new_snow",
+     "elevation": {
+      "lowerBound": "2000"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "subdivision": "neutral",
+       "coreZoneText": "Degré de danger \"marqué\" (3=) à toutes les expositions au-dessus de 2000m.",
+       "problemID": "222"
+      }
+     }
+    },
+    {
+     "comment": "Des avalanches de glissement très nombreuses de petite et rarement moyenne taille sont à attendre sur les pentes herbeuses. Prudence en présence de fissures de glissement.",
+     "dangerRatingValue": "moderate",
+     "validTimePeriod": "all_day",
+     "problemType": "gliding_snow",
+     "customData": {
+      "CH": {
+       "problemID": "223"
+      }
+     }
+    }
+   ],
+   "customData": {
+    "CH": {
+     "aggregation": [
+      {
+       "category": "dry",
+       "validTimePeriod": "all_day",
+       "problemTypes": [
+        "new_snow"
+       ],
+       "problemIDs": [
+        "222"
+       ],
+       "title": "Avalanches sèches"
+      },
+      {
+       "category": "wet",
+       "validTimePeriod": "all_day",
+       "problemTypes": [
+        "gliding_snow"
+       ],
+       "problemIDs": [
+        "223"
+       ],
+       "title": "Avalanches de glissement"
+      }
+     ],
+     "weather": [
+      {
+       "wind": {
+        "speedKmh": 46,
+        "direction": "SW",
+        "highlight": "medium"
+       },
+       "period": {
+        "end": "2026-11-22T16:00:00.000Z",
+        "start": "2026-11-21T16:00:00.000Z"
+       },
+       "newSnow": [
+        {
+         "snowCm": 0,
+         "elevationM": 1500,
+         "precipitationType": "snowRain"
+        },
+        {
+         "snowCm": 7,
+         "elevationM": 2500,
+         "precipitationType": "snow"
+        }
+       ],
+       "timeSeries": {
+        "temperatures": [
+         {
+          "valueC": 0.2,
+          "timestamp": "2026-11-21T17:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0.8,
+          "timestamp": "2026-11-21T18:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.3,
+          "timestamp": "2026-11-21T19:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.6,
+          "timestamp": "2026-11-21T20:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.8,
+          "timestamp": "2026-11-21T21:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.6,
+          "timestamp": "2026-11-21T22:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3,
+          "timestamp": "2026-11-21T23:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3,
+          "timestamp": "2026-11-22T00:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 3.2,
+          "timestamp": "2026-11-22T01:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.8,
+          "timestamp": "2026-11-22T02:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.9,
+          "timestamp": "2026-11-22T03:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2,
+          "timestamp": "2026-11-22T04:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0.3,
+          "timestamp": "2026-11-22T05:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.1,
+          "timestamp": "2026-11-22T06:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.6,
+          "timestamp": "2026-11-22T07:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0,
+          "timestamp": "2026-11-22T08:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.2,
+          "timestamp": "2026-11-22T09:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0,
+          "timestamp": "2026-11-22T10:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.2,
+          "timestamp": "2026-11-22T11:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.7,
+          "timestamp": "2026-11-22T12:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1,
+          "timestamp": "2026-11-22T13:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.3,
+          "timestamp": "2026-11-22T14:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.4,
+          "timestamp": "2026-11-22T15:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.8,
+          "timestamp": "2026-11-22T16:00:00.000Z",
+          "elevationM": 2000
+         }
+        ],
+        "snowfallLimit": [
+         {
+          "timestamp": "2026-11-21T17:00:00.000Z",
+          "elevationM": 1380,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-21T18:00:00.000Z",
+          "elevationM": 1320,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-21T19:00:00.000Z",
+          "elevationM": 1240,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-21T20:00:00.000Z",
+          "elevationM": 1170,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-21T21:00:00.000Z",
+          "elevationM": 1150,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-21T22:00:00.000Z",
+          "elevationM": 1160,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-21T23:00:00.000Z",
+          "elevationM": 1180,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T00:00:00.000Z",
+          "elevationM": 1130,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T01:00:00.000Z",
+          "elevationM": 1090,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T02:00:00.000Z",
+          "elevationM": 1100,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T03:00:00.000Z",
+          "elevationM": 1010,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T04:00:00.000Z",
+          "elevationM": 1040,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T05:00:00.000Z",
+          "elevationM": 1040,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T06:00:00.000Z",
+          "elevationM": 1200,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T07:00:00.000Z",
+          "elevationM": 1320,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T08:00:00.000Z",
+          "elevationM": 1450,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T09:00:00.000Z",
+          "elevationM": 1500,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T10:00:00.000Z",
+          "elevationM": 1580,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T11:00:00.000Z",
+          "elevationM": 1570,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T12:00:00.000Z",
+          "elevationM": 1520,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T13:00:00.000Z",
+          "elevationM": 1450,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T14:00:00.000Z",
+          "elevationM": 1460,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T15:00:00.000Z",
+          "elevationM": 1420,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T16:00:00.000Z",
+          "elevationM": 1360,
+          "reasonForNull": null
+         }
+        ]
+       }
+      },
+      {
+       "wind": {
+        "speedKmh": 45,
+        "direction": "SW",
+        "highlight": "medium"
+       },
+       "period": {
+        "end": "2026-11-23T16:00:00.000Z",
+        "start": "2026-11-22T16:00:00.000Z"
+       },
+       "newSnow": [
+        {
+         "snowCm": 13,
+         "elevationM": 1500,
+         "precipitationType": "snow"
+        },
+        {
+         "snowCm": 21,
+         "highlight": "medium",
+         "elevationM": 2500,
+         "precipitationType": "snow"
+        }
+       ],
+       "timeSeries": {
+        "temperatures": [
+         {
+          "valueC": -2.2,
+          "timestamp": "2026-11-22T17:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.9,
+          "timestamp": "2026-11-22T18:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.5,
+          "timestamp": "2026-11-22T19:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.8,
+          "timestamp": "2026-11-22T20:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.1,
+          "timestamp": "2026-11-22T21:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.9,
+          "timestamp": "2026-11-22T22:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3,
+          "timestamp": "2026-11-22T23:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.8,
+          "timestamp": "2026-11-23T00:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.9,
+          "timestamp": "2026-11-23T01:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.4,
+          "timestamp": "2026-11-23T02:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.5,
+          "timestamp": "2026-11-23T03:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.5,
+          "timestamp": "2026-11-23T04:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3,
+          "timestamp": "2026-11-23T05:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.4,
+          "timestamp": "2026-11-23T06:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4.2,
+          "timestamp": "2026-11-23T07:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.8,
+          "timestamp": "2026-11-23T08:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.8,
+          "timestamp": "2026-11-23T09:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4.1,
+          "timestamp": "2026-11-23T10:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.5,
+          "timestamp": "2026-11-23T11:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.9,
+          "timestamp": "2026-11-23T12:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4,
+          "timestamp": "2026-11-23T13:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4.3,
+          "timestamp": "2026-11-23T14:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4.3,
+          "timestamp": "2026-11-23T15:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4.3,
+          "timestamp": "2026-11-23T16:00:00.000Z",
+          "elevationM": 2000
+         }
+        ],
+        "snowfallLimit": [
+         {
+          "timestamp": "2026-11-22T17:00:00.000Z",
+          "elevationM": 1320,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T18:00:00.000Z",
+          "elevationM": 1320,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T19:00:00.000Z",
+          "elevationM": 1330,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T20:00:00.000Z",
+          "elevationM": 1350,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T21:00:00.000Z",
+          "elevationM": 1320,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T22:00:00.000Z",
+          "elevationM": 1180,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-22T23:00:00.000Z",
+          "elevationM": 1170,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T00:00:00.000Z",
+          "elevationM": 1240,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T01:00:00.000Z",
+          "elevationM": 1230,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T02:00:00.000Z",
+          "elevationM": 1150,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T03:00:00.000Z",
+          "elevationM": 1120,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T04:00:00.000Z",
+          "elevationM": 1110,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T05:00:00.000Z",
+          "elevationM": 1120,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T06:00:00.000Z",
+          "elevationM": 1130,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T07:00:00.000Z",
+          "elevationM": 1060,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T08:00:00.000Z",
+          "elevationM": 1050,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T09:00:00.000Z",
+          "elevationM": 1100,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T10:00:00.000Z",
+          "elevationM": 1130,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T11:00:00.000Z",
+          "elevationM": 1150,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T12:00:00.000Z",
+          "elevationM": 1180,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T13:00:00.000Z",
+          "elevationM": 1190,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T14:00:00.000Z",
+          "elevationM": 1130,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T15:00:00.000Z",
+          "elevationM": 1100,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T16:00:00.000Z",
+          "elevationM": 1070,
+          "reasonForNull": null
+         }
+        ]
+       }
+      },
+      {
+       "wind": {
+        "speedKmh": 16,
+        "direction": "SW"
+       },
+       "period": {
+        "end": "2026-11-24T16:00:00.000Z",
+        "start": "2026-11-23T16:00:00.000Z"
+       },
+       "newSnow": [
+        {
+         "snowCm": 0,
+         "elevationM": 1500,
+         "precipitationType": "snow"
+        },
+        {
+         "snowCm": 1,
+         "elevationM": 2500,
+         "precipitationType": "snow"
+        }
+       ],
+       "timeSeries": {
+        "temperatures": [
+         {
+          "valueC": -4.3,
+          "timestamp": "2026-11-23T17:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4.1,
+          "timestamp": "2026-11-23T18:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4.2,
+          "timestamp": "2026-11-23T19:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4,
+          "timestamp": "2026-11-23T20:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.9,
+          "timestamp": "2026-11-23T21:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.8,
+          "timestamp": "2026-11-23T22:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.8,
+          "timestamp": "2026-11-23T23:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.9,
+          "timestamp": "2026-11-24T00:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4,
+          "timestamp": "2026-11-24T01:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -4,
+          "timestamp": "2026-11-24T02:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.7,
+          "timestamp": "2026-11-24T03:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -3.1,
+          "timestamp": "2026-11-24T04:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -2.4,
+          "timestamp": "2026-11-24T05:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.9,
+          "timestamp": "2026-11-24T06:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -1.3,
+          "timestamp": "2026-11-24T07:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": -0.5,
+          "timestamp": "2026-11-24T08:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0.3,
+          "timestamp": "2026-11-24T09:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 0.9,
+          "timestamp": "2026-11-24T10:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.5,
+          "timestamp": "2026-11-24T11:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 1.9,
+          "timestamp": "2026-11-24T12:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.2,
+          "timestamp": "2026-11-24T13:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.5,
+          "timestamp": "2026-11-24T14:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.7,
+          "timestamp": "2026-11-24T15:00:00.000Z",
+          "elevationM": 2000
+         },
+         {
+          "valueC": 2.9,
+          "timestamp": "2026-11-24T16:00:00.000Z",
+          "elevationM": 2000
+         }
+        ],
+        "snowfallLimit": [
+         {
+          "timestamp": "2026-11-23T17:00:00.000Z",
+          "elevationM": 1030,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T18:00:00.000Z",
+          "elevationM": 1040,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T19:00:00.000Z",
+          "elevationM": 1040,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T20:00:00.000Z",
+          "elevationM": 1030,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T21:00:00.000Z",
+          "elevationM": 1020,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T22:00:00.000Z",
+          "elevationM": 1020,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-23T23:00:00.000Z",
+          "elevationM": 1010,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-24T00:00:00.000Z",
+          "elevationM": 970,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-24T01:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T02:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T03:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T04:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T05:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T06:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T07:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T08:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T09:00:00.000Z",
+          "elevationM": null,
+          "reasonForNull": "BELOW_REGION"
+         },
+         {
+          "timestamp": "2026-11-24T10:00:00.000Z",
+          "elevationM": 930,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-24T11:00:00.000Z",
+          "elevationM": 1090,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-24T12:00:00.000Z",
+          "elevationM": 1170,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-24T13:00:00.000Z",
+          "elevationM": 1240,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-24T14:00:00.000Z",
+          "elevationM": 1250,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-24T15:00:00.000Z",
+          "elevationM": 1230,
+          "reasonForNull": null
+         },
+         {
+          "timestamp": "2026-11-24T16:00:00.000Z",
+          "elevationM": 1180,
+          "reasonForNull": null
+         }
+        ]
+       }
+      }
+     ],
+     "dangerRatingEvolution": [
+      {
+       "date": "2026-11-24",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-25",
+       "dangerRating": {
+        "mainValue": "moderate",
+        "customData": {
+         "CH": {
+          "subdivision": "plus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-23",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "plus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-22",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "minus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-21",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-20",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "publicationTime": "2026-11-23T16:00:00Z",
+   "weatherForecast": {
+    "comment": "<h2>23.11. 17:00 – 24.11. 17:00</h2><ul><li>Limite des chutes de neige: De moins de 860&nbsp;m à 1250&nbsp;m</li><li>Température maximale à 2000&nbsp;m: 2.9&nbsp;°C</li><li>Neige fraîche à 1500&nbsp;m: 0&nbsp;cm</li><li>Neige fraîche à 2500&nbsp;m: 1&nbsp;cm</li><li>Vitesse du vent: 16&nbsp;km/h</li><li>Direction du vent: SW</li></ul>"
+   },
+   "weatherReview": {
+    "comment": "<h2>21.11. 17:00 – 22.11. 17:00</h2><ul><li>Limite des chutes de neige: De 1010 à 1580&nbsp;m</li><li>Température maximale à 2000&nbsp;m: 3.2&nbsp;°C</li><li>Neige fraîche à 1500&nbsp;m: Neige fondue</li><li>Neige fraîche à 2500&nbsp;m: 7&nbsp;cm</li><li>Vitesse du vent: 46&nbsp;km/h</li><li>Direction du vent: SW</li></ul><h2>22.11. 17:00 – 23.11. 17:00</h2><ul><li>Limite des chutes de neige: De 1050 à 1350&nbsp;m</li><li>Température maximale à 2000&nbsp;m: -1.5&nbsp;°C</li><li>Neige fraîche à 1500&nbsp;m: 13&nbsp;cm</li><li>Neige fraîche à 2500&nbsp;m: 21&nbsp;cm</li><li>Vitesse du vent: 45&nbsp;km/h</li><li>Direction du vent: SW</li></ul>"
+   },
+   "snowpackStructure": {
+    "comment": "Des couches fragiles susceptibles de se rompre se trouvent surtout dans les couches de neige fraîche et de neige soufflée de ces derniers jours. Celles-ci vont se stabiliser rapidement. Des couches fragiles marquées, ayant subi une métamorphose constructive à grains anguleux, sont à peine présentes."
+   },
+   "tendency": [
+    {
+     "comment": "<h2>Avalanches sèches</h2><p>Le danger d'avalanches sèches diminue. Cependant, des amateurs de sports d'hiver peuvent toujours déclencher des avalanches. Un choix prudent des itinéraires est nécessaire.</p><h2>Avalanches mouillées</h2><p>À tout moment des avalanches de glissement sont possibles. Les zones présentant des fissures de glissement doivent être évitées dans la mesure du possible.</p>"
+    }
+   ]
+  }
+ ]
+}

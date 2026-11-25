@@ -12,7 +12,7 @@ from c2corg_api.views.coverage import (
     coverage_of_a_polygon,
     find_coverage,
 )
-from c2corg_api.views.document_tag import read_todo_tag
+from c2corg_api.views.favourite import read_todo_tag
 from c2corg_api.views.forum import create_topic
 from c2corg_api.views.image import (
     create_images,

@@ -19,6 +19,7 @@ from c2corg_api.schemas.types import (
     Map,
     OneOf,
     Seq,
+    SmallInt,
     Str,
 )
 
@@ -37,16 +38,16 @@ class ImageSchema(DocumentSchema):
     categories: Seq(OneOf(a.image_categories)) = None
     image_type: OneOf(image_types) = None
     author: Str(100) = None
-    elevation: Int = None
-    height: Int = None
-    width: Int = None
+    elevation: SmallInt = None
+    height: SmallInt = None
+    width: SmallInt = None
     file_size: Int = None
     filename: Str(30)
     camera_name: Str(100) = None
     exposure_time: FiniteFloat = None
     focal_length: FiniteFloat = None
     fnumber: FiniteFloat = None
-    iso_speed: Int = None
+    iso_speed: SmallInt = None
     date_time: DateTime = None
 
 

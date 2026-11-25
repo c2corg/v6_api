@@ -2,14 +2,17 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
+from geoalchemy2.shape import from_shape
+from shapely.geometry import MultiPolygon, shape
 
+from c2corg_api.models.coverage import NavitiaCoverage
 from c2corg_api.models.user import User
 from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_documents import POINT
 from c2corg_api.tests.search.__init__ import reset_search_index
 
-# the coverage polygon of the documents fixture, in EPSG:4326
+# the polygon of the coverage of the tests, in EPSG:4326
 POLYGON_4326 = json.dumps(
     {
         'type': 'Polygon',
@@ -184,12 +187,23 @@ class TestSitemaps:
         check_snapshot('sitemaps_xml_empty_page', response)
 
 
-@pytest.mark.usefixtures('documents')
+@pytest.fixture
+def navitia_coverage(session):
+    """Add the coverage 'fr-se', the polygon above."""
+    polygon = MultiPolygon([shape(json.loads(POLYGON_4326))])
+    session.add(
+        NavitiaCoverage(coverage_type='fr-se', geom=from_shape(polygon, srid=4326))
+    )
+    session.flush()
+
+
+@pytest.mark.usefixtures('navitia_coverage')
 class TestCoverageLookup:
     @contract(('GET', '/getcoverage'))
     def test_coverage_of_a_point(self, browser):
         response = browser.get('/getcoverage', params={'lon': 5.71, 'lat': 45.655})
         check_snapshot('getcoverage', response)
+        assert response.json == 'fr-se'
 
     @contract(('GET', '/getcoverage'))
     def test_no_coverage(self, browser):
@@ -201,6 +215,7 @@ class TestCoverageLookup:
     def test_coverages_of_a_polygon(self, browser):
         response = browser.post('/getpolygoncoverage', {'geom_detail': POLYGON_4326})
         check_snapshot('getpolygoncoverage', response)
+        assert response.json == ['fr-se']
 
 
 @pytest.mark.usefixtures('documents')

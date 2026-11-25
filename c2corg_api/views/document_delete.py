@@ -1,4 +1,4 @@
-from sqlalchemy.sql.expression import and_, exists, or_, over
+from sqlalchemy.sql.expression import and_, exists, or_, over, select
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import DBSession, article, image
@@ -7,7 +7,7 @@ from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
 from c2corg_api.models.cache_version import CacheVersion, update_cache_version_full
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
+from c2corg_api.models.common.attributes import image_types
 from c2corg_api.models.document import (
     ArchiveDocument,
     ArchiveDocumentGeometry,
@@ -20,12 +20,13 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_history import (
     DocumentVersion,
     HistoryMetaData,
+    get_creators,
     has_been_created_by,
     is_less_than_24h_old,
 )
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
+from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
 from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
 from c2corg_api.models.outing import (
@@ -60,6 +61,7 @@ from c2corg_api.models.xreport import (
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.document_trash import keep_deleted_document, keep_deleted_locale
 from c2corg_api.views.image import delete_all_files_for_image
+from c2corg_api.views.image_embeds import images_embedded_elsewhere
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id, validate_lang
 
@@ -89,7 +91,6 @@ def validate_document_type(request, **kwargs):
         ARTICLE_TYPE,
         BOOK_TYPE,
         XREPORT_TYPE,
-        COVERAGE_TYPE,
     ):
         request.errors.add(
             'querystring', 'document_id', 'Unsupported type when deleting document'
@@ -257,8 +258,17 @@ def validate_requestor(request, **kwargs):
 def _delete(request, document_id, document_type, keep=True):
     # kept a while, to be restored by a moderator (see views.document_trash),
     # unless the deletion must leave nothing (e.g. the erasure of an account)
+    image_ids = []
     if keep:
-        keep_deleted_document(request, document_id, document_type)
+        # The erasure of an account deletes each document of the user itself
+        # (scripts/users/process_removals.py): no image deleted with them.
+        image_ids = personal_images_deleted_with(request, document_id, document_type)
+        keep_deleted_document(request, document_id, document_type, image_ids)
+
+    for image_id in image_ids:
+        delete_all_files_for_image(image_id, request)
+        _delete_document(request, image_id, IMAGE_TYPE)
+        update_deleted_documents_list(image_id, IMAGE_TYPE)
 
     if document_type == IMAGE_TYPE:
         # Files are actually removed only if the transaction succeeds
@@ -272,6 +282,98 @@ def _delete(request, document_id, document_type, keep=True):
     return {}
 
 
+def _images_linked_only_to(document_id):
+    """Return the images linked to this document and to no other: {id: type}."""
+    linked = (
+        select(Association.child_document_id)
+        .where(
+            Association.parent_document_id == document_id,
+            Association.child_document_type == IMAGE_TYPE,
+        )
+        .union(
+            select(Association.parent_document_id).where(
+                Association.child_document_id == document_id,
+                Association.parent_document_type == IMAGE_TYPE,
+            )
+        )
+    )
+    other_link = exists().where(
+        or_(
+            and_(
+                Association.parent_document_id == Image.document_id,
+                Association.child_document_id != document_id,
+            ),
+            and_(
+                Association.child_document_id == Image.document_id,
+                Association.parent_document_id != document_id,
+            ),
+        )
+    )
+    rows = DBSession.execute(
+        select(Image.document_id, Image.image_type).where(
+            Image.document_id.in_(linked), ~other_link
+        )
+    )
+    return dict(rows.all())
+
+
+def personal_images_deleted_with(request, document_id, document_type, images=None):
+    """Return the ids of the personal images deleted with a document."""
+    # The personal images linked to this document only, uploaded by its
+    # author (e.g. the photos of an outing), are deleted with it, kept in the
+    # same entry of the deleted documents, and restored with it. The other
+    # images linked to it stay, without the link: the collaborative ones and
+    # those of other users are listed for the moderators (GET /images/orphans),
+    # as are the personal images shown in the text of another document.
+    # `images`: the result of _images_linked_only_to, when already read.
+    if document_type == IMAGE_TYPE:
+        return []
+    if images is None:
+        images = _images_linked_only_to(document_id)
+    image_ids = [i for i, image_type in images.items() if image_type == 'personal']
+    if not image_ids:
+        return []
+    creators = get_creators([document_id, *image_ids])
+    author_id = creators.get(document_id, {}).get('user_id')
+    image_ids = [
+        image_id
+        for image_id in image_ids
+        if author_id is not None
+        and creators.get(image_id, {}).get('user_id') == author_id
+    ]
+    if not request.has_permission('moderator'):
+        # only the images the user could delete (see validate_requestor)
+        image_ids = [i for i in image_ids if is_less_than_24h_old(i)]
+    # an image shown in the text of another document ([img=ID]) stays
+    embedded = images_embedded_elsewhere(image_ids, document_id)
+    return sorted(i for i in image_ids if i not in embedded)
+
+
+def read_images_of_deletion(request):
+    """Tell what the deletion of a document does to the images linked to it.
+
+    Request:
+        `GET` `/documents/delete/{id}/images`
+
+    Response: how many images are deleted with it, and how many stay linked
+    to no document, by type (shown before deleting):
+
+        {'deleted': 3,
+         'orphaned': {'collaborative': 2, 'personal': 1, 'copyright': 0}}
+    """
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
+    images = _images_linked_only_to(document_id)
+    deleted = set(
+        personal_images_deleted_with(request, document_id, document_type, images)
+    )
+    orphaned = dict.fromkeys(image_types, 0)
+    for image_id, image_type in images.items():
+        if image_id not in deleted and image_type in orphaned:
+            orphaned[image_type] += 1
+    return {'deleted': len(deleted), 'orphaned': orphaned}
+
+
 def _delete_document(request, document_id, document_type, redirecting=False):
     # Check if documents are redirecting (merged) to the document to delete
     # If yes, delete them first.
@@ -282,7 +384,7 @@ def _delete_document(request, document_id, document_type, redirecting=False):
     # Remove associations and update cache of formerly associated docs
     update_cache_version_full(document_id, document_type)
     _remove_associations(document_id)
-    _remove_tags(document_id)
+    _remove_favourites(document_id)
 
     clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
         document_type
@@ -417,8 +519,6 @@ def _get_models(document_type):
         return Article, None, ArchiveArticle, None
     if document_type == BOOK_TYPE:
         return Book, None, ArchiveBook, None
-    if document_type == COVERAGE_TYPE:
-        return Coverage, None, ArchiveDocument, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
     raise AssertionError(f'unexpected document type {document_type}')
@@ -645,10 +745,10 @@ def _remove_associations(document_id):
     ).delete()
 
 
-def _remove_tags(document_id):
-    DBSession.query(DocumentTag).filter(DocumentTag.document_id == document_id).delete()
-    DBSession.query(DocumentTagLog).filter(
-        DocumentTagLog.document_id == document_id
+def _remove_favourites(document_id):
+    DBSession.query(Favourite).filter(Favourite.document_id == document_id).delete()
+    DBSession.query(FavouriteLog).filter(
+        FavouriteLog.document_id == document_id
     ).delete()
 
 

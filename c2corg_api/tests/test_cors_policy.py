@@ -35,3 +35,14 @@ def test_the_configured_origins_are_allowed():
     allowed = json.loads(result.stdout.strip().splitlines()[-1])
     # the configured origin, and no longer the default one
     assert allowed == ['https://www.example.org', None]
+
+
+def test_a_pattern_allows_the_ports_of_a_host(monkeypatch):
+    from c2corg_api.views import cors_policy
+    from c2corg_api.web.cors import origin_allowed
+
+    # as config/env.dev: any port of the dev machine, no other host
+    monkeypatch.setitem(cors_policy, 'origins', ('http://localhost:[0-9]*',))
+    assert origin_allowed('http://localhost:8095')
+    assert not origin_allowed('http://localhost.evil.example')
+    assert not origin_allowed('https://evil.example')

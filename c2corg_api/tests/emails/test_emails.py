@@ -55,6 +55,25 @@ def test_localization():
             assert len(body) > 0
             assert '%s' in body
 
+    # the emails of the account removals: their values are named
+    values = {'name': 'n', 'target': 't', 'date': '2026-12-01', 'forum': 'f'}
+    for reason in ['anonymization', 'merge']:
+        for stage in ['planned', 'done']:
+            key = f'account_{reason}_{stage}'
+            for lang in default_langs:
+                subject = localizator.get_translation(lang, key + '_subject')
+                body = localizator.get_translation(lang, key + '_body')
+                text = body % values
+                assert '\n' not in subject
+                assert '%' not in text
+                # the account named, between the quotes of the language
+                assert any(q in text for q in ('"n"', '« n »', '»n«'))
+                if reason == 'merge':
+                    assert any(q in text for q in ('"t"', '« t »', '»t«'))
+                if stage == 'planned':
+                    assert '2026-12-01' in text
+                    assert text.count(' f\n') == 1
+
     def badlang():
         localizator.get_translation('toto', 'registration_subject')
 

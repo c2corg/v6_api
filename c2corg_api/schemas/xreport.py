@@ -11,7 +11,7 @@ from c2corg_api.schemas.document import (
     document_children,
     geometry_schema,
 )
-from c2corg_api.schemas.types import Bool, Date, Int, Map, OneOf, Seq, Str
+from c2corg_api.schemas.types import Bool, Date, Map, OneOf, Seq, SmallInt, Str
 
 XreportGeometrySchema = geometry_schema(['POINT'])
 
@@ -35,12 +35,12 @@ class XreportLocaleSchema(LocaleSchema):
 class XreportSchema(DocumentSchema):
     locales: Seq(XreportLocaleSchema) = []
     geometry: Map(XreportGeometrySchema) = None
-    elevation: Int = None
+    elevation: SmallInt = None
     date: Date = None
     event_type: OneOf(a.event_types) = None
     event_activity: OneOf(a.event_activities)
-    nb_participants: Int = None
-    nb_impacted: Int = None
+    nb_participants: SmallInt = None
+    nb_impacted: SmallInt = None
     rescue: Bool = None
     avalanche_level: OneOf(a.avalanche_levels) = None
     avalanche_slope: OneOf(a.avalanche_slopes) = None
@@ -48,7 +48,7 @@ class XreportSchema(DocumentSchema):
     # personal information, only shown to the author and moderators
     author_status: OneOf(a.author_statuses) = None
     activity_rate: OneOf(a.activity_rates) = None
-    age: Int = None
+    age: SmallInt = None
     gender: OneOf(a.genders) = None
     previous_injuries: OneOf(a.previous_injuries) = None
     autonomy: OneOf(a.autonomies) = None

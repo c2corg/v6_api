@@ -126,6 +126,8 @@ def docs(session, user_ids) -> Docs:
         activities=['paragliding'],
         height=1500,
         image_type='personal',
+        date_time=datetime.datetime(2026, 4, 4, 12, 25, tzinfo=datetime.UTC),
+        camera_name='Meta Vanguard',
     )
     image4.locales.append(
         DocumentLocale(lang='en', title='Mont Blanc from the air', description='...')
@@ -284,6 +286,9 @@ class TestImageRest:
         image4 = by_id[docs.image4.document_id]
         assert image4['image_type'] == 'personal'
         assert image4['license']['id'] == 'CC-BY-NC-ND-3.0'
+        # the time of the shot and the camera, to locate it on a GPS track
+        assert image4['date_time'] == '2026-04-04T12:25:00+00:00'
+        assert image4['camera_name'] == 'Meta Vanguard'
 
     def test_get_collection_paginated(self, client, session, docs):
         client.get('/images?offset=invalid', status=422)

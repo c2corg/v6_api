@@ -99,6 +99,15 @@ def validate_topic_create(request, **kwargs):
         return
 
     if locale.topic_id is not None:
+        # a topic deleted in the forum, or moved out of sight, is replaced: the
+        # comments box of the document gets a 404 for it
+        client = get_discourse_client(request.registry.settings)
+        if client.enabled and client.topic_is_gone(locale.topic_id):
+            log.warning(
+                f'Forum topic {locale.topic_id} of {document_id}_{lang} is gone: '
+                'it is replaced'
+            )
+            return
         request.errors.add(
             'body',
             f'{document_id}_{lang}',
@@ -376,6 +385,11 @@ def create_topic(request):
     if 'topic_id' in response:
         topic_id = response['topic_id']
 
+        if locale.document_topic is not None:
+            # the topic was gone (see validate_topic_create)
+            DBSession.delete(locale.document_topic)
+            DBSession.flush()
+            DBSession.expire(locale, ['document_topic'])
         document_topic = DocumentTopic(topic_id=topic_id)
         locale.document_topic = document_topic
         update_cache_version_direct(locale.document_id)

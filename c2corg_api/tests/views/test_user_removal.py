@@ -1,5 +1,5 @@
 import datetime
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from pydiscourse.exceptions import DiscourseClientError
@@ -49,6 +49,17 @@ def discourse(settings, user_ids):
     set_discourse_client(mock)
     yield mock
     set_discourse_client(original)
+
+
+@pytest.fixture(autouse=True)
+def send_email():
+    """Catch the emails telling the users about their removal."""
+    with patch('c2corg_api.emails.email_service.EmailService._send_email') as mock:
+        yield mock
+
+
+def sent_to(send_email):
+    return [(c.args[0], c.kwargs['subject']) for c in send_email.call_args_list]
 
 
 def future(days=7):
@@ -133,6 +144,72 @@ class TestCreate:
         removal = post(client, self.PREFIX, body, 'contributor2').json
         assert removal['target_user_id'] == user_ids['moderator']
         assert removal['target_forum_id'] == forum_id(user_ids['moderator'])
+
+    def test_anonymization_email(self, client, session, user_ids, send_email):
+        session.get(User, user_ids['contributor']).lang = 'en'
+        session.flush()
+        body = body_for(user_ids['contributor'])
+        post(client, self.PREFIX, body, 'moderator')
+
+        send_email.assert_called_once()
+        assert send_email.call_args.args == ('contributor@camptocamp.org',)
+        subject = send_email.call_args.kwargs['subject']
+        assert subject == 'Anonymization of your Camptocamp.org account'
+        text = send_email.call_args.kwargs['body']
+        assert '"Contributor"' in text
+        assert f'from {body["executable_after"]}' in text
+
+    def test_merge_emails(self, client, user_ids, send_email):
+        # both accounts of the user, in the language of each
+        body = body_for(
+            user_ids['contributor'],
+            reason='merge',
+            target_user_id=user_ids['moderator'],
+        )
+        post(client, self.PREFIX, body, 'contributor2')
+
+        subject = 'Fusion de vos comptes Camptocamp.org'
+        assert sent_to(send_email) == [
+            ('contributor@camptocamp.org', subject),
+            ('moderator@camptocamp.org', subject),
+        ]
+        assert (
+            '"Contributor" sera fusionné dans le compte "Moderator"'
+            in (send_email.call_args.kwargs['body'])
+        )
+
+    def test_merge_same_address(self, client, session, user_ids, send_email):
+        # one email when both accounts share their address
+        session.get(User, user_ids['moderator']).email = 'Contributor@camptocamp.org'
+        session.flush()
+        body = body_for(
+            user_ids['contributor'],
+            reason='merge',
+            target_user_id=user_ids['moderator'],
+        )
+        post(client, self.PREFIX, body, 'contributor2')
+        assert len(send_email.call_args_list) == 1
+
+    def test_no_email_to_a_spammer(self, client, user_ids, send_email):
+        body = body_for(user_ids['contributor'], reason='spam')
+        post(client, self.PREFIX, body, 'moderator')
+        send_email.assert_not_called()
+
+    def test_no_email_to_an_unvalidated_address(
+        self, client, session, user_ids, send_email
+    ):
+        session.get(User, user_ids['contributor']).email_validated = False
+        session.flush()
+        post(client, self.PREFIX, body_for(user_ids['contributor']), 'moderator')
+        send_email.assert_not_called()
+
+    def test_email_failure(self, client, session, user_ids, send_email):
+        # the request is saved all the same
+        send_email.side_effect = OSError('no mail server')
+        removal = post(
+            client, self.PREFIX, body_for(user_ids['contributor']), 'moderator'
+        ).json
+        assert session.get(AccountRemovalRequest, removal['id']) is not None
 
     def test_targets(self, client, user_ids, discourse):
         user_id = user_ids['contributor']
@@ -467,20 +544,29 @@ class TestRead:
         response = client.get(self.PREFIX + '/count', headers=headers, status=200)
         assert response.json == {
             'open': 0,
+            'actionable': 0,
             'roles': {'topoguide': True, 'forum': False},
         }
 
-        create(client, user_ids)
+        request_id = create(client, user_ids)
         response = client.get(self.PREFIX + '/count', headers=headers, status=200)
+        # its author validates nothing
         assert response.json['open'] == 1
+        assert response.json['actionable'] == 0
 
-        # a moderator of the forum only
+        # a moderator of the forum only: the forum side is theirs
         headers = auth_headers(username='contributor3')
         response = client.get(self.PREFIX + '/count', headers=headers, status=200)
         assert response.json == {
             'open': 1,
+            'actionable': 1,
             'roles': {'topoguide': False, 'forum': True},
         }
+
+        # once they validated it, nothing left for them
+        post(client, url(request_id, 'validate'), {'side': 'forum'}, 'contributor3')
+        response = client.get(self.PREFIX + '/count', headers=headers, status=200)
+        assert response.json['actionable'] == 0
 
         # neither of the topoguide nor of the forum
         headers = auth_headers(username='contributornotos')

@@ -626,8 +626,8 @@ def test_outings_tracks_are_simplified_and_in_2d(client, long_tracks):
 @pytest.fixture
 def wiggle(session):
     """Add an outing whose track has a bend of 8 meters."""
-    # (the database already simplifies the tracks of routes and outings by 5 m
-    # when it saves them, see simplify_geom_detail: the bend is more than that)
+    # (the database already simplifies the tracks of outings by 2 m when it
+    # saves them, see simplify_geom_detail: the bend is more than that)
     session.add(
         _outing(
             'Wiggle',

@@ -7,7 +7,6 @@ from c2corg_api.models.common import attributes
 from c2corg_api.models.common.fields_area import fields_area
 from c2corg_api.models.common.fields_article import fields_article
 from c2corg_api.models.common.fields_book import fields_book
-from c2corg_api.models.common.fields_coverage import fields_coverage
 from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.common.fields_outing import fields_outing
 from c2corg_api.models.common.fields_route import fields_route
@@ -15,7 +14,6 @@ from c2corg_api.models.common.fields_topo_map import fields_topo_map
 from c2corg_api.models.common.fields_user_profile import fields_user_profile
 from c2corg_api.models.common.fields_waypoint import fields_waypoint
 from c2corg_api.models.common.fields_xreport import fields_xreport
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
 from c2corg_api.models.image import IMAGE_TYPE, Image
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route, RouteLocale
@@ -25,9 +23,11 @@ from c2corg_api.models.user_profile import (
     UserProfile,
 )
 from c2corg_api.models.waypoint import (
+    HUT_CATEGORY_FIELDS,
     WAYPOINT_TYPE,
     Waypoint,
     WaypointLocale,
+    hut_category,
 )
 from c2corg_api.models.xreport import (
     XREPORT_TYPE,
@@ -37,7 +37,6 @@ from c2corg_api.models.xreport import (
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.article import article_listing_schema
 from c2corg_api.schemas.book import book_listing_schema
-from c2corg_api.schemas.coverage import coverage_listing_schema
 from c2corg_api.schemas.image import image_listing_schema
 from c2corg_api.schemas.outing import outing_schema
 from c2corg_api.schemas.route import route_schema
@@ -61,6 +60,7 @@ class GetDocumentsConfig:
         include_areas=True,
         include_img_count=False,
         set_custom_fields=None,
+        load_fields=(),
     ):
         self.document_type = document_type
         self.clazz = clazz
@@ -72,6 +72,8 @@ class GetDocumentsConfig:
         self.set_custom_fields = set_custom_fields
 
         self._set_load_only_fields(fields, listing_fields)
+        # read to compute a field of the listings (set_custom_fields), not given as such
+        self.fields_document.update(load_fields)
 
     def _set_load_only_fields(self, fields, listing_fields):
         if not listing_fields:
@@ -325,6 +327,15 @@ waypoint_listing_schema_adaptor = make_schema_adaptor(
     adapt_waypoint_schema_for_type, 'waypoint_type', 'listing'
 )
 
+
+def set_hut_category(waypoints, lang):
+    """Set what the huts offer (`hut_category`) on the waypoints of a listing."""
+    for waypoint in waypoints:
+        status = hut_category(waypoint)
+        if status:
+            waypoint.hut_category = status
+
+
 waypoint_documents_config = GetDocumentsConfig(
     WAYPOINT_TYPE,
     Waypoint,
@@ -332,14 +343,8 @@ waypoint_documents_config = GetDocumentsConfig(
     clazz_locale=WaypointLocale,
     fields=fields_waypoint,
     adapt_schema=waypoint_listing_schema_adaptor,
-)
-
-# coverages
-coverage_documents_config = GetDocumentsConfig(
-    COVERAGE_TYPE,
-    Coverage,
-    coverage_listing_schema,
-    listing_fields=fields_coverage['listing'],
+    set_custom_fields=set_hut_category,
+    load_fields=HUT_CATEGORY_FIELDS,
 )
 
 document_configs = {
@@ -353,5 +358,4 @@ document_configs = {
     MAP_TYPE: topo_map_documents_config,
     ARTICLE_TYPE: article_documents_config,
     USERPROFILE_TYPE: user_profile_documents_config,
-    COVERAGE_TYPE: coverage_documents_config,
 }

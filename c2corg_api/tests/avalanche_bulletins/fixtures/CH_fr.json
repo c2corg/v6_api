@@ -1,0 +1,440 @@
+{
+ "bulletins": [
+  {
+   "bulletinID": "f5f19f78-339a-40b0-9b18-378ad5cf6ffa",
+   "lang": "fr",
+   "validTime": {
+    "startTime": "2026-11-22T07:00:00Z",
+    "endTime": "2026-11-22T16:00:00Z"
+   },
+   "nextUpdate": "2026-11-22T16:00:00Z",
+   "unscheduled": false,
+   "regions": [
+    {
+     "regionID": "CH-1112",
+     "name": "Pays d'Enhaut"
+    }
+   ],
+   "dangerRatings": [
+    {
+     "mainValue": "considerable",
+     "validTimePeriod": "all_day",
+     "customData": {
+      "CH": {
+       "subdivision": "neutral"
+      }
+     }
+    }
+   ],
+   "avalancheProblems": [
+    {
+     "comment": "La neige fraîche et la neige soufflée des derniers jours sont partiellement encore fragiles. Des amateurs de sports d'hiver seuls peuvent déclencher des avalanches, pouvant atteindre une grande taille. <br/> Avec la neige fraîche et le vent le danger d'avalanches augmente notoirement en cours de journée. Des avalanches spontanées sont à attendre l'après-midi. Ceci surtout sur les pentes exposées au nord et à l'est. <br/> Les randonnées demandent beaucoup d' expérience dans l'évaluation du danger d'avalanche et de la retenue.",
+     "dangerRatingValue": "considerable",
+     "validTimePeriod": "all_day",
+     "problemType": "new_snow",
+     "elevation": {
+      "lowerBound": "2200"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "subdivision": "neutral",
+       "coreZoneText": "Degré de danger \"marqué\" (3=) à toutes les expositions au-dessus de 2200m.",
+       "problemID": "42"
+      }
+     }
+    },
+    {
+     "comment": "Des avalanches de neige mouillée et de glissement sont à attendre avec la pluie. Celles-ci sont généralement de taille moyenne.",
+     "dangerRatingValue": "moderate",
+     "validTimePeriod": "all_day",
+     "problemType": "wet_snow",
+     "elevation": {
+      "upperBound": "2200"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "coreZoneText": "Degré de danger \"limité\" (2) à toutes les expositions en dessous de 2200m.",
+       "problemID": "43"
+      }
+     }
+    },
+    {
+     "comment": "Des avalanches de neige mouillée et de glissement sont à attendre avec la pluie. Celles-ci sont généralement de taille moyenne.",
+     "dangerRatingValue": "moderate",
+     "validTimePeriod": "all_day",
+     "problemType": "gliding_snow",
+     "elevation": {
+      "upperBound": "2200"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "coreZoneText": "Degré de danger \"limité\" (2) à toutes les expositions en dessous de 2200m.",
+       "problemID": "44"
+      }
+     }
+    }
+   ],
+   "customData": {
+    "CH": {
+     "aggregation": [
+      {
+       "category": "dry",
+       "validTimePeriod": "all_day",
+       "problemTypes": [
+        "new_snow"
+       ],
+       "problemIDs": [
+        "42"
+       ],
+       "title": "Avalanches sèches"
+      },
+      {
+       "category": "wet",
+       "validTimePeriod": "all_day",
+       "problemTypes": [
+        "wet_snow",
+        "gliding_snow"
+       ],
+       "problemIDs": [
+        "43",
+        "44"
+       ],
+       "title": "Avalanches mouillées et de glissement"
+      }
+     ],
+     "dangerRatingEvolution": [
+      {
+       "date": "2026-11-22",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-23",
+       "dangerRating": {
+        "mainValue": "high",
+        "customData": {
+         "CH": {
+          "subdivision": "minus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-21",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-20",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-19",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "minus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-18",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "minus"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "publicationTime": "2026-11-22T07:00:00Z",
+   "weatherForecast": {
+    "comment": "<h2>21.11. 17:00 – 22.11. 17:00</h2><ul><li>Limite des chutes de neige: De 1140 à 1670&nbsp;m</li><li>Température maximale à 2000&nbsp;m: 3.2&nbsp;°C</li><li>Neige fraîche à 1000&nbsp;m: Pluie</li><li>Neige fraîche à 2000&nbsp;m: 10&nbsp;cm</li><li>Vitesse du vent: 37&nbsp;km/h</li><li>Direction du vent: SW</li></ul>"
+   },
+   "weatherReview": {
+    "comment": "<h2>19.11. 17:00 – 20.11. 17:00</h2><ul><li>Limite des chutes de neige: De 1220 à 1430&nbsp;m</li><li>Température maximale à 2000&nbsp;m: -1.7&nbsp;°C</li><li>Neige fraîche à 1000&nbsp;m: Pluie</li><li>Neige fraîche à 2000&nbsp;m: 15&nbsp;cm</li><li>Vitesse du vent: 35&nbsp;km/h</li><li>Direction du vent: SW</li></ul><h2>20.11. 17:00 – 21.11. 17:00</h2><ul><li>Limite des chutes de neige: De 1290 à 1510&nbsp;m</li><li>Température maximale à 2000&nbsp;m: -0.3&nbsp;°C</li><li>Neige fraîche à 1000&nbsp;m: Pluie</li><li>Neige fraîche à 2000&nbsp;m: 7&nbsp;cm</li><li>Vitesse du vent: 34&nbsp;km/h</li><li>Direction du vent: SW</li></ul>"
+   },
+   "snowpackStructure": {
+    "comment": "La neige fraîche et la neige soufflée de cette semaine se stabilisent. Avec de nouvelles chutes de neige et un vent d'ouest devenant de plus en plus fort, des accumulations de neige soufflée se forment en cours de la journée en altitude. En dessous de 2000 m, le manteau neigeux est fragilisé par la chaleur et la pluie."
+   },
+   "tendency": [
+    {
+     "comment": "<h2>Avalanches sèches</h2><p>Des avalanches peuvent être déjà déclenchées par un seul amateur de sports d'hiver. Il faut s'attendre à des avalanches spontanées. Celles-ci peuvent aussi se déclencher dans la neige ancienne, notamment sur les pentes exposées au nord et à l'est au-dessus d'environ 2600 m. Les avalanches peuvent de manière isolée devenir très grandes et menacer les voies de communications plus élevées dans les parcours d'avalanches typiques. <br/> Pour des randonnées les conditions sont très critiques.</p><h2>Avalanches mouillées</h2><p>Des avalanches de glissement de moyenne taille sont à attendre sur les pentes raides herbeuses en dessous d'environ 2400 m. Prudence en présence de fissures de glissement.</p>"
+    }
+   ]
+  },
+  {
+   "bulletinID": "988bdced-eb75-4e21-b7d5-67793415f770",
+   "lang": "fr",
+   "validTime": {
+    "startTime": "2026-11-22T07:00:00Z",
+    "endTime": "2026-11-22T16:00:00Z"
+   },
+   "nextUpdate": "2026-11-22T16:00:00Z",
+   "unscheduled": false,
+   "regions": [
+    {
+     "regionID": "CH-1113",
+     "name": "Aigle - Leysin"
+    }
+   ],
+   "dangerRatings": [
+    {
+     "mainValue": "considerable",
+     "validTimePeriod": "all_day",
+     "customData": {
+      "CH": {
+       "subdivision": "neutral"
+      }
+     }
+    }
+   ],
+   "avalancheProblems": [
+    {
+     "comment": "La neige fraîche et la neige soufflée des derniers jours sont partiellement encore fragiles. Des amateurs de sports d'hiver seuls peuvent déclencher des avalanches, pouvant atteindre une grande taille. <br/> Avec la neige fraîche et le vent le danger d'avalanches augmente notoirement en cours de journée. Des avalanches spontanées sont à attendre l'après-midi. Ceci surtout sur les pentes exposées au nord et à l'est. <br/> Les randonnées demandent beaucoup d' expérience dans l'évaluation du danger d'avalanche et de la retenue.",
+     "dangerRatingValue": "considerable",
+     "validTimePeriod": "all_day",
+     "problemType": "new_snow",
+     "elevation": {
+      "lowerBound": "2200"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "subdivision": "neutral",
+       "coreZoneText": "Degré de danger \"marqué\" (3=) à toutes les expositions au-dessus de 2200m.",
+       "problemID": "35"
+      }
+     }
+    },
+    {
+     "comment": "Des avalanches de neige mouillée et de glissement sont à attendre avec la pluie. Celles-ci sont généralement de taille moyenne.",
+     "dangerRatingValue": "moderate",
+     "validTimePeriod": "all_day",
+     "problemType": "wet_snow",
+     "elevation": {
+      "upperBound": "2200"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "coreZoneText": "Degré de danger \"limité\" (2) à toutes les expositions en dessous de 2200m.",
+       "problemID": "36"
+      }
+     }
+    },
+    {
+     "comment": "Des avalanches de neige mouillée et de glissement sont à attendre avec la pluie. Celles-ci sont généralement de taille moyenne.",
+     "dangerRatingValue": "moderate",
+     "validTimePeriod": "all_day",
+     "problemType": "gliding_snow",
+     "elevation": {
+      "upperBound": "2200"
+     },
+     "aspects": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+     ],
+     "customData": {
+      "CH": {
+       "coreZoneText": "Degré de danger \"limité\" (2) à toutes les expositions en dessous de 2200m.",
+       "problemID": "37"
+      }
+     }
+    }
+   ],
+   "customData": {
+    "CH": {
+     "aggregation": [
+      {
+       "category": "dry",
+       "validTimePeriod": "all_day",
+       "problemTypes": [
+        "new_snow"
+       ],
+       "problemIDs": [
+        "35"
+       ],
+       "title": "Avalanches sèches"
+      },
+      {
+       "category": "wet",
+       "validTimePeriod": "all_day",
+       "problemTypes": [
+        "wet_snow",
+        "gliding_snow"
+       ],
+       "problemIDs": [
+        "36",
+        "37"
+       ],
+       "title": "Avalanches mouillées et de glissement"
+      }
+     ],
+     "dangerRatingEvolution": [
+      {
+       "date": "2026-11-22",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-23",
+       "dangerRating": {
+        "mainValue": "high",
+        "customData": {
+         "CH": {
+          "subdivision": "minus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-21",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-20",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "neutral"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-19",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "minus"
+         }
+        }
+       }
+      },
+      {
+       "date": "2026-11-18",
+       "dangerRating": {
+        "mainValue": "considerable",
+        "customData": {
+         "CH": {
+          "subdivision": "minus"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "publicationTime": "2026-11-22T07:00:00Z",
+   "weatherForecast": {
+    "comment": "<h2>21.11. 17:00 – 22.11. 17:00</h2><ul><li>Limite des chutes de neige: De 1280 à 1700&nbsp;m</li><li>Température maximale à 2000&nbsp;m: 3.1&nbsp;°C</li><li>Neige fraîche à 1000&nbsp;m: Pluie</li><li>Neige fraîche à 2000&nbsp;m: 12&nbsp;cm</li><li>Vitesse du vent: 23&nbsp;km/h</li><li>Direction du vent: S</li></ul>"
+   },
+   "weatherReview": {
+    "comment": "<h2>19.11. 17:00 – 20.11. 17:00</h2><ul><li>Limite des chutes de neige: De 1260 à 1430&nbsp;m</li><li>Température maximale à 2000&nbsp;m: -1.6&nbsp;°C</li><li>Neige fraîche à 1000&nbsp;m: Pluie</li><li>Neige fraîche à 2000&nbsp;m: 4&nbsp;cm</li><li>Vitesse du vent: 27&nbsp;km/h</li><li>Direction du vent: SW</li></ul><h2>20.11. 17:00 – 21.11. 17:00</h2><ul><li>Limite des chutes de neige: De 1300 à 1450&nbsp;m</li><li>Température maximale à 2000&nbsp;m: -0.1&nbsp;°C</li><li>Neige fraîche à 1000&nbsp;m: Pluie</li><li>Neige fraîche à 2000&nbsp;m: 3&nbsp;cm</li><li>Vitesse du vent: 26&nbsp;km/h</li><li>Direction du vent: SW</li></ul>"
+   },
+   "snowpackStructure": {
+    "comment": "La neige fraîche et la neige soufflée de cette semaine se stabilisent. Avec de nouvelles chutes de neige et un vent d'ouest devenant de plus en plus fort, des accumulations de neige soufflée se forment en cours de la journée en altitude. En dessous de 2000 m, le manteau neigeux est fragilisé par la chaleur et la pluie."
+   },
+   "tendency": [
+    {
+     "comment": "<h2>Avalanches sèches</h2><p>Des avalanches peuvent être déjà déclenchées par un seul amateur de sports d'hiver. Il faut s'attendre à des avalanches spontanées. Celles-ci peuvent aussi se déclencher dans la neige ancienne, notamment sur les pentes exposées au nord et à l'est au-dessus d'environ 2600 m. Les avalanches peuvent de manière isolée devenir très grandes et menacer les voies de communications plus élevées dans les parcours d'avalanches typiques. <br/> Pour des randonnées les conditions sont très critiques.</p><h2>Avalanches mouillées</h2><p>Des avalanches de glissement de moyenne taille sont à attendre sur les pentes raides herbeuses en dessous d'environ 2400 m. Prudence en présence de fissures de glissement.</p>"
+    }
+   ]
+  }
+ ]
+}

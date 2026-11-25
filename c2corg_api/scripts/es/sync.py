@@ -14,8 +14,8 @@ from c2corg_api.models.association_views import (
 )
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.document_tag import DocumentTagLog
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
+from c2corg_api.models.favourite import FavouriteLog
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user import User
@@ -57,7 +57,7 @@ def sync_es(session, batch_size=1000):
         + get_changed_users(session, since)
         + get_changed_documents_for_associations(session, since)
         + get_deleted_locale_documents(session, since)
-        + get_tagged_documents(session, since)
+        + get_favourite_routes(session, since)
     )
     log.info(f'Number of changed documents: {len(changed_documents)}')
     if changed_documents:
@@ -345,11 +345,13 @@ def get_deleted_documents(session, last_update):
     )
 
 
-def get_tagged_documents(session, last_update):
-    """Return the ids of documents tagged/untagged since the last update."""
+def get_favourite_routes(session, last_update):
+    """Return the routes added to or removed from favourites since the last update."""
+    # only the routes have the users having them in favourites in the index
     return (
-        session.query(DocumentTagLog.document_id, DocumentTagLog.document_type)
-        .filter(DocumentTagLog.written_at >= last_update)
+        session.query(FavouriteLog.document_id, FavouriteLog.document_type)
+        .filter(FavouriteLog.written_at >= last_update)
+        .filter(FavouriteLog.document_type == ROUTE_TYPE)
         .all()
     )
 
@@ -361,10 +363,6 @@ def sync_documents(session, changed_documents, batch_size):
         docs_per_type = get_documents_per_type(changed_documents)
         add_dependent_documents(session, docs_per_type)
         for doc_type, document_ids in docs_per_type.items():
-            if doc_type not in search_documents:
-                # some document types (e.g. coverages) are not indexed
-                logging.warning(f'Document type {doc_type} is not indexed')
-                continue
             if document_ids:
                 docs = get_documents(session, doc_type, batch_size, document_ids)
                 create_search_documents(doc_type, docs, batch)

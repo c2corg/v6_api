@@ -4,12 +4,14 @@ import datetime
 from unittest.mock import MagicMock
 
 import pytest
+from sqlalchemy import text
 
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.scripts.forum.retitle_topics import (
     FIRST_INTERIM_TOPIC_ID,
     retitle,
+    retitle_all,
     topics_to_retitle,
 )
 
@@ -88,3 +90,18 @@ def test_apply(outing):
     retitle(client, topic_id, document, locale, apply=True, first_post=True)
     client.client.update_post.assert_called_once()
     assert client.client.update_post.call_args.args[0] == 50
+
+
+def test_broken_document_skipped(outing, session):
+    """An outing without its row in guidebook.outings fails alone."""
+    session.execute(
+        text('delete from guidebook.outings where document_id = :id'),
+        {'id': outing.document_id},
+    )
+    session.expire_all()
+    client = _client([])
+    total = len(_topic_ids(everything=True))
+    done, failed = retitle_all(client, topics_to_retitle(0, True, None), True, False, 0)
+    # the first topic of the outing fails, the run goes on to the end
+    assert failed >= 1
+    assert done + failed == total

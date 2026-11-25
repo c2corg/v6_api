@@ -6,7 +6,13 @@ from typing import Annotated
 
 from fastapi import Depends, Query, Request
 
-from c2corg_api.views.document_delete import delete_document, delete_document_locale
+from c2corg_api.views.document_delete import (
+    delete_document,
+    delete_document_locale,
+    read_images_of_deletion,
+    validate_document_type,
+    validate_requestor,
+)
 from c2corg_api.views.document_merge import merge_documents
 from c2corg_api.views.document_protect import protect_document, unprotect_document
 from c2corg_api.views.document_revert import revert_document
@@ -16,11 +22,25 @@ from c2corg_api.views.document_trash import (
     restore_deleted_document,
 )
 from c2corg_api.views.document_version_mask import mask_version, unmask_version
+from c2corg_api.views.image_duplicates import (
+    dismiss_duplicate_images,
+    read_duplicate_images,
+)
+from c2corg_api.views.image_embeds import read_broken_embeds
+from c2corg_api.views.image_orphans import read_orphan_images
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
 from c2corg_api.web.handlers import serve_read, typed_values
-from c2corg_api.web.params import DocType, Id, Limit, Offset, day, natural
+from c2corg_api.web.params import (
+    DocType,
+    Id,
+    ImageType,
+    Limit,
+    Offset,
+    day,
+    natural,
+)
 
 User = Annotated[CurrentUser | None, Depends(current_user)]
 Moderator = Annotated[None, Depends(permission_check('moderator'))]
@@ -36,6 +56,7 @@ WRITES = [
     ('/documents/delete/{id:int}', 'DELETE', delete_document),
     ('/documents/delete/{id:int}/{lang}', 'DELETE', delete_document_locale),
     ('/documents/deleted/{id:int}/restore', 'POST', restore_deleted_document),
+    ('/images/duplicates/dismiss', 'POST', dismiss_duplicate_images),
 ]
 
 
@@ -44,6 +65,10 @@ def include(app):
     for path, endpoint in (
         ('/documents/deleted', deleted_documents),
         ('/documents/deleted/{id:int}', deleted_document),
+        ('/images/orphans', orphan_images),
+        ('/images/broken-embeds', broken_embeds),
+        ('/images/duplicates', duplicate_images),
+        ('/documents/delete/{id:int}/images', images_of_deletion),
     ):
         app.add_api_route(
             path,
@@ -107,8 +132,85 @@ def deleted_document(request: Request, user: User, _: Moderator, id: Id):
     return serve_read(request, user, [typed_values(validated)], read_deleted_document)
 
 
+def orphan_images(
+    request: Request,
+    user: User,
+    _: Moderator,
+    offset: Annotated[
+        Offset | None, Query(description='The first image, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many: 30 by default, 100 at most.')
+    ] = None,
+    image_type: Annotated[
+        ImageType | None, Query(description='Only the images of this type.')
+    ] = None,
+):
+    """Return the images linked to no document, the last created first."""
+    validated = {'offset': offset, 'limit': limit, 'image_type': image_type}
+    return serve_read(request, user, [typed_values(validated)], read_orphan_images)
+
+
+def broken_embeds(
+    request: Request,
+    user: User,
+    _: Moderator,
+    offset: Annotated[
+        Offset | None, Query(description='The first embed, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many: 30 by default, 100 at most.')
+    ] = None,
+):
+    """Return the images shown in texts ([img=ID]) that do not show."""
+    validated = {'offset': offset, 'limit': limit}
+    return serve_read(request, user, [typed_values(validated)], read_broken_embeds)
+
+
+def duplicate_images(
+    request: Request,
+    user: User,
+    _: Moderator,
+    offset: Annotated[
+        Offset | None, Query(description='The first set, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many sets: 30 by default, 100 at most.')
+    ] = None,
+    same_document: Annotated[
+        bool | None,
+        Query(description='Only the sets with two images linked to one document.'),
+    ] = None,
+):
+    """Return the sets of duplicate images, the last uploaded first."""
+    validated = {'offset': offset, 'limit': limit, 'same_document': same_document}
+    return serve_read(request, user, [typed_values(validated)], read_duplicate_images)
+
+
+def images_of_deletion(request: Request, user: User, id: Id):
+    """Return how many images a deletion takes along, and leaves orphan."""
+    # the checks of the deletion: who may delete this document
+    validated = {'id': id}
+    return serve_read(
+        request,
+        user,
+        [typed_values(validated), validate_document_type, validate_requestor],
+        read_images_of_deletion,
+        permission='authenticated',
+    )
+
+
+images_of_deletion.permission = 'authenticated'
+images_of_deletion.described = True
+
 # read by the route inventory of the contract tests (routes.txt)
-for _endpoint in (deleted_documents, deleted_document):
+for _endpoint in (
+    deleted_documents,
+    deleted_document,
+    orphan_images,
+    broken_embeds,
+    duplicate_images,
+):
     _endpoint.permission = 'moderator'
     # described in the OpenAPI document (see web.openapi)
     _endpoint.described = True

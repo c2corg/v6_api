@@ -238,6 +238,9 @@ def _recompute_batch(session, outing_ids, user_id, comment, report):
         session.query(Outing)
         .options(selectinload(Outing.locales))
         .filter(Outing.document_id.in_(outing_ids))
+        # the report lists the outings in the order of their ids: IN () alone
+        # gives no order (PostgreSQL 9.6 returns another one than the latest)
+        .order_by(Outing.document_id)
         .all()
     )
     with_track = _with_track(session, outing_ids)

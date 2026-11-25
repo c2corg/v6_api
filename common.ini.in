@@ -89,6 +89,15 @@ discourse.allowed_sso_hosts = {discourse_allowed_sso_hosts}
 discourse.enabled = {discourse_enabled}
 discourse.category = {discourse_category}
 
+# the scheduler removes the accounts of the validated removal requests
+users.removals.auto = {removals_auto}
+
+# the scheduler harvests the avalanche bulletins (c2corg_api.harvest)
+harvest.enabled = {harvest_enabled}
+# for one harvester, else (empty) as harvest.enabled
+harvest.avalanche.meteofrance.enabled = {harvest_meteofrance_enabled}
+harvest.avalanche.caaml.enabled = {harvest_caaml_enabled}
+
 ui.url = {ui_url}
 
 # Space separated list of origins allowed to make cross-origin (CORS)

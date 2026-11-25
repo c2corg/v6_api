@@ -13,6 +13,7 @@
         "lang": "str",
         "user": {
           "lang": "str",
+          "moderator": "bool",
           "name": "str",
           "user_id": "int",
           "username": "str"

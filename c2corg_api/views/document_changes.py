@@ -78,7 +78,9 @@ def load_feed(doc_ids, limit, user_id=None):
                     HistoryMetaData.written_at,
                 )
                 .joinedload(HistoryMetaData.user)
-                .load_only(User.id, User.name, User.username, User.lang),
+                .load_only(
+                    User.id, User.name, User.username, User.lang, User.moderator
+                ),
             )
             .options(
                 joinedload(DocumentVersion.document).load_only(
@@ -127,6 +129,7 @@ def serialize_change(change):
             'name': change.history_metadata.user.name,
             'username': change.history_metadata.user.username,
             'lang': change.history_metadata.user.lang,
+            'moderator': change.history_metadata.user.moderator,
         },
         'version_id': change.id,
         'comment': change.history_metadata.comment,

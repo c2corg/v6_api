@@ -1,8 +1,10 @@
 import datetime
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
+from c2corg_api.jobs import configure_scheduler_from_config
+from c2corg_api.jobs.process_removals import process_removals, removals_auto
 from c2corg_api.models.account_removal import AccountRemovalRequest
 from c2corg_api.models.deleted_document import DeletedDocument
 from c2corg_api.models.document import Document, DocumentGeometry
@@ -37,6 +39,13 @@ def discourse(settings):
     set_discourse_client(mock)
     yield mock
     set_discourse_client(original)
+
+
+@pytest.fixture(autouse=True)
+def send_email():
+    """Catch the emails telling the users about their removal."""
+    with patch('c2corg_api.emails.email_service.EmailService._send_email') as mock:
+        yield mock
 
 
 def make_removal(session, user_ids, reason='merge', **kwargs):
@@ -123,6 +132,101 @@ class TestFindReadyRequests:
 
 class _NotFound(Exception):
     response = Mock(status_code=404)
+
+
+class TestGraceByReason:
+    """A spammer goes 1 hour after the last validation, the others 24 hours."""
+
+    @pytest.mark.parametrize(('reason', 'ready'), [('spam', True), ('merge', False)])
+    def test_two_hours_after(self, session, user_ids, reason, ready):
+        two_hours_ago = NOW - datetime.timedelta(hours=2)
+        removal = make_removal(
+            session,
+            user_ids,
+            reason=reason,
+            topoguide_validated_at=two_hours_ago,
+            forum_validated_at=two_hours_ago,
+        )
+        found = [r.id for r in find_ready_requests(NOW)]
+        assert found == ([removal.id] if ready else [])
+        assert removal.ready_at() == two_hours_ago + datetime.timedelta(
+            hours=1 if reason == 'spam' else 24
+        )
+
+    def test_given_delay(self, session, user_ids):
+        # the --grace-hours of the script applies to all
+        two_hours_ago = NOW - datetime.timedelta(hours=2)
+        make_removal(
+            session,
+            user_ids,
+            reason='spam',
+            topoguide_validated_at=two_hours_ago,
+            forum_validated_at=two_hours_ago,
+        )
+        assert find_ready_requests(NOW, grace_hours=3) == []
+
+
+class TestJob:
+    """The scheduler's job: the same removal, off unless switched on."""
+
+    @pytest.mark.parametrize(
+        ('value', 'on'),
+        [
+            (None, False),
+            ('false', False),
+            ('true', True),
+            (' True ', True),
+            ('1', True),
+        ],
+    )
+    def test_switch(self, value, on):
+        settings = {} if value is None else {'users.removals.auto': value}
+        assert removals_auto(settings) is on
+
+    @pytest.mark.parametrize('on', [False, True])
+    def test_scheduled_when_on(self, settings, on):
+        scheduler = Mock()
+        with patch('c2corg_api.jobs.BackgroundScheduler', return_value=scheduler):
+            configure_scheduler_from_config(
+                {**settings, 'users.removals.auto': 'true' if on else 'false'}
+            )
+        ids = [call.kwargs['id'] for call in scheduler.add_job.call_args_list]
+        assert ('process_removals' in ids) is on
+
+    def test_removes_the_ready_accounts(self, session, user_ids, settings, discourse):
+        removal = make_removal(session, user_ids)
+        later = make_removal(
+            session,
+            user_ids,
+            user_id=user_ids['contributor3'],
+            forum_validated_at=NOW - datetime.timedelta(hours=2),
+        )
+
+        process_removals(settings)
+
+        discourse.merge_user.assert_called_once_with(user_ids['contributor'], 49513)
+        session.expire_all()
+        assert removal.done_at is not None
+        assert later.done_at is None
+
+    def test_forum_disabled(self, session, user_ids, settings, discourse):
+        discourse.enabled = False
+        removal = make_removal(session, user_ids)
+
+        process_removals(settings)
+
+        discourse.merge_user.assert_not_called()
+        session.expire_all()
+        assert removal.done_at is None
+
+    def test_failure_stays_open(self, session, user_ids, settings, discourse):
+        discourse.merge_user.side_effect = Exception('forum down')
+        removal = make_removal(session, user_ids)
+
+        process_removals(settings)
+
+        session.expire_all()
+        assert removal.done_at is None
 
 
 class TestPreview:
@@ -249,6 +353,48 @@ class TestProcessRemoval:
         assert done['topoguide'] == 'merged'
         assert 'documents' not in done
 
+    @pytest.mark.parametrize(
+        ('reason', 'addresses', 'subject'),
+        [
+            (
+                'anonymization',
+                ['contributor@camptocamp.org'],
+                'Votre compte Camptocamp.org a été anonymisé',
+            ),
+            (
+                'merge',
+                ['contributor@camptocamp.org', 'contributor2@camptocamp.org'],
+                'Vos comptes Camptocamp.org ont été fusionnés',
+            ),
+        ],
+    )
+    def test_emails(
+        self,
+        session,
+        user_ids,
+        queue_config,
+        settings,
+        send_email,
+        reason,
+        addresses,
+        subject,
+    ):
+        # read before the merge deletes the account, sent once it is saved
+        removal = make_removal(session, user_ids, reason=reason)
+        process_removal(removal.id, settings, queue_config)
+
+        assert [c.args[0] for c in send_email.call_args_list] == addresses
+        assert {c.kwargs['subject'] for c in send_email.call_args_list} == {subject}
+        assert '"Contributor"' in send_email.call_args.kwargs['body']
+
+    def test_email_failure(self, session, user_ids, queue_config, settings, send_email):
+        # the account is removed all the same
+        send_email.side_effect = OSError('no mail server')
+        removal = make_removal(session, user_ids, reason='anonymization')
+        assert process_removal(removal.id, settings, queue_config) is True
+        session.expire_all()
+        assert removal.done_at is not None
+
     def test_already_removed(
         self, session, user_ids, queue_config, settings, discourse
     ):
@@ -310,7 +456,9 @@ class TestProcessRemoval:
         discourse.merge_user.assert_not_called()
         assert session.get(User, user_ids['contributor']) is not None
 
-    def test_spam(self, session, user_ids, queue_config, settings, discourse):
+    def test_spam(
+        self, session, user_ids, queue_config, settings, discourse, send_email
+    ):
         source_id = user_ids['contributor']
         spam = make_outing(session, source_id)
         spam.locales[0].document_topic = DocumentTopic(topic_id=77)
@@ -341,6 +489,8 @@ class TestProcessRemoval:
         assert done['action'] == 'done'
         assert done['forum'] == 'deleted'
         assert done['documents'] == [spam_id]
+        # no email to a spammer
+        send_email.assert_not_called()
         assert session.get(User, source_id) is None
         # deleted for good, its comment topic closed and unlisted
         assert session.query(DeletedDocument).count() == 0

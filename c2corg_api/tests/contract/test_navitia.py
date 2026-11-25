@@ -6,7 +6,7 @@ import pytest
 
 from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
-from c2corg_api.tests.contract.test_misc import POLYGON_4326
+from c2corg_api.tests.contract.test_misc import navitia_coverage  # noqa: F401
 from c2corg_api.views.navitia import JOB_TTL, redis_client
 
 JOURNEYS = ('GET', '/navitia/journeys')
@@ -32,7 +32,7 @@ JOURNEY_PARAMS = {
     'datetime_represents': 'departure',
 }
 ISOCHRONE_PARAMS = {
-    # in the coverage of the documents fixture, which the isochrone needs
+    # in the coverage of the navitia_coverage fixture, which the isochrone needs
     'from': '5.71;45.655',
     'datetime': '20260116T115100',
     'datetime_represents': 'departure',
@@ -139,21 +139,6 @@ class TestJourneys:
         assert response.json['errors'][0]['description'] == (
             'Navitia API config is missing'
         )
-
-
-@pytest.fixture
-def navitia_coverage(browser):
-    """Add the coverage the isochrone needs, in longitude and latitude."""
-    # the isochrone needs the coverage of its source: in production the
-    # polygons of the coverages are in longitude and latitude
-    browser.create(
-        'coverages',
-        {
-            'coverage_type': 'fr-se',
-            'geometry': {'geom_detail': POLYGON_4326},
-            'locales': [{'lang': 'en', 'title': 'Navitia coverage'}],
-        },
-    )
 
 
 @pytest.mark.usefixtures('navitia_coverage')

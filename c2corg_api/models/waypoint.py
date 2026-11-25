@@ -327,3 +327,26 @@ class ArchiveWaypointLocale(_WaypointLocaleMixin, ArchiveDocumentLocale):
     }
 
     __table_args__ = Base.__table_args__
+
+
+# the fields `hut_category` is computed from
+HUT_CATEGORY_FIELDS = ('capacity', 'capacity_staffed', 'custodianship')
+
+
+def hut_category(waypoint):
+    """Return what a hut offers, for the listings (the map shows it).
+
+    `wardened` with a staffed capacity or when it is only open when wardened,
+    `shelter` when it has no bed, else its custodianship (None for the other
+    waypoint types).
+    """
+    if waypoint.waypoint_type != 'hut':
+        return None
+    if (
+        waypoint.capacity_staffed
+        or waypoint.custodianship == 'accessible_when_wardened'
+    ):
+        return 'wardened'
+    if waypoint.capacity == 0:
+        return 'shelter'
+    return waypoint.custodianship

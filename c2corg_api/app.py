@@ -2,6 +2,8 @@
 # Served by uvicorn (c2corg_api.asgi); the tests drive it through FastAPI's
 # TestClient (c2corg_api.tests.client).
 
+import logging
+import os
 from contextlib import asynccontextmanager
 
 from anyio import to_thread
@@ -12,9 +14,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Match
 
 from c2corg_api.web import (
+    avalanche_bulletins,
     document_actions,
     document_map,
     documents,
+    favourites,
     feeds,
     health,
     history,
@@ -33,6 +37,28 @@ from c2corg_api.web.auth import TokenValidationMiddleware
 from c2corg_api.web.checks import Refused, refused_response
 from c2corg_api.web.cors import CorsMiddleware
 from c2corg_api.web.errors import UnexpectedErrorMiddleware, error_response
+
+log = logging.getLogger(__name__)
+
+
+def warn_navitia_config():
+    """Warn at startup when the Navitia (public transport) key is unusable.
+
+    NAVITIA_API_KEY comes from the .env file (see .env, "test-key" in dev):
+    without a real key, the journey and public transport endpoints fail and
+    the stops of new waypoints are not computed.
+    """
+    key = os.getenv('NAVITIA_API_KEY')
+    if not key:
+        log.warning(
+            'NAVITIA_API_KEY is not set (is the .env file loaded?): the '
+            'public transport endpoints will answer 500.'
+        )
+    elif key == 'test-key':
+        log.warning(
+            'NAVITIA_API_KEY is the "test-key" placeholder: the public '
+            'transport features are disabled (fine for development).'
+        )
 
 
 class Registry:
@@ -62,6 +88,7 @@ def _lifespan(threads):
         # wait here for a thread instead. Gunicorn's sync workers serve one
         # request at a time, and do not run this.
         to_thread.current_default_thread_limiter().total_tokens = threads
+        warn_navitia_config()
         yield
 
     return lifespan
@@ -101,7 +128,9 @@ def create_fastapi_app(settings, registry=None):
     misc.include(app)
     users.include(app)
     navitia.include(app)
+    avalanche_bulletins.include(app)
     user_actions.include(app)
+    favourites.include(app)
     document_actions.include(app)
     if openapi.enabled(settings):
         openapi.include(app)
