@@ -1,0 +1,44 @@
+{
+ "kaernten.html": {
+  "a[rel=\"next\"]": "str",
+  "script:-soup-contains(\"clickedTour\")": "str",
+  "table.border-collapse tbody tr[data-href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(3) a[href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(4)": "str"
+ },
+ "niederoesterreich.html": {
+  "a[rel=\"next\"]": "str",
+  "script:-soup-contains(\"clickedTour\")": "str",
+  "table.border-collapse tbody tr[data-href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(3) a[href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(4)": "str"
+ },
+ "oberoesterreich.html": {
+  "a[rel=\"next\"]": "str",
+  "script:-soup-contains(\"clickedTour\")": "str",
+  "table.border-collapse tbody tr[data-href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(3) a[href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(4)": "str"
+ },
+ "salzburg.html": {
+  "a[rel=\"next\"]": "str",
+  "script:-soup-contains(\"clickedTour\")": "str",
+  "table.border-collapse tbody tr[data-href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(3) a[href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(4)": "str"
+ },
+ "salzburg_page2.html": {
+  "a[rel=\"next\"]": "str",
+  "script:-soup-contains(\"clickedTour\")": "str",
+  "table.border-collapse tbody tr[data-href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(3) a[href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(4)": "str"
+ },
+ "steiermark.html": {
+  "a[rel=\"next\"]": "str",
+  "script:-soup-contains(\"clickedTour\")": "str",
+  "table.border-collapse tbody tr[data-href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(3) a[href]": "str",
+  "table.border-collapse tbody tr[data-href] > td:nth-of-type(4)": "str"
+ }
+}

@@ -2,7 +2,8 @@
 
 The `/metaskirando` view of the UI shows, next to the outings of Camptocamp, the outings reported on partner
 sites ([skitour.fr](https://skitour.fr), [gulliver.it](https://www.gulliver.it), [bivouak.net](https://www.bivouak.net)
-and [gipfelbuch.ch](https://www.gipfelbuch.ch), the last two off by default). The API does not proxy the partner sites
+[gipfelbuch.ch](https://www.gipfelbuch.ch) and [skitourenportal.eu](https://skitourenportal.eu), the last three off
+by default). The API does not proxy the partner sites
 at request time: the harvester of [docs/harvest.md](harvest.md) runs each source every 15 minutes into its own tables,
 and `GET /partner-outings` merges those rows with the c2c outings of the same period.
 
@@ -32,7 +33,7 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 | env key | ini key | default | meaning |
 | --- | --- | --- | --- |
 | `harvest_partners_enabled` | `harvest.partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests the partner sources, whatever `harvest.enabled`; `make harvest-partners` refuses to run unless a source is on or `--force` is given |
-| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak` and `gipfelbuch`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
+| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak`, `gipfelbuch` and `skitourenportal`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
 | `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
 | `partners_retention` | `partners.retention_days` | `31` | outings older than that are not stored, and purged |
 | `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route lookups) older than that are purged |
@@ -152,7 +153,7 @@ them refresh the fixtures. Run them from a machine that reaches the sites.
 python -m c2corg_api.partners record <source> [--out DIR] [--since YYYY-MM-DD]
 ```
 
-`<source>` is `skitour`, `gulliver`, `bivouak` or `gipfelbuch`. The command runs the real adapter with
+`<source>` is `skitour`, `gulliver`, `bivouak`, `gipfelbuch` or `skitourenportal`. The command runs the real adapter with
 the real transport, through a `RecordingTransport`, and writes into
 `<out>/<source>/` (default: the tests fixtures directory):
 
@@ -193,6 +194,34 @@ for its coordinates (`data-lat`, `data-lng` of the map): at most 10 new detail p
 each answer kept in the lookup cache (`sortie:<id>`). Outings over the cap keep the massif (`region`), the country and the
 summit named in the title, and are located by the job. `robots.txt` asks the crawlers for 10 s between two requests: the
 adapter waits that long (5 lists + 10 pages = 15 requests, about 2.5 minutes per run at most).
+
+### skitourenportal.eu (HTML)
+
+The Tourenforum of Austria (Salzburg, Oberösterreich, Niederösterreich, Kärnten, Steiermark): no API, so
+`sources/skitourenportal.py` reads the five portal pages (`/salzburg`...: a table of the latest tours, 16 per page,
+`?page=N`) with BeautifulSoup and CSS selectors (`c2corg_api/partners/htmlparse.py`), at most 2 pages per state and one
+request per 3 s. `robots.txt` allows everything. The rows have no activity (all are `skitouring`), rating or
+elevation: only title, date, author, region and link.
+
+- **Position.** DATA_SOURCES said there were no coordinates: the table has none, but the map of each portal page lists
+  a marker (latitude, longitude) per tour in an inline script. It is read when there is one (`geom_quality='route'`:
+  a point of the tour, not known more precisely); a marker is also looked up on the pages of the other states. A tour
+  without marker keeps `region`, `country='AT'` and, when the title ends with an elevation (`Spielmann 3027`,
+  `Hochkönig 2941 m`), `summit_name` and `elevation_max`, for the job to resolve. The tour pages hold no more
+  (photos, narrative, comments; `/beitrag/<id>` answers 500, `/<state>/beitrag/<id>` is the portal page again).
+- **Regions to areas.** `c2corg_api/partners/regions/skitourenportal.json` maps each region text to its c2c area
+  (`area_ids`: the Bundesland, `admin_limits`; `range_ids`: the ranges covering at least 15% of it) and country;
+  `partners/region_map.py` (`lookup(source, text)`) reads it, ignoring case, accents and ae/oe/ue spellings. It covers
+  the 5 regions of the site, nothing else (Tirol, Vorarlberg, Wien and Burgenland are not on it); the ids were read
+  in the demo database on 2026-11-25, and the file's `coverage` block says how. Skitour massifs and gipfelbuch region
+  codes get their own `regions/<source>.json`.
+- **HTML contract.** As for bivouak.net (see "Sources that publish HTML"): `REQUIRED_SELECTORS` (the same for the 5
+  portal pages: rows, title and author cells, the marker script, the next link) is the allow-list of a recording and
+  the contract `shapes` and the live test check; the authors are real names, so `PSEUDONYMISE_SELECTORS` records them
+  as `user1`, `user2`... (name and profile link).
+- **Terms.** `/informationen` gives no licence for third parties (it only lets the avalanche services reuse the photos,
+  with the source). We reuse no photo or text: title, date, author, region, position and the link, with the credit.
+  Ask the Tourenforum before enabling it (see Production notes).
 
 ### Checking for changes: `shapes`
 
@@ -242,6 +271,7 @@ contract change. Use `-rs` to see the reasons.
 | gulliver.it | Cloudflare challenge (403): "blocked", exit 2 / skip | needs an allowed network or a Gulliver allow-list |
 | bivouak.net | reachable | `record` makes up to 15 requests, 10 s apart |
 | gipfelbuch.ch | reachable (robots.txt allows all) | `record` makes up to 17 requests, 2 s apart |
+| skitourenportal.eu | reachable, without `www` (recorded 2026-11-25) | no key |
 
 Run them from a workstation or from production infrastructure; in the sandbox
 they only report why they could not run.
