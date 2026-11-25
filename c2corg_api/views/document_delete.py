@@ -63,7 +63,10 @@ from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.document_links import linking_documents
 from c2corg_api.views.document_trash import keep_deleted_document, keep_deleted_locale
 from c2corg_api.views.image import delete_all_files_for_image
-from c2corg_api.views.image_embeds import images_embedded_elsewhere
+from c2corg_api.views.image_embeds import (
+    embedding_documents,
+    images_embedded_elsewhere,
+)
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id, validate_lang
 
@@ -379,10 +382,15 @@ def read_images_of_deletion(request):
         `GET` `/documents/delete/{id}/images`
 
     Response: how many images are deleted with it, and how many stay linked
-    to no document, by type (shown before deleting):
+    to no document, by type; and the texts of other documents that show it
+    (an image, [img=ID]) or link to it ([[type/ID|label]], a URL): they break
+    (shown before deleting):
 
         {'deleted': 3,
-         'orphaned': {'collaborative': 2, 'personal': 1, 'copyright': 0}}
+         'orphaned': {'collaborative': 2, 'personal': 1, 'copyright': 0},
+         'embedded_in': [{'document_id': 12, 'document_type': 'r',
+                          'title': '...', 'langs': ['fr']}],
+         'linked_from': [...]}
     """
     document_id = request.validated['id']
     document_type = request.validated['document_type']
@@ -394,7 +402,18 @@ def read_images_of_deletion(request):
     for image_id, image_type in images.items():
         if image_id not in deleted and image_type in orphaned:
             orphaned[image_type] += 1
-    return {'deleted': len(deleted), 'orphaned': orphaned}
+    embedded_in = (
+        embedding_documents([document_id]).get(document_id, [])
+        if document_type == IMAGE_TYPE
+        else []
+    )
+    linked_from = linking_documents([document_id], document_type).get(document_id, [])
+    return {
+        'deleted': len(deleted),
+        'orphaned': orphaned,
+        'embedded_in': embedded_in,
+        'linked_from': linked_from,
+    }
 
 
 def _delete_document(request, document_id, document_type, redirecting=False):

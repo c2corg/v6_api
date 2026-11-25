@@ -803,6 +803,8 @@ def test_images_of_deletion(client, outing_images, docs):  # noqa: F811
         'deleted': 1,
         # the collaborative image, and the personal one of another user
         'orphaned': {'collaborative': 1, 'personal': 1, 'copyright': 0},
+        'embedded_in': [],
+        'linked_from': [],
     }
 
     for username in ('moderator', 'contributor'):
@@ -821,7 +823,40 @@ def test_images_of_deletion_of_an_image(client, docs):  # noqa: F811
     assert body == {
         'deleted': 0,
         'orphaned': {'collaborative': 0, 'personal': 0, 'copyright': 0},
+        'embedded_in': [],
+        'linked_from': [],
     }
+
+
+def test_images_of_deletion_texts(client, session, docs):  # noqa: F811
+    from c2corg_api.tests.views.test_document_links import _write
+
+    image_id = docs.image1.document_id
+    route_id = docs.route1.document_id
+    # the image shown in route1, linked from route2 and from route1 (once)
+    _write(session, docs.route1, f'[img={image_id}/]\n\n[[images/{image_id}|x]]')
+    _write(session, docs.route2, f'see [[images/{image_id}|the photo]]')
+    # a link to a route is no link to the image
+    _write(session, docs.route3, f'[[routes/{image_id}|wrong type]]')
+
+    body = client.get(f'/documents/delete/{image_id}/images', headers=_moderator()).json
+
+    route1 = {
+        'document_id': route_id,
+        'document_type': 'r',
+        'title': docs.route1.locales[0].title,
+        'langs': [docs.route1.locales[0].lang],
+    }
+    assert body['embedded_in'] == [route1]
+    assert [d['document_id'] for d in body['linked_from']] == sorted(
+        [route_id, docs.route2.document_id], reverse=True
+    )
+
+    # a route linked from another text
+    _write(session, docs.route3, f'[[routes/{route_id}|the route]]')
+    body = client.get(f'/documents/delete/{route_id}/images', headers=_moderator()).json
+    assert body['embedded_in'] == []
+    assert [d['document_id'] for d in body['linked_from']] == [docs.route3.document_id]
 
 
 def test_personal_image_shown_elsewhere_kept(
@@ -839,10 +874,11 @@ def test_personal_image_shown_elsewhere_kept(
     assert client.get(url, headers=_moderator()).json['deleted'] == 1
     # shown in the text of a route: kept, orphan
     _embed(session, docs.route1, photo_id)
-    assert client.get(url, headers=_moderator()).json == {
-        'deleted': 0,
-        'orphaned': {'collaborative': 1, 'personal': 2, 'copyright': 0},
-    }
+    body = client.get(url, headers=_moderator()).json
+    assert (body['deleted'], body['orphaned']) == (
+        0,
+        {'collaborative': 1, 'personal': 2, 'copyright': 0},
+    )
 
     with HTTMock(_image_service):
         _delete(client, docs.outing2.document_id)
