@@ -84,13 +84,53 @@ def trim_data(source: str, endpoint: str, data):
     return _keep(data, _tree(paths))
 
 
-def trim_body(source: str, url: str, body: bytes) -> bytes:
-    """`trim_data` on a JSON body; anything else is returned as is."""
+def pseudonymise_paths(source: str, endpoint: str) -> list[str]:
+    """Return the JSON paths holding a partner user's identity (may be empty)."""
+    from c2corg_api.partners.sources import REGISTRY
+
+    adapter = REGISTRY.get(source)
+    paths = getattr(adapter, 'PSEUDONYMISE_PATHS', {}) if adapter else {}
+    return list(paths.get(endpoint, ()))
+
+
+def _replace(value, tree, names):
+    if not tree:
+        if value is None or isinstance(value, bool | dict | list):
+            return value
+        fake = names.setdefault((type(value).__name__, value), len(names) + 1)
+        return fake if isinstance(value, int) else f'user{fake}'
+    if isinstance(value, list):
+        sub = tree.get('[]', tree)
+        return [_replace(v, sub, names) for v in value]
+    if isinstance(value, dict):
+        return {
+            k: _replace(v, tree[k], names) if k in tree else v for k, v in value.items()
+        }
+    return value
+
+
+def pseudonymise_data(source: str, endpoint: str, data, names: dict | None = None):
+    """Replace the author identities by stable fakes ("user1", "user2"...).
+
+    `names` is shared by the responses of one recording, so that the same
+    author gets the same pseudonym everywhere. Integer ids stay integers.
+    """
+    paths = pseudonymise_paths(source, endpoint)
+    if not paths:
+        return data
+    names = {} if names is None else names
+    return _replace(data, _tree(paths), names)
+
+
+def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> bytes:
+    """`trim_data` then `pseudonymise_data` on a JSON body; else returned as is."""
     try:
         data = json.loads(body)
     except ValueError:  # includes bad UTF-8
         return body
-    trimmed = trim_data(source, endpoint_of(url), data)
+    endpoint = endpoint_of(url)
+    trimmed = trim_data(source, endpoint, data)
+    trimmed = pseudonymise_data(source, endpoint, trimmed, names)
     return (json.dumps(trimmed, indent=1, ensure_ascii=False) + '\n').encode()
 
 

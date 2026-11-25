@@ -111,6 +111,11 @@ class GulliverAdapter:
     # the allow-list of what a recording keeps: anything else (comment texts,
     # access and observation notes, tracks...) is never written to a fixture.
     # A path that ends on an object keeps the whole object.
+    # see SkitourAdapter.PSEUDONYMISE_PATHS
+    PSEUDONYMISE_PATHS: ClassVar[dict[str, list[str]]] = {
+        'commentglobal': ['[].user_nicename']
+    }
+
     REQUIRED_PATHS: ClassVar[dict[str, list[str]]] = {
         'commentglobal': [
             '[].ID',
