@@ -19,8 +19,18 @@ from sqlalchemy.dialects.postgresql import JSONB
 from c2corg_api.models import Base, enums, schema
 from c2corg_api.models.utils import ArrayOfEnum
 
-# how precisely the position of a partner outing is known
-GEOM_QUALITIES = ('summit', 'start', 'route', 'area_centroid', 'none')
+# how precisely the position of a partner outing is known: given by the partner
+# (`summit`, `start`, `route`), or found by the job from the hints of an outing
+# without coordinates (`summit_match`: a c2c summit of the same name;
+# `area_centroid`: the centroid of its region), or unknown (`none`)
+GEOM_QUALITIES = (
+    'summit',
+    'start',
+    'route',
+    'summit_match',
+    'area_centroid',
+    'none',
+)
 # health of a source, see the job harvesting the partner outings
 SOURCE_STATUSES = (
     'never_run',

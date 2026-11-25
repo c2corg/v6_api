@@ -18,7 +18,8 @@ from collections import Counter
 from typing import ClassVar
 
 from c2corg_api.partners import htmlparse, normalise
-from c2corg_api.partners.adapter import ParseError, SourceDown
+from c2corg_api.partners.adapter import ParseError
+from c2corg_api.partners.lookups import LookupRequests
 from c2corg_api.partners.model import (
     FetchContext,
     FetchResult,
@@ -164,7 +165,7 @@ class _Run:
         self.seen = set()
         self.summits = {}  # in-run: key -> dict, or None (no answer)
         self.detail_fetches = 0
-        self.detail_down = False
+        self.requests = LookupRequests(ctx, result)
 
     def harvest(self):
         response = self.ctx.transport.get(LIST_URL)
@@ -269,16 +270,12 @@ class _Run:
         if cached is not None:
             self.summits[key] = cached
             return cached
-        if self.detail_down or self.detail_fetches >= MAX_DETAIL_FETCHES:
+        if self.detail_fetches >= MAX_DETAIL_FETCHES or not self.requests.available:
             self.result.skipped['summit_lookup_deferred'] += 1
             return None  # not remembered: nothing was tried
         self.detail_fetches += 1
-        try:
-            response = self.ctx.transport.get(url)
-        except SourceDown as e:  # the listing is still good: try again later
-            log.info('gipfelbuch %s: %s', url, e)
-            self.detail_down = True
-            self.result.skipped['summit_lookup_deferred'] += 1
+        response = self.requests.get(url)
+        if response is None:  # the site failed for it: asked again next run
             return None
         place = parse_detail(response.text('utf-8')) if response.status == 200 else None
         if place is None:

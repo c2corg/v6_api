@@ -10,7 +10,11 @@ if TYPE_CHECKING:
     from c2corg_api.partners.lookups import LookupCache
     from c2corg_api.partners.transport import Transport
 
-GeomQuality = Literal['summit', 'start', 'route', 'area_centroid', 'none']
+# `summit_match` and `area_centroid` are set by the job (location hints), never
+# by an adapter
+GeomQuality = Literal[
+    'summit', 'start', 'route', 'summit_match', 'area_centroid', 'none'
+]
 SourceStatus = Literal[
     'never_run', 'ok', 'degraded', 'blocked', 'down', 'failing', 'disabled'
 ]
