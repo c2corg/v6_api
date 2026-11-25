@@ -60,28 +60,39 @@ def test_es_down(monkeypatch, client):
 
     r = client.get('/outings?act=skitouring', status=503)
     assert r.json['errors'][0]['name'] == 'search unavailable'
-def test_partners_status_empty(client):
-    # no source ever ran: still a 200
-    r = client.get('/health', status=200)
-    assert r.json['partners'] == {}
 
 
-def test_partners_status(client, session):
+def test_partners_in_the_harvest_status(client, session):
+    # the partner sources are harvest sources: one representation for all
+    from datetime import UTC, datetime
+
     from c2corg_api.models import DBSession
-    from c2corg_api.models.partner_outing import PartnerSource
+    from c2corg_api.models.harvest import HarvestSource
 
-    DBSession.add(PartnerSource(source='skitour', status='disabled'))
-    DBSession.add(PartnerSource(source='gulliver', status='blocked'))
+    now = datetime(2026, 11, 25, 10, tzinfo=UTC)
+    DBSession.add(
+        HarvestSource(
+            id='partners.skitour:outings',
+            harvester='partners.skitour',
+            next_run_at=now,
+            last_success=now,
+        )
+    )
+    DBSession.add(
+        HarvestSource(
+            id='partners.gulliver:outings',
+            harvester='partners.gulliver',
+            next_run_at=now,
+            error_count=2,
+        )
+    )
     DBSession.flush()
 
     r = client.get('/health', status=200)
-    assert r.json['partners'] == {'skitour': 'disabled', 'gulliver': 'blocked'}
-
-
-def test_partners_status_failure_does_not_fail_the_check(client, monkeypatch):
-    from c2corg_api.web import health
-
-    # the query raises: the key is empty and the status stays 200
-    monkeypatch.setattr(health, 'PartnerSource', None)
-    r = client.get('/health', status=200)
-    assert r.json['partners'] == {}
+    assert r.json['harvest']['partners.skitour'] == {
+        'sources': 1,
+        'failing': 0,
+        'last_success': '2026-11-25T10:00:00+00:00',
+    }
+    assert r.json['harvest']['partners.gulliver']['failing'] == 1
+    assert 'partners' not in r.json

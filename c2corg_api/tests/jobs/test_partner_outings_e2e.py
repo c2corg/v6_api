@@ -28,8 +28,9 @@ SHIFT = TODAY - RECORDED
 EARTH = 6378137.0
 
 SETTINGS = {
-    'partners.enabled': 'true',
-    'partners.sources': 'skitour,gulliver',
+    'harvest.partners.enabled': 'false',
+    'harvest.partners.skitour.enabled': 'true',
+    'harvest.partners.gulliver.enabled': 'true',
     'partners.interval_minutes': '15',
     'partners.retention_days': '31',
     'partners.transport': 'fixtures',
@@ -270,7 +271,13 @@ def test_sources_are_degraded_on_purpose(client, world):
 
 def test_health_lists_the_partners(client, world):
     response = client.get('/health', status='*')
-    assert response.json['partners'] == {'skitour': 'degraded', 'gulliver': 'degraded'}
+    # the partner harvesters, as the other harvesters (degraded is no failure)
+    harvest = response.json['harvest']
+    for name in ('partners.skitour', 'partners.gulliver'):
+        assert harvest[name]['sources'] == 1
+        assert harvest[name]['failing'] == 0
+        assert harvest[name]['last_success']
+    assert 'partners' not in response.json
 
 
 def test_second_harvest_is_idempotent(client, session, world):
