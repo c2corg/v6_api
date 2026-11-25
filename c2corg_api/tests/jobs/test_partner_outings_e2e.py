@@ -281,7 +281,10 @@ def test_sources_are_degraded_on_purpose(client, world):
     # set has an item that does not parse: its run is `degraded`
     answer = client.get('/partner-outings/sources', status=200).json
     sources = {s['source']: s for s in answer['sources']}
-    assert set(sources) == {'skitour', 'gulliver'}
+    # bivouak is switched off (harvest.partners.bivouak.enabled): off by default
+    assert set(sources) == {'skitour', 'gulliver', 'bivouak'}
+    assert sources['bivouak']['status'] == 'disabled'
+    assert sources['bivouak']['status_detail'] == 'not configured'
     assert sources['skitour']['status'] == 'ok'
     assert sources['skitour']['status_detail'] is None
     assert sources['skitour']['last_fetched'] == 30
@@ -293,12 +296,17 @@ def test_sources_are_degraded_on_purpose(client, world):
         'route_lookup_deferred': 1,
         'unmapped_activity:kayak': 1,
     }
+    for name in ('skitour', 'gulliver'):
+        assert sources[name]['last_success_at'] == NOW.isoformat()
     for source in sources.values():
-        assert source['last_success_at'] == NOW.isoformat()
         assert source['site_url'].startswith('https://')
     # the listing carries the same statuses
     listed = {s['source']: s['status'] for s in listing(client)['sources']}
-    assert listed == {'skitour': 'ok', 'gulliver': 'degraded'}
+    assert listed == {
+        'skitour': 'ok',
+        'gulliver': 'degraded',
+        'bivouak': 'disabled',
+    }
 
 
 def test_health_lists_the_partners(client, world):

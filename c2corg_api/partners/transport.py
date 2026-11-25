@@ -292,7 +292,8 @@ class RecordingTransport:
 
     def _file_name(self, url, params, content_type) -> str:
         path = urlsplit(url).path
-        endpoint = _slug(path.rstrip('/').rsplit('/', 1)[-1]) or 'index'
+        last = re.sub(r'\.(?:php|html?|json)$', '', path.rstrip('/').rsplit('/', 1)[-1])
+        endpoint = _slug(last) or 'index'
         suffix = ''.join(
             f'_{_slug(str(k))}{_slug(str(v))}'
             for k, v in sorted((params or {}).items())
