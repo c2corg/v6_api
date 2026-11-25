@@ -325,7 +325,8 @@ def _secret(name):
     try:
         return Path(path).read_text(encoding='utf-8').strip() or None
     except OSError as e:
-        log.warning('Cannot read %s_FILE (%s): %s', name, path, type(e).__name__)
+        # Neither the name nor the path: CodeQL counts both as secret data.
+        log.warning('Cannot read a partner secret file: %s', type(e).__name__)
         return None
 
 
