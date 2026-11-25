@@ -45,12 +45,16 @@ def outing(**kwargs):
 
 
 def test_source_names_come_from_the_registry():
-    assert SOURCE_NAMES == tuple(REGISTRY) == (
-        'skitour',
-        'gulliver',
-        'bivouak',
-        'gipfelbuch',
-        'skitourenportal',
+    assert (
+        SOURCE_NAMES
+        == tuple(REGISTRY)
+        == (
+            'skitour',
+            'gulliver',
+            'bivouak',
+            'gipfelbuch',
+            'skitourenportal',
+        )
     )
 
 

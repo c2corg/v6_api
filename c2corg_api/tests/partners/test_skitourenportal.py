@@ -10,7 +10,7 @@ from c2corg_api.partners import contract, htmlparse, region_map
 from c2corg_api.partners.adapter import ParseError, SourceBlocked, SourceDown
 from c2corg_api.partners.lookups import MemoryLookupCache
 from c2corg_api.partners.model import FetchContext, HarvestedOuting
-from c2corg_api.partners.sources import REGISTRY, skitourenportal
+from c2corg_api.partners.sources import skitourenportal
 from c2corg_api.partners.sources.skitourenportal import (
     SkitourenportalAdapter,
     parse_listing,
@@ -519,8 +519,9 @@ def test_a_changed_layout_is_breaking(capture):
     actual = contract.captured_shapes('skitourenportal', changed)
     report = contract.compare(adapter, expected, actual)
     assert report.breaking
-    assert any('tr[data-href]' in p and 'no longer matches' in p for p in report.problems)
-    assert any('clickedTour' in p for p in report.problems)
+    problems = report.problems
+    assert any('tr[data-href]' in p and 'no longer matches' in p for p in problems)
+    assert any('clickedTour' in p for p in problems)
 
 
 def test_no_html_answer_is_unchecked_not_breaking():
