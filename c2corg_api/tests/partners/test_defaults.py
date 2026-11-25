@@ -17,7 +17,7 @@ def read_env(name):
 
 def test_env_default_is_safe_for_production():
     env = read_env('env.default')
-    assert env['partners_enabled'] == 'false'
+    assert env['harvest_partners_enabled'] == 'false'
     assert env['partners_transport'] == 'http'
     assert env['partners_allow_synthetic'] == 'false'
     assert env['partners_lookup_retention'] == '30'
