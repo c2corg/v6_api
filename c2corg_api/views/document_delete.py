@@ -22,7 +22,7 @@ from c2corg_api.models.document_history import (
     HistoryMetaData,
     get_creators,
     has_been_created_by,
-    is_less_than_24h_old,
+    is_in_deletion_period,
 )
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
@@ -236,11 +236,11 @@ def validate_requestor(request, **kwargs):
         )
         return
 
-    if not is_less_than_24h_old(document_id):
+    if not is_in_deletion_period(document_id):
         request.errors.add(
             'querystring',
             'document_id',
-            'Only document less than 24h old can be deleted',
+            'Only documents less than 30 days old can be deleted',
         )
         return
 
@@ -362,7 +362,7 @@ def personal_images_deleted_with(request, document_id, document_type, images=Non
     ]
     if not request.has_permission('moderator'):
         # only the images the user could delete (see validate_requestor)
-        image_ids = [i for i in image_ids if is_less_than_24h_old(i)]
+        image_ids = [i for i in image_ids if is_in_deletion_period(i)]
     # an image shown in the text of another document ([img=ID]) stays
     embedded = images_embedded_elsewhere(image_ids, document_id)
     return sorted(i for i in image_ids if i not in embedded)

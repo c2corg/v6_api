@@ -375,7 +375,7 @@ def docs(session, user_ids) -> Docs:
     session.add(article2)
     session.flush()
 
-    # Make the article older than 24h old
+    # Make the article older than the deletion period (30 days)
     written_at = datetime.datetime(2016, 1, 1, 0, 0, 0)
     create_new_version(article2, user_id, written_at)
     update_feed_document_create(article2, user_id)
@@ -1063,7 +1063,7 @@ def test_delete_personal_doc_not_author(client, docs):
     )
 
 
-def test_delete_personal_doc_author_less_24h(client, docs):
+def test_delete_personal_doc_author_in_deletion_period(client, docs):
     # article1 has just been created by 'contributor'
     headers = auth_headers(username='contributor')
     client.delete_json(
@@ -1074,8 +1074,8 @@ def test_delete_personal_doc_author_less_24h(client, docs):
     )
 
 
-def test_delete_personal_doc_author_more_24h(client, docs):
-    # article2 is older than 24h
+def test_delete_personal_doc_author_after_deletion_period(client, docs):
+    # article2 is older than 30 days
     headers = auth_headers(username='contributor')
     client.delete_json(
         PREFIX + str(docs.article2.document_id),
@@ -1083,6 +1083,36 @@ def test_delete_personal_doc_author_more_24h(client, docs):
         headers=headers,
         status=400,
     )
+
+
+@pytest.mark.parametrize(('days', 'status'), [(29, 200), (31, 400)])
+def test_delete_personal_doc_deletion_period(client, session, docs, days, status):
+    from c2corg_api.models.document_history import DELETION_PERIOD, DocumentVersion
+
+    # the first version of article1, moved back in time
+    version = (
+        session.query(DocumentVersion)
+        .filter(DocumentVersion.document_id == docs.article1.document_id)
+        .order_by(DocumentVersion.id)
+        .first()
+    )
+    version.history_metadata.written_at = datetime.datetime.now(
+        datetime.UTC
+    ) - datetime.timedelta(days=days)
+    session.flush()
+    assert DELETION_PERIOD == datetime.timedelta(days=30)
+
+    response = client.delete_json(
+        PREFIX + str(docs.article1.document_id),
+        {},
+        headers=auth_headers(username='contributor'),
+        status=status,
+    )
+
+    if status == 400:
+        assert response.json['errors'][0]['description'] == (
+            'Only documents less than 30 days old can be deleted'
+        )
 
 
 def test_delete_outing_with_other_users(client, session, user_ids, docs):

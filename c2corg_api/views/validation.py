@@ -22,7 +22,6 @@ from c2corg_api.models.document_history import has_been_created_by
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
-from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
@@ -557,39 +556,37 @@ def association_permission_removal_checker(request):
     return check
 
 
-# the documents whose images are the topoguide's: an image is not left without
-# a document by unlinking it from one of them
-COLLABORATIVE_TYPES = (AREA_TYPE, BOOK_TYPE, MAP_TYPE, ROUTE_TYPE, WAYPOINT_TYPE)
-
-
 def check_image_keeps_a_document(association):
-    """Refuse to unlink an image from its last document when it is collaborative."""
+    """Refuse to unlink an image from its last document."""
     # an orphan image is lost for the readers (see views.image_orphans): it is
-    # deleted instead, by a moderator. Unlinking an image from an outing or a
-    # personal document stays possible: they are their authors'.
-    if association.child_document_type != IMAGE_TYPE:
-        return
-    parent_type = association.parent_document_type
-    if parent_type not in COLLABORATIVE_TYPES and not (
-        parent_type == ARTICLE_TYPE
-        and not article.is_personal(association.parent_document_id)
-    ):
-        return
-    image_id = association.child_document_id
-    other_links = exists().where(
-        or_(
-            and_(
-                Association.child_document_id == image_id,
-                Association.parent_document_id != association.parent_document_id,
-            ),
-            Association.parent_document_id == image_id,
+    # deleted instead (by its author during the deletion period, else by a
+    # moderator). For everyone, whatever the document: an outing, a route...
+    for side in ('parent', 'child'):
+        if getattr(association, f'{side}_document_type') != IMAGE_TYPE:
+            continue
+        image_id = getattr(association, f'{side}_document_id')
+        other_id = (
+            association.child_document_id
+            if side == 'parent'
+            else association.parent_document_id
         )
-    )
-    if not DBSession.query(other_links).scalar():
-        raise HTTPBadRequest(
-            'as the last document of the image, this document can not be '
-            'disassociated: delete the image instead'
+        other_links = exists().where(
+            or_(
+                and_(
+                    Association.child_document_id == image_id,
+                    Association.parent_document_id != other_id,
+                ),
+                and_(
+                    Association.parent_document_id == image_id,
+                    Association.child_document_id != other_id,
+                ),
+            )
         )
+        if not DBSession.query(other_links).scalar():
+            raise HTTPBadRequest(
+                'as the last document of the image, this document can not be '
+                'disassociated: delete the image instead'
+            )
 
 
 def check_permission_for_association_removal(request, association):

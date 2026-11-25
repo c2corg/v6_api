@@ -1065,14 +1065,42 @@ def test_delete_association_last_collaborative_document_of_image(client, docs):
 
 def test_delete_association_last_outing_or_personal_document_of_image(client, docs):
     image_id = docs.image1.document_id
-    # outings and personal documents are their authors': unlinked all the same
-    _link(client, docs.outing.document_id, image_id)
-    _unlink(client, docs.outing.document_id, image_id, username='contributor')
-    _link(client, docs.article2.document_id, image_id)
-    _unlink(client, docs.article2.document_id, image_id)
+    outing_id = docs.outing.document_id
+    article_id = docs.article2.document_id
+    _link(client, outing_id, image_id)
+
+    # whatever the document: an outing, by its user or a moderator
+    for username in ('contributor', 'moderator'):
+        response = _unlink(client, outing_id, image_id, 400, username)
+        assert_error(response.json['errors'], 'Bad Request', LAST_DOCUMENT_OF_IMAGE)
+
+    # a personal article
+    _link(client, article_id, image_id)
+    _unlink(client, outing_id, image_id)
+    response = _unlink(client, article_id, image_id, status=400)
+    assert_error(response.json['errors'], 'Bad Request', LAST_DOCUMENT_OF_IMAGE)
 
 
-def test_update_image_last_collaborative_document(client, docs):
+def test_delete_association_image_of_image(client, session, user_ids, docs):
+    from c2corg_api.models.image import Image
+    from c2corg_api.views.document import create_new_version
+
+    image2 = Image(filename='image2.jpg', image_type='collaborative')
+    session.add(image2)
+    session.flush()
+    create_new_version(image2, user_ids['moderator'])
+    image_id = docs.image1.document_id
+    _link(client, image_id, image2.document_id)
+    _link(client, docs.route1.document_id, image2.document_id)
+
+    # image2 keeps the route, image1 had only image2
+    response = _unlink(client, image_id, image2.document_id, status=400)
+    assert_error(response.json['errors'], 'Bad Request', LAST_DOCUMENT_OF_IMAGE)
+    _link(client, docs.route2.document_id, image_id)
+    _unlink(client, image_id, image2.document_id)
+
+
+def test_update_image_last_document(client, docs):
     image_id = docs.image1.document_id
     _link(client, docs.route1.document_id, image_id)
     image = client.get(f'/images/{image_id}', status=200).json

@@ -88,6 +88,7 @@ def get_creators(document_ids):
             ArchiveDocument.document_id.label('document_id'),
             User.id.label('user_id'),
             User.name.label('name'),
+            HistoryMetaData.written_at.label('written_at'),
             over(
                 func.rank(),
                 partition_by=ArchiveDocument.document_id,
@@ -109,13 +110,19 @@ def get_creators(document_ids):
         .filter(ArchiveDocument.document_id.in_(document_ids))
         .subquery('t')
     )
-    query = DBSession.query(t.c.document_id, t.c.user_id, t.c.name).filter(
-        t.c.rank == 1
-    )
+    query = DBSession.query(
+        t.c.document_id, t.c.user_id, t.c.name, t.c.written_at
+    ).filter(t.c.rank == 1)
 
+    # created_at: when the first version was written (the deletion period of
+    # the personal documents starts then, see is_in_deletion_period)
     return {
-        document_id: {'name': name, 'user_id': user_id}
-        for document_id, user_id, name in query
+        document_id: {
+            'name': name,
+            'user_id': user_id,
+            'created_at': written_at.isoformat(),
+        }
+        for document_id, user_id, name, written_at in query
     }
 
 
@@ -131,8 +138,13 @@ def has_been_created_by(document_id, user_id):
     return creator_info and creator_info['user_id'] == user_id
 
 
-def is_less_than_24h_old(document_id):
-    """Check that the first version of this document was created less than 24h ago."""
+# how long the author of a personal document (an outing, a personal image...)
+# may delete it, from its first version; then only a moderator
+DELETION_PERIOD = timedelta(days=30)
+
+
+def is_in_deletion_period(document_id):
+    """Tell whether the first version of this document is recent enough to delete it."""
     written_at = (
         DBSession.query(HistoryMetaData.written_at.label('written_at'))
         .select_from(HistoryMetaData)
@@ -144,4 +156,4 @@ def is_less_than_24h_old(document_id):
         .limit(1)
         .scalar()
     )
-    return datetime.now(UTC) - written_at <= timedelta(hours=720)
+    return datetime.now(UTC) - written_at <= DELETION_PERIOD
