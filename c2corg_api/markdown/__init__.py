@@ -281,7 +281,9 @@ def _get_markdown_parser():
     return _markdown_parser
 
 
-def parse_code(text, image_url_resolver=None, image_size_resolver=None):
+def parse_code(
+    text, image_url_resolver=None, image_size_resolver=None, link_type_resolver=None
+):
     """Get markdown, and returns HTML.
 
     This function is thread-safe.
@@ -291,6 +293,9 @@ def parse_code(text, image_url_resolver=None, image_size_resolver=None):
     embedded images (see `img.make_image_url_resolver`), and
     `image_size_resolver` an optional `document_id -> (width, height) or None`
     giving the size of their original (see `img.make_image_size_resolver`).
+    `link_type_resolver` is an optional `document_id -> type or None` giving
+    the type of the documents of the [[type/id|label]] links ("routes"...):
+    a link with another type is built with it.
     """
     # we need parsing to be thread safe because
     # L numbering, and Markdown() has internal global variables
@@ -307,6 +312,7 @@ def parse_code(text, image_url_resolver=None, image_size_resolver=None):
         parser.reset()
         parser.c2c_image_url_resolver = image_url_resolver
         parser.c2c_image_size_resolver = image_size_resolver
+        parser.c2c_link_type_resolver = link_type_resolver
 
         try:
             text = parser.convert(text)
@@ -320,6 +326,7 @@ def parse_code(text, image_url_resolver=None, image_size_resolver=None):
         finally:
             parser.c2c_image_url_resolver = None
             parser.c2c_image_size_resolver = None
+            parser.c2c_link_type_resolver = None
 
     text = text.replace(_iframe_secret_tag, 'iframe')
     text = text.replace(_img_url_secret_attribute, 'c2c:url')

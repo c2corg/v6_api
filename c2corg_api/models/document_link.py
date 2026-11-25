@@ -2,6 +2,36 @@ from sqlalchemy.sql.schema import Column, ForeignKey, Index
 from sqlalchemy.sql.sqltypes import Boolean, Integer, String
 
 from c2corg_api.models import Base, schema
+from c2corg_api.models.common.document_types import (
+    AREA_TYPE,
+    ARTICLE_TYPE,
+    BOOK_TYPE,
+    IMAGE_TYPE,
+    MAP_TYPE,
+    OUTING_TYPE,
+    ROUTE_TYPE,
+    USERPROFILE_TYPE,
+    WAYPOINT_TYPE,
+    XREPORT_TYPE,
+)
+
+# the type of the document of a link, by the type written in it: the pages of
+# the site (/routes/123...)
+LINK_TYPES = {
+    'areas': AREA_TYPE,
+    'articles': ARTICLE_TYPE,
+    'books': BOOK_TYPE,
+    'images': IMAGE_TYPE,
+    'maps': MAP_TYPE,
+    'outings': OUTING_TYPE,
+    'profiles': USERPROFILE_TYPE,
+    'routes': ROUTE_TYPE,
+    'waypoints': WAYPOINT_TYPE,
+    'xreports': XREPORT_TYPE,
+}
+
+# the type written in a link, by the type of its document
+LINK_TYPE_NAMES = {letter: name for name, letter in LINK_TYPES.items()}
 
 
 class DocumentLink(Base):

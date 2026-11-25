@@ -19,14 +19,12 @@ from c2corg_api.models.article import ARTICLE_TYPE, Article
 from c2corg_api.models.book import BOOK_TYPE
 from c2corg_api.models.deleted_document import RETENTION
 from c2corg_api.models.document import Document
-from c2corg_api.models.document_link import DocumentLink
+from c2corg_api.models.document_link import LINK_TYPES, DocumentLink
 from c2corg_api.models.image import IMAGE_TYPE, Image
-from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
-from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.image_embeds import (
     LIMIT_DEFAULT,
     LIMIT_MAX,
@@ -34,21 +32,6 @@ from c2corg_api.views.image_embeds import (
     entries,
     restorable_documents,
 )
-
-# the type of the document of a link, by the type written in it: the pages of
-# the site (/routes/123...)
-LINK_TYPES = {
-    'areas': AREA_TYPE,
-    'articles': ARTICLE_TYPE,
-    'books': BOOK_TYPE,
-    'images': IMAGE_TYPE,
-    'maps': MAP_TYPE,
-    'outings': OUTING_TYPE,
-    'profiles': USERPROFILE_TYPE,
-    'routes': ROUTE_TYPE,
-    'waypoints': WAYPOINT_TYPE,
-    'xreports': XREPORT_TYPE,
-}
 
 # the types of v5, which the site redirects (/summits/123 to /waypoints/123):
 # right in a URL, not in a [[type/id|label]] (the page builds the link itself)

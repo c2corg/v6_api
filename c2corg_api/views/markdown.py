@@ -1,4 +1,6 @@
-from sqlalchemy import inspect
+import re
+
+from sqlalchemy import inspect, select
 
 from c2corg_api.markdown import get_text_references, parse_code
 from c2corg_api.markdown.img import (
@@ -7,7 +9,8 @@ from c2corg_api.markdown.img import (
     make_image_url_resolver,
 )
 from c2corg_api.models import DBSession
-from c2corg_api.models.document_link import DocumentLink
+from c2corg_api.models.document import Document
+from c2corg_api.models.document_link import LINK_TYPE_NAMES, DocumentLink
 from c2corg_api.models.image import get_shown_images
 from c2corg_api.models.image_embed import ImageEmbed
 
@@ -21,6 +24,9 @@ NOT_MARKDOWN_PROPERTY = {
     'topic_id',
     'participants',
 }
+
+# loose pattern of the ids of the [[type/id|label]] links, before parsing
+WIKILINK_ID_RE = re.compile(r'\[\[[a-z]+/(\d+)')
 
 # document ids are postgres integers, larger values can't be queried
 _MAX_DOCUMENT_ID = 2**31 - 1
@@ -37,15 +43,41 @@ def configure_image_url(settings):
 
 def cook(data):
     image_url_resolver, image_size_resolver = _get_image_resolvers(data)
+    link_type_resolver = _get_link_type_resolver(data)
 
     result = {}
     for key in data:
         if key not in NOT_MARKDOWN_PROPERTY and data[key]:
-            result[key] = parse_code(data[key], image_url_resolver, image_size_resolver)
+            result[key] = parse_code(
+                data[key], image_url_resolver, image_size_resolver, link_type_resolver
+            )
         else:
             result[key] = data[key]
 
     return result
+
+
+def _get_link_type_resolver(data):
+    """Resolve the types of the documents of the [[type/id|label]] links."""
+    # in one query: a link with a wrong or old type (v5 "summits", "route"...)
+    # leads to the document of its id all the same; it is listed as broken to
+    # be corrected (see views.document_links). Unknown ids keep their type.
+    ids = set()
+    for key, value in data.items():
+        if key not in NOT_MARKDOWN_PROPERTY and isinstance(value, str):
+            ids.update(int(i) for i in WIKILINK_ID_RE.findall(value))
+    ids = {i for i in ids if i <= _MAX_DOCUMENT_ID}
+    if not ids:
+        return None
+    types = dict(
+        DBSession.execute(
+            select(Document.document_id, Document.type).where(
+                Document.document_id.in_(ids)
+            )
+        ).all()
+    )
+    names = {i: LINK_TYPE_NAMES.get(t) for i, t in types.items()}
+    return names.get
 
 
 def _get_image_resolvers(data):

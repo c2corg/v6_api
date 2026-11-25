@@ -1,7 +1,7 @@
 import pytest
 from httmock import HTTMock
 
-from c2corg_api.markdown import get_text_references
+from c2corg_api.markdown import get_text_references, parse_code
 from c2corg_api.models import DBSession
 from c2corg_api.models.document_link import DocumentLink
 from c2corg_api.scripts.images.rebuild_embeds import rebuild_image_embeds
@@ -16,7 +16,7 @@ from c2corg_api.tests.views.test_document_trash import (  # noqa: F401
     _restore,
     outing_images,
 )
-from c2corg_api.views.markdown import update_text_references
+from c2corg_api.views.markdown import cook, update_text_references
 
 
 def _write(session, document, text):
@@ -244,3 +244,36 @@ def test_personal_image_linked_elsewhere_kept(client, session, outing_images, do
         _delete(client, docs.outing2.document_id)
 
     assert session.get(type(outing_images['photo']), photo_id) is not None
+
+
+def test_parse_code_link_type_resolver():
+    def resolver(document_id):
+        return {3: 'waypoints'}.get(document_id)
+
+    html = parse_code('[[summits/3|a]] [[routes/4|b]]', link_type_resolver=resolver)
+
+    # the type of the document of the id; an unknown id keeps its type
+    assert 'c2c:document-id="3" c2c:document-type="waypoints"' in html
+    assert 'c2c:document-id="4" c2c:document-type="routes"' in html
+    # the links stored are the ones written
+    assert get_text_references('[[summits/3|a]]') == ([], [('summits', 3, False)])
+
+
+def test_cook_leads_wrong_types_to_the_document(docs):  # noqa: F811
+    waypoint_id = docs.waypoint1.document_id
+    route_id = docs.route1.document_id
+
+    cooked = cook(
+        {
+            'lang': 'fr',
+            'description': f'[[routes/{waypoint_id}|a]] [[parkings/{waypoint_id}|b]]',
+            'summary': f'[[routes/{route_id}|c]] [[routes/9999999|d]]',
+        }
+    )
+
+    assert cooked['description'].count('c2c:document-type="waypoints"') == 2
+    assert (
+        f'c2c:document-id="{route_id}" c2c:document-type="routes"'
+        in (cooked['summary'])
+    )
+    assert 'c2c:document-id="9999999" c2c:document-type="routes"' in (cooked['summary'])

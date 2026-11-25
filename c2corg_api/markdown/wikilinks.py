@@ -37,7 +37,7 @@ SITE_URL_RE = re.compile(
 
 class C2CWikiLinkExtension(Extension):
     def extendMarkdown(self, md):  # noqa: N802
-        pattern = C2CWikiLinks(WIKILINK_RE)
+        pattern = C2CWikiLinks(WIKILINK_RE, md)
         # append to end of inline patterns
         md.inlinePatterns.register(pattern, 'c2c_wikilink', 75)
         # after the inline patterns (20): the links are built
@@ -46,13 +46,26 @@ class C2CWikiLinkExtension(Extension):
 
 class C2CWikiLinks(Pattern):
     def handleMatch(self, m):  # noqa: N802
+        document_type = m.group('document_type')
+        document_id = m.group('document_id')
+
+        # the links as written, for get_text_references()
+        links = getattr(self.md, 'c2c_linked_documents', None)
+        if links is not None:
+            links.append((document_type, int(document_id), False))
+
+        # the type of the document of this id, when known (see parse_code): a
+        # link with a wrong or old type (v5 "summits", "route"...) leads to it
+        resolver = getattr(self.md, 'c2c_link_type_resolver', None)
+        if resolver is not None:
+            document_type = resolver(int(document_id)) or document_type
 
         a = ElementTree.Element(
             'a',
             {
                 'c2c:role': 'internal-link',
-                'c2c:document-id': m.group('document_id'),
-                'c2c:document-type': m.group('document_type'),
+                'c2c:document-id': document_id,
+                'c2c:document-type': document_type,
             },
         )
 
@@ -75,20 +88,16 @@ class C2CWikiLinks(Pattern):
 
 
 class C2CLinkCollector(Treeprocessor):
-    """Collect the links to documents of the site, for get_text_references()."""
+    """Collect the full URLs of the site linked, for get_text_references()."""
 
     # (document type as written, document id, written as a full URL); only
-    # when the parser has a list to fill (`c2c_linked_documents`)
+    # when the parser has a list to fill (`c2c_linked_documents`). The
+    # [[type/id|label]] are collected by C2CWikiLinks.
     def run(self, root):
         links = getattr(self.md, 'c2c_linked_documents', None)
         if links is None:
             return
         for a in root.iter('a'):
-            if a.get('c2c:role') == 'internal-link':
-                links.append(
-                    (a.get('c2c:document-type'), int(a.get('c2c:document-id')), False)
-                )
-                continue
             m = SITE_URL_RE.match(a.get('href') or '')
             if m:
                 links.append(
