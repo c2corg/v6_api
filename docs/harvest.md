@@ -1,10 +1,11 @@
-# Harvesting (avalanche bulletins)
+# Harvesting (avalanche bulletins, partner outings)
 
 The scheduler (`make run-background-jobs`, `c2corg_api/scripts/jobs/scheduler.py`) fetches data from outside services
 in the background and stores it in PostgreSQL, so that the API reads it from the database instead of asking the
 services at each request. The first data harvested are the avalanche bulletins: the BRA of Météo-France (one per French
 massif) and the CAAML v6 files of the EAWS services of the Alps and the Pyrenees (SLF, avalanche.report,
-lawinen-warnung.eu, AINEVA, Lauegi...).
+lawinen-warnung.eu, AINEVA, Lauegi...). The outings of the partner sites (skitour.fr, gulliver.it...) are harvested
+the same way: see [partner-outings.md](partner-outings.md) and [Partner outings](#partner-outings) below.
 
 The code is in two parts:
 
@@ -78,7 +79,10 @@ requests a minute, shared with the PDFs the API fetches on demand. The CAAML ser
 - `harvest.enabled` (`common.ini.in`, from `harvest_enabled` in `config/env.default`, `false` by default) switches on
   all the harvesters; `harvest.<name>.enabled` (`harvest.avalanche.meteofrance.enabled` from
   `harvest_meteofrance_enabled`, `harvest.avalanche.caaml.enabled` from `harvest_caaml_enabled`) overrides it for one
-  harvester: `true` or `false`, empty (the default) to follow `harvest.enabled`. Set them in an env file
+  harvester: `true` or `false`, empty (the default) to follow `harvest.enabled`. The most specific switch set wins:
+  for `partners.skitour`, `harvest.partners.skitour.enabled`, else `harvest.partners.enabled` (a group), else
+  `harvest.enabled`. The templates set `harvest.partners.enabled` to `false`: the partner sources stay off until
+  switched on on purpose, whatever `harvest.enabled`. Set them in an env file
   (`config/env.local`, or the one given with `make CONFIG=... load-env`), then `make load-env`.
 - With no harvester switched on, the scheduler registers none of the harvest jobs (tick, pruning, compaction).
 - Without `METEOFRANCE_API_KEY`, the Météo-France harvester lists no source: its sources get disabled.
@@ -168,7 +172,7 @@ The *Next harvester*, *Next service* and *Next tables* boxes of the
    `fetch()` and `store()`; set `requests_per_minute` if the service has a quota and `keep_payloads_days`.
 2. `store()` writes with the session it is given, never `DBSession`: the runner commits it with the state of the source,
    or rolls both back. Return `Stored(published=True)` when there was a new publication (it slows the polling down).
-3. Add it to `runner.harvesters()`.
+3. Add it to `runner.harvesters(settings)` (`settings`: the .ini settings, for a harvester configured by them).
 4. Add its tables to `c2corg_api/models/` (imported by `models/__init__.py`) and an alembic migration.
 5. Add `harvest.<name>.enabled = {harvest_<name>_enabled}` to `common.ini.in` and `harvest_<name>_enabled=""` to
    `config/env.default` (empty: as `harvest.enabled`).
@@ -225,3 +229,40 @@ class SnowHeightHarvester(Harvester):
 
   It fetches only the due sources: to fetch some now, `UPDATE guidebook.harvest_sources SET next_run_at = now() WHERE
   harvester = 'avalanche.caaml';` first.
+
+## Partner outings
+
+The partner outings (`c2corg_api/partners/`, [partner-outings.md](partner-outings.md)) were first harvested by an
+APScheduler job of their own. They now run on this framework; this section records the comparison and the choices.
+
+| | Avalanche harvester (this framework) | Partner job (before) | Now |
+| --- | --- | --- | --- |
+| Scheduling | `harvest_tick` every minute, `next_run_at` by source, claims `SKIP LOCKED` with a lease, lanes by host | an interval job running every source in turn | the tick: a harvester `partners.<name>` by adapter, one source (`partners.skitour:outings`) |
+| Switches | `harvest.enabled`, `harvest.<name>.enabled` | `partners.enabled`, `partners.sources` | `harvest...enabled`, with groups: `harvest.partners.enabled`, `harvest.partners.<name>.enabled` |
+| Backoff | `Policy`: from `backoff_min`, doubled up to `backoff_max` | after 3 failures, 2 x to 16 x the interval | the policy: from the interval up to 16 x (`partners.interval_minutes`) |
+| Status, health | `harvest_sources` (errors, last success); `/health` `harvest` | `partner_sources` (`ok`, `degraded`, `blocked`, `down`, `failing`, `disabled`); `/health` `partners` | `/health` `harvest` only; `partner_sources` stays the domain status of `/partner-outings/sources` (API unchanged) |
+| State | `harvest_sources.state`, ETag, SHA-256; `harvest_payloads` | `partner_sources.cursor`, `partner_lookups` | unchanged: the cursor is committed with the outings; `harvest_payloads` keeps a JSON summary of each run (7 days) |
+| Fetching | one URL a source, a conditional GET, `Payload` then `store(session)` | an adapter pages and looks up routes in the database while it fetches | `PartnerHarvester.fetch` runs the whole source (`run_source`) and returns the summary; `store` only reads it |
+| HTTP | `requests.get` with a user agent and a timeout; 2 requests at once by host | `partners.transport.HttpTransport`: user agent, delay between requests by host, budget by run, timeouts, `classify` (401/403/429 and challenge pages: blocked; 5xx, timeouts: down) | unchanged for now (follow-up below) |
+| Tests | `requests.get` mocked, fixture files for the parsers | `FixtureTransport` (recorded answers, manifests), `RecordingTransport` and the `record`/`shapes` CLI, opt-in live tests | both kept |
+
+Choices:
+
+- **One framework.** The tick, the claims, the lanes, the policy, the switches and the health check are this
+  framework's. The partner interval job and its backoff are gone; the purge of the partner rows stays a job of its own,
+  scheduled even with the harvest off (the licences), with a job marking the sources switched off `disabled` when the
+  scheduler starts.
+- **Why `fetch` stores.** An adapter makes several requests (pages, route lookups cached in `partner_lookups`) and
+  normalises the outings: there is no single content to hash and store later. The partner run keeps its own
+  transaction (outings, lookups, cursor and status together); a failed run raises `PartnerRunFailed` (`blocked: HTTP
+  403...`, secrets masked) so that the runner counts the error and backs off.
+- **The pure adapter contract stays partner-specific.** `HarvestedOuting` and `Adapter.fetch(ctx)` model outings;
+  a bulletin is a file fetched with a conditional GET, which `Harvester` already fits. What both could share is the
+  transport layer below them.
+- **Follow-up: one polite HTTP transport.** Move `HttpResponse`, `classify`, `HttpTransport`, `FixtureTransport` and
+  `RecordingTransport` (and `SourceBlocked`/`SourceDown`) from `c2corg_api/partners/transport.py` to
+  `c2corg_api/harvest/transport.py`, re-exported by the old module so that the adapters keep their imports; then let
+  the avalanche harvesters fetch through it (a `Payload` from an `HttpResponse`, conditional headers passed through)
+  and test them on recorded manifests instead of mocks of `requests.get`. A blocked or down service would then be
+  told apart in `harvest_sources` too. Not done here: it changes the avalanche code and the imports the adapters
+  under development rely on.

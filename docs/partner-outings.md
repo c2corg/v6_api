@@ -2,21 +2,25 @@
 
 The `/metaskirando` view of the UI shows, next to the outings of Camptocamp, the outings reported on partner
 sites ([skitour.fr](https://skitour.fr), [gulliver.it](https://www.gulliver.it)). The API does not proxy the
-partner sites at request time: a job harvests them every 15 minutes into its own tables, and
-`GET /partner-outings` merges those rows with the c2c outings of the same period.
+partner sites at request time: the harvester of [docs/harvest.md](harvest.md) runs each source every 15 minutes into
+its own tables, and `GET /partner-outings` merges those rows with the c2c outings of the same period.
 
 ```
-partner site -> adapter (c2corg_api/partners/sources/<name>.py, pure) -> job (jobs/harvest_partner_outings.py)
-             -> guidebook.partner_outings / partner_sources / partner_lookups
-             -> GET /partner-outings, GET /partner-outings/sources, GET /health  (views/partner_outings.py)
+harvest_tick (c2corg_api/harvest) -> PartnerHarvester partners.<name> (jobs/harvest_partner_outings.py)
+  -> adapter (c2corg_api/partners/sources/<name>.py, pure) -> run_source: upsert, areas, health
+  -> guidebook.partner_outings / partner_sources / partner_lookups (+ harvest_sources: schedule, errors)
+  -> GET /partner-outings, GET /partner-outings/sources (views/partner_outings.py), GET /health (harvest)
 ```
 
 - An adapter only turns the answers of the site into `HarvestedOuting` objects. It gets its HTTP transport and its
   lookup cache from the job, so it runs unchanged on recorded fixtures.
+- Each adapter is a harvester of the shared framework (`c2corg_api/harvest`, [docs/harvest.md](harvest.md)), named
+  `partners.<name>` with one source (`partners.skitour:outings`): the harvest tick schedules it, the policy backs it
+  off after errors, `harvest_sources` keeps its schedule and errors, and `/health` reports it under `harvest`.
 - The job stores the rows (one per source and external id), assigns the c2c areas that contain the point of each
   outing, records the health of each source, and a second job purges the outings and the lookups older than the retention.
-  That purge job is scheduled even when the harvest is off (`partners_enabled="false"`): the rows must not outlive the
-  retention.
+  That purge job is scheduled even when the harvest is off (`harvest_partners_enabled="false"`): the rows must not
+  outlive the retention.
 - The design is in `doc/meta/A2_HARVESTER.md` of c2corg/metaskirando-archive.
 
 ## Configuration
@@ -26,9 +30,9 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 
 | env key | ini key | default | meaning |
 | --- | --- | --- | --- |
-| `partners_enabled` | `partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests; `make harvest-partners` refuses to run unless it is true or `--force` is given |
-| `partners_sources` | `partners.sources` | `skitour,gulliver` | adapters to run |
-| `partners_interval` | `partners.interval_minutes` | `15` | scheduler period; base of the backoff |
+| `harvest_partners_enabled` | `harvest.partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests the partner sources, whatever `harvest.enabled`; `make harvest-partners` refuses to run unless a source is on or `--force` is given |
+| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty | one source: `true`/`false`, empty as `harvest.partners.enabled` (a new adapter needs no line: absent is empty) |
+| `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
 | `partners_retention` | `partners.retention_days` | `31` | outings older than that are not stored, and purged |
 | `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route lookups) older than that are purged |
 | `partners_transport` | `partners.transport` | `http` (`fixtures` in `env.dev`) | `http`: the real sites; `fixtures`: recorded answers, no network |
@@ -57,10 +61,11 @@ when both are set.
 | `failing` | a bug, too many unparsable items (more than 3 and 10%), or a storage error: nothing stored | yes |
 | `blocked` | the site refuses us: 401/403/429 or an anti-bot challenge page (Cloudflare) | yes |
 | `down` | the site does not answer: 5xx, timeout, or the request budget of the run is spent | yes |
-| `disabled` | the source does not run by choice: a secret is missing, or it is missing from `partners.sources` (`status_detail` says which: `not configured`) | no |
+| `disabled` | the source does not run by choice: a secret is missing, or it is switched off (`status_detail` says which: `not configured`, set when the scheduler starts) | no |
 
-After 3 failed runs in a row (`failing`, `blocked`, `down`) the job waits 2 x, 4 x, ... the interval (at most 16 x)
-before trying again. `blocked` is not `down`: a blocked source needs an agreement or an allowlisting from the
+A failed run (`failing`, `blocked`, `down`) is an error of its harvest source (`PartnerRunFailed`, in
+`harvest_sources.last_error`): the harvest policy waits 1 x, 2 x, 4 x... the interval (at most 16 x) before trying
+again. `blocked` is not `down`: a blocked source needs an agreement or an allowlisting from the
 partner, retrying more often only makes it worse. `status_detail` never contains a secret.
 
 A source that fails never stops the other sources, and its previous outings stay listed until the retention purge.
@@ -74,7 +79,7 @@ not parse on purpose: both sources end `degraded`, which is the expected demo st
 are shifted so that the newest fixture outings are dated today.
 
 With the dev stack of the README (`scripts/sandbox-up.sh`, or the dev container, with the anonymized dev
-database): `config/env.dev` already has `partners_enabled="true"`, `partners_transport="fixtures"` and
+database): `config/env.dev` already has `harvest_partners_enabled="true"`, `partners_transport="fixtures"` and
 `partners_allow_synthetic="true"` (the demo fixtures are synthetic; without it the sources end `failing`).
 
 ```bash
@@ -85,7 +90,9 @@ make harvest-partners                          # runs the job once: skitour.fr a
 make serve                                     # API on :6543 (already running after sandbox-up.sh)
 ```
 
-`make harvest-partners` needs `partners.enabled` (it exits with a message otherwise; `--force` overrides). It logs a lot of SQL; the last lines tell the status of each source
+`make harvest-partners` runs the enabled sources now, due or not (`harvest.runner.harvest_now`). It needs
+`harvest.partners.enabled` (it exits with a message otherwise; `--force` overrides). It logs a lot of SQL; the last
+lines tell the status of each source
 (`Partner source skitour: degraded (10 upserted)`). Then:
 
 ```bash
@@ -96,7 +103,7 @@ curl -s 'localhost:6543/partner-outings?sources=gulliver'
 curl -s 'localhost:6543/partner-outings?a=14409'                    # the Vanoise range of the demo database
 curl -s 'localhost:6543/partner-outings?date=2026-06-18,2026-07-18&sources=c2c'   # the c2c outings of the demo database
 curl -s 'localhost:6543/partner-outings/sources' | python3 -m json.tool
-curl -s 'localhost:6543/health'                                      # "partners": {"skitour": "degraded", ...}
+curl -s 'localhost:6543/health'                                      # "harvest": {"partners.skitour": {...}, ...}
 ```
 
 Notes:
@@ -108,7 +115,8 @@ Notes:
 - The fixture coordinates fall in real areas of the demo database: the `areas` of each item are filled
   (country, department, range). Rows without a point (or outside any area) have `areas: []`.
 - Run the job again whenever you like: it is idempotent (upsert), and shifts the dates to the current day.
-  `make run-background-jobs` starts the scheduler, which re-harvests every `partners.interval_minutes`.
+  `make run-background-jobs` starts the scheduler: its harvest tick re-harvests each source every
+  `partners.interval_minutes`.
 - The answers are cached twice: 120 s in Redis and 120 s by the clients (`Cache-Control: max-age=120`), so a new
   harvest can take about 4 minutes to show: wait, or flush with `make flush-redis` (and reload without cache).
 - Another port (the main API already uses 6543): `C2C_API_CONFIG=development.ini uv run uvicorn c2corg_api.asgi:app --port 6544`.
@@ -229,9 +237,11 @@ they only report why they could not run.
 - **Rate limits.** Each adapter declares its politeness (`rate` in `partners/sources/*.py`): a minimum delay between
   requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 40 requests). A spent budget
   makes the run `down`.
-- **Enabling.** Keep `partners_enabled="false"` and `partners_transport="http"` (the defaults) until the agreements are
-  there; then set `partners_enabled="true"` and the secret in the environment of the background-jobs container.
-- **Monitoring.** `/health` lists `partners: {source: status}` without ever failing the check; look at
+- **Enabling.** Keep `harvest_partners_enabled="false"` and `partners_transport="http"` (the defaults) until the
+  agreements are there; then set `harvest_partners_enabled="true"` (or one source with
+  `harvest_partners_<name>_enabled="true"`) and the secret in the environment of the background-jobs container.
+- **Monitoring.** `/health` lists each source under `harvest` (`partners.skitour: {sources, failing, last_success}`)
+  without ever failing the check; look at
   `/partner-outings/sources` (`status_detail`, `last_success_at`, `last_skipped`) when a source is not `ok`.
 - **Fixtures.** The recorded fixtures are synthetic (`manifest.json` says `synthetic: true`): the partner sites are not
   reachable from the sandboxes. Replace them with real recordings when the agreements allow it, and keep the

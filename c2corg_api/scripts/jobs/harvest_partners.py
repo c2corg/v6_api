@@ -19,7 +19,8 @@ def usage(argv):
     print(
         f'usage: {cmd} <config_uri> [--force] [var=value]\n'
         f'(example: "{cmd} development.ini")\n'
-        '--force: run even when partners.enabled is not true'
+        '--force: run even when no partner source is switched on\n'
+        '(harvest.partners.enabled, harvest.partners.<source>.enabled)'
     )
     sys.exit(1)
 
@@ -36,12 +37,15 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     if not force and not partners_enabled(settings):
         print(
-            'partners.enabled is not true: nothing harvested. Set partners_enabled'
-            f'="true" (make load-env), or run {os.path.basename(argv[0])} '
-            f'{config_uri} --force.',
+            'harvest.partners.enabled is not true: nothing harvested. Set '
+            'harvest_partners_enabled="true" (make load-env), or run '
+            f'{os.path.basename(argv[0])} {config_uri} --force.',
             file=sys.stderr,
         )
         sys.exit(1)
+    if force and not partners_enabled(settings):
+        # the sources switched off one by one stay off
+        settings = {**settings, 'harvest.partners.enabled': 'true'}
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
 
