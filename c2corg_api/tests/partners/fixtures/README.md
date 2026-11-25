@@ -51,7 +51,8 @@ c2corg_api.partners shapes` to see what changed.
 | gulliver.it | 403 Cloudflare "Just a moment..." JS challenge | synthetic |
 | gipfelbuch.ch | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
 | bivouak.net | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
-| skitourenportal.eu, on-ice.it | blocked by the sandbox proxy | synthetic or recorded elsewhere (M2) |
+| skitourenportal.eu | reachable without `www` | recorded 2026-11-25 (HTML, trimmed to the selectors, authors pseudonymised) |
+| on-ice.it | blocked by the sandbox proxy | not yet (later) |
 | api.camptocamp.org | reachable | not needed |
 
 Never commit an API key or a cookie in a fixture.
