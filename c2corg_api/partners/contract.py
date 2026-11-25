@@ -9,6 +9,11 @@ endpoint, and compared with the shapes of the committed fixtures
 `REQUIRED_PATHS` is also the allow-list of what a recording keeps: any other
 field (licensed texts, comments, photos, tracks...) is dropped before it is
 written, so a new free-text field of a partner never reaches the fixtures.
+
+A source that publishes HTML declares `REQUIRED_SELECTORS` instead (endpoint ->
+CSS selectors of every element it reads), with the same two roles: the
+allow-list of a recording (`htmlparse.trim`) and the contract the live check
+compares (a selector that matched in the fixtures must still match).
 """
 
 import datetime
@@ -20,7 +25,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from c2corg_api.partners import shapes
+from c2corg_api.partners import htmlparse, shapes
 from c2corg_api.partners.lookups import MemoryLookupCache
 from c2corg_api.partners.model import FetchContext, FetchResult
 from c2corg_api.partners.transport import HttpResponse, Transport
@@ -36,9 +41,15 @@ VOLATILE_PARAMS: dict[str, tuple[str, ...]] = {'skitour': ('j',)}  # days back
 
 
 def endpoint_of(url: str) -> str:
-    """Return the endpoint name of a URL: its last path segment, in snake case."""
-    segment = urlsplit(url).path.rstrip('/').rsplit('/', 1)[-1]
-    return re.sub(r'[^a-z0-9]+', '_', segment.lower()).strip('_') or 'index'
+    """Return the endpoint name of a URL: its last path segment, in snake case.
+
+    A file extension is dropped, and so is an id with what follows it
+    (`sortie-30061-belle-descente.html` is the endpoint `sortie`).
+    """
+    segment = urlsplit(url).path.rstrip('/').rsplit('/', 1)[-1].lower()
+    segment = re.sub(r'\.(?:php|html?|json)$', '', segment)
+    segment = re.sub(r'[-_]\d.*$', '', segment)
+    return re.sub(r'[^a-z0-9]+', '_', segment).strip('_') or 'index'
 
 
 def read_paths(source: str, endpoint: str) -> list[str]:
@@ -52,6 +63,16 @@ def read_paths(source: str, endpoint: str) -> list[str]:
     if adapter is None:
         return []
     return list(adapter.REQUIRED_PATHS.get(endpoint, ()))
+
+
+def read_selectors(source: str, endpoint: str) -> list[str]:
+    """Return the CSS selectors the adapter of a source reads from an HTML endpoint."""
+    from c2corg_api.partners.sources import REGISTRY
+
+    adapter = REGISTRY.get(source)
+    if adapter is None:
+        return []
+    return list(getattr(adapter, 'REQUIRED_SELECTORS', {}).get(endpoint, ()))
 
 
 def _tree(paths):
@@ -123,10 +144,19 @@ def pseudonymise_data(source: str, endpoint: str, data, names: dict | None = Non
 
 
 def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> bytes:
-    """`trim_data` then `pseudonymise_data` on a JSON body; else returned as is."""
+    """Trim a JSON body (`trim_data`, then `pseudonymise_data`) or an HTML one.
+
+    An HTML body is trimmed (`htmlparse.trim`) when the source declares
+    selectors for the endpoint; anything else is returned as is.
+    """
     try:
         data = json.loads(body)
     except ValueError:  # includes bad UTF-8
+        selectors = read_selectors(source, endpoint_of(url))
+        if selectors:
+            return htmlparse.trim(
+                body.decode('utf-8', errors='replace'), selectors
+            ).encode()
         return body
     endpoint = endpoint_of(url)
     trimmed = trim_data(source, endpoint, data)
@@ -177,18 +207,26 @@ def captured_shapes(source: str, responses) -> dict[str, Any]:
     for response in responses:
         if response.status != 200:
             continue
+        endpoint = endpoint_of(response.url)
         try:
             data = json.loads(response.body)
         except ValueError:
+            selectors = read_selectors(source, endpoint)
+            if not selectors:
+                continue
+            one = htmlparse.matches(response.text('utf-8'), selectors)
+            out[endpoint] = shapes.merge(out[endpoint], one) if endpoint in out else one
             continue
-        endpoint = endpoint_of(response.url)
         one = shapes.shape(trim_data(source, endpoint, data))
         out[endpoint] = shapes.merge(out[endpoint], one) if endpoint in out else one
     return out
 
 
 def build_shape_index(directory: Path) -> dict[str, Any]:
-    """Shape of every JSON file (status 200) of a fixture directory, by file."""
+    """Shape of every JSON or HTML file (status 200) of a fixture directory, by file.
+
+    The shape of an HTML file is its matching selectors (`htmlparse.matches`).
+    """
     directory = Path(directory)
     manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf-8'))
     source = manifest['source']
@@ -197,11 +235,16 @@ def build_shape_index(directory: Path) -> dict[str, Any]:
         file = entry.get('file')
         if not file or int(entry.get('status', 200)) != 200:
             continue
+        body = (directory / file).read_bytes()
+        endpoint = endpoint_of(entry['url'])
         try:
-            data = json.loads((directory / file).read_bytes())
+            data = json.loads(body)
         except ValueError:
+            selectors = read_selectors(source, endpoint)
+            if selectors:
+                index[file] = htmlparse.matches(body.decode('utf-8'), selectors)
             continue
-        index[file] = shapes.shape(trim_data(source, endpoint_of(entry['url']), data))
+        index[file] = shapes.shape(trim_data(source, endpoint, data))
     return dict(sorted(index.items()))
 
 
@@ -327,6 +370,19 @@ def compare(adapter, expected: Mapping[str, Any], actual: Mapping[str, Any]) -> 
         if endpoint in expected and endpoint in actual:
             lines = shapes.diff(expected[endpoint], actual[endpoint])
             report.diff[endpoint] = [x for x in lines if _meaningful(x)]
+    for endpoint, selectors in sorted(
+        getattr(adapter, 'REQUIRED_SELECTORS', {}).items()
+    ):
+        for selector in selectors:
+            label = f'{endpoint}: {selector}'
+            if endpoint not in actual:
+                report.unchecked.append(f'{label} (endpoint not requested)')
+            elif selector in actual[endpoint]:
+                continue
+            elif selector in expected.get(endpoint, {}):
+                report.problems.append(f'{label} no longer matches')
+            else:
+                report.unchecked.append(f'{label} (no match in the sample)')
     for endpoint, paths in sorted(adapter.REQUIRED_PATHS.items()):
         for path in paths:
             label = f'{endpoint}: {path}'

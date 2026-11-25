@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from c2corg_api.partners import contract
+from c2corg_api.partners import contract, htmlparse
 from c2corg_api.partners.sources import REGISTRY
 from c2corg_api.tests.partners.test_cli import FIXTURES
 
@@ -74,7 +74,7 @@ def test_recorded_fixtures_only_hold_the_paths_the_adapter_reads(source):
         assert endpoint in REGISTRY[source].REQUIRED_PATHS, entry['file']
         assert contract.trim_data(source, endpoint, data) == data, entry['file']
         checked += 1
-    assert checked
+    assert checked or REGISTRY[source].REQUIRED_SELECTORS  # an HTML source
 
 
 @pytest.mark.parametrize('source', sorted(REGISTRY))
@@ -113,3 +113,35 @@ def test_recorded_author_identities_are_pseudonymised(source):
                 assert re.fullmatch(r'user\d+', str(value)), (entry['file'], path)
                 checked += 1
     assert checked or source != 'skitour'
+
+
+def _html_fixtures():
+    return [
+        pytest.param(
+            source, entry['file'], entry['url'], id=f'{source}/{entry["file"]}'
+        )
+        for source in sorted(REGISTRY)
+        if getattr(REGISTRY[source], 'REQUIRED_SELECTORS', None)
+        for entry in json.loads(
+            (FIXTURES / source / 'manifest.json').read_text(encoding='utf-8')
+        )['entries']
+        if entry['file'].endswith('.html') and int(entry.get('status', 200)) == 200
+    ]
+
+
+@pytest.mark.parametrize(('source', 'file', 'url'), _html_fixtures())
+def test_html_fixtures_only_hold_the_selectors_the_adapter_reads(source, file, url):
+    """Same allow-list for HTML: trimming changes nothing, and no media or script."""
+    text = (FIXTURES / source / file).read_text(encoding='utf-8')
+    selectors = contract.read_selectors(source, contract.endpoint_of(url))
+    assert selectors, file
+    assert htmlparse.trim(text, selectors) == text
+    soup = htmlparse.parse(text)
+    assert not soup.find(['img', 'script', 'style', 'iframe', 'video', 'audio'])
+    # texts are short fields (a title, a name, a number), never a narrative
+    longest = max((len(t.strip()) for t in soup.stripped_strings), default=0)
+    assert longest <= 200, file
+
+
+def test_there_is_an_html_fixture_to_check():
+    assert any(p.values[0] == 'bivouak' for p in _html_fixtures())
