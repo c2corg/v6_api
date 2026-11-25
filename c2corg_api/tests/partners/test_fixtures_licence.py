@@ -1,6 +1,7 @@
 """Licence: no partner free text in the committed fixtures and recordings."""
 
 import json
+import re
 
 import pytest
 
@@ -28,6 +29,10 @@ FORBIDDEN_KEYS = {
     'texte',
     'body',
     'legende',
+    'cond',
+    'participants',
+    'gpx',
+    'topos',
 }
 
 
@@ -77,3 +82,34 @@ def test_required_paths_are_never_free_text_keys(source):
     for paths in REGISTRY[source].REQUIRED_PATHS.values():
         for path in paths:
             assert FORBIDDEN_KEYS.isdisjoint(contract._TOKEN.findall(path)), path
+
+
+def _values(node, tokens):
+    if not tokens:
+        yield node
+    elif tokens[0] == '[]':
+        for item in node if isinstance(node, list) else []:
+            yield from _values(item, tokens[1:])
+    elif isinstance(node, dict) and tokens[0] in node:
+        yield from _values(node[tokens[0]], tokens[1:])
+
+
+@pytest.mark.parametrize('source', sorted(REGISTRY))
+def test_recorded_author_identities_are_pseudonymised(source):
+    """A public repository: a recording holds "user1", "user2"... only."""
+    directory = FIXTURES / source
+    manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf-8'))
+    if manifest['synthetic']:
+        pytest.skip('synthetic fixtures hold invented names')
+    adapter = REGISTRY[source]
+    checked = 0
+    for entry in manifest['entries']:
+        if not entry['file'].endswith('.json') or int(entry.get('status', 200)) != 200:
+            continue
+        data = json.loads((directory / entry['file']).read_text(encoding='utf-8'))
+        endpoint = contract.endpoint_of(entry['url'])
+        for path in getattr(adapter, 'PSEUDONYMISE_PATHS', {}).get(endpoint, ()):
+            for value in _values(data, contract._TOKEN.findall(path)):
+                assert re.fullmatch(r'user\d+', str(value)), (entry['file'], path)
+                checked += 1
+    assert checked or source != 'skitour'

@@ -3,11 +3,15 @@ the real skitour and gulliver adapters, then `GET /partner-outings`.
 
 This is the local demo (docs/partner-outings.md) run as a test: no network, the
 fixtures of c2corg_api/tests/partners/fixtures, test areas around the places of
-the fixtures, and a few c2c outings next to the partner ones.
+the fixtures, and a few c2c outings next to the partner ones. The skitour fixtures
+are a real recording (2026-11-25); the gulliver ones are still synthetic.
 """
 
 import datetime
+import json
 import math
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -19,12 +23,14 @@ from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.partner_outing import PartnerOuting, PartnerSource
 
 UTC = datetime.UTC
-# the fixtures were recorded on 2026-11-24: harvesting a week later shifts the
-# dates of the outings by 7 days, as the demo does every day
+# gulliver was recorded (synthetic) on 2026-11-24, skitour (real) on 2026-11-25:
+# harvesting later shifts the dates of the outings, as the demo does every day
 RECORDED = datetime.date(2026, 11, 24)
+SKITOUR_RECORDED = datetime.date(2026, 11, 25)
 NOW = datetime.datetime(2026, 12, 1, 12, 0, tzinfo=UTC)
 TODAY = NOW.date()
 SHIFT = TODAY - RECORDED
+SKITOUR_SHIFT = TODAY - SKITOUR_RECORDED
 EARTH = 6378137.0
 
 SETTINGS = {
@@ -40,9 +46,20 @@ SETTINGS = {
 
 # what the fixtures hold, by external id (lon, lat of the point; date as
 # recorded; ski rating min) - see c2corg_api/tests/partners/fixtures
-SKITOUR_WITH_POINT = {'112345', '112346', '112348', '112351', '112352', '112355'}
-SKITOUR_IN_VANOISE = {'112345', '112348', '112351'}
-SKITOUR_IN_WINDOW = SKITOUR_WITH_POINT | {'112347', '112349', '112350'}
+SKITOUR_FIXTURE = (
+    Path(__file__).parent.parent / 'partners/fixtures/skitour/sorties_c1_l200_p1.json'
+)
+SKITOUR_ITEMS = json.loads(SKITOUR_FIXTURE.read_text(encoding='utf-8'))
+SKITOUR_IN_WINDOW = {item['id'] for item in SKITOUR_ITEMS}  # 30, all with a point
+# in the test Vanoise box (6.4, 45.2, 7.0, 45.5): 188891, 188874 and 188871 by
+# their summit, 188880 by its start point
+SKITOUR_IN_VANOISE = {'188891', '188874', '188871', '188880'}
+SKITOUR_PARIS_DAY = {
+    item['id']: datetime.datetime.fromtimestamp(
+        int(item['date']), ZoneInfo('Europe/Paris')
+    ).date()
+    for item in SKITOUR_ITEMS
+}
 GULLIVER_WITH_POINT = {'48181', '48188', '48190', '48199', '48204', '48207', '48213'}
 GULLIVER_IN_AOSTA = {'48181', '48190', '48199', '48204', '48207', '48213'}
 GULLIVER_ALL = GULLIVER_WITH_POINT | {'48196', '48210'}
@@ -91,7 +108,7 @@ def make_outing(session, title, day, area_id, activities):
 @pytest.fixture
 def world(session, db_connection):
     """Two areas around the fixtures, two c2c outings, then the harvest."""
-    vanoise = make_area(session, 'Vanoise', box(6.7, 45.3, 7.0, 45.5))
+    vanoise = make_area(session, 'Vanoise', box(6.4, 45.2, 7.0, 45.5))
     aosta = make_area(session, "Vallee d'Aoste", box(7.0, 45.6, 7.8, 46.0))
     c2c_skiing = make_outing(
         session,
@@ -135,6 +152,7 @@ def external(answer, source):
 
 def test_harvested_outings_are_listed_with_c2c_ones(client, world):
     answer = listing(client)
+    assert len(SKITOUR_IN_WINDOW) == 30
     assert external(answer, 'skitour') == SKITOUR_IN_WINDOW
     assert external(answer, 'gulliver') == GULLIVER_ALL
     assert {world['c2c_skiing'], world['c2c_hiking']} <= set(ids(answer))
@@ -142,39 +160,46 @@ def test_harvested_outings_are_listed_with_c2c_ones(client, world):
     # the day desc: the list is ordered, all the sources mixed
     days = [item['date'] for item in answer['items']]
     assert days == sorted(days, reverse=True)
-    # the oldest fixture outing (2026-11-10) is out of the window, not purged
-    assert 'skitour:112210' not in ids(answer)
 
 
 def test_dates_are_shifted_to_the_days_before_today(client, db_connection, world):
     answer = listing(client)
     partner_days = {item['date'] for item in answer['items'] if item['source'] != 'c2c'}
-    assert max(partner_days) == TODAY.isoformat()
+    # the newest skitour outings are of the day before the recording (the API
+    # dates them at 00:00 and lists them the day after), so yesterday here
+    assert max(partner_days) == (TODAY - datetime.timedelta(days=1)).isoformat()
     assert min(partner_days) >= (TODAY - datetime.timedelta(days=14)).isoformat()
     by_id = {item['id']: item for item in answer['items']}
-    # recorded on 2026-11-24, harvested a week later
-    assert by_id['skitour:112349']['date'] == '2026-12-01'
-    assert (
-        by_id['skitour:112345']['date']
-        == (datetime.date(2026, 11, 23) + SHIFT).isoformat()
-    )
+    # skitour: recorded on 2026-11-25 (the epochs are Paris midnights), harvested
+    # six days later
+    assert by_id['skitour:188899']['date'] == '2026-11-30'
+    assert by_id['skitour:188900']['date'] == '2026-11-27'
+    for ext, day in SKITOUR_PARIS_DAY.items():
+        assert by_id[f'skitour:{ext}']['date'] == (day + SKITOUR_SHIFT).isoformat()
 
 
 def test_items_carry_credit_rating_and_areas(client, world):
     by_id = {item['id']: item for item in listing(client)['items']}
-    sana = by_id['skitour:112345']
-    assert sana['credit'] == {'site': 'skitour.fr', 'site_url': 'https://skitour.fr'}
-    assert sana['rating']['ski_rating_min'] == '3.2'
-    assert sana['geometry']['quality'] == 'summit'
-    assert [a['document_id'] for a in sana['areas']] == [world['vanoise']]
-    assert sana['areas'][0]['title'] == 'Vanoise'
+    vanoise = by_id['skitour:188891']
+    assert vanoise['credit'] == {
+        'site': 'skitour.fr',
+        'site_url': 'https://skitour.fr',
+    }
+    assert vanoise['rating']['ski_rating_min'] == '2.2'
+    assert vanoise['geometry']['quality'] == 'summit'
+    assert [a['document_id'] for a in vanoise['areas']] == [world['vanoise']]
+    assert vanoise['areas'][0]['title'] == 'Vanoise'
+    # a skitour outing without summit: the start point locates it
+    start = by_id['skitour:188880']
+    assert start['geometry']['quality'] == 'start'
+    assert [a['document_id'] for a in start['areas']] == [world['vanoise']]
     cheneil = by_id['gulliver:48213']
     assert cheneil['credit']['site'] == 'gulliver.it'
     assert cheneil['geometry']['quality'] == 'start'
     assert [a['document_id'] for a in cheneil['areas']] == [world['aosta']]
     # no coordinates: no geometry, no area, still listed
-    assert by_id['skitour:112349']['geometry'] is None
-    assert by_id['skitour:112349']['areas'] == []
+    assert by_id['gulliver:48210']['geometry'] is None
+    assert by_id['gulliver:48210']['areas'] == []
 
 
 def test_areas_are_assigned_by_the_point(db_connection, session, world):
@@ -187,11 +212,13 @@ def test_areas_are_assigned_by_the_point(db_connection, session, world):
         assert rows[('skitour', ext)] == [world['vanoise']]
     for ext in GULLIVER_IN_AOSTA:
         assert rows[('gulliver', ext)] == [world['aosta']]
-    # a point in the Vercors and one in Ecrins: not in a test area
-    assert rows[('skitour', '112355')] == []
-    assert rows[('skitour', '112346')] == []
+    # points in Lauziere or Ecrins: not in a test area
+    assert rows[('skitour', '188899')] == []
+    assert rows[('skitour', '188888')] == []
+    assert all(
+        rows[('skitour', ext)] == [] for ext in SKITOUR_IN_WINDOW - SKITOUR_IN_VANOISE
+    )
     # no point at all
-    assert rows[('skitour', '112349')] == []
     assert rows[('gulliver', '48210')] == []
 
 
@@ -226,16 +253,20 @@ def test_other_filters(client, world):
     assert not any(i.startswith('skitour:') for i in ids(hiking))
 
     steep = listing(client, steep='true', sources='skitour,gulliver')
-    assert set(ids(steep)) == {'skitour:112346', 'gulliver:48207'}
+    assert set(ids(steep)) == {'skitour:188878', 'gulliver:48207'}
 
-    # ski rating 4.1 and more: the couloir of skitour and the canalone of gulliver
+    # ski rating 4.1 and more: the 4.3 of skitour and the canalone of gulliver
     rated = listing(client, trat='4.1,', sources='skitour,gulliver')
-    assert set(ids(rated)) == {'skitour:112346', 'gulliver:48207'}
+    assert set(ids(rated)) == {'skitour:188878', 'gulliver:48207'}
 
     # a day
-    day = (datetime.date(2026, 11, 24) + SHIFT).isoformat()
+    recorded_day = datetime.date(2026, 11, 24)  # Paris day of 14 of the outings
+    day = (recorded_day + SKITOUR_SHIFT).isoformat()
     that_day = listing(client, date=day, sources='skitour')
-    assert external(that_day, 'skitour') == {'112349', '112351', '112352'}
+    assert external(that_day, 'skitour') == {
+        ext for ext, d in SKITOUR_PARIS_DAY.items() if d == recorded_day
+    }
+    assert len(external(that_day, 'skitour')) == 14
 
 
 def test_paging_keeps_the_total(client, world):
@@ -246,13 +277,14 @@ def test_paging_keeps_the_total(client, world):
 
 
 def test_sources_are_degraded_on_purpose(client, world):
-    # each fixture set has an item that does not parse: the run is `degraded`
+    # the real skitour recording parses completely: `ok`. The synthetic gulliver
+    # set has an item that does not parse: its run is `degraded`
     answer = client.get('/partner-outings/sources', status=200).json
     sources = {s['source']: s for s in answer['sources']}
     assert set(sources) == {'skitour', 'gulliver'}
-    assert sources['skitour']['status'] == 'degraded'
-    assert sources['skitour']['status_detail'] == '2 items failed to parse'
-    assert sources['skitour']['last_fetched'] == 10
+    assert sources['skitour']['status'] == 'ok'
+    assert sources['skitour']['status_detail'] is None
+    assert sources['skitour']['last_fetched'] == 30
     assert sources['gulliver']['status'] == 'degraded'
     assert sources['gulliver']['status_detail'] == '1 items failed to parse'
     assert sources['gulliver']['last_fetched'] == 9
@@ -266,7 +298,7 @@ def test_sources_are_degraded_on_purpose(client, world):
         assert source['site_url'].startswith('https://')
     # the listing carries the same statuses
     listed = {s['source']: s['status'] for s in listing(client)['sources']}
-    assert listed == {'skitour': 'degraded', 'gulliver': 'degraded'}
+    assert listed == {'skitour': 'ok', 'gulliver': 'degraded'}
 
 
 def test_health_lists_the_partners(client, world):
@@ -285,7 +317,7 @@ def test_second_harvest_is_idempotent(client, session, world):
     # a later run, the same day: same rows, same answer
     job.harvest_partner_outings(SETTINGS, now=NOW + datetime.timedelta(hours=1))
     session.expire_all()
-    assert session.query(PartnerOuting).count() == 19
+    assert session.query(PartnerOuting).count() == 39
     assert session.get(PartnerSource, 'skitour').consecutive_failures == 0
     after = listing(client)
     assert ids(after) == ids(before)

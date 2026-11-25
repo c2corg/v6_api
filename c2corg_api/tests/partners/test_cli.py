@@ -90,26 +90,26 @@ def test_shapes_removed_key_is_breaking(site, capsys):
     def remove(data):
         for outing in data:
             for summit in outing.get('sommets') or []:
-                summit.pop('latlon', None)
+                summit.pop('lat', None)
 
-    for page in ('p1', 'p2'):
+    for page in ('p1',):
         _edit(site / f'skitour/sorties_c1_l200_{page}.json', remove)
     assert cli.main(['shapes', 'skitour']) == 1
     out = capsys.readouterr().out
     assert 'BREAKING' in out
-    assert 'sorties: [].sommets[].latlon is missing' in out
-    assert '- [].sommets[].latlon' in out
+    assert 'sorties: [].sommets[].lat is missing' in out
+    assert '- [].sommets[].lat' in out
 
 
 def test_shapes_retyped_key_is_breaking(site, capsys):
     def retype(data):
         for outing in data:
-            outing['id'] = str(outing['id'])
+            outing['id'] = int(outing['id'])
 
-    for page in ('p1', 'p2'):
+    for page in ('p1',):
         _edit(site / f'skitour/sorties_c1_l200_{page}.json', retype)
     assert cli.main(['shapes', 'skitour']) == 1
-    assert 'sorties: [].id changed type: int -> str' in capsys.readouterr().out
+    assert 'sorties: [].id changed type: str -> int' in capsys.readouterr().out
 
 
 def test_shapes_gulliver_nested_path_removed(site, capsys):
@@ -125,7 +125,7 @@ def test_shapes_gulliver_nested_path_removed(site, capsys):
 
 
 def test_shapes_unparsable_answer_exits_1(site, capsys):
-    for page in ('p1', 'p2'):
+    for page in ('p1',):
         _edit(
             site / f'skitour/sorties_c1_l200_{page}.json',
             lambda data: data.clear(),
@@ -229,8 +229,10 @@ def test_record_writes_fixtures(site, tmp_path, capsys):
     assert 'test-key' not in ''.join(p.read_text() for p in directory.iterdir())
     # the licensed texts of skitour are not kept
     recorded = (directory / name).read_text(encoding='utf-8')
-    assert 'LICENSED' not in recorded
-    assert json.loads(recorded)[0]['titre'] == 'Pointe de la Sana, face NE'
+    assert (
+        json.loads(recorded)[0]['titre']
+        == 'Dôme des Rousses, croupe nord et lac du milieu'
+    )
     shape = json.loads((directory / 'shape.json').read_text(encoding='utf-8'))
     assert sorted(shape) == [e['file'] for e in manifest['entries']]
     assert 'recorded 1 responses' in capsys.readouterr().out
@@ -309,17 +311,29 @@ def test_record_drops_skitour_free_text(site, tmp_path):
         for item in data:
             item['commentaires'] = 'COMMENTS-TEXT'
             item['meteo'] = 'WEATHER-TEXT'
-            for summit in item['sommets']:
+            item['recit'] = 'RECIT-TEXT'
+            item['cond'] = 'COND-TEXT'
+            item['photos'] = [{'id': 'PHOTO-ID'}]
+            item['participants'] = [{'pseudo': 'PARTICIPANT-NAME'}]
+            for summit in item.get('sommets') or []:
                 summit['description'] = 'SUMMIT-TEXT'
 
     _edit(site / 'skitour/sorties_c1_l200_p1.json', add_text)
     out = tmp_path / 'recorded'
     assert cli.main(['record', 'skitour', '--out', str(out)]) == 0
     recorded = (out / 'skitour/sorties_c1_l200_p1.json').read_text()
-    for text in ('COMMENTS-TEXT', 'WEATHER-TEXT', 'SUMMIT-TEXT'):
+    for text in (
+        'COMMENTS-TEXT',
+        'WEATHER-TEXT',
+        'SUMMIT-TEXT',
+        'RECIT-TEXT',
+        'COND-TEXT',
+        'PHOTO-ID',
+        'PARTICIPANT-NAME',
+    ):
         assert text not in recorded
     first = json.loads(recorded)[0]
-    assert first['sommets'][0]['latlon'] and first['dif_ski'] == '3.2'
+    assert first['sommets'][0]['lat'] and first['dif_ski'] == '2.1'
 
 
 def test_trim_keeps_nothing_of_an_unknown_endpoint():
@@ -400,3 +414,44 @@ def test_compatible_types():
     assert contract._compatible({'str'}, {'null'})
     assert contract._compatible({'str', 'null'}, {'str'})
     assert not contract._compatible({'str'}, {'list'})
+
+
+def test_secrets_from_env_or_key_file(monkeypatch, tmp_path):
+    adapter = REGISTRY['skitour']()
+    monkeypatch.delenv('SKITOUR_API_KEY', raising=False)
+    monkeypatch.delenv('SKITOUR_API_KEY_FILE', raising=False)
+    assert cli.secrets_from_env(adapter) == {}
+    key_file = tmp_path / 'key'
+    key_file.write_text('file-key\n', encoding='utf-8')
+    monkeypatch.setenv('SKITOUR_API_KEY_FILE', str(key_file))
+    assert cli.secrets_from_env(adapter) == {'SKITOUR_API_KEY': 'file-key'}
+    # the variable wins over the file
+    monkeypatch.setenv('SKITOUR_API_KEY', 'env-key')
+    assert cli.secrets_from_env(adapter) == {'SKITOUR_API_KEY': 'env-key'}
+    # an unreadable file is no secret
+    monkeypatch.delenv('SKITOUR_API_KEY')
+    monkeypatch.setenv('SKITOUR_API_KEY_FILE', str(tmp_path / 'missing'))
+    assert cli.secrets_from_env(adapter) == {}
+
+
+def test_record_pseudonymises_authors_consistently(site, tmp_path):
+    def authors(data):
+        for i, item in enumerate(data):
+            item['auteur'] = {'id': str(i), 'pseudo': 'Alice' if i % 2 else 'Bob'}
+
+    _edit(site / 'skitour/sorties_c1_l200_p1.json', authors)
+    out = tmp_path / 'recorded'
+    assert cli.main(['record', 'skitour', '--out', str(out)]) == 0
+    recorded = json.loads((out / 'skitour/sorties_c1_l200_p1.json').read_text())
+    pseudos = [item['auteur']['pseudo'] for item in recorded]
+    assert pseudos[:3] == ['user1', 'user2', 'user1']
+    assert 'Alice' not in json.dumps(recorded) and 'Bob' not in json.dumps(recorded)
+
+
+def test_pseudonymise_keeps_the_type_of_ids():
+    names = {}
+    data = [{'a': {'id': 77, 'n': 'x'}}, {'a': {'id': 77, 'n': 'y'}}]
+    out = contract._replace(data, contract._tree(['[].a.id']), names)
+    assert out[0]['a']['id'] == out[1]['a']['id']
+    assert isinstance(out[0]['a']['id'], int)
+    assert out[0]['a']['n'] == 'x'
