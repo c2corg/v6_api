@@ -36,9 +36,18 @@ from c2corg_api.partners.transport import FixtureTransport
 UTC = datetime.UTC
 NOW = datetime.datetime(2026, 11, 24, 12, 0, tzinfo=UTC)
 TODAY = NOW.date()
+
+
+def only(*names):
+    """Return the switches of these partner sources only."""
+    return {
+        'harvest.partners.enabled': 'false',
+        **{f'harvest.partners.{name}.enabled': 'true' for name in names},
+    }
+
+
 SETTINGS = {
-    'partners.enabled': 'true',
-    'partners.sources': 'fake,other',
+    'harvest.partners.enabled': 'false',
     'partners.interval_minutes': '15',
     'partners.retention_days': '31',
     'partners.transport': 'http',
@@ -140,17 +149,28 @@ def outings_of(db, source='fake'):
 
 
 def test_partners_enabled():
-    assert job.partners_enabled({'partners.enabled': 'true'})
-    assert job.partners_enabled({'partners.enabled': ' True '})
-    assert not job.partners_enabled({'partners.enabled': 'false'})
+    # the switches of c2corg_api.harvest: the group, else harvest.enabled
+    assert job.partners_enabled({'harvest.partners.enabled': 'true'})
+    assert job.partners_enabled({'harvest.partners.enabled': ' True '})
+    assert job.partners_enabled({'harvest.enabled': 'true'})
+    assert not job.partners_enabled(
+        {'harvest.enabled': 'true', 'harvest.partners.enabled': 'false'}
+    )
+    assert not job.partners_enabled({'harvest.partners.enabled': 'false'})
     assert not job.partners_enabled({})
 
 
-def test_enabled_sources_intersects_the_registry(fake_registry):
+def test_enabled_sources_follow_the_switches(fake_registry):
     fake_registry(make_adapter('fake'), make_adapter('other'))
-    settings = {'partners.sources': ' fake , unknown,other,fake,'}
-    assert job.enabled_sources(settings) == ['fake', 'other']
-    assert job.enabled_sources({'partners.sources': ''}) == []
+    assert job.enabled_sources(only('fake', 'other', 'unknown')) == ['fake', 'other']
+    assert job.enabled_sources(only()) == []
+    # one source switched off in a group switched on
+    settings = {
+        'harvest.partners.enabled': 'true',
+        'harvest.partners.skitour.enabled': 'false',
+    }
+    assert 'skitour' not in job.enabled_sources(settings)
+    assert {'gulliver', 'fake', 'other'} <= set(job.enabled_sources(settings))
 
 
 def test_transport_for(tmp_path):
@@ -691,54 +711,94 @@ def test_storing_error_fails_the_source_not_the_job(db):
     assert outings_of(db) == []
 
 
-# ------------------------------------------------------------------ backoff
+# ------------------------------------------------- the harvester, the policy
 
 
-def test_backoff(db):
-    adapter = make_adapter(fetch=raises(SourceDown('503')))
-    for i in range(4):
-        # spaced by more than any backoff window
-        run(db, adapter, now=NOW + datetime.timedelta(days=i))
-    row = source_row(db)
-    assert row.consecutive_failures == 4
-    assert len(adapter.calls) == 4
-    last = NOW + datetime.timedelta(days=3)
+def test_a_harvester_per_adapter(fake_registry):
+    fake_registry(make_adapter('fake'))
+    harvesters = {h.name: h for h in job.partner_harvesters(SETTINGS)}
+    assert {'partners.skitour', 'partners.gulliver', 'partners.fake'} <= set(harvesters)
+    fake = harvesters['partners.fake']
+    assert fake.sources() == ['outings']
+    assert fake.source_id('outings') == 'partners.fake:outings'
+    assert fake.host('outings') == 'fake.example'
+    # and the runner knows them, with the avalanche ones
+    from c2corg_api.harvest import runner
 
-    # 4 failures: waits interval * 2**2 = 60 minutes
-    assert run(db, adapter, now=last + datetime.timedelta(minutes=59)) == 'down'
-    assert len(adapter.calls) == 4
-    row = source_row(db)
-    assert row.last_run_at == last
-    assert row.consecutive_failures == 4
-
-    # the next tick, read a few ms early, is not skipped
-    tick = last + datetime.timedelta(minutes=60, milliseconds=-5)
-    assert run(db, adapter, now=tick) == 'down'
-    assert len(adapter.calls) == 5
-    assert source_row(db).consecutive_failures == 5
+    names = [h.name for h in runner.harvesters()]
+    assert 'avalanche.caaml' in names
+    assert 'partners.fake' in names
 
 
-def test_no_backoff_before_three_failures(db):
-    adapter = make_adapter(fetch=raises(SourceDown('503')))
-    for i in range(3):
-        run(db, adapter, now=NOW + datetime.timedelta(minutes=i))
-    assert len(adapter.calls) == 3
-    # 3 failures: waits 15 * 2 = 30 minutes
-    run(db, adapter, now=NOW + datetime.timedelta(minutes=10))
-    assert len(adapter.calls) == 3
-    run(db, adapter, now=NOW + datetime.timedelta(minutes=32))
-    assert len(adapter.calls) == 4
+def test_the_policy_follows_the_interval():
+    from c2corg_api.harvest.policy import next_run
+
+    harvester = job.partner_harvesters({'partners.interval_minutes': '20'})[0]
+    policy = harvester.policy
+    assert next_run(policy, NOW) == NOW + datetime.timedelta(minutes=20)
+    # the backoff starts at the interval, doubled up to 16 times it
+    assert next_run(policy, NOW, error_count=3) == NOW + datetime.timedelta(minutes=80)
+    assert next_run(policy, NOW, error_count=50) == NOW + datetime.timedelta(
+        minutes=320
+    )
 
 
-def test_backoff_is_capped(db):
-    row = job._get_source_row(db, 'fake')
-    row.consecutive_failures = 50
-    row.last_run_at = NOW
-    # 15 * 2**4 = 240 minutes at most
-    adapter = make_adapter(fetch=ok_fetch)
-    assert run(db, adapter, now=NOW + datetime.timedelta(minutes=239)) == 'never_run'
-    assert adapter.calls == []
-    assert run(db, adapter, now=NOW + datetime.timedelta(minutes=240)) == 'ok'
+def test_fetch_runs_the_source_and_returns_a_summary(db, db_connection, fake_registry):
+    from c2corg_api.harvest.harvester import State
+
+    fake_registry(make_adapter(fetch=ok_fetch))
+    harvester = job.PartnerHarvester(REGISTRY['fake'], SETTINGS, clock=lambda: NOW)
+    payload = harvester.fetch('outings', State())
+    assert json.loads(payload.content) == {
+        'status': 'ok',
+        'status_detail': None,
+        'fetched': 2,
+        'upserted': 2,
+        'skipped': {},
+    }
+    assert payload.content_type == 'application/json'
+    assert source_row(db).status == 'ok'
+    assert harvester.store(db, 'outings', payload).published
+
+
+@pytest.mark.parametrize(
+    'exception, status',
+    [(SourceDown('HTTP 503'), 'down'), (SourceBlocked('HTTP 403'), 'blocked')],
+)
+def test_a_failed_run_is_an_error_of_the_harvest_source(
+    db, db_connection, fake_registry, exception, status
+):
+    from c2corg_api.harvest.harvester import State
+
+    fake_registry(make_adapter(fetch=raises(exception)))
+    harvester = job.PartnerHarvester(REGISTRY['fake'], SETTINGS, clock=lambda: NOW)
+    with pytest.raises(job.PartnerRunFailed, match=f'^{status}: {exception}$'):
+        harvester.fetch('outings', State())
+    assert source_row(db).status == status
+
+
+def test_disabled_is_not_an_error(db, db_connection, fake_registry, monkeypatch):
+    from c2corg_api.harvest.harvester import State
+
+    monkeypatch.delenv('FAKE_KEY', raising=False)
+    fake_registry(make_adapter(fetch=ok_fetch, secrets=('FAKE_KEY',)))
+    harvester = job.PartnerHarvester(REGISTRY['fake'], SETTINGS, clock=lambda: NOW)
+    summary = json.loads(harvester.fetch('outings', State()).content)
+    assert summary['status'] == 'disabled'
+    assert summary['status_detail'] == 'FAKE_KEY not set'
+
+
+def test_the_harvest_records_and_backs_off(db, db_connection, fake_registry):
+    from c2corg_api.models.harvest import HarvestSource
+
+    fake_registry(make_adapter(fetch=raises(SourceDown('HTTP 503'))))
+    job.harvest_partner_outings(only('fake'), now=NOW)
+    db.expire_all()
+    row = db.get(HarvestSource, 'partners.fake:outings')
+    assert row.harvester == 'partners.fake'
+    assert row.error_count == 1
+    assert row.last_error == "PartnerRunFailed('down: HTTP 503')"
+    assert source_row(db).status == 'down'
 
 
 # -------------------------------------------------------------------- since
@@ -947,7 +1007,7 @@ def test_fixture_mode_end_to_end(db, db_connection, fixtures_dir, fake_registry)
     fake_registry(adapter)
     settings = {
         **SETTINGS,
-        'partners.sources': 'fake',
+        **only('fake'),
         'partners.transport': 'fixtures',
         'partners.fixtures_dir': str(fixtures_dir),
     }
@@ -961,7 +1021,7 @@ def test_fixture_mode_with_the_real_adapters(db, db_connection, days_after):
     # the local demo: the recorded fixtures of every source, even weeks later
     settings = {
         **SETTINGS,
-        'partners.sources': 'skitour,gulliver',
+        **only('skitour', 'gulliver'),
         'partners.transport': 'fixtures',
     }
     now = NOW + datetime.timedelta(days=days_after)
@@ -986,7 +1046,7 @@ def test_skitour_key_error_is_blocked(db, directory, message):
     fixtures = Path(__file__).parents[1] / 'partners' / 'fixtures'
     adapter = REGISTRY['skitour']()
     transport = FixtureTransport(fixtures, directory, rate=adapter.rate)
-    settings = {**SETTINGS, 'partners.sources': 'skitour'}
+    settings = {**SETTINGS, **only('skitour')}
     run(db, adapter, transport=transport, settings=settings)
     row = source_row(db, 'skitour')
     assert row.status == 'blocked'
@@ -1010,7 +1070,7 @@ def test_one_failing_source_does_not_stop_the_others(
         'good', fetch=lambda ctx: FetchResult([outing('7', source='good')])
     )
     fake_registry(boom, blocked, crash, disabled, good)
-    settings = {**SETTINGS, 'partners.sources': 'boom,blocked,crash,disabled,good'}
+    settings = {**SETTINGS, **only('boom', 'blocked', 'crash', 'disabled', 'good')}
 
     job.harvest_partner_outings(settings, now=NOW)
 
@@ -1038,7 +1098,7 @@ def test_harvest_records_a_source_that_cannot_start(
     fake_registry(make_adapter('nofixture', fetch=ok_fetch))
     settings = {
         **SETTINGS,
-        'partners.sources': 'nofixture',
+        **only('nofixture'),
         'partners.transport': 'fixtures',
         'partners.fixtures_dir': str(tmp_path),
     }
@@ -1059,7 +1119,7 @@ def test_record_failure_masks_the_secrets(
         raise RuntimeError('cannot reach https://x/?key=s3cr3t-value&k=s3cr3t%2Dvalue')
 
     monkeypatch.setattr(job, 'transport_for', broken)
-    job.harvest_partner_outings({**SETTINGS, 'partners.sources': 'fake'}, now=NOW)
+    job.harvest_partner_outings({**SETTINGS, **only('fake')}, now=NOW)
     row = source_row(db)
     assert row.status == 'failing'
     assert 's3cr3t-value' not in row.status_detail
@@ -1076,12 +1136,12 @@ def test_sources_missing_from_the_configuration_are_disabled(
 ):
     fake_registry(make_adapter('fake', fetch=ok_fetch))
     fake_registry(make_adapter('other', fetch=ok_fetch))
-    both = {**SETTINGS, 'partners.sources': 'fake,other'}
+    both = {**SETTINGS, **only('fake', 'other')}
     job.harvest_partner_outings(both, now=NOW)
     assert source_row(db, 'other').status == 'ok'
     # `other` is dropped from the configuration; skitour and gulliver never were
     job.harvest_partner_outings(
-        {**SETTINGS, 'partners.sources': 'fake'},
+        {**SETTINGS, **only('fake')},
         now=NOW + datetime.timedelta(hours=1),
     )
     assert source_row(db, 'fake').status == 'ok'
@@ -1102,7 +1162,7 @@ def test_harvest_uses_the_lookup_cache(db, db_connection, fake_registry):
         return FetchResult([outing('1', source='fake')])
 
     fake_registry(make_adapter('fake', fetch=fetch))
-    job.harvest_partner_outings({**SETTINGS, 'partners.sources': 'fake'}, now=NOW)
+    job.harvest_partner_outings({**SETTINGS, **only('fake')}, now=NOW)
     db.expire_all()
     assert db.get(PartnerLookup, ('fake', 'route:1')).data == {'name': 'Col'}
 
@@ -1132,33 +1192,36 @@ def scheduled_jobs(settings):
 
 
 def test_scheduler_adds_the_harvest_only_when_enabled():
-    added = scheduled_jobs({'partners.enabled': 'false'})
+    added = scheduled_jobs({'harvest.partners.enabled': 'false'})
+    assert 'harvest_tick' not in added
     assert 'harvest_partner_outings' not in added
     assert 'purge_token' in added
 
 
-def test_scheduler_always_purges_the_partner_rows():
+def test_scheduler_always_purges_and_marks_the_partner_rows():
     # the licence: rows must not outlive the retention, harvest on or off
-    for settings in ({'partners.enabled': 'false'}, {}):
-        purge = scheduled_jobs(settings)['purge_partner_outings']
+    for settings in ({'harvest.partners.enabled': 'false'}, {}):
+        added = scheduled_jobs(settings)
+        purge = added['purge_partner_outings']
         assert (purge['trigger'], purge['hour'], purge['minute']) == ('cron', 1, 40)
         assert purge['kwargs'] == {'settings': settings}
+        mark = added['mark_unconfigured_partner_sources']
+        assert mark['trigger'] == 'date'
+        assert mark['kwargs'] == {'settings': settings}
 
 
-def test_scheduler_adds_the_partner_jobs():
-    settings = {'partners.enabled': 'true', 'partners.interval_minutes': '20'}
+def test_scheduler_harvests_the_partners_with_the_tick():
+    # one wiring for all the harvesters: the harvest tick of c2corg_api.harvest
+    settings = {'harvest.partners.enabled': 'true'}
     added = scheduled_jobs(settings)
-    harvest = added['harvest_partner_outings']
-    assert harvest['trigger'] == 'interval'
-    assert harvest['minutes'] == 20
-    assert harvest['max_instances'] == 1
-    assert harvest['coalesce'] is True
-    assert harvest['kwargs'] == {'settings': settings}
-    delay = harvest['next_run_time'] - datetime.datetime.now(UTC)
-    assert datetime.timedelta(seconds=20) < delay <= datetime.timedelta(seconds=30)
-    purge = added['purge_partner_outings']
-    assert (purge['trigger'], purge['hour'], purge['minute']) == ('cron', 1, 40)
-    assert purge['kwargs'] == {'settings': settings}
+    assert 'harvest_partner_outings' not in added
+    tick = added['harvest_tick']
+    assert tick['kwargs'] == {'settings': settings}
+    from c2corg_api.harvest import runner
+
+    names = [h.name for h in runner.enabled_harvesters(settings)]
+    assert 'partners.skitour' in names
+    assert 'avalanche.caaml' not in names
 
 
 def run_script(settings, argv, tmp_path=None):
@@ -1176,7 +1239,7 @@ def run_script(settings, argv, tmp_path=None):
 
 
 def test_harvest_script_runs_the_job_once():
-    settings = {'partners.enabled': 'true'}
+    settings = {'harvest.partners.enabled': 'true'}
     harvest = run_script(settings, ['x', 'development.ini'])
     harvest.assert_called_once_with(settings)
     with pytest.raises(SystemExit):
@@ -1185,7 +1248,7 @@ def test_harvest_script_runs_the_job_once():
 
 @pytest.mark.parametrize('enabled', ['false', '', None])
 def test_harvest_script_refuses_when_disabled(enabled, capsys):
-    settings = {} if enabled is None else {'partners.enabled': enabled}
+    settings = {} if enabled is None else {'harvest.partners.enabled': enabled}
     from c2corg_api.scripts.jobs import harvest_partners
 
     with (
@@ -1200,11 +1263,11 @@ def test_harvest_script_refuses_when_disabled(enabled, capsys):
     harvest.assert_not_called()
     engine.assert_not_called()
     err = capsys.readouterr().err
-    assert 'partners.enabled is not true' in err
+    assert 'harvest.partners.enabled is not true' in err
     assert '--force' in err
 
 
 def test_harvest_script_force_runs_anyway():
-    settings = {'partners.enabled': 'false'}
+    settings = {'harvest.partners.enabled': 'false'}
     harvest = run_script(settings, ['x', 'development.ini', '--force'])
-    harvest.assert_called_once_with(settings)
+    harvest.assert_called_once_with({'harvest.partners.enabled': 'true'})

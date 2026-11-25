@@ -1,6 +1,5 @@
 import atexit
 import logging
-from datetime import UTC, datetime, timedelta
 
 from apscheduler.events import EVENT_JOB_ERROR
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -70,9 +69,9 @@ def configure_scheduler_from_config(settings):
             kwargs={'settings': settings},
         )
 
-    # harvest the sources (avalanche bulletins...) once switched on
-    # (harvest.enabled, harvest.<name>.enabled): each source says when it is
-    # due; a tick still running makes the next wait
+    # harvest the sources (avalanche bulletins, partner outings...) once
+    # switched on (harvest.enabled, harvest.<name>.enabled): each source says
+    # when it is due; a tick still running makes the next wait
     if enabled_harvesters(settings):
         scheduler.add_job(
             harvest_tick,
@@ -116,20 +115,15 @@ def configure_scheduler_from_config(settings):
         kwargs={'settings': settings},
     )
 
-    # harvest the outings of the partner sites, once switched on
-    # (partners.enabled); the first run 30 s after the start
-    if partner_outings.partners_enabled(settings):
-        scheduler.add_job(
-            partner_outings.harvest_partner_outings,
-            id='harvest_partner_outings',
-            name='Harvest the outings of the partner sites',
-            trigger='interval',
-            minutes=int(settings.get('partners.interval_minutes') or 15),
-            max_instances=1,
-            coalesce=True,
-            next_run_time=datetime.now(UTC) + timedelta(seconds=30),
-            kwargs={'settings': settings},
-        )
+    # mark the partner sources switched off as disabled, once at the start:
+    # the switches (harvest.partners[.<name>].enabled) change with a restart
+    scheduler.add_job(
+        partner_outings.mark_unconfigured_sources,
+        id='mark_unconfigured_partner_sources',
+        name='Mark the partner sources switched off as disabled',
+        trigger='date',
+        kwargs={'settings': settings},
+    )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)
 

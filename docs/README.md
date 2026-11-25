@@ -10,7 +10,8 @@ Published with GitHub Pages (Settings > Pages > Deploy from a branch: `master`, 
 
 Other documentation:
 
-- [`harvest.md`](harvest.md): the background harvester and the stored avalanche bulletins.
+- [`harvest.md`](harvest.md): the background harvester, the stored avalanche bulletins, and how the partner outings
+  run on it ([`partner-outings.md`](partner-outings.md)).
 
 These pages are public: never put IP addresses, secrets or access policies in a diagram.
 

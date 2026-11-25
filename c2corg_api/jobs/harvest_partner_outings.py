@@ -4,9 +4,15 @@ The adapters (`c2corg_api.partners`) are pure: this job gives them a transport
 and a lookup cache, stores what they return in `guidebook.partner_outings`,
 keeps the health of each source in `guidebook.partner_sources`, and purges the
 outings and the lookups older than the retention.
+
+Each adapter is a harvester of `c2corg_api.harvest` (`PartnerHarvester`,
+named `partners.<adapter>`): the harvest tick schedules it, switches it on
+(`harvest.partners.enabled`, `harvest.partners.<adapter>.enabled`), backs off
+after errors and reports it in the health check, as the other harvesters.
 """
 
 import dataclasses
+import json
 import logging
 import os
 import time
@@ -20,6 +26,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from c2corg_api.harvest.harvester import Harvester, Payload, Stored
+from c2corg_api.harvest.policy import Policy
 from c2corg_api.models import DBSession, schema
 from c2corg_api.models.partner_outing import (
     PartnerLookup,
@@ -45,11 +53,13 @@ OVERLAP_DAYS = 2
 # a run with more item errors than max(MIN_ITEM_ERRORS, 10% of the items) fails
 MIN_ITEM_ERRORS = 3
 MAX_ITEM_ERROR_RATIO = 0.1
-# runs failed in a row before the backoff starts
-BACKOFF_AFTER = 3
-BACKOFF_MARGIN = timedelta(seconds=30)
 DETAIL_LENGTH = 500
 NOT_CONFIGURED = 'not configured'
+HARVESTER_PREFIX = 'partners.'
+# the one source of a partner harvester: `partners.skitour:outings`
+OUTINGS = 'outings'
+# the run summaries kept in harvest_payloads (small JSON), for debugging
+KEEP_SUMMARIES_DAYS = 7
 DEFAULT_FIXTURES_DIR = (
     Path(__file__).resolve().parent.parent / 'tests' / ('partners/fixtures')
 )
@@ -62,25 +72,23 @@ def _setting_is_true(settings, key):
     return str(settings.get(key, 'false')).strip().lower() in ('true', '1', 'yes', 'on')
 
 
-def partners_enabled(settings):
-    """Tell whether the scheduler harvests the partner outings."""
-    return _setting_is_true(settings, 'partners.enabled')
+def harvester_name(source):
+    """Return the name of the harvester of a partner source: `partners.<source>`."""
+    return f'{HARVESTER_PREFIX}{source}'
 
 
 def enabled_sources(settings):
-    """Return the configured sources that have an adapter (`partners.sources`)."""
-    names = [
-        name.strip()
-        for name in str(settings.get('partners.sources', '')).split(',')
-        if name.strip()
+    """Return the partner sources switched on (`harvest.partners[.<name>].enabled`)."""
+    from c2corg_api.harvest.runner import harvest_enabled
+
+    return [
+        name for name in REGISTRY if harvest_enabled(settings, harvester_name(name))
     ]
-    sources = []
-    for name in names:
-        if name not in REGISTRY:
-            log.warning('Partner source %s has no adapter, skipped', name)
-        elif name not in sources:
-            sources.append(name)
-    return sources
+
+
+def partners_enabled(settings):
+    """Tell whether the scheduler harvests at least one partner source."""
+    return bool(enabled_sources(settings))
 
 
 def _retention_days(settings):
@@ -284,17 +292,6 @@ def _get_source_row(session, name):
     return row
 
 
-def _backoff_active(row, now, settings):
-    """Tell whether a source failing in a row is left alone for a while."""
-    failures = row.consecutive_failures or 0
-    if failures < BACKOFF_AFTER or row.last_run_at is None:
-        return False
-    wait = timedelta(minutes=_interval_minutes(settings) * 2 ** min(failures - 2, 4))
-    # the scheduler ticks every interval, but `now` is read a few ms after the
-    # tick: without a margin, a tick right on the end of the wait is skipped
-    return now - row.last_run_at < wait - BACKOFF_MARGIN
-
-
 def _since(row, now, settings):
     last_success = row.last_success_at or now - timedelta(days=INITIAL_DAYS)
     last_success = last_success.astimezone(UTC)
@@ -333,15 +330,12 @@ def run_source(session, adapter, transport, lookups, now, settings):
     """Harvest one source and record its health. Never raises.
 
     Commits (the outings, the lookups and the health of the source are one
-    unit; a failure never touches the other sources). Returns the status.
+    unit; a failure never touches the other sources). Returns the status. The
+    backoff after failures is the harvest policy's (`PartnerHarvester`).
     """
     name = adapter.name
     try:
         row = _get_source_row(session, name)
-        if _backoff_active(row, now, settings):
-            log.info('Partner source %s is in backoff, skipped', name)
-            session.rollback()
-            return row.status
         return _run_source(session, row, adapter, transport, lookups, now, settings)
     except Exception:
         # the health itself could not be recorded (database error...)
@@ -476,34 +470,114 @@ def _store(session, result, shift, now, settings, skipped):
     return len(ids)
 
 
-def harvest_partner_outings(settings, now=None):
-    """Run the adapters of the enabled sources, one after the other.
+class PartnerRunFailed(Exception):
+    """A run ended `blocked`, `down` or `failing`: an error of its harvest source.
 
-    The entry point of the scheduler. A source failing never stops the next
-    one. The outings older than the retention are purged by their own job.
+    The message is the status and its detail, the secrets masked.
     """
-    now = now or datetime.now(UTC)
-    # a savepoint per commit when the bind is a connection already in a
-    # transaction (the tests), nothing special on the engine
-    with Session(
-        DBSession.get_bind(), join_transaction_mode='create_savepoint'
-    ) as session:
-        for name in enabled_sources(settings):
+
+
+class PartnerHarvester(Harvester):
+    """The harvester of one partner source (`partners.skitour:outings`).
+
+    An adapter pages, and looks things up in the database while it fetches:
+    no one-URL payload to store later. So `fetch` runs the whole source
+    (`run_source`: the adapter, the outings, the health in partner_sources,
+    committed together), and hands the runner a summary of the run (the
+    payload kept, `store` a no-op). A failed run raises `PartnerRunFailed`:
+    the runner records the error and backs off (`policy`).
+    """
+
+    keep_payloads_days = KEEP_SUMMARIES_DAYS
+
+    def __init__(self, adapter_cls, settings=None, clock=None):
+        self.adapter_cls = adapter_cls
+        self.settings = settings or {}
+        self.name = harvester_name(adapter_cls.name)
+        every = _interval_minutes(self.settings)
+        # every `partners.interval_minutes`; after errors, from the same
+        # interval, doubled up to 16 times it
+        self.policy = Policy(
+            default_every=every,
+            after_publication_every=None,
+            backoff_min=every,
+            backoff_max=every * 16,
+        )
+        self._clock = clock or (lambda: datetime.now(UTC))
+
+    def sources(self):
+        return [OUTINGS]
+
+    def url(self, source):
+        # its host: the lanes of the runner, one site at a time
+        return self.adapter_cls.site_url
+
+    def fetch(self, source, state):
+        name = self.adapter_cls.name
+        now = self._clock()
+        # a savepoint per commit when the bind is a connection already in a
+        # transaction (the tests), nothing special on the engine
+        with Session(
+            DBSession.get_bind(), join_transaction_mode='create_savepoint'
+        ) as session:
             try:
-                adapter_cls = REGISTRY[name]
-                transport = transport_for(adapter_cls, settings)
-                run_source(
-                    session,
-                    adapter_cls(),
-                    transport,
-                    DbLookupCache(session, name),
-                    now,
-                    settings,
-                )
+                transport = transport_for(self.adapter_cls, self.settings)
+                adapter = self.adapter_cls()
             except Exception as e:
                 log.exception('Partner source %s could not start', name)
                 _record_failure(session, name, now, e, _start_secrets(name))
-        _mark_unconfigured(session, enabled_sources(settings))
+                raise PartnerRunFailed(f'failing: {type(e).__name__}') from e
+            status = run_source(
+                session,
+                adapter,
+                transport,
+                DbLookupCache(session, name),
+                now,
+                self.settings,
+            )
+            session.expire_all()
+            row = session.get(PartnerSource, name)
+            summary = {
+                'status': status,
+                'status_detail': row.status_detail if row else None,
+                'fetched': row.last_fetched if row else None,
+                'upserted': row.last_upserted if row else None,
+                'skipped': (row.last_skipped or {}) if row else {},
+            }
+        if status in FAILURE_STATUSES:
+            raise PartnerRunFailed(f'{status}: {summary["status_detail"]}')
+        return Payload(json.dumps(summary, sort_keys=True).encode(), 'application/json')
+
+    def store(self, session, source, payload):
+        # stored by fetch; a run that wrote outings is a publication
+        summary = json.loads(payload.content)
+        return Stored(published=bool(summary.get('upserted')))
+
+
+def partner_harvesters(settings=None, clock=None):
+    """Return a harvester for each partner adapter (`harvest.runner.harvesters`)."""
+    return [PartnerHarvester(REGISTRY[name], settings, clock) for name in REGISTRY]
+
+
+def harvest_partner_outings(settings, now=None):
+    """Harvest the enabled partner sources once, now (make harvest-partners).
+
+    The scheduler runs them through the harvest tick instead. A source failing
+    never stops the next one. The outings older than the retention are purged
+    by their own job.
+    """
+    from c2corg_api.harvest.runner import harvest_now
+
+    clock = (lambda: now) if now is not None else None
+    enabled = set(enabled_sources(settings))
+    harvest_now(
+        [
+            h
+            for h in partner_harvesters(settings, clock)
+            if h.adapter_cls.name in enabled
+        ]
+    )
+    mark_unconfigured_sources(settings)
 
 
 def _start_secrets(name):
@@ -512,7 +586,7 @@ def _start_secrets(name):
 
 
 def _mark_unconfigured(session, configured):
-    """Mark the sources missing from `partners.sources` as `disabled`.
+    """Mark the sources not switched on (`harvest.partners...`) as `disabled`.
 
     Their outings stay listed until the retention purge. Never raises.
     """
@@ -527,6 +601,18 @@ def _mark_unconfigured(session, configured):
     except Exception:
         log.exception('Partner sources: the unconfigured ones were not marked')
         session.rollback()
+
+
+def mark_unconfigured_sources(settings):
+    """Scheduler entry point: mark the sources switched off as `disabled`.
+
+    Run when the scheduler starts (the switches only change with a restart),
+    and by `harvest_partner_outings`.
+    """
+    with Session(
+        DBSession.get_bind(), join_transaction_mode='create_savepoint'
+    ) as session:
+        _mark_unconfigured(session, enabled_sources(settings))
 
 
 def _record_failure(session, name, now, error, secrets=None):
