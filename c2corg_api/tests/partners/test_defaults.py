@@ -46,7 +46,7 @@ def test_new_sources_are_off_by_default():
     # agrees; the dev stack runs them on the fixtures
     env = read_env('env.default')
     dev = read_env('env.dev')
-    for name in ('bivouak',):
+    for name in ('bivouak', 'gipfelbuch'):
         assert env[f'harvest_partners_{name}_enabled'] == 'false', name
         assert dev[f'harvest_partners_{name}_enabled'] == 'true', name
 

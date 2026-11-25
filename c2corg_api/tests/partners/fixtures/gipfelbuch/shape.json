@@ -1,0 +1,54 @@
+{
+ "2355191.html": {
+  "#map-container-inner": "str"
+ },
+ "2355201.html": {
+  "#map-container-inner": "str"
+ },
+ "2355342.html": {
+  "#map-container-inner": "str"
+ },
+ "2355344.html": {
+  "#map-container-inner": "str"
+ },
+ "2355347.html": {
+  "#map-container-inner": "str"
+ },
+ "2355353.html": {
+  "#map-container-inner": "str"
+ },
+ "2355384.html": {
+  "#map-container-inner": "str"
+ },
+ "2355394.html": {
+  "#map-container-inner": "str"
+ },
+ "2355399.html": {
+  "#map-container-inner": "str"
+ },
+ "2355403.html": {
+  "#map-container-inner": "str"
+ },
+ "2355404.html": {
+  "#map-container-inner": "str"
+ },
+ "2355428.html": {
+  "#map-container-inner": "str"
+ },
+ "2355522.html": {
+  "#map-container-inner": "str"
+ },
+ "2355569.html": {
+  "#map-container-inner": "str"
+ },
+ "2355583.html": {
+  "#map-container-inner": "str"
+ },
+ "uebersicht.html": {
+  "article.list-item[id^=\"conditions\"] .autor-infos span": "str",
+  "article.list-item[id^=\"conditions\"] .information .date": "str",
+  "article.list-item[id^=\"conditions\"] .main-icon i[data-tooltip]": "str",
+  "article.list-item[id^=\"conditions\"] .main-title .main": "str",
+  "article.list-item[id^=\"conditions\"] .regions div": "str"
+ }
+}

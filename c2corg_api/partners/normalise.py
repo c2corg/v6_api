@@ -34,6 +34,19 @@ ACTIVITY_MAP: dict[str, dict[str, tuple[tuple[str, ...], bool]]] = {
         'vtt': (('mountain_biking',), False),
         'parapente': (('paragliding',), False),
     },
+    # gipfelbuch.ch: the "Routenart" (the label of the activity icon);
+    # canyoning and "Anderer Routentyp" have no c2c activity: not mapped
+    'gipfelbuch': {
+        'skitour': (('skitouring',), False),
+        'freeride': (('skitouring',), False),
+        'schneeschuhtour': (('snowshoeing',), False),
+        'wanderung': (('hiking',), False),
+        'klettertour': (('rock_climbing',), False),
+        'eisklettern': (('ice_climbing',), False),
+        'klettersteig': (('via_ferrata',), False),
+        'hochtour': (('mountain_climbing',), False),
+        'bike': (('mountain_biking',), False),
+    },
 }
 
 # Blachere grade -> (min, max) c2c ski ratings
