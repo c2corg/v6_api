@@ -93,6 +93,7 @@ harvest.enabled = {harvest_enabled}
 # for one harvester, else (empty) as harvest.enabled
 harvest.avalanche.meteofrance.enabled = {harvest_meteofrance_enabled}
 harvest.avalanche.caaml.enabled = {harvest_caaml_enabled}
+
 # partner outings harvester (see jobs/harvest_partner_outings.py). The secrets
 # (SKITOUR_API_KEY) are read from the environment, never from here
 partners.enabled = {partners_enabled}
