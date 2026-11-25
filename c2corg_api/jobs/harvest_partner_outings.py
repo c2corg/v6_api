@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 from c2corg_api.harvest.harvester import Harvester, Payload, Stored
 from c2corg_api.harvest.policy import Policy
+from c2corg_api.jobs.partner_locations import resolve_locations
 from c2corg_api.models import DBSession, schema
 from c2corg_api.models.partner_outing import (
     PartnerLookup,
@@ -154,7 +155,7 @@ class DbLookupCache:
         )
 
 
-def _outing_values(outing, now):
+def _outing_values(outing, now, area_ids=None):
     if outing.lon is not None and outing.lat is not None:
         geom = func.ST_Transform(
             func.ST_SetSRID(func.ST_MakePoint(outing.lon, outing.lat), 4326), 3857
@@ -184,24 +185,31 @@ def _outing_values(outing, now):
         'snow': dict(outing.snow) if outing.snow else None,
         'geom': geom,
         'geom_quality': outing.geom_quality,
-        # recomputed by assign_areas
-        'area_ids': [],
+        # recomputed by assign_areas from the point, unless given (the outings
+        # located by their region or country: see partner_locations)
+        'area_ids': list(area_ids or []),
         'fetched_at': now,
     }
 
 
-def upsert_outings(session, outings, now):
+def upsert_outings(session, outings, now, area_ids=None):
     """Insert or update the outings, and return their ids.
 
     One row per (source, external_id): an outing already known is updated,
-    keeping its id and `first_seen_at`. Does not commit.
+    keeping its id and `first_seen_at`. `area_ids` gives the areas of some
+    outings, by `(source, external_id)`; the others get theirs from
+    `assign_areas`. Does not commit.
     """
+    area_ids = area_ids or {}
     # one statement cannot update a row twice: the last occurrence wins
     unique = {(o.source, o.external_id): o for o in outings}
     outings = list(unique.values())
     ids = []
     for start in range(0, len(outings), BATCH_SIZE):
-        rows = [_outing_values(o, now) for o in outings[start : start + BATCH_SIZE]]
+        rows = [
+            _outing_values(o, now, area_ids.get((o.source, o.external_id)))
+            for o in outings[start : start + BATCH_SIZE]
+        ]
         statement = insert(PartnerOuting).values(rows)
         keep = {'id', 'first_seen_at', 'source', 'external_id'}
         update = {
@@ -219,7 +227,9 @@ def upsert_outings(session, outings, now):
 def assign_areas(session, ids=None):
     """Set `area_ids` to the areas containing the point of the outings.
 
-    All the outings when `ids` is None. Redirected areas are ignored. Does not
+    All the outings when `ids` is None. Redirected areas are ignored. The
+    outings placed at the centroid of their region keep the areas of the
+    region (`partner_locations`): the centroid is not where they are. Does not
     commit.
     """
     # ST_Intersects: the predicate of area_association.update_areas_for_document
@@ -231,7 +241,7 @@ def assign_areas(session, ids=None):
             JOIN {schema}.documents d
               ON d.document_id = a.document_id AND d.redirects_to IS NULL
             WHERE ST_Intersects(g.geom_detail, p.geom)), '{{}}')
-        WHERE p.geom IS NOT NULL"""
+        WHERE p.geom IS NOT NULL AND p.geom_quality <> 'area_centroid'"""
     if ids is None:
         session.execute(text(sql))
     elif ids:
@@ -404,11 +414,19 @@ def _run_source(session, row, adapter, transport, lookups, now, settings):
             status = 'failing'
             detail = f'{result.item_errors} items failed to parse out of {seen}'
         else:
+            problems = []
             if result.item_errors:
+                problems.append(f'{result.item_errors} items failed to parse')
+            if skipped['lookup_failed']:
+                # detail pages, routes...: those outings keep their hints only
+                problems.append(f'{skipped["lookup_failed"]} lookups failed')
+            if problems:
                 status = 'degraded'
-                detail = f'{result.item_errors} items failed to parse'
+                detail = ', '.join(problems)
             try:
-                upserted = _store(session, result, shift, now, settings, skipped)
+                upserted = _store(
+                    session, result, shift, now, settings, skipped, lookups
+                )
             except Exception as e:
                 log.warning('Partner source %s: storing failed', name, exc_info=True)
                 session.rollback()
@@ -456,8 +474,8 @@ def _fixture_shift(name, transport, now):
     return shift
 
 
-def _store(session, result, shift, now, settings, skipped):
-    """Upsert the outings of a result, and assign their areas."""
+def _store(session, result, shift, now, settings, skipped, lookups):
+    """Locate the outings without coordinates, upsert them, assign their areas."""
     outings = result.outings
     if shift:
         outings = [dataclasses.replace(o, date=o.date + shift) for o in outings]
@@ -465,7 +483,10 @@ def _store(session, result, shift, now, settings, skipped):
     kept = [o for o in outings if o.date >= limit]
     if len(kept) < len(outings):
         skipped['too_old'] += len(outings) - len(kept)
-    ids = upsert_outings(session, kept, now)
+    kept, area_ids, located = resolve_locations(session, lookups, kept)
+    if located:
+        log.info('Partner outings located from their hints: %s', dict(located))
+    ids = upsert_outings(session, kept, now, area_ids)
     assign_areas(session, ids)
     return len(ids)
 

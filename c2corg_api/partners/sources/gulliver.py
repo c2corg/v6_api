@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 
 from c2corg_api.partners import normalise
 from c2corg_api.partners.adapter import ParseError
+from c2corg_api.partners.lookups import LookupRequests
 from c2corg_api.partners.model import (
     FetchContext,
     FetchResult,
@@ -160,6 +161,7 @@ class _Run:
         self.seen = set()
         self.routes = {}  # in-run: route id -> dict, or _UNRESOLVED
         self.route_fetches = 0
+        self.requests = LookupRequests(ctx, result)
 
     def harvest(self):
         for page in range(1, MAX_PAGES + 1):
@@ -301,10 +303,13 @@ class _Run:
         if cached is not None:
             self.routes[route_id] = cached
             return cached
-        if self.route_fetches >= MAX_ROUTE_FETCHES:
+        if self.route_fetches >= MAX_ROUTE_FETCHES or not self.requests.available:
             return None  # not remembered: nothing was tried
         self.route_fetches += 1
-        response = self.ctx.transport.get(f'{BASE_URL}/routes', params={'id': route_id})
+        response = self.requests.get(f'{BASE_URL}/routes', params={'id': route_id})
+        if response is None:  # the site failed for it: asked again next run
+            self.routes[route_id] = _UNRESOLVED
+            return None
         route = None
         if response.status == 200:
             try:

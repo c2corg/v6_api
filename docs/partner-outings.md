@@ -19,8 +19,9 @@ harvest_tick (c2corg_api/harvest) -> PartnerHarvester partners.<name> (jobs/harv
 - Each adapter is a harvester of the shared framework (`c2corg_api/harvest`, [docs/harvest.md](harvest.md)), named
   `partners.<name>` with one source (`partners.skitour:outings`): the harvest tick schedules it, the policy backs it
   off after errors, `harvest_sources` keeps its schedule and errors, and `/health` reports it under `harvest`.
-- The job stores the rows (one per source and external id), assigns the c2c areas that contain the point of each
-  outing, records the health of each source, and a second job purges the outings and the lookups older than the retention.
+- The job locates the outings published without coordinates from their hints (summit name, region, country: see
+  [Outings without coordinates](#outings-without-coordinates)), stores the rows (one per source and external id),
+  assigns the c2c areas that contain the point of each outing, records the health of each source, and a second job purges the outings and the lookups older than the retention.
   That purge job is scheduled even when the harvest is off (`harvest_partners_enabled="false"`): the rows must not
   outlive the retention.
 - The design is in `doc/meta/A2_HARVESTER.md` of c2corg/metaskirando-archive.
@@ -36,7 +37,7 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 | `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak`, `gipfelbuch` and `skitourenportal`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
 | `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
 | `partners_retention` | `partners.retention_days` | `31` | outings older than that are not stored, and purged |
-| `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route lookups) older than that are purged |
+| `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route, detail and summit lookups, and the job's resolutions of location hints) older than that are purged |
 | `partners_transport` | `partners.transport` | `http` (`fixtures` in `env.dev`) | `http`: the real sites; `fixtures`: recorded answers, no network |
 | `partners_fixtures_dir` | `partners.fixtures_dir` | empty | empty: `c2corg_api/tests/partners/fixtures` |
 | `partners_allow_synthetic` | `partners.allow_synthetic` | `false` (`true` in `env.dev` only) | fixture mode may run on a manifest with `synthetic: true`. Otherwise the source is `failing` (ERROR log, detail says why) and nothing is stored: hand-made data can never be published by accident |
@@ -59,7 +60,7 @@ when both are set.
 | --- | --- | --- |
 | `never_run` | no row yet: the job has not run since the source exists (`/partner-outings/sources` lists every known source, with or without a row) | no |
 | `ok` | the run went through, nothing skipped for an error | no |
-| `degraded` | the run stored its outings, but some items could not be parsed (below the failure threshold) | no |
+| `degraded` | the run stored its outings, but some items could not be parsed (below the failure threshold), or some lookups failed (`lookup_failed` in `last_skipped`) | no |
 | `failing` | a bug, too many unparsable items (more than 3 and 10%), or a storage error: nothing stored | yes |
 | `blocked` | the site refuses us: 401/403/429 or an anti-bot challenge page (Cloudflare) | yes |
 | `down` | the site does not answer: 5xx, timeout, or the request budget of the run is spent | yes |
@@ -71,6 +72,48 @@ again. `blocked` is not `down`: a blocked source needs an agreement or an allowl
 partner, retrying more often only makes it worse. `status_detail` never contains a secret.
 
 A source that fails never stops the other sources, and its previous outings stay listed until the retention purge.
+
+**Lookups fail one item, not the run.** A listing page that answers 5xx or times out makes the run `down`, but a
+secondary request for one outing (a gulliver route, a bivouak detail page, a gipfelbuch summit page) does not: through
+`partners.lookups.LookupRequests`, the outing keeps its hints (region, summit name, country) for the job to locate,
+`lookup_failed` is counted in `last_skipped`, nothing is cached (the next run asks again), and the run is `degraded`.
+After 3 failures in a row the site is taken for down for the rest of the run: the remaining lookups are deferred
+(`route_lookup_deferred`, `location_deferred`, `summit_lookup_deferred`). A block (`SourceBlocked`: 401/403/429,
+challenge page) on a lookup still stops the run: `blocked`. In fixture mode, a page missing from the recording is a
+failed lookup too.
+
+## Outings without coordinates
+
+Some sites give no position for some or all of their outings (gipfelbuch, skitourenportal, bivouak beyond its lookup
+cap), only hints in `HarvestedOuting`: `summit_name` (+ `elevation_max`), `region` and `country` (ISO alpha-2). Before
+storing, the job (`c2corg_api/jobs/partner_locations.py`) resolves them, in order:
+
+1. **Summit.** The c2c waypoints of type `summit` or `pass` (not redirected) whose title, in any locale (each part of
+   `A / B` alone), has the same folded name (`c2corg_api/partners/places.py`: case, accents, `ä`/`ae`, `ß`/`ss`,
+   punctuation, text in brackets and a trailing elevation ignored, `Riedberger Horn` = `Riedbergerhorn`); within
+   50 m of `elevation_max` when the partner gives it; inside the c2c area of the country when it gives one
+   (`partners/regions/countries.json`: ISO code -> country area). Failing that, and only with an altitude, the name
+   without its generic words (`Pointe de la`, `Piz`, `Monte`, `Gr.`, `Hoher`...): `Galise` (3340 m) finds
+   `Pointe de la Galise` (3343 m). Two candidates or more: no match. The outing gets the point of the waypoint,
+   `geom_quality = 'summit_match'`, and the areas of that point.
+2. **Region.** The region text through the table of the source (`partners/regions/<source>.json`, `region_map.lookup`):
+   the centroid of its first area, `geom_quality = 'area_centroid'`, and `area_ids` from the table plus the country
+   (not the areas around the centroid, which the purge does not recompute either).
+3. **Country.** No point; `area_ids` is the country area alone, so the outing is listed under its country.
+
+Otherwise the outing has no position and no area. `geom_quality` tells the UI how far to trust the point: `summit`,
+`start` and `route` are given by the partner; `summit_match` (a guess by name) and `area_centroid` are found by the job
+and shown as approximate, as any unknown value.
+
+Each resolution is cached in `partner_lookups` under the source (`resolve:summit:<folded name>|<altitude>|<country>`,
+`resolve:area:<id>`), misses too, and expires with the other lookups (`partners.lookup_retention_days`): a summit added
+to c2c is found within that delay. The uncached summits of a run are looked up together: one scan of the titles of the
+summit and pass waypoints (the waypoints table, then the locales by their `document_id` index; when every hint has an
+altitude, only the waypoints within 50 m of one), folded in Python, then the point and the country areas of the
+matches only (primary key, GiST index of the areas). The names are folded in Python rather than in SQL: the databases
+have no `unaccent`, and `translate()` with the accent table costs about 25 µs a title in PostgreSQL (1.4 s for the
+52 000 locales of the demo database), where the scan and the Python fold take 70 ms for the 3 200 summit and pass
+titles of the demo (production has about 25 times more: about 1.5 s, only on runs that meet a new summit name).
 
 ## Local demo
 
@@ -315,6 +358,7 @@ URL redirects there, and the `src_conditions_type` filter is not a GET parameter
   `country` (`CH`, `AT`, `DE`, `IT`, `FR`, `LI`). The page of a report holds a map element with WGS 84 `data-lat` /
   `data-lon` (the point of the route's summit, entered by the contributors). It is read once per summit and kept in
   `partner_lookups` (`summit:<name>_<altitude>`), at most 15 new summits per run (`summit_lookup_deferred` in `last_skipped`
-  counts the rest, which come on the next runs); such outings get `geom_quality = 'summit'`. The others keep the
-  hints for the job's resolver.
+  counts the rest, which come on the next runs; `lookup_failed` the pages that answered 5xx or did not answer); such
+  outings get `geom_quality = 'summit'`. The others keep the hints for the job's resolver
+  ([Outings without coordinates](#outings-without-coordinates)): `summit_match`, else their country.
 - **Parsing.** By labelled element (`REQUIRED_SELECTORS`, via `htmlparse`), never by position.

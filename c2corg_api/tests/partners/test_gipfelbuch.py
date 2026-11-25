@@ -212,7 +212,9 @@ def test_summits_are_looked_up_once_and_remembered():
     assert Counter(o.geom_quality for o in second.outings) == Counter(
         summit=RESOLVED, none=OUTINGS - RESOLVED
     )
-    assert second.skipped['summit_lookup_deferred'] == OUTINGS - RESOLVED
+    # three summit pages fail ("no fixture"), then the rest waits for next run
+    assert second.skipped['lookup_failed'] == 3
+    assert second.skipped['summit_lookup_deferred'] == OUTINGS - RESOLVED - 3
 
 
 def test_same_summit_in_two_reports_is_one_lookup():
@@ -257,10 +259,23 @@ def test_a_failing_summit_page_is_not_remembered():
 def test_site_down_on_a_summit_page_keeps_the_listing():
     listing = page(card('1'), card('2', title='B (2100m)'))
     result, transport, lookups = run(Canned(listing, SourceDown('HTTP 503')))
-    assert len(result.outings) == 2
-    assert len(transport.urls) == 2  # no more tries after the first failure
-    assert result.skipped['summit_lookup_deferred'] == 2
+    # each outing keeps its hints for the job's resolver
+    assert [o.summit_name for o in result.outings] == ['Gipfel', 'B']
+    assert {o.geom_quality for o in result.outings} == {'none'}
+    assert len(transport.urls) == 3  # the listing, then one try per summit
+    assert result.skipped['lookup_failed'] == 2
+    assert 'summit_lookup_deferred' not in result.skipped
     assert lookups.get('summit:gipfel_2000') is None
+
+
+def test_summit_pages_stop_after_three_failures_in_a_row():
+    titles = [f'S{i} ({2000 + i}m)' for i in range(5)]
+    listing = page(*(card(str(i), title=t) for i, t in enumerate(titles)))
+    result, transport, _ = run(Canned(listing, SourceDown('HTTP 503')))
+    assert len(result.outings) == 5
+    assert len(transport.urls) == 1 + 3
+    assert result.skipped['lookup_failed'] == 3
+    assert result.skipped['summit_lookup_deferred'] == 2
 
 
 def test_blocked_on_a_summit_page_is_a_block():

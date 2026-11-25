@@ -28,6 +28,7 @@ from urllib.parse import urljoin
 
 from c2corg_api.partners import htmlparse, normalise
 from c2corg_api.partners.adapter import ParseError
+from c2corg_api.partners.lookups import LookupRequests
 from c2corg_api.partners.model import (
     FetchContext,
     FetchResult,
@@ -141,6 +142,7 @@ class _Run:
         self.result = result
         self.seen = set()
         self.detail_fetches = 0
+        self.requests = LookupRequests(ctx, result)
 
     def harvest(self):
         by_sport = [self._list(bit) for bit in SPORTS]
@@ -306,10 +308,12 @@ class _Run:
         cached = self.ctx.lookups.get(key)
         if cached is not None:
             return cached
-        if self.detail_fetches >= MAX_DETAIL_FETCHES:
+        if self.detail_fetches >= MAX_DETAIL_FETCHES or not self.requests.available:
             return None  # not remembered: nothing was tried
         self.detail_fetches += 1
-        response = self.ctx.transport.get(url)
+        response = self.requests.get(url)
+        if response is None:  # the site failed for it: asked again next run
+            return None
         if response.status == 404:
             detail = _extract_detail(None)  # gone: never asked again
         elif response.status == 200:

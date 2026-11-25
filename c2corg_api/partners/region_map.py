@@ -67,3 +67,19 @@ def lookup(source: str, region: str | None) -> RegionAreas | None:
     if not region:
         return None
     return load(source).get(fold(region))
+
+
+@cache
+def _countries() -> dict[str, int]:
+    data = json.loads((DIRECTORY / 'countries.json').read_text(encoding='utf-8'))
+    return {code.upper(): area_id for code, area_id in data['countries'].items()}
+
+
+def country_area(code: str | None) -> int | None:
+    """Return the c2c country area of an ISO 3166-1 alpha-2 code ('CH'), or None.
+
+    `regions/countries.json`: the countries partners publish and their neighbours.
+    """
+    if not code:
+        return None
+    return _countries().get(code.strip().upper())
