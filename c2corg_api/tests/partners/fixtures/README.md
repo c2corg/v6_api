@@ -49,7 +49,7 @@ c2corg_api.partners shapes` to see what changed.
 |---|---|---|
 | skitour.fr | reachable with an API key (`cle` header, `SKITOUR_API_KEY` or `SKITOUR_API_KEY_FILE`) | recorded 2026-11-25 (`skitour/`, `synthetic: false`) |
 | gulliver.it | 403 Cloudflare "Just a moment..." JS challenge | synthetic |
-| gipfelbuch.ch | reachable | recorded (M2) |
+| gipfelbuch.ch | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
 | bivouak.net | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
 | skitourenportal.eu, on-ice.it | blocked by the sandbox proxy | synthetic or recorded elsewhere (M2) |
 | api.camptocamp.org | reachable | not needed |
