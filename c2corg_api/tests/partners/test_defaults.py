@@ -28,3 +28,24 @@ def test_only_the_dev_stack_allows_synthetic_fixtures():
     assert read_env('env.dev')['partners_allow_synthetic'] == 'true'
     for name in ('env.demo', 'env.test', 'env.devcontainer', 'env.local.sample'):
         assert 'partners_allow_synthetic' not in read_env(name), name
+
+
+def test_each_source_has_its_switch():
+    from c2corg_api.partners.sources import REGISTRY
+
+    env = read_env('env.default')
+    template = (CONFIG.parent / 'common.ini.in').read_text(encoding='utf-8')
+    for name in REGISTRY:
+        key = f'harvest_partners_{name}_enabled'
+        assert key in env, name
+        assert f'harvest.partners.{name}.enabled = {{{key}}}' in template, name
+
+
+def test_new_sources_are_off_by_default():
+    # off even when harvest_partners_enabled is switched on, until the site
+    # agrees; the dev stack runs them on the fixtures
+    env = read_env('env.default')
+    dev = read_env('env.dev')
+    for name in ('bivouak',):
+        assert env[f'harvest_partners_{name}_enabled'] == 'false', name
+        assert dev[f'harvest_partners_{name}_enabled'] == 'true', name
