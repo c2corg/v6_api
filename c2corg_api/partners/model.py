@@ -53,6 +53,12 @@ class HarvestedOuting:
     lon: float | None = None  # WGS 84; the job transforms to 3857 in SQL
     lat: float | None = None
     geom_quality: GeomQuality = 'none'
+    # Location hints for outings without coordinates (lat/lon None). The job,
+    # not the adapter, resolves them against c2c data: `summit_name` (+
+    # `elevation_max`) against the summit waypoints, `country` (ISO 3166-1
+    # alpha-2) and `region` against the areas. Adapters fill what they know.
+    summit_name: str | None = None
+    country: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
