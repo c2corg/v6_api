@@ -2,14 +2,16 @@ import datetime
 import json
 from collections import Counter
 
+import pytest
 from httmock import HTTMock, all_requests
 from sqlalchemy import Text, cast, select
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql.functions import func
 
+from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association, AssociationLog
-from c2corg_api.models.deleted_document import RETENTION
-from c2corg_api.models.document import Document
+from c2corg_api.models.deleted_document import RETENTION, DeletedDocument
+from c2corg_api.models.document import ArchiveDocument, Document, DocumentLocale
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange
@@ -163,15 +165,9 @@ def test_change_since_merge_kept(client, session, docs, user_ids):  # noqa: F811
     body = _unmerge(client, entry.id).json
 
     assert body['skipped'] == {'associations': 1}
-    assert session.get(
-        Association, (docs.waypoint2.document_id, docs.route1.document_id)
-    )
-    assert not session.get(
-        Association, (docs.waypoint1.document_id, docs.route1.document_id)
-    )
-    assert session.get(
-        Association, (docs.waypoint1.document_id, docs.route2.document_id)
-    )
+    assert _associated(session, docs.waypoint2, docs.route1)
+    assert not _associated(session, docs.waypoint1, docs.route1)
+    assert _associated(session, docs.waypoint1, docs.route2)
 
 
 def test_association_removed_since_merge(client, session, docs):  # noqa: F811
@@ -246,20 +242,244 @@ def test_moderators_only(client, session, docs):  # noqa: F811
     entry_id = _entry(session, docs.route1).id
     _unmerge(client, entry_id, status=403, username='contributor')
     _unmerge(client, 999999, status=404)
-    client.get('/documents/merged', status=403)
+    client.get('/documents/deleted?kind=merged', status=403)
 
 
-def test_list(client, session, docs):  # noqa: F811
+def _list(client, query=''):
+    return client.get(
+        '/documents/deleted?' + query, headers=_moderator(), status=200
+    ).json
+
+
+def test_list_with_deletions(client, session, docs, user_ids):  # noqa: F811
     _merge(client, docs.route1, docs.route2)
-    body = client.get('/documents/merged', headers=_moderator(), status=200).json
-    assert body['total'] == 1
-    (merge,) = body['merges']
-    assert merge['source_document_id'] == docs.route1.document_id
-    assert merge['target_document_id'] == docs.route2.document_id
-    assert merge['title'] == 'Mont Blanc du ciel'
-    assert merge['merged_by']['name'] == 'Moderator'
-    assert merge['counts']['favourites_moved'] == 1
+    client.delete_json(
+        f'/documents/delete/{docs.waypoint4.document_id}',
+        headers=_moderator(),
+        status=200,
+    )
 
-    _unmerge(client, merge['id'])
-    body = client.get('/documents/merged', headers=_moderator(), status=200).json
-    assert body['total'] == 0
+    body = _list(client)
+    assert body['total'] == 2
+    # the last first: one transaction in the tests, same date, then by kind
+    deleted, merged = body['documents']
+    assert deleted['kind'] == 'deleted'
+    assert deleted['document_id'] == docs.waypoint4.document_id
+    assert merged['kind'] == 'merged'
+    assert merged['document_id'] == docs.route1.document_id
+    assert merged['document_type'] == 'r'
+    assert merged['title'] == 'Mont Blanc du ciel'
+    assert merged['target_document_id'] == docs.route2.document_id
+    assert merged['target_title'] == 'Mont Blanc du soleil'
+    assert merged['deleted_by']['name'] == 'Moderator'
+    assert merged['author']['user_id'] == user_ids['contributor']
+    assert merged['counts']['favourites_moved'] == 1
+
+    # the filters
+    def kinds(query):
+        return [entry['kind'] for entry in _list(client, query)['documents']]
+
+    assert kinds('kind=merged') == ['merged']
+    assert kinds('kind=deleted') == ['deleted']
+    assert kinds('type=r') == ['merged']
+    assert kinds('type=w') == ['deleted']
+    assert kinds(f'author={user_ids["contributor"]}') == ['merged']
+    assert kinds(f'deleted_by={user_ids["moderator"]}') == ['deleted', 'merged']
+    assert kinds(f'deleted_by={user_ids["contributor"]}') == []
+    assert kinds('deleted_until=2026-01-01') == []
+    assert kinds('kind=merged&deleted_since=2026-01-01') == ['merged']
+    client.get('/documents/deleted?kind=both', headers=_moderator(), status=422)
+
+    # paging over both kinds
+    body = _list(client, 'offset=1&limit=1')
+    assert body['total'] == 2
+    assert [entry['kind'] for entry in body['documents']] == ['merged']
+
+    _unmerge(client, merged['id'])
+    assert kinds('') == ['deleted']
+
+
+# with the soft delete (views.document_trash): a deleted target or source
+# takes the merge out of the list, its restore brings it back
+
+
+def _delete(client, document):
+    client.delete_json(
+        f'/documents/delete/{document.document_id}', headers=_moderator(), status=200
+    )
+
+
+def _restore(client, session, document):
+    entry = (
+        session.query(DeletedDocument)
+        .filter(
+            DeletedDocument.document_id == document.document_id,
+            DeletedDocument.lang.is_(None),
+        )
+        .order_by(DeletedDocument.id.desc())
+        .first()
+    )
+    return client.post_json(
+        f'/documents/deleted/{entry.id}/restore', {}, headers=_moderator(), status=200
+    ).json
+
+
+def _listed(client):
+    body = _list(client, 'kind=merged')
+    assert body['total'] == len(body['documents'])
+    return [merge['document_id'] for merge in body['documents']]
+
+
+def _exists(session, document):
+    # a query: session.get would answer from the identity map
+    return (
+        session.query(Document)
+        .filter(Document.document_id == document.document_id)
+        .count()
+        > 0
+    )
+
+
+def _archives_redirecting(session, document, target):
+    return (
+        session.query(ArchiveDocument)
+        .filter(
+            ArchiveDocument.document_id == document.document_id,
+            ArchiveDocument.redirects_to == target.document_id,
+        )
+        .count()
+    )
+
+
+def _associated(session, parent, child):
+    return (
+        session.query(Association)
+        .filter(
+            Association.parent_document_id == parent.document_id,
+            Association.child_document_id == child.document_id,
+        )
+        .count()
+        > 0
+    )
+
+
+@pytest.fixture
+def route0(session, docs):  # noqa: F811
+    # merged into route1 before
+    route = Route(
+        activities=['skitouring'],
+        redirects_to=docs.route1.document_id,
+        locales=[RouteLocale(lang='fr', title='Mont Blanc de la lune')],
+    )
+    session.add(route)
+    session.flush()
+    return route
+
+
+def test_target_deleted_then_restored(client, session, docs, route0):  # noqa: F811
+    before = _dump(session)
+    _merge(client, docs.route1, docs.route2)
+    assert _redirects_to(session, route0) == docs.route2.document_id
+    entry_id = _entry(session, docs.route1).id
+    assert _listed(client) == [docs.route1.document_id]
+
+    # the merged documents are deleted with their target
+    _delete(client, docs.route2)
+    assert not _exists(session, docs.route1)
+    assert not _exists(session, route0)
+    assert _listed(client) == []
+    body = _unmerge(client, entry_id, status=400).json
+    assert body['errors'][0]['description'] == (
+        'The target was deleted: restore it first'
+    )
+
+    _restore(client, session, docs.route2)
+    assert _redirects_to(session, docs.route1) == docs.route2.document_id
+    assert _listed(client) == [docs.route1.document_id]
+
+    body = _unmerge(client, entry_id).json
+    assert body['skipped'] == {}
+    assert _dump(session) == before
+    assert _redirects_to(session, docs.route1) is None
+    assert _redirects_to(session, route0) == docs.route1.document_id
+
+
+def test_source_deleted_then_restored(client, session, docs):  # noqa: F811
+    before = _dump(session)
+    _merge(client, docs.route1, docs.route2)
+    entry_id = _entry(session, docs.route1).id
+
+    _delete(client, docs.route1)
+    assert _exists(session, docs.route2)
+    assert _listed(client) == []
+    body = _unmerge(client, entry_id, status=400).json
+    assert body['errors'][0]['description'] == (
+        'The source was deleted: restore it first'
+    )
+
+    _restore(client, session, docs.route1)
+    assert _listed(client) == [docs.route1.document_id]
+    _unmerge(client, entry_id)
+    assert _dump(session) == before
+
+
+def test_target_deleted_after_unmerge(client, session, docs, route0):  # noqa: F811
+    _merge(client, docs.route1, docs.route2)
+    _unmerge(client, _entry(session, docs.route1).id)
+
+    # the old versions of route1 still redirect to route2: route1 and the
+    # route merged into it stay
+    assert _archives_redirecting(session, docs.route1, docs.route2) == 1
+    _delete(client, docs.route2)
+    assert _exists(session, docs.route1)
+    assert _exists(session, route0)
+    assert not _exists(session, docs.route2)
+    # the old version of route1 no longer redirects (foreign key)
+    assert _archives_redirecting(session, docs.route1, docs.route2) == 0
+
+    # and the restore of route2 brings back route2 only, and the history
+    _restore(client, session, docs.route2)
+    assert _archives_redirecting(session, docs.route1, docs.route2) == 1
+    assert _redirects_to(session, docs.route1) is None
+    assert _redirects_to(session, route0) == docs.route1.document_id
+
+
+def test_target_merged_again_hidden(client, session, docs, user_ids):  # noqa: F811
+    create_new_version(docs.waypoint2, user_ids['contributor'])
+    session.flush()
+    _merge(client, docs.waypoint1, docs.waypoint2)
+    _merge(client, docs.waypoint2, docs.waypoint4)
+    # waypoint1 now redirects to waypoint4: only the last merge can be undone
+    assert _listed(client) == [docs.waypoint2.document_id]
+
+    _unmerge(client, _entry(session, docs.waypoint2).id)
+    assert _listed(client) == [docs.waypoint1.document_id]
+
+
+def test_associated_document_deleted_since(client, session, docs, user_ids):  # noqa: F811
+    # an association moved by the merge, its other end deleted since: not
+    # moved back (skipped); the restore of that end brings the association
+    # back where it was at the deletion, with the target
+    article = Article(
+        categories=['site_info'],
+        activities=['hiking'],
+        article_type='collab',
+        locales=[DocumentLocale(lang='en', title='An article')],
+    )
+    session.add(article)
+    session.flush()
+    create_new_version(article, user_ids['contributor'])
+    association = Association.create(
+        parent_document=docs.route1, child_document=article
+    )
+    session.add(association)
+    session.flush()
+
+    _merge(client, docs.route1, docs.route2)
+    _delete(client, article)
+    body = _unmerge(client, _entry(session, docs.route1).id).json
+    assert body['skipped'] == {'associations': 1}
+
+    _restore(client, session, article)
+    assert _associated(session, docs.route2, article)
+    assert not _associated(session, docs.route1, article)

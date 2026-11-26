@@ -31,10 +31,12 @@ def upgrade():
             server_default=sa.text('now()'),
             nullable=False,
         ),
+        sa.Column('author_id', sa.Integer(), nullable=True),
         sa.Column('merged_by', sa.Integer(), nullable=True),
         sa.Column('unmerged_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('unmerged_by', sa.Integer(), nullable=True),
         sa.Column('snapshot', JSONB(), nullable=False),
+        sa.ForeignKeyConstraint(['author_id'], ['users.user.id'], ondelete='SET NULL'),
         sa.ForeignKeyConstraint(['merged_by'], ['users.user.id'], ondelete='SET NULL'),
         sa.ForeignKeyConstraint(
             ['unmerged_by'], ['users.user.id'], ondelete='SET NULL'

@@ -86,6 +86,7 @@ DELETED_DOCUMENT_ROUTES = [
     ('GET', '/documents/deleted'),
     ('GET', '/documents/deleted/{id}'),
     ('POST', '/documents/deleted/{id}/restore'),
+    ('POST', '/documents/merged/{id}/unmerge'),
     ('GET', '/images/orphans'),
     ('GET', '/images/broken-embeds'),
     ('GET', '/documents/broken-links'),
@@ -163,3 +164,11 @@ def test_deleted_document_unknown(browser):
     check_snapshot('documents_deleted_unknown_get', response)
     response = browser.post(f'{url}/restore', {}, user='moderator', status=404)
     check_snapshot('documents_deleted_unknown_restore', response)
+
+
+@contract(('POST', '/documents/merged/{id}/unmerge'))
+def test_merge_unknown(browser):
+    response = browser.post(
+        '/documents/merged/9999999/unmerge', {}, user='moderator', status=404
+    )
+    check_snapshot('documents_merged_unknown_unmerge', response)

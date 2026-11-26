@@ -16,7 +16,18 @@ from datetime import UTC, datetime, timedelta
 from itertools import batched
 
 from geoalchemy2 import Geometry
-from sqlalchemy import ARRAY, Integer, Text, and_, case, cast, exists, or_, tuple_
+from sqlalchemy import (
+    ARRAY,
+    Integer,
+    Text,
+    and_,
+    case,
+    cast,
+    exists,
+    or_,
+    tuple_,
+    union_all,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql.expression import literal, literal_column, select
@@ -70,6 +81,10 @@ from c2corg_api.views.validation import validate_id
 # the version of the snapshot format
 FORMAT = 1
 
+# the kinds of the entries of the list (`kind` filter)
+KIND_DELETED = 'deleted'
+KIND_MERGED = 'merged'
+
 # The tables whose rows may have lost their other end during the retention
 # (an associated document deleted, a user removed): their rows are skipped
 # then. The rows of the other tables are all restored, or nothing is.
@@ -101,6 +116,9 @@ class Snapshot:
         # the archives of routes whose main waypoint is the deleted waypoint
         # (set to null by the deletion): {waypoint id: [route archive ids]}
         self.main_waypoint_of = {}
+        # the archives of documents merged into the deleted document and
+        # unmerged since (set to null by the deletion): {document id: [ids]}
+        self.redirects_of = {}
         # the personal images deleted with the document (see
         # views.document_delete.personal_images_deleted_with)
         self.deleted_images = []
@@ -137,6 +155,7 @@ class Snapshot:
             'format': FORMAT,
             'tables': self.tables,
             'main_waypoint_of': {str(k): v for k, v in self.main_waypoint_of.items()},
+            'redirects_of': {str(k): v for k, v in self.redirects_of.items()},
             'deleted_images': self.deleted_images,
         }
 
@@ -228,14 +247,29 @@ def _title(snapshot, document_id, lang):
 
 
 def _capture_document(snapshot, document_id, document_type, redirecting):
-    # the rows views.document_delete._delete_document removes
-    merged_ids = DBSession.execute(
-        select(ArchiveDocument.document_id)
-        .where(ArchiveDocument.redirects_to == document_id)
-        .distinct()
-    ).scalars()
+    # the rows views.document_delete._delete_document removes, with the
+    # documents redirecting to this one now (not a merge undone since)
+    merged_ids = (
+        DBSession.execute(
+            select(Document.document_id).where(Document.redirects_to == document_id)
+        )
+        .scalars()
+        .all()
+    )
     for merged_id in merged_ids:
         _capture_document(snapshot, merged_id, document_type, redirecting=True)
+    unmerged_archive_ids = (
+        DBSession.execute(
+            select(ArchiveDocument.id).where(
+                ArchiveDocument.redirects_to == document_id,
+                ArchiveDocument.document_id.not_in(merged_ids),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if unmerged_archive_ids:
+        snapshot.redirects_of[document_id] = unmerged_archive_ids
 
     clazz, clazz_locale, archive_clazz, archive_clazz_locale = _models(document_type)
 
@@ -375,6 +409,16 @@ def restore(request, entry):
             ArchiveRoute.main_waypoint_id.is_(None),
         ).update(
             {ArchiveRoute.main_waypoint_id: int(waypoint_id)},
+            synchronize_session=False,
+        )
+
+    # the entries kept before have no `redirects_of`
+    for document_id, archive_ids in entry.snapshot.get('redirects_of', {}).items():
+        DBSession.query(ArchiveDocument).filter(
+            ArchiveDocument.id.in_(archive_ids),
+            ArchiveDocument.redirects_to.is_(None),
+        ).update(
+            {ArchiveDocument.redirects_to: int(document_id)},
             synchronize_session=False,
         )
 
@@ -577,44 +621,88 @@ def list_entries(
     deleted_by=None,
     deleted_since=None,
     deleted_until=None,
+    kind=None,
 ):
-    """Return the deleted documents that can be restored, the last deleted first."""
-    # deleted_since and deleted_until are days, both included
-    query = DBSession.query(DeletedDocument).filter(
+    """Return the deletions and merges that can be undone, the last first."""
+    # deleted_since and deleted_until are days, both included. The merges
+    # (views.document_unmerge) are listed with the deletions, `kind` tells
+    # them apart: their date, `deleted_by` and the filters are those of the
+    # merge.
+    from c2corg_api.views.document_unmerge import merge_summaries, merges_query
+
+    since = _start_of(deleted_since) if deleted_since is not None else None
+    until = (
+        _start_of(deleted_until + timedelta(days=1))
+        if deleted_until is not None
+        else None
+    )
+    queries = []
+    if kind in (None, KIND_DELETED):
+        queries.append(
+            _deletions_query(document_type, author_id, deleted_by, since, until)
+        )
+    if kind in (None, KIND_MERGED):
+        queries.append(
+            merges_query(
+                KIND_MERGED, document_type, author_id, deleted_by, since, until
+            )
+        )
+    listed = (
+        union_all(*queries).subquery() if len(queries) > 1 else queries[0].subquery()
+    )
+    total = DBSession.execute(select(func.count()).select_from(listed)).scalar()
+    rows = DBSession.execute(
+        select(listed.c.kind, listed.c.id)
+        .order_by(listed.c.at.desc(), listed.c.kind, listed.c.id.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    deleted_ids = [entry_id for k, entry_id in rows if k == KIND_DELETED]
+    entries = {
+        entry.id: entry
+        for entry in DBSession.query(DeletedDocument).filter(
+            DeletedDocument.id.in_(deleted_ids)
+        )
+    }
+    histories = {entry_id: _history(entry) for entry_id, entry in entries.items()}
+    users = _users(
+        user_id
+        for entry_id, entry in entries.items()
+        for user_id in (entry.deleted_by, histories[entry_id]['author_id'])
+    )
+    merges = merge_summaries([entry_id for k, entry_id in rows if k == KIND_MERGED])
+    return {
+        'total': total,
+        'documents': [
+            _entry_summary(entries[entry_id], histories[entry_id], users)
+            if k == KIND_DELETED
+            else merges[entry_id]
+            for k, entry_id in rows
+        ],
+    }
+
+
+def _deletions_query(document_type, author_id, deleted_by, since, until):
+    query = select(
+        literal(KIND_DELETED).label('kind'),
+        DeletedDocument.id.label('id'),
+        DeletedDocument.deleted_at.label('at'),
+    ).where(
         DeletedDocument.restored_at.is_(None),
         DeletedDocument.deleted_at >= expired_before(),
     )
     if document_type is not None:
-        query = query.filter(DeletedDocument.document_type == document_type)
+        query = query.where(DeletedDocument.document_type == document_type)
     if author_id is not None:
-        query = query.filter(DeletedDocument.author_id == author_id)
+        query = query.where(DeletedDocument.author_id == author_id)
     if deleted_by is not None:
-        query = query.filter(DeletedDocument.deleted_by == deleted_by)
-    if deleted_since is not None:
-        query = query.filter(DeletedDocument.deleted_at >= _start_of(deleted_since))
-    if deleted_until is not None:
-        query = query.filter(
-            DeletedDocument.deleted_at < _start_of(deleted_until + timedelta(days=1))
-        )
-    total = query.count()
-    entries = (
-        query.order_by(DeletedDocument.deleted_at.desc(), DeletedDocument.id.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
-    histories = {entry.id: _history(entry) for entry in entries}
-    users = _users(
-        user_id
-        for entry in entries
-        for user_id in (entry.deleted_by, histories[entry.id]['author_id'])
-    )
-    return {
-        'total': total,
-        'documents': [
-            _entry_summary(entry, histories[entry.id], users) for entry in entries
-        ],
-    }
+        query = query.where(DeletedDocument.deleted_by == deleted_by)
+    if since is not None:
+        query = query.where(DeletedDocument.deleted_at >= since)
+    if until is not None:
+        query = query.where(DeletedDocument.deleted_at < until)
+    return query
 
 
 def _start_of(day):
@@ -623,6 +711,7 @@ def _start_of(day):
 
 def _entry_summary(entry, history, users):
     return {
+        'kind': KIND_DELETED,
         'id': entry.id,
         'document_id': entry.document_id,
         'document_type': entry.document_type,
@@ -854,7 +943,9 @@ def read_deleted_documents(request):
         `GET` `/documents/deleted?offset=0&limit=30`
 
         Filters: `type` (`o`...), `author` and `deleted_by` (user ids),
-        `deleted_since` and `deleted_until` (days, YYYY-MM-DD, included).
+        `deleted_since` and `deleted_until` (days, YYYY-MM-DD, included),
+        `kind` (`deleted` or `merged`: the merges that can be undone are
+        listed too, see views.document_unmerge).
     """
     validated = request.validated
     return list_entries(
@@ -865,6 +956,7 @@ def read_deleted_documents(request):
         deleted_by=validated.get('deleted_by'),
         deleted_since=validated.get('deleted_since'),
         deleted_until=validated.get('deleted_until'),
+        kind=validated.get('kind'),
     )
 
 

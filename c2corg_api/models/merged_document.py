@@ -37,6 +37,12 @@ class MergedDocument(Base):
         index=True,
     )
 
+    # who wrote the source document, the author of its first version: to
+    # filter the list of the moderators (as DeletedDocument.author_id)
+    author_id = Column(
+        Integer, ForeignKey(users_schema + '.user.id', ondelete='SET NULL')
+    )
+
     merged_by = Column(
         Integer, ForeignKey(users_schema + '.user.id', ondelete='SET NULL')
     )

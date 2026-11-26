@@ -420,6 +420,8 @@ def _delete_document(request, document_id, document_type, redirecting=False):
     # Check if documents are redirecting (merged) to the document to delete
     # If yes, delete them first.
     _remove_merged_documents(request, document_id, document_type)
+    # the old versions of the documents unmerged since still redirect to it
+    _remove_redirects_of_archives(document_id)
 
     remove_from_cache(document_id)
 
@@ -447,11 +449,20 @@ def _delete_document(request, document_id, document_type, redirecting=False):
     )
 
 
+def _remove_redirects_of_archives(document_id):
+    DBSession.query(ArchiveDocument).filter(
+        ArchiveDocument.redirects_to == document_id
+    ).update({ArchiveDocument.redirects_to: None}, synchronize_session=False)
+
+
 def _remove_merged_documents(request, document_id, document_type):
+    # the documents redirecting to this one now: not those whose merge was
+    # undone since (views.document_unmerge), whose old versions still redirect
+    # (the same as views.document_trash._capture_document)
     merged_document_ids = [
         row[0]
-        for row in DBSession.query(ArchiveDocument.document_id)
-        .filter(ArchiveDocument.redirects_to == document_id)
+        for row in DBSession.query(Document.document_id)
+        .filter(Document.redirects_to == document_id)
         .all()
     ]
     for merged_document_id in merged_document_ids:

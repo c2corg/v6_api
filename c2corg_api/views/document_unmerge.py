@@ -18,7 +18,8 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import and_, exists, or_
-from sqlalchemy.sql.expression import select
+from sqlalchemy.orm import aliased
+from sqlalchemy.sql.expression import literal, select
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.httpexceptions import HTTPBadRequest, HTTPNotFound
@@ -31,6 +32,7 @@ from c2corg_api.models.cache_version import (
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.deleted_document import RETENTION
 from c2corg_api.models.document import Document, DocumentLocale, UpdateType
+from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage
@@ -168,6 +170,7 @@ def keep_merge(request, source_document_id, target_document_id, document_type):
             target_document_id=target,
             document_type=document_type,
             title=_title(source),
+            author_id=_author_id(source),
             merged_by=request.authenticated_userid,
             snapshot={
                 'format': FORMAT,
@@ -199,6 +202,19 @@ def _title(document_id):
     return next((locales[lang] for lang in default_langs if lang in locales), None)
 
 
+def _author_id(document_id):
+    # who wrote the first version of the document
+    return DBSession.execute(
+        select(HistoryMetaData.user_id)
+        .join(
+            DocumentVersion, DocumentVersion.history_metadata_id == HistoryMetaData.id
+        )
+        .where(DocumentVersion.document_id == document_id)
+        .order_by(HistoryMetaData.written_at, HistoryMetaData.id)
+        .limit(1)
+    ).scalar()
+
+
 def expired_before():
     """Return the time before which a merge can no longer be undone."""
     return datetime.now(UTC) - RETENTION
@@ -220,8 +236,12 @@ def _check_unmergeable(entry):
         raise HTTPBadRequest('Unknown format of the merge')
     source = DBSession.get(Document, entry.source_document_id)
     target = DBSession.get(Document, entry.target_document_id)
-    if source is None or target is None:
-        raise HTTPBadRequest('A document of the merge was deleted')
+    # a deleted document (views.document_trash) can be restored: the merge
+    # can be undone again then
+    if target is None:
+        raise HTTPBadRequest('The target was deleted: restore it first')
+    if source is None:
+        raise HTTPBadRequest('The source was deleted: restore it first')
     if target.redirects_to is not None:
         # the source redirects to the new target too
         raise HTTPBadRequest(
@@ -400,35 +420,71 @@ def _written_since(log_model, since, first_id, second_id):
     return DBSession.query(exists().where(key, log_model.written_at > since)).scalar()
 
 
-def list_entries(offset, limit):
-    """Return the merges that can be undone, the last first."""
-    query = DBSession.query(MergedDocument).filter(
-        MergedDocument.unmerged_at.is_(None),
-        MergedDocument.merged_at >= expired_before(),
+def merges_query(kind, document_type, author_id, merged_by, since, until):
+    """Select the merges that can be undone, for views.document_trash.list_entries."""
+    # Only those whose source still redirects to the target: not those whose
+    # source or target was deleted (listed again once restored), nor those
+    # whose target was merged since into another document (listed again once
+    # that merge is undone).
+    source = aliased(Document)
+    target = aliased(Document)
+    query = (
+        select(
+            literal(kind).label('kind'),
+            MergedDocument.id.label('id'),
+            MergedDocument.merged_at.label('at'),
+        )
+        .join(source, source.document_id == MergedDocument.source_document_id)
+        .join(target, target.document_id == MergedDocument.target_document_id)
+        .where(
+            MergedDocument.unmerged_at.is_(None),
+            MergedDocument.merged_at >= expired_before(),
+            source.redirects_to == MergedDocument.target_document_id,
+            target.redirects_to.is_(None),
+        )
     )
-    total = query.count()
+    if document_type is not None:
+        query = query.where(MergedDocument.document_type == document_type)
+    if author_id is not None:
+        query = query.where(MergedDocument.author_id == author_id)
+    if merged_by is not None:
+        query = query.where(MergedDocument.merged_by == merged_by)
+    if since is not None:
+        query = query.where(MergedDocument.merged_at >= since)
+    if until is not None:
+        query = query.where(MergedDocument.merged_at < until)
+    return query
+
+
+def merge_summaries(entry_ids):
+    """Describe merges for the list of the moderators, by id."""
     entries = (
-        query.order_by(MergedDocument.merged_at.desc(), MergedDocument.id.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
+        DBSession.query(MergedDocument).filter(MergedDocument.id.in_(entry_ids)).all()
+        if entry_ids
+        else []
     )
-    users = _users(entry.merged_by for entry in entries)
+    users = _users(
+        user_id for entry in entries for user_id in (entry.merged_by, entry.author_id)
+    )
     return {
-        'total': total,
-        'merges': [
-            {
-                'id': entry.id,
-                'source_document_id': entry.source_document_id,
-                'target_document_id': entry.target_document_id,
-                'type': entry.document_type,
-                'title': entry.title,
-                'merged_at': entry.merged_at.isoformat(),
-                'merged_by': _user(users, entry.merged_by),
-                'counts': _counts(entry.snapshot),
-            }
-            for entry in entries
-        ],
+        entry.id: {
+            'kind': 'merged',
+            'id': entry.id,
+            # the source, merged into the target
+            'document_id': entry.source_document_id,
+            'document_type': entry.document_type,
+            'lang': None,
+            'title': entry.title,
+            'author': _user(users, entry.author_id),
+            'target_document_id': entry.target_document_id,
+            'target_title': _title(entry.target_document_id),
+            # the names of a deletion, for one list: when merged, by whom
+            'deleted_at': entry.merged_at.isoformat(),
+            'deleted_by': _user(users, entry.merged_by),
+            'expires_at': (entry.merged_at + RETENTION).isoformat(),
+            'counts': _counts(entry.snapshot),
+        }
+        for entry in entries
     }
 
 
@@ -456,22 +512,6 @@ def purge_expired(session):
 
 
 # the views (routes in web.document_actions), for the moderators
-
-LIMIT_DEFAULT = 30
-LIMIT_MAX = 100
-
-
-def read_merged_documents(request):
-    """List the merges that can be undone.
-
-    Request:
-        `GET` `/documents/merged?offset=0&limit=30`
-    """
-    validated = request.validated
-    return list_entries(
-        validated.get('offset') or 0,
-        min(validated.get('limit') or LIMIT_DEFAULT, LIMIT_MAX),
-    )
 
 
 @write(validators=[validate_id], permission='moderator')
