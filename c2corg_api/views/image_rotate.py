@@ -52,7 +52,8 @@ def _image(request):
 def rotate_image_file(request, filename, rotation):
     """Turn an image file on the image service; return the new filename."""
     settings = request.registry.settings
-    response = requests.post(
+    # bandit sees no timeout when it is not a literal: it comes from the settings
+    response = requests.post(  # nosec B113
         image_backend_endpoint(settings, 'rotate'),
         data={
             'secret': settings['image_backend.secret_key'],
