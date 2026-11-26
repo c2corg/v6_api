@@ -1,0 +1,100 @@
+name: Deployments
+
+# Show on GitHub what the preprod and the production run, as GitHub
+# Deployments (environment pages, "deployed" marks on commits and PRs).
+#
+# This workflow only OBSERVES: it reads the public /health endpoint of each
+# environment and records the commit it reports, with its own GITHUB_TOKEN.
+# The infrastructure never reports to GitHub and GitHub holds no credential
+# of it (c2corg/v6-docker-compose#163): the preprod deploys itself from a
+# timer on its VM, the production is deployed by hand.
+on:
+  # Catch every change, including the manual production deployments.
+  schedule:
+    - cron: '7,37 * * * *'
+  # After a green CI on master the preprod picks up the new image within
+  # minutes: wait for it, and report an error if it never shows up.
+  # Safe here: no artifact or code of the triggering run is used, only its sha.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: ['Continuous integration']
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run at a time, so that two runs never record the same deployment.
+concurrency:
+  group: deployments
+  cancel-in-progress: false
+
+env:
+  PREPROD_HEALTH: https://api.preprod.camptocamp.org/health
+  PREPROD_URL: https://www.preprod.camptocamp.org
+  PRODUCTION_HEALTH: https://api.camptocamp.org/health
+  PRODUCTION_URL: https://www.camptocamp.org
+
+jobs:
+  record:
+    # workflow_run also fires for failed CI runs and for pull requests
+    # whose branch is named master (forks): only a push to master counts.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # to create deployments and their statuses
+      deployments: write
+    outputs:
+      production-recorded: ${{ steps.production.outputs.recorded }}
+      production-sha: ${{ steps.production.outputs.sha }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      # The default branch's script, never code from a pull request.
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Wait for the new commit on the preprod
+        if: github.event_name == 'workflow_run'
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: .github/scripts/deployments.sh wait preprod "$PREPROD_HEALTH" "$PREPROD_URL" "$SHA" 20
+      - name: Preprod
+        if: github.event_name != 'workflow_run'
+        run: .github/scripts/deployments.sh observe preprod "$PREPROD_HEALTH" "$PREPROD_URL"
+      - name: Production
+        id: production
+        # also when the preprod never got the new commit
+        if: ${{ !cancelled() }}
+        run: .github/scripts/deployments.sh observe production "$PRODUCTION_HEALTH" "$PRODUCTION_URL"
+
+  release-note:
+    # Best effort: note in the release when it reached production. Kept in
+    # a job of its own, since editing a release needs contents: write.
+    needs: record
+    if: >-
+      !cancelled() && needs.record.outputs.production-sha != '' &&
+      (needs.record.outputs.production-recorded == 'true' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # to edit the release notes
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Note the production deployment in its release
+        env:
+          SHA: ${{ needs.record.outputs.production-sha }}
+        run: .github/scripts/deployments.sh release-note "$SHA"
