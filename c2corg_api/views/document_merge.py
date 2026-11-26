@@ -19,6 +19,7 @@ from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
 from c2corg_api.views.document import update_version
+from c2corg_api.views.document_unmerge import keep_merge
 from c2corg_api.views.image import delete_all_files_for_image
 from c2corg_api.views.resource import write
 from c2corg_api.views.waypoint import update_linked_route_titles
@@ -141,6 +142,9 @@ def merge_documents(request):
     source_document_id = request.validated['source_document_id']
     target_document_id = request.validated['target_document_id']
     source_doc = DBSession.get(Document, source_document_id)
+
+    # kept before anything changes, to undo the merge
+    keep_merge(request, source_document_id, target_document_id, source_doc.type)
 
     # transfer associations from source to target
     transfer_associations(source_document_id, target_document_id)

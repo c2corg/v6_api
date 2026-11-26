@@ -23,6 +23,7 @@ from c2corg_api.views.document_trash import (
     read_deleted_documents,
     restore_deleted_document,
 )
+from c2corg_api.views.document_unmerge import read_merged_documents, unmerge_document
 from c2corg_api.views.document_version_mask import mask_version, unmask_version
 from c2corg_api.views.image_duplicates import (
     dismiss_duplicate_images,
@@ -58,6 +59,7 @@ WRITES = [
     ('/documents/delete/{id:int}', 'DELETE', delete_document),
     ('/documents/delete/{id:int}/{lang}', 'DELETE', delete_document_locale),
     ('/documents/deleted/{id:int}/restore', 'POST', restore_deleted_document),
+    ('/documents/merged/{id:int}/unmerge', 'POST', unmerge_document),
     ('/images/duplicates/dismiss', 'POST', dismiss_duplicate_images),
 ]
 
@@ -67,6 +69,7 @@ def include(app):
     for path, endpoint in (
         ('/documents/deleted', deleted_documents),
         ('/documents/deleted/{id:int}', deleted_document),
+        ('/documents/merged', merged_documents),
         ('/images/orphans', orphan_images),
         ('/images/broken-embeds', broken_embeds),
         ('/documents/broken-links', broken_links),
@@ -127,6 +130,20 @@ def deleted_documents(
         'deleted_until': deleted_until,
     }
     return serve_read(request, user, [typed_values(validated)], read_deleted_documents)
+
+
+def merged_documents(
+    request: Request,
+    user: User,
+    _: Moderator,
+    offset: Annotated[
+        Offset | None, Query(description='The first merge, from 0.')
+    ] = None,
+    limit: Annotated[Limit | None, Query(description='How many merges.')] = None,
+):
+    """Return the merges a moderator can undo, the last first."""
+    validated = {'offset': offset, 'limit': limit}
+    return serve_read(request, user, [typed_values(validated)], read_merged_documents)
 
 
 def deleted_document(request: Request, user: User, _: Moderator, id: Id):
@@ -232,6 +249,7 @@ images_of_deletion.described = True
 for _endpoint in (
     deleted_documents,
     deleted_document,
+    merged_documents,
     orphan_images,
     broken_embeds,
     broken_links,
