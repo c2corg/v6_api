@@ -2,7 +2,7 @@
 # The routes call the functions of views/ through web.handlers, with the
 # checks their decorators declare (see web.documents.include_document_writes).
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, Query, Request
 
@@ -23,6 +23,7 @@ from c2corg_api.views.document_trash import (
     read_deleted_documents,
     restore_deleted_document,
 )
+from c2corg_api.views.document_unmerge import unmerge_document
 from c2corg_api.views.document_version_mask import mask_version, unmask_version
 from c2corg_api.views.image_duplicates import (
     dismiss_duplicate_images,
@@ -58,6 +59,7 @@ WRITES = [
     ('/documents/delete/{id:int}', 'DELETE', delete_document),
     ('/documents/delete/{id:int}/{lang}', 'DELETE', delete_document_locale),
     ('/documents/deleted/{id:int}/restore', 'POST', restore_deleted_document),
+    ('/documents/merged/{id:int}/unmerge', 'POST', unmerge_document),
     ('/images/duplicates/dismiss', 'POST', dismiss_duplicate_images),
 ]
 
@@ -115,8 +117,12 @@ def deleted_documents(
         day('deleted_until') | None,
         Query(description='Only the documents deleted this day or before.'),
     ] = None,
+    kind: Annotated[
+        Literal['deleted', 'merged'] | None,
+        Query(description='Only the deletions, or only the merges.'),
+    ] = None,
 ):
-    """Return the deleted documents a moderator can restore, the last first."""
+    """Return the deletions and merges a moderator can undo, the last first."""
     validated = {
         'offset': offset,
         'limit': limit,
@@ -125,6 +131,7 @@ def deleted_documents(
         'deleted_by': deleted_by,
         'deleted_since': deleted_since,
         'deleted_until': deleted_until,
+        'kind': kind,
     }
     return serve_read(request, user, [typed_values(validated)], read_deleted_documents)
 
