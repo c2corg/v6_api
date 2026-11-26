@@ -20,6 +20,13 @@ from .wikilinks import C2CWikiLinkExtension
 
 logger = logging.getLogger('MARKDOWN')
 
+# an opening <a> tag of the cleaned HTML (attribute values are quoted)
+_LINK_TAG_PATTERN = re.compile(r'<a\s((?:[^>"]|"[^"]*")*)>')
+_HREF_PATTERN = re.compile(r'\bhref="(https?://[^"/?#]*)[^"]*"', re.IGNORECASE)
+# the user part and the port of a link host
+_HOST_PATTERN = re.compile(r'^https?://(?:[^@]*@)?([^:]*)', re.IGNORECASE)
+_EXTERNAL_LINK_REL = 'nofollow ugc'
+
 _PARSER_EXCEPTION_MESSAGE = """
 <div c2c:role="danger" style="font-weight:bold">
 Parser error, please send a mail to
@@ -247,7 +254,8 @@ def _get_cleaner():
             filter_style_properties=set(_CSS_PROPERTIES),
             url_schemes=set(_URL_SCHEMES),
             strip_comments=True,
-            # keep links as written (nh3 adds rel="noopener noreferrer")
+            # no rel from nh3 ("noopener noreferrer" on every link):
+            # _mark_external_links adds one to the links to other sites
             link_rel=None,
         )
 
@@ -328,12 +336,37 @@ def parse_code(
             parser.c2c_image_size_resolver = None
             parser.c2c_link_type_resolver = None
 
+    text = _mark_external_links(text)
     text = text.replace(_iframe_secret_tag, 'iframe')
     text = text.replace(_img_url_secret_attribute, 'c2c:url')
     text = text.replace(_img_width_secret_attribute, 'c2c:width')
     text = text.replace(_img_height_secret_attribute, 'c2c:height')
 
     return text
+
+
+def _is_external_host(host):
+    host = host.lower().rstrip('.')
+    return host != 'camptocamp.org' and not host.endswith('.camptocamp.org')
+
+
+def _mark_external_links(html):
+    """Add rel="nofollow ugc" to the links of the cleaned HTML to other sites."""
+    # Links written by users: search engines must not credit the sites they
+    # lead to (an expired domain bought by a spammer, for instance). Links to
+    # camptocamp.org and its subdomains, and wikilinks, are left as they are.
+    # The cleaner drops any rel attribute written in the text.
+
+    def mark(match):
+        href = _HREF_PATTERN.search(match.group(1))
+        if not href:
+            return match.group(0)
+        host = _HOST_PATTERN.match(href.group(1)).group(1)
+        if not _is_external_host(host):
+            return match.group(0)
+        return f'<a {match.group(1)} rel="{_EXTERNAL_LINK_REL}">'
+
+    return _LINK_TAG_PATTERN.sub(mark, html)
 
 
 def get_embedded_image_ids(text):
