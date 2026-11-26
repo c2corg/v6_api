@@ -449,11 +449,62 @@ def test_target_merged_again_hidden(client, session, docs, user_ids):  # noqa: F
     session.flush()
     _merge(client, docs.waypoint1, docs.waypoint2)
     _merge(client, docs.waypoint2, docs.waypoint4)
-    # waypoint1 now redirects to waypoint4: only the last merge can be undone
+    # waypoint1 now redirects to waypoint4: only the last merge can be undone,
+    # the merge of waypoint1 is hinted
     assert _listed(client) == [docs.waypoint2.document_id]
+    (merge,) = _list(client, 'kind=merged')['documents']
+    assert merge['earlier_merges'] == [
+        {
+            'id': _entry(session, docs.waypoint1).id,
+            'document_id': docs.waypoint1.document_id,
+            'title': 'Dent de Crolles',
+            'target_document_id': docs.waypoint2.document_id,
+        }
+    ]
 
     _unmerge(client, _entry(session, docs.waypoint2).id)
     assert _listed(client) == [docs.waypoint1.document_id]
+    (merge,) = _list(client, 'kind=merged')['documents']
+    assert merge['earlier_merges'] == []
+
+
+def test_chain_of_three(client, session, docs, user_ids):  # noqa: F811
+    # route0 merged into route1, route1 into route2, route2 into route3
+    contributor_id = user_ids['contributor']
+    routes = []
+    for title in ('Route 0', 'Route 3'):
+        route = Route(
+            activities=['skitouring'], locales=[RouteLocale(lang='fr', title=title)]
+        )
+        session.add(route)
+        session.flush()
+        create_new_version(route, contributor_id)
+        routes.append(route)
+    session.flush()
+    route0, route3 = routes
+    _merge(client, route0, docs.route1)
+    _merge(client, docs.route1, docs.route2)
+    _merge(client, docs.route2, route3)
+
+    (merge,) = _list(client, 'kind=merged')['documents']
+    assert merge['document_id'] == docs.route2.document_id
+    assert [m['document_id'] for m in merge['earlier_merges']] == [
+        docs.route1.document_id,
+        route0.document_id,
+    ]
+
+    # undone one after the other, the chain shrinks
+    _unmerge(client, merge['id'])
+    (merge,) = _list(client, 'kind=merged')['documents']
+    assert merge['document_id'] == docs.route1.document_id
+    assert [m['document_id'] for m in merge['earlier_merges']] == [route0.document_id]
+    _unmerge(client, merge['id'])
+    (merge,) = _list(client, 'kind=merged')['documents']
+    assert merge['document_id'] == route0.document_id
+    _unmerge(client, merge['id'])
+    assert _listed(client) == []
+    for route in (route0, docs.route1, docs.route2, route3):
+        assert _redirects_to(session, route) is None
 
 
 def test_associated_document_deleted_since(client, session, docs, user_ids):  # noqa: F811

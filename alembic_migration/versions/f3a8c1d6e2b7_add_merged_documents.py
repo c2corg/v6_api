@@ -1,5 +1,8 @@
 """Keep the merges of documents for a while (undo a merge).
 
+Also indexes the redirections (merged documents), looked up by a merge and
+a deletion.
+
 Revision ID: f3a8c1d6e2b7
 Revises: 5e3c1a7b9d42
 Create Date: 2026-11-26 12:00:00.000000
@@ -54,5 +57,20 @@ def upgrade():
         )
 
 
+    for table in ('documents', 'documents_archives'):
+        op.create_index(
+            f'ix_guidebook_{table}_redirects_to',
+            table,
+            ['redirects_to'],
+            unique=False,
+            schema='guidebook',
+            postgresql_where=sa.text('redirects_to IS NOT NULL'),
+        )
+
+
 def downgrade():
+    for table in ('documents', 'documents_archives'):
+        op.drop_index(
+            f'ix_guidebook_{table}_redirects_to', table_name=table, schema='guidebook'
+        )
     op.drop_table('merged_documents', schema='guidebook')

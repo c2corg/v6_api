@@ -192,14 +192,26 @@ def keep_merge(request, source_document_id, target_document_id, document_type):
 
 
 def _title(document_id):
-    locales = dict(
-        DBSession.execute(
-            select(DocumentLocale.lang, DocumentLocale.title).where(
-                DocumentLocale.document_id == document_id
-            )
-        ).all()
-    )
-    return next((locales[lang] for lang in default_langs if lang in locales), None)
+    return _titles([document_id]).get(document_id)
+
+
+def _titles(document_ids):
+    """Return the title of documents in the first lang found, by id."""
+    locales = {}
+    if document_ids:
+        rows = DBSession.execute(
+            select(
+                DocumentLocale.document_id, DocumentLocale.lang, DocumentLocale.title
+            ).where(DocumentLocale.document_id.in_(list(document_ids)))
+        )
+        for document_id, lang, title in rows:
+            locales.setdefault(document_id, {})[lang] = title
+    return {
+        document_id: next(
+            (titles[lang] for lang in default_langs if lang in titles), None
+        )
+        for document_id, titles in locales.items()
+    }
 
 
 def _author_id(document_id):
@@ -466,6 +478,8 @@ def merge_summaries(entry_ids):
     users = _users(
         user_id for entry in entries for user_id in (entry.merged_by, entry.author_id)
     )
+    titles = _titles({entry.target_document_id for entry in entries})
+    earlier = _earlier_merges(entries)
     return {
         entry.id: {
             'kind': 'merged',
@@ -477,13 +491,67 @@ def merge_summaries(entry_ids):
             'title': entry.title,
             'author': _user(users, entry.author_id),
             'target_document_id': entry.target_document_id,
-            'target_title': _title(entry.target_document_id),
+            'target_title': titles.get(entry.target_document_id),
             # the names of a deletion, for one list: when merged, by whom
             'deleted_at': entry.merged_at.isoformat(),
             'deleted_by': _user(users, entry.merged_by),
             'expires_at': (entry.merged_at + RETENTION).isoformat(),
             'counts': _counts(entry.snapshot),
+            # the merges into the source before: hidden while this one is
+            # not undone (their source redirects to the target now), listed
+            # again one after the other once undone, the nearest first
+            'earlier_merges': earlier[entry.id],
         }
+        for entry in entries
+    }
+
+
+def _earlier_merges(entries):
+    """Return the chain of merges hidden behind each merge, by merge id."""
+    # A merged into B, then B into C: A redirects to C (one level of
+    # redirection, see views.document_merge), the merge of A is not listed
+    # until the merge of B is undone. The merges kept are few (RETENTION):
+    # all those that may be undone are read at once.
+    if not entries:
+        return {}
+    source = aliased(Document)
+    pending = DBSession.execute(
+        select(
+            MergedDocument.id,
+            MergedDocument.source_document_id,
+            MergedDocument.target_document_id,
+            MergedDocument.title,
+            source.redirects_to,
+        )
+        .join(source, source.document_id == MergedDocument.source_document_id)
+        .where(
+            MergedDocument.unmerged_at.is_(None),
+            MergedDocument.merged_at >= expired_before(),
+            source.redirects_to.is_not(None),
+        )
+        .order_by(MergedDocument.merged_at.desc(), MergedDocument.id.desc())
+    ).all()
+    by_target = {}
+    for merge in pending:
+        by_target.setdefault(merge.target_document_id, []).append(merge)
+
+    def chain(document_id, final_target, seen):
+        for merge in by_target.get(document_id, []):
+            if merge.redirects_to != final_target or merge.id in seen:
+                continue
+            seen.add(merge.id)
+            yield {
+                'id': merge.id,
+                'document_id': merge.source_document_id,
+                'title': merge.title,
+                'target_document_id': document_id,
+            }
+            yield from chain(merge.source_document_id, final_target, seen)
+
+    return {
+        entry.id: list(
+            chain(entry.source_document_id, entry.target_document_id, {entry.id})
+        )
         for entry in entries
     }
 
