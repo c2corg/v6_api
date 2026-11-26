@@ -1023,6 +1023,76 @@ def test_delete_image_error_deleting_files(client, session, settings, docs):
         scenarios.check_cache_version(session, docs.outing1.document_id, 2)
 
 
+def test_delete_image_with_merged_image_in_feed(client, session, user_ids, docs):
+    """An image merged into the deleted one goes with it, feed references too."""
+    user_id = user_ids['contributor']
+    merged = Image(
+        filename='merged.jpg',
+        activities=['paragliding'],
+        image_type='collaborative',
+        locales=[DocumentLocale(lang='en', title='Copy')],
+    )
+    session.add(merged)
+    session.flush()
+    create_new_version(merged, user_id)
+    # uploaded to an outing, shown in its feed item, then merged as a copy
+    update_feed_images_upload(
+        [merged],
+        [
+            {
+                'filename': 'merged.jpg',
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'locales': [{'lang': 'en', 'title': 'Copy'}],
+                'associations': {
+                    'outings': [{'document_id': docs.outing2.document_id}],
+                },
+            }
+        ],
+        user_id,
+    )
+    # merged as the merge view does: the archive version redirects too
+    merged.redirects_to = docs.image1.document_id
+    session.flush()
+    update_version(
+        merged,
+        user_id,
+        f'merged with {docs.image1.document_id}',
+        [UpdateType.FIGURES],
+        [],
+    )
+    session.flush()
+    assert (
+        session.query(DocumentChange)
+        .filter(DocumentChange.image1_id == merged.document_id)
+        .count()
+        > 0
+    )
+
+    @all_requests
+    def image_service_mock(url, request):
+        return {'status_code': 200, 'content': ''}
+
+    with HTTMock(image_service_mock):
+        client.delete_json(
+            PREFIX + str(docs.image1.document_id),
+            {},
+            headers=auth_headers(username='moderator'),
+            status=200,
+        )
+
+    assert (
+        session.query(Image).filter(Image.document_id == merged.document_id).count()
+        == 0
+    )
+    references = or_(
+        DocumentChange.image1_id == merged.document_id,
+        DocumentChange.image2_id == merged.document_id,
+        DocumentChange.image3_id == merged.document_id,
+    )
+    assert session.query(DocumentChange).filter(references).count() == 0
+
+
 def test_delete_collaborative_doc(client, docs):
     # Collaborative documents cannot be deleted, even by their authors:
     headers = auth_headers(username='contributor')
