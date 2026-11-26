@@ -685,7 +685,7 @@ def list_entries(
 
 def _deletions_query(document_type, author_id, deleted_by, since, until):
     query = select(
-        literal(KIND_DELETED).label('kind'),
+        cast(literal(KIND_DELETED), Text).label('kind'),
         DeletedDocument.id.label('id'),
         DeletedDocument.deleted_at.label('at'),
     ).where(

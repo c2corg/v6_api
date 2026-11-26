@@ -17,9 +17,9 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, exists, or_
+from sqlalchemy import Text, and_, exists, or_
 from sqlalchemy.orm import aliased
-from sqlalchemy.sql.expression import literal, select
+from sqlalchemy.sql.expression import cast, literal, select
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.httpexceptions import HTTPBadRequest, HTTPNotFound
@@ -442,7 +442,7 @@ def merges_query(kind, document_type, author_id, merged_by, since, until):
     target = aliased(Document)
     query = (
         select(
-            literal(kind).label('kind'),
+            cast(literal(kind), Text).label('kind'),
             MergedDocument.id.label('id'),
             MergedDocument.merged_at.label('at'),
         )
