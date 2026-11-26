@@ -412,8 +412,9 @@ def _delete_document(request, document_id, document_type, redirecting=False):
     if not redirecting:
         _remove_from_feed(document_id)
 
-    if not redirecting and document_type == IMAGE_TYPE:
-        # Remove the references of this image from the feed
+    if document_type == IMAGE_TYPE:
+        # Remove the references of this image from the feed: also for an image
+        # merged into the deleted one (a copy shown in the feed of its upload)
         _remove_image_from_feed(document_id)
 
     if document_type == WAYPOINT_TYPE:
