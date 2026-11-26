@@ -155,6 +155,14 @@ def test_dismiss_duplicate_images_unknown(browser):
     check_snapshot('images_duplicates_dismiss_unknown', response)
 
 
+@contract(('POST', '/images/rotate'))
+def test_rotate_unknown_image(browser):
+    response = browser.post(
+        '/images/rotate', {'document_id': 9999999}, user='moderator', status=400
+    )
+    check_snapshot('images_rotate_unknown', response)
+
+
 @contract(
     ('GET', '/documents/deleted/{id}'), ('POST', '/documents/deleted/{id}/restore')
 )
