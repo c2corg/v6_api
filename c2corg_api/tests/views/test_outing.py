@@ -430,6 +430,13 @@ def test_get(client, user_ids, docs):
     assert 'geometry' in linked_images[0]
     assert 'geom' in linked_images[0].get('geometry')
 
+    # the waypoints of the route, for the map
+    route_waypoints = associations.get('route_waypoints')
+    assert len(route_waypoints) == 1
+    assert route_waypoints[0]['document_id'] == docs.waypoint.document_id
+    assert 'geom' in route_waypoints[0]['geometry']
+    assert 'waypoint_type' in route_waypoints[0]
+
     locale_en = get_locale(body.get('locales'), 'en')
     assert 1 == locale_en.get('topic_id')
 
@@ -445,6 +452,7 @@ def test_get_edit(client, docs):
     assert 'associations' in body
     associations = body['associations']
     assert 'waypoints' not in associations
+    assert 'route_waypoints' not in associations
     assert 'routes' in associations
     assert 'users' in associations
     assert 'images' not in associations
