@@ -24,8 +24,14 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_LINK_MODE=copy \
     PATH=/opt/venv/bin:$PATH
 
+# the commit (also the cache key), then git describe --tags --always and the
+# committer date (ISO 8601) of the commit, shown by /health (see common.ini.in)
 ARG VERSION
-ENV version=$VERSION
+ARG GIT_DESCRIBE=""
+ARG COMMIT_DATE=""
+ENV version=$VERSION \
+    git_describe=$GIT_DESCRIBE \
+    commit_date=$COMMIT_DATE
 
 WORKDIR /var/www/
 

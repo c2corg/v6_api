@@ -44,7 +44,7 @@ def health(request: Request, response: Response):
     if origin and not origin_allowed(origin):
         # as the other routes (see web.checks.validate_origin)
         return error_response([('header', 'Origin', f'{origin} not allowed')])
-    status = {'version': request.app.state.settings.get('cache_version')}
+    status = _version_status(request.app.state.settings)
     with request_session() as session:
         if not _add_database_status(status, session):
             response.status_code = 500
@@ -54,6 +54,18 @@ def health(request: Request, response: Response):
     if _add_maintenance_mode_status(status):
         response.status_code = 404
     return status
+
+
+def _version_status(settings):
+    # version: the commit SHA, also the cache key (cache_version); describe
+    # (git describe --tags --always) and commit_date (the committer date, ISO
+    # 8601) tell where it sits relative to the releases and how recent it is.
+    # The CI Docker job passes them as build arguments; empty elsewhere.
+    return {
+        'version': settings.get('cache_version'),
+        'describe': settings.get('version.describe') or '',
+        'commit_date': settings.get('version.commit_date') or '',
+    }
 
 
 def _add_database_status(status, session):

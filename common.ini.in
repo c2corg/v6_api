@@ -64,6 +64,11 @@ redis.cache_status_refresh_period = {redis_cache_status_refresh_period}
 
 cache_version = {version}
 cache_version_timestamp = False
+# shown by /health next to the version (the commit): git describe --tags
+# --always and the committer date (ISO 8601) of the commit, given by the CI
+# Docker build (see docker/Dockerfile), empty elsewhere
+version.describe = {git_describe}
+version.commit_date = {commit_date}
 
 # User id to use for anonymous contributions in the guidebook
 guidebook.anonymous_user_account = {guidebook_anonymous_user_account}
