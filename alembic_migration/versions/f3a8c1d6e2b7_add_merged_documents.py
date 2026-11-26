@@ -4,7 +4,7 @@ Also indexes the redirections (merged documents), looked up by a merge and
 a deletion.
 
 Revision ID: f3a8c1d6e2b7
-Revises: 5e3c1a7b9d42
+Revises: 5e0c8a7d3b14
 Create Date: 2026-11-26 12:00:00.000000
 
 """
@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
 revision = 'f3a8c1d6e2b7'
-down_revision = '5e3c1a7b9d42'
+down_revision = '5e0c8a7d3b14'
 branch_labels = None
 depends_on = None
 
