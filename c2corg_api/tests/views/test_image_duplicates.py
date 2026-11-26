@@ -340,3 +340,41 @@ def test_without_exif_date_by_one_user(client, session, user_ids):
     _uploaded_at(session, second, TAKEN + datetime.timedelta(days=400))
 
     assert _list(client).json['total'] == 1
+
+
+def test_texts_linking_to_an_image(client, session, user_ids, docs, copies):  # noqa: F811
+    from c2corg_api.models.document_link import DocumentLink
+
+    personal, collaborative, twice = copies
+    route_locale = docs.route1.locales[0]
+    common = {
+        'document_locale_id': route_locale.id,
+        'document_id': docs.route1.document_id,
+        'lang': route_locale.lang,
+        'is_url': False,
+    }
+    session.add_all(
+        [
+            DocumentLink(
+                **common, target_id=personal.document_id, target_type='images'
+            ),
+            # a link to a route: does not show the image
+            DocumentLink(
+                **common, target_id=collaborative.document_id, target_type='routes'
+            ),
+        ]
+    )
+    session.flush()
+
+    images = _list(client, '?offset=1').json['sets'][0]['images']
+
+    assert images[0]['linked_from'] == [
+        {
+            'document_id': docs.route1.document_id,
+            'document_type': 'r',
+            'lang': route_locale.lang,
+            'title': route_locale.title,
+            'image_id': personal.document_id,
+        }
+    ]
+    assert images[1]['linked_from'] == []

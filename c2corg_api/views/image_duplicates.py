@@ -26,6 +26,7 @@ from c2corg_api.caching import cache_image_duplicates, get_or_create
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import Document
+from c2corg_api.models.document_link import DocumentLink
 from c2corg_api.models.image import Image
 from c2corg_api.models.image_duplicate import DismissedImageDuplicate
 from c2corg_api.models.image_embed import ImageEmbed
@@ -118,11 +119,13 @@ def list_duplicate_images(offset, limit, same_document=False):
     created = _created(ids)
     links = _links(ids)
     embeds = _embeds(ids)
+    linked = _linked(ids)
     users = _users([user_id for _, user_id in created.values()])
     titles = document_titles(
         ids
         + [d['document_id'] for ds in links.values() for d in ds]
         + [e['document_id'] for es in embeds.values() for e in es]
+        + [e['document_id'] for es in linked.values() for e in es]
     )
     return {
         'total': len(shown),
@@ -130,7 +133,9 @@ def list_duplicate_images(offset, limit, same_document=False):
             {
                 'same_document': same,
                 'images': [
-                    _image(images[i], created.get(i), users, links, embeds, titles)
+                    _image(
+                        images[i], created.get(i), users, links, embeds, linked, titles
+                    )
                     for i in image_ids
                 ],
             }
@@ -246,8 +251,24 @@ def _links(ids):
 
 def _embeds(ids):
     """Return the texts showing each image by an [img=ID] tag: {id: [{...}]}."""
-    # Also the texts showing an image merged into it (they show its files):
-    # deleting the image breaks them too. Merging keeps them working.
+    return _texts(ids, ImageEmbed.image_id, ImageEmbed)
+
+
+def _linked(ids):
+    """Return the texts linking to each image ([[images/ID|label]], URL)."""
+    # only the links that show an image: "images/ID" (see document_links)
+    return _texts(
+        ids,
+        DocumentLink.target_id,
+        DocumentLink,
+        DocumentLink.target_type == 'images',
+    )
+
+
+def _texts(ids, target, model, *conditions):
+    """Return the texts of a model (embeds or links) of each image: {id: [...]}."""
+    # Also the texts of an image merged into it (they show its files): deleting
+    # the image breaks them too. Merging keeps them working.
     if not ids:
         return {}
     merged = DBSession.execute(
@@ -256,23 +277,20 @@ def _embeds(ids):
         )
     ).all()
     shown = {image_id: image_id for image_id in ids}
-    shown.update({source: target for source, target in merged})
+    shown.update({source: target_id for source, target_id in merged})
     rows = DBSession.execute(
-        select(
-            ImageEmbed.image_id,
-            ImageEmbed.document_id,
-            ImageEmbed.lang,
-            Document.type,
-        )
-        .join(Document, Document.document_id == ImageEmbed.document_id)
+        select(target, model.document_id, model.lang, Document.type)
+        .join(Document, Document.document_id == model.document_id)
         .where(
-            ImageEmbed.image_id.in_(list(shown)),
+            target.in_(list(shown)),
             # an image's own text is not another document
-            ImageEmbed.document_id != ImageEmbed.image_id,
+            model.document_id != target,
             # a merged document is not shown
             Document.redirects_to.is_(None),
+            *conditions,
         )
-        .order_by(ImageEmbed.document_id, ImageEmbed.lang)
+        .distinct()
+        .order_by(model.document_id, model.lang)
     )
     result = {}
     for image_id, document_id, lang, document_type in rows:
@@ -287,7 +305,7 @@ def _embeds(ids):
     return result
 
 
-def _image(row, created, users, links, embeds, titles):
+def _image(row, created, users, links, embeds, linked, titles):
     at, user_id = created or (None, None)
     return {
         'document_id': row.document_id,
@@ -308,6 +326,10 @@ def _image(row, created, users, links, embeds, titles):
         'embedded_in': [
             {**e, 'title': titles.get(e['document_id'])}
             for e in embeds.get(row.document_id, [])
+        ],
+        'linked_from': [
+            {**e, 'title': titles.get(e['document_id'])}
+            for e in linked.get(row.document_id, [])
         ],
     }
 

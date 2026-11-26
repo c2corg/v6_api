@@ -86,12 +86,13 @@ def document_titles(ids):
     }
 
 
-def _restorable_images(cutoff):
-    """Return the images that can be restored: (image id, last entry id)."""
-    # the rows of an image are kept by the deletion of the image, of the
-    # document it was deleted with (snapshot['deleted_images'], see
-    # views.document_delete) or of the image it was merged into. Each entry
-    # is read once: the snapshots are large.
+def restorable_documents(cutoff, document_type=IMAGE_TYPE):
+    """Return the documents that can be restored: (document id, last entry id)."""
+    # Of this type, or of any type (None). The rows of a document are kept by
+    # its deletion, the one of the document it was deleted with (an image,
+    # snapshot['deleted_images'], see views.document_delete) or the one of the
+    # document it was merged into. Each entry is read once: the snapshots are
+    # large.
     kept = (
         select(
             DeletedDocument.id.label('entry_id'),
@@ -107,15 +108,13 @@ def _restorable_images(cutoff):
         )
         .subquery()
     )
-    return (
-        select(
-            cast(kept.c.row.op('->>')('document_id'), Integer).label('image_id'),
-            func.max(kept.c.entry_id).label('entry_id'),
-        )
-        .where(kept.c.row.op('->>')('type') == IMAGE_TYPE)
-        .group_by(kept.c.row.op('->>')('document_id'))
-        .subquery()
-    )
+    query = select(
+        cast(kept.c.row.op('->>')('document_id'), Integer).label('document_id'),
+        func.max(kept.c.entry_id).label('entry_id'),
+    ).group_by(kept.c.row.op('->>')('document_id'))
+    if document_type is not None:
+        query = query.where(kept.c.row.op('->>')('type') == document_type)
+    return query.subquery()
 
 
 def list_broken_embeds(offset, limit):
@@ -148,11 +147,11 @@ def list_broken_embeds(offset, limit):
         select(func.count()).select_from(base.subquery())
     ).scalar()
     broken = base.subquery()
-    restorable = _restorable_images(cutoff)
+    restorable = restorable_documents(cutoff)
     entry_id = restorable.c.entry_id
     rows = DBSession.execute(
         select(broken, entry_id)
-        .outerjoin(restorable, restorable.c.image_id == broken.c.image_id)
+        .outerjoin(restorable, restorable.c.document_id == broken.c.image_id)
         .order_by(
             entry_id.is_(None),
             entry_id,
@@ -162,7 +161,7 @@ def list_broken_embeds(offset, limit):
         .offset(offset)
         .limit(limit)
     ).all()
-    entries = _entries({row.entry_id for row in rows} - {None})
+    deleted = entries({row.entry_id for row in rows} - {None})
     # the titles of the documents, and of those of the ids that are not images
     titles = document_titles(
         {row.document_id for row in rows}
@@ -185,7 +184,7 @@ def list_broken_embeds(offset, limit):
                     if row.image_document_type is not None
                     else None
                 ),
-                'deleted': entries.get(row.entry_id),
+                'deleted': deleted.get(row.entry_id),
             }
             for row in rows
         ],
@@ -198,30 +197,30 @@ def _reason(row):
     return 'deleted' if row.entry_id is not None else 'missing'
 
 
-def _entries(ids):
-    """Return the deleted entries of these ids, to restore the images."""
+def entries(ids):
+    """Return the deleted entries of these ids, to restore the documents."""
     # import here: document_trash imports the views of the documents
     from c2corg_api.views.document_trash import _user, _users
 
     if not ids:
         return {}
-    entries = (
+    rows = (
         DBSession.execute(select(DeletedDocument).where(DeletedDocument.id.in_(ids)))
         .scalars()
         .all()
     )
-    users = _users([entry.deleted_by for entry in entries])
+    users = _users([entry.deleted_by for entry in rows])
     return {
         entry.id: {
             'entry_id': entry.id,
-            # the document deleted with the image, or the image itself
+            # the document deleted with the target, or the target itself
             'document_id': entry.document_id,
             'document_type': entry.document_type,
             'deleted_at': entry.deleted_at.isoformat(),
             'expires_at': (entry.deleted_at + RETENTION).isoformat(),
             'by': _user(users, entry.deleted_by),
         }
-        for entry in entries
+        for entry in rows
     }
 
 
