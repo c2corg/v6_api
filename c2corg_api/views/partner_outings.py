@@ -271,6 +271,7 @@ def _partner_side(params, binds):
                p.steep AS steep, p.elevation_max::integer AS elevation_max,
                p.height_diff_up::integer AS height_diff_up,
                p.orientations::text[] AS orientations, p.snow AS snow,
+               p.gpx_url AS gpx_url,
                p.region AS region, p.geom AS geom,
                p.geom_quality AS geom_quality, p.area_ids AS area_ids
         FROM guidebook.partner_outings p
@@ -325,6 +326,7 @@ def _c2c_side(params, binds):
                {steep} AS steep, o.elevation_max::integer AS elevation_max,
                o.height_diff_up::integer AS height_diff_up,
                NULL::text[] AS orientations, NULL::jsonb AS snow,
+               NULL::text AS gpx_url,
                NULL::text AS region, g.geom AS geom,
                CASE WHEN g.geom IS NOT NULL THEN 'start' ELSE 'none' END
                    AS geom_quality, NULL::integer[] AS area_ids
@@ -524,6 +526,7 @@ def _item(row, locales, authors, areas, titles):
         'height_diff_up': row['height_diff_up'],
         'orientations': row['orientations'] or [],
         'snow': row['snow'],
+        'gpx_url': row['gpx_url'],
         'region': row['region'],
         'geometry': geometry,
         'areas': [titles[i] for i in sorted(area_ids) if i in titles],

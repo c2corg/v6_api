@@ -1,0 +1,88 @@
+{
+  "source": "gulliver",
+  "recorded_at": "2026-11-27",
+  "synthetic": true,
+  "note": "SYNTHETIC EDGE CASES, in the real format of the gulliver/ recording: steep grade, empty route skeleton, unsafe GPX links, broken items, a failing route, a report only on the front page, an empty report detail. Hand-written, only used by tests/partners/test_gulliver.py; never re-record it.",
+  "entries": [
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "params": {
+        "page": "1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "commentglobal_page1.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "params": {
+        "page": "2"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "commentglobal_page2.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "params": {
+        "id": "700001"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "routes_id700001.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "params": {
+        "id": "700002"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "routes_id700002.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "params": {
+        "id": "700003"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "routes_id700003.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "params": {
+        "id": "700004"
+      },
+      "status": 503,
+      "content_type": "text/html"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/front_page/comments",
+      "params": {
+        "sorting": "id"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "comments_sortingid.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "params": {
+        "id": "900010"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "comments_id900010.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "params": {
+        "id": "900012"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "comments_id900012.json"
+    }
+  ]
+}

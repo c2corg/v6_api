@@ -20,6 +20,17 @@ SourceStatus = Literal[
 ]
 
 
+# the kinds of `HarvestedOuting.texts`
+TEXT_KINDS = (
+    'narrative',  # the report itself
+    'conditions',  # observations on the conditions (dangers, notes)
+    'access',  # the road, the parking, the approach
+    'snow',  # the snow as the author describes it (quality, top / bottom)
+    'equipment',  # the gear used
+)
+TEXT_MAX_LENGTH = 20000  # characters, per text
+
+
 @dataclass(frozen=True, slots=True)
 class RateLimit:
     """How politely a source is queried."""
@@ -54,6 +65,13 @@ class HarvestedOuting:
     # values of attributes.orientation_types
     orientations: tuple[str, ...] = ()
     snow: Mapping[str, int | str] | None = None
+    # the public GPX file of the report (https, on the partner site): a link
+    # only, never fetched. Validated by the adapter.
+    gpx_url: str | None = None
+    # The free texts of the report, plain text (HTML stripped), keyed by kind:
+    # see TEXT_KINDS. Stored by the job, never served by the API, never real in
+    # a fixture (the recorder redacts them: REDACT_PATHS / REDACT_SELECTORS).
+    texts: Mapping[str, str] | None = None
     lon: float | None = None  # WGS 84; the job transforms to 3857 in SQL
     lat: float | None = None
     geom_quality: GeomQuality = 'none'

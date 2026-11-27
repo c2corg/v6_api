@@ -1,0 +1,33 @@
+{
+ "11753": {
+  "title": "Uja (Costiera dell&#8217;) da Chiapili di Sopra",
+  "region": {
+   "name": "Piemonte"
+  },
+  "district": "TO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "1000"
+    },
+    "alt_top": {
+     "value": "2726"
+    },
+    "exposure": {
+     "value": "Nord-Ovest"
+    },
+    "grade_skimo": {
+     "value": "BS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.45783095702839,
+      "lng": 7.164993234942543
+     }
+    }
+   }
+  }
+ }
+}

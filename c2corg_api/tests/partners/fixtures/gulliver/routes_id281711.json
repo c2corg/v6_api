@@ -1,0 +1,33 @@
+{
+ "281711": {
+  "title": "Vaccare (Trucco delle) e Pilone Madonna della Neve da Frais",
+  "region": {
+   "name": "Piemonte"
+  },
+  "district": "TO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "725"
+    },
+    "alt_top": {
+     "value": "2186"
+    },
+    "exposure": {
+     "value": "Nord"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.1021665194427,
+      "lng": 6.994028160926975
+     }
+    }
+   }
+  }
+ }
+}

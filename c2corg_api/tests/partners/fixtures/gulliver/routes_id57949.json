@@ -1,20 +1,32 @@
 {
- "title": "Cima Bianca da Cheneil",
- "region": {
-  "name": "Valle d&#8217;Aosta"
- },
- "district": "Valtournenche",
- "meta": {
-  "data": {
-   "drop": "1400",
-   "alt_top": "3009",
-   "exposure": "N-NE",
-   "grade_skimo": "BSA"
+ "57949": {
+  "title": "Teodulo (Rifugio) da Cervinia",
+  "region": {
+   "name": "Valle d'Aosta"
   },
-  "geo": {
-   "coords": {
-    "lat": "45.9181",
-    "lng": "7.6483"
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "1400"
+    },
+    "alt_top": {
+     "value": "3317"
+    },
+    "exposure": {
+     "value": "Sud-Ovest"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.936982365219016,
+      "lng": 7.6296508311483136
+     }
+    }
    }
   }
  }

@@ -32,6 +32,12 @@
           "geom": "str",
           "quality": "str"
         },
+        "gpx_url": {
+          "any_of": [
+            "\"null\"",
+            "\"str\""
+          ]
+        },
         "height_diff_up": "null",
         "id": "str",
         "lang": "str",

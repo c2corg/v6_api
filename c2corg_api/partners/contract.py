@@ -32,6 +32,10 @@ from c2corg_api.partners.transport import HttpResponse, Transport
 
 SHAPE_FILE = 'shape.json'
 _TOKEN = re.compile(r'\[\]|[^.\[\]]+')
+# a path token for any key of an object keyed by ids (`*.ID`: gulliver
+# answers `{"350636": {...}, ...}`); its shape is `{"*": <merged values>}`
+WILDCARD = '*'
+LIST_ITEMS = '[]'  # the path token of the items of a list
 # lists longer than this are cut in the recorded fixtures
 MAX_ITEMS = 30
 
@@ -40,13 +44,25 @@ MAX_ITEMS = 30
 VOLATILE_PARAMS: dict[str, tuple[str, ...]] = {'skitour': ('j',)}  # days back
 
 
-def endpoint_of(url: str) -> str:
+def _adapter(source: str | None):
+    from c2corg_api.partners.sources import REGISTRY
+
+    return REGISTRY.get(source) if source else None
+
+
+def endpoint_of(url: str, source: str | None = None) -> str:
     """Return the endpoint name of a URL: its last path segment, in snake case.
 
     A file extension is dropped, and so is an id with what follows it
-    (`sortie-30061-belle-descente.html` is the endpoint `sortie`).
+    (`sortie-30061-belle-descente.html` is the endpoint `sortie`). An adapter
+    whose endpoints share a last segment names them in `ENDPOINTS` (URL path
+    suffix -> endpoint, e.g. gulliver `/front_page/comments`).
     """
-    segment = urlsplit(url).path.rstrip('/').rsplit('/', 1)[-1].lower()
+    path = urlsplit(url).path.rstrip('/')
+    for suffix, name in getattr(_adapter(source), 'ENDPOINTS', {}).items():
+        if path.endswith(suffix.rstrip('/')):
+            return name
+    segment = path.rsplit('/', 1)[-1].lower()
     segment = re.sub(r'\.(?:php|html?|json)$', '', segment)
     if segment.isdigit():  # '/verhaeltnisse/2355428': the page of one item
         return 'detail'
@@ -77,6 +93,45 @@ def read_selectors(source: str, endpoint: str) -> list[str]:
     return list(getattr(adapter, 'REQUIRED_SELECTORS', {}).get(endpoint, ()))
 
 
+def embedded_html(source: str, endpoint: str) -> dict[str, list[str]]:
+    """Return the JSON paths of an endpoint holding HTML -> the selectors read in it.
+
+    Some JSON answers carry an HTML fragment in a string (gulliver
+    `front_page/comments`: `content`). The adapter declares the path in
+    `REQUIRED_PATHS` and its selectors in `EMBEDDED_HTML`: the string is
+    trimmed like an HTML page (`htmlparse.trim`) and its shape is the
+    selectors that match.
+    """
+    adapter = _adapter(source)
+    found = getattr(adapter, 'EMBEDDED_HTML', {}).get(endpoint, {})
+    return {path: list(selectors) for path, selectors in found.items()}
+
+
+def _map_path(data, tokens, fn):
+    """Return `data` with `fn` applied to the values at a path (copied, not mutated)."""
+    if not tokens:
+        return fn(data)
+    step, rest = tokens[0], tokens[1:]
+    if isinstance(data, list) and step == LIST_ITEMS:
+        return [_map_path(v, rest, fn) for v in data]
+    if isinstance(data, dict) and step == WILDCARD:
+        return {k: _map_path(v, rest, fn) for k, v in data.items()}
+    if isinstance(data, dict) and step in data:
+        return {**data, step: _map_path(data[step], rest, fn)}
+    return data
+
+
+def _on_embedded(source, endpoint, data, fn):
+    """Apply `fn(text, selectors)` to each embedded HTML string of a JSON answer."""
+    for path, selectors in embedded_html(source, endpoint).items():
+
+        def one(value, selectors=selectors):
+            return fn(value, selectors) if isinstance(value, str) else value
+
+        data = _map_path(data, _TOKEN.findall(path), one)
+    return data
+
+
 def _tree(paths):
     """Turn paths into a nested dict; `{}` marks a path end (kept whole)."""
     root: dict = {}
@@ -94,6 +149,10 @@ def _keep(value, tree):
         # a top-level list is entered even when the paths do not start with []
         sub = tree.get('[]', tree)
         return [_keep(v, sub) for v in value[:MAX_ITEMS]]
+    if isinstance(value, dict) and WILDCARD in tree:
+        # an object keyed by ids: every key, each value trimmed alike
+        items = list(value.items())[:MAX_ITEMS]
+        return {k: _keep(v, tree[WILDCARD]) for k, v in items}
     if isinstance(value, dict):
         return {k: _keep(v, tree[k]) for k, v in value.items() if k in tree}
     return None  # a scalar where the adapter expects an object: nothing read
@@ -104,7 +163,8 @@ def trim_data(source: str, endpoint: str, data):
     paths = read_paths(source, endpoint)
     if not paths:  # an endpoint the adapter does not declare: keep nothing
         return [] if isinstance(data, list) else {} if isinstance(data, dict) else None
-    return _keep(data, _tree(paths))
+    kept = _keep(data, _tree(paths))
+    return _on_embedded(source, endpoint, kept, htmlparse.trim)
 
 
 def pseudonymise_paths(source: str, endpoint: str) -> list[str]:
@@ -125,6 +185,8 @@ def _replace(value, tree, names):
     if isinstance(value, list):
         sub = tree.get('[]', tree)
         return [_replace(v, sub, names) for v in value]
+    if isinstance(value, dict) and WILDCARD in tree:
+        return {k: _replace(v, tree[WILDCARD], names) for k, v in value.items()}
     if isinstance(value, dict):
         return {
             k: _replace(v, tree[k], names) if k in tree else v for k, v in value.items()
@@ -145,6 +207,61 @@ def pseudonymise_data(source: str, endpoint: str, data, names: dict | None = Non
     return _replace(data, _tree(paths), names)
 
 
+REDACTED = re.compile(r'\[text \d+ chars\]')
+
+
+def redacted(text: str) -> str:
+    """Return the placeholder a recording writes instead of a partner text."""
+    return f'[text {len(text)} chars]'
+
+
+def redact_paths(source: str, endpoint: str) -> list[str]:
+    """Return the JSON paths holding partner free text (may be empty).
+
+    The adapter reads them (they are in `REQUIRED_PATHS`: the texts are stored
+    in the database, never served), but a recording replaces each text by a
+    placeholder (`[text 812 chars]`): no real partner text reaches a fixture.
+    """
+    adapter = _adapter(source)
+    return list(getattr(adapter, 'REDACT_PATHS', {}).get(endpoint, ()))
+
+
+def _redact_all(value):
+    if isinstance(value, str):
+        keep = not value.strip() or REDACTED.fullmatch(value)
+        return value if keep else redacted(value)
+    if isinstance(value, list):
+        return [_redact_all(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _redact_all(v) for k, v in value.items()}
+    return value
+
+
+def _redact(value, tree):
+    if not tree:  # a text, or an object of texts: every string is replaced
+        return _redact_all(value)
+    if isinstance(value, list):
+        sub = tree.get('[]', tree)
+        return [_redact(v, sub) for v in value]
+    if isinstance(value, dict) and WILDCARD in tree:
+        return {k: _redact(v, tree[WILDCARD]) for k, v in value.items()}
+    if isinstance(value, dict):
+        return {k: _redact(v, tree[k]) if k in tree else v for k, v in value.items()}
+    return value
+
+
+def redact_data(source: str, endpoint: str, data):
+    """Replace the texts at `REDACT_PATHS` by placeholders (`[text N chars]`)."""
+    paths = redact_paths(source, endpoint)
+    return _redact(data, _tree(paths)) if paths else data
+
+
+def redact_selectors(source: str, endpoint: str) -> list[str]:
+    """Return the CSS selectors of the elements holding partner free text."""
+    adapter = _adapter(source)
+    return list(getattr(adapter, 'REDACT_SELECTORS', {}).get(endpoint, ()))
+
+
 def pseudonymise_selectors(source: str, endpoint: str) -> list[str]:
     """Return the CSS selectors of the elements holding a partner user's identity."""
     from c2corg_api.partners.sources import REGISTRY
@@ -155,16 +272,17 @@ def pseudonymise_selectors(source: str, endpoint: str) -> list[str]:
 
 
 def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> bytes:
-    """Trim a JSON body (`trim_data`, then `pseudonymise_data`) or an HTML one.
+    """Trim a JSON body (`trim_data`, `pseudonymise_data`, `redact_data`) or HTML.
 
     An HTML body is trimmed (`htmlparse.trim`, with the pseudonyms of
-    `PSEUDONYMISE_SELECTORS`) when the source declares selectors for the
-    endpoint; anything else is returned as is.
+    `PSEUDONYMISE_SELECTORS` and the placeholders of `REDACT_SELECTORS`) when
+    the source declares selectors for the endpoint; anything else is returned
+    as is.
     """
     try:
         data = json.loads(body)
     except ValueError:  # includes bad UTF-8
-        endpoint = endpoint_of(url)
+        endpoint = endpoint_of(url, source)
         selectors = read_selectors(source, endpoint)
         if selectors:
             return htmlparse.trim(
@@ -172,12 +290,45 @@ def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> 
                 selectors,
                 pseudonymise_selectors(source, endpoint),
                 names,
+                redact=redact_selectors(source, endpoint),
             ).encode()
         return body
-    endpoint = endpoint_of(url)
+    endpoint = endpoint_of(url, source)
     trimmed = trim_data(source, endpoint, data)
     trimmed = pseudonymise_data(source, endpoint, trimmed, names)
+    trimmed = redact_data(source, endpoint, trimmed)
     return (json.dumps(trimmed, indent=1, ensure_ascii=False) + '\n').encode()
+
+
+def _shape(value, tree):
+    """`shapes.shape`, with the objects keyed by ids (`*` paths) merged under `*`."""
+    if isinstance(value, dict) and WILDCARD in tree:
+        merged = None
+        for child in value.values():
+            one = _shape(child, tree[WILDCARD])
+            merged = one if merged is None else shapes.merge(merged, one)
+        return {WILDCARD: merged} if merged is not None else {}
+    if isinstance(value, dict):
+        return {k: _shape(value[k], tree.get(k, {})) for k in sorted(value)}
+    if isinstance(value, list):
+        items = [_shape(v, tree.get('[]', tree)) for v in value]
+        if not items:
+            return []
+        merged = items[0]
+        for item in items[1:]:
+            merged = shapes.merge(merged, item)
+        return [merged]
+    return shapes.shape(value)
+
+
+def data_shape(source: str, endpoint: str, data):
+    """Return the shape of a (trimmed) JSON answer of an endpoint.
+
+    Objects keyed by ids have the shape `{"*": ...}`, and an embedded HTML
+    string the selectors that match in it (`{selector: "str"}`).
+    """
+    view = _on_embedded(source, endpoint, data, htmlparse.matches)
+    return _shape(view, _tree(read_paths(source, endpoint)))
 
 
 class CapturingTransport:
@@ -223,7 +374,7 @@ def captured_shapes(source: str, responses) -> dict[str, Any]:
     for response in responses:
         if response.status != 200:
             continue
-        endpoint = endpoint_of(response.url)
+        endpoint = endpoint_of(response.url, source)
         try:
             data = json.loads(response.body)
         except ValueError:
@@ -233,7 +384,7 @@ def captured_shapes(source: str, responses) -> dict[str, Any]:
             one = htmlparse.matches(response.text('utf-8'), selectors)
             out[endpoint] = shapes.merge(out[endpoint], one) if endpoint in out else one
             continue
-        one = shapes.shape(trim_data(source, endpoint, data))
+        one = data_shape(source, endpoint, trim_data(source, endpoint, data))
         out[endpoint] = shapes.merge(out[endpoint], one) if endpoint in out else one
     return out
 
@@ -252,7 +403,7 @@ def build_shape_index(directory: Path) -> dict[str, Any]:
         if not file or int(entry.get('status', 200)) != 200:
             continue
         body = (directory / file).read_bytes()
-        endpoint = endpoint_of(entry['url'])
+        endpoint = endpoint_of(entry['url'], source)
         try:
             data = json.loads(body)
         except ValueError:
@@ -260,7 +411,7 @@ def build_shape_index(directory: Path) -> dict[str, Any]:
             if selectors:
                 index[file] = htmlparse.matches(body.decode('utf-8'), selectors)
             continue
-        index[file] = shapes.shape(trim_data(source, endpoint, data))
+        index[file] = data_shape(source, endpoint, trim_data(source, endpoint, data))
     return dict(sorted(index.items()))
 
 
@@ -281,12 +432,13 @@ def fixture_shapes(directory: Path) -> dict[str, Any]:
     directory = Path(directory)
     index = json.loads((directory / SHAPE_FILE).read_text(encoding='utf-8'))
     manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf-8'))
+    source = manifest.get('source')
     out: dict[str, Any] = {}
     for entry in manifest.get('entries', []):
         file = entry.get('file')
         if file not in index:
             continue
-        endpoint = endpoint_of(entry['url'])
+        endpoint = endpoint_of(entry['url'], source)
         one = index[file]
         out[endpoint] = shapes.merge(out[endpoint], one) if endpoint in out else one
     return out
@@ -335,6 +487,20 @@ def lookup(shape, path: str):
     if found:
         return 'ok', frozenset(found)
     return ('unchecked', ()) if unchecked else ('missing', ())
+
+
+def _at(shape, path: str):
+    """Return the node of a shape at a path (first list item), or None."""
+    node = shape
+    for step in _TOKEN.findall(path):
+        if isinstance(node, list):
+            node = node[0] if node else None
+            if step == LIST_ITEMS:
+                continue
+        if not isinstance(node, dict) or step not in node:
+            return None
+        node = node[step]
+    return node
 
 
 def _compatible(expected, actual) -> bool:
@@ -399,6 +565,21 @@ def compare(adapter, expected: Mapping[str, Any], actual: Mapping[str, Any]) -> 
                 report.problems.append(f'{label} no longer matches')
             else:
                 report.unchecked.append(f'{label} (no match in the sample)')
+    for endpoint, by_path in sorted(getattr(adapter, 'EMBEDDED_HTML', {}).items()):
+        for path, selectors in sorted(by_path.items()):
+            for selector in selectors:
+                label = f'{endpoint}: {path} {selector}'
+                if endpoint not in actual:
+                    report.unchecked.append(f'{label} (endpoint not requested)')
+                    continue
+                found = _at(actual[endpoint], path)
+                if isinstance(found, dict) and selector in found:
+                    continue
+                before = _at(expected.get(endpoint, {}), path)
+                if isinstance(before, dict) and selector in before:
+                    report.problems.append(f'{label} no longer matches')
+                else:
+                    report.unchecked.append(f'{label} (no match in the sample)')
     for endpoint, paths in sorted(adapter.REQUIRED_PATHS.items()):
         for path in paths:
             label = f'{endpoint}: {path}'

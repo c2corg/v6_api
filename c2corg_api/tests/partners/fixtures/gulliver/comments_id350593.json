@@ -1,0 +1,26 @@
+{
+ "350593": {
+  "ID": "350593",
+  "user_nicename": "user101",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "528713",
+  "permalink": "https://www.gulliver.it/itinerari/succiso-alpe-dal-p-so-del-cerreto-per-m-alto-e-m-casarola/2026/11/21/350593/",
+  "content": "[text 374 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "route": {
+   "title": "Succiso (Alpe di) dal Passo del Cerreto per Monte Alto e Monte Casarola",
+   "region": {
+    "name": "Emilia-Romagna"
+   },
+   "district": "RE"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 6 chars]"
+   }
+  }
+ }
+}

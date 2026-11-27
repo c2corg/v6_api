@@ -1,0 +1,33 @@
+{
+ "58707": {
+  "title": "Grevon (Piatta di) da Pila",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "876"
+    },
+    "alt_top": {
+     "value": "2756"
+    },
+    "exposure": {
+     "value": "Nord"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.68737837216303,
+      "lng": 7.3107580701141295
+     }
+    }
+   }
+  }
+ }
+}

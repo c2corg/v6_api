@@ -27,6 +27,7 @@
           "geom": "str",
           "quality": "str"
         },
+        "gpx_url": "str",
         "height_diff_up": "null",
         "id": "str",
         "lang": "str",

@@ -202,7 +202,8 @@ def cmd_shapes(args) -> int:
         now = datetime.datetime.combine(
             recorded, datetime.time(12), tzinfo=datetime.UTC
         )
-        since = args.since or recorded - datetime.timedelta(days=2)
+        # the default of `record`: the same requests as the recording
+        since = args.since or recorded - datetime.timedelta(days=DEFAULT_DAYS)
         # no key is needed to replay files
         secrets = {
             name: secrets.get(name, 'offline') for name in adapter.required_secrets

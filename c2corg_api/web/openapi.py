@@ -199,6 +199,11 @@ _PARTNER_OUTING = {
         'height_diff_up': {'type': ['integer', 'null']},
         'orientations': {'type': 'array', 'items': {'type': 'string'}},
         'snow': {'type': ['object', 'null'], 'additionalProperties': True},
+        'gpx_url': {
+            'type': ['string', 'null'],
+            'description': 'The public GPX file of the report on the partner site '
+            '(a link, under the terms of the site), `null` for c2c.',
+        },
         'region': {'type': ['string', 'null']},
         'geometry': {
             'type': ['object', 'null'],

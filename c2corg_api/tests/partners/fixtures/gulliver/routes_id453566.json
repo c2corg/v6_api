@@ -1,0 +1,33 @@
+{
+ "453566": {
+  "title": "Sises (Monte) da Sestriere per il versante NE",
+  "region": {
+   "name": "Piemonte"
+  },
+  "district": "TO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "638"
+    },
+    "alt_top": {
+     "value": "2658"
+    },
+    "exposure": {
+     "value": "Nord-Est"
+    },
+    "grade_skimo": {
+     "value": "OS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 44.9566688272293,
+      "lng": 6.879854533885914
+     }
+    }
+   }
+  }
+ }
+}

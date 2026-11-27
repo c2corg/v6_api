@@ -1,0 +1,30 @@
+{
+ "350579": {
+  "ID": "350579",
+  "user_nicename": "user104",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "766085",
+  "permalink": "https://www.gulliver.it/itinerari/carchio-monte-natale-a-gaza/2026/11/21/350579/",
+  "content": "[text 170 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "route": {
+   "title": "Carchio (Monte) &#8211; Natale a Gaza",
+   "region": {
+    "name": "Toscana"
+   },
+   "district": "MS"
+  },
+  "tracks": [
+   {
+    "guid": "https://www.gulliver.it/wp-content/uploads/2026/11/2026-11-21_3401462373_Escursione-alpinistica-komoot.gpx"
+   }
+  ],
+  "meta": {
+   "access": {
+    "value": "[text 147 chars]"
+   }
+  }
+ }
+}

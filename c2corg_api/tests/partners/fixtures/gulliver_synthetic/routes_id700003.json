@@ -1,0 +1,27 @@
+{
+ "700003": {
+  "title": "Sentiero di prova",
+  "region": {
+   "name": "Provence-Alpes-C\u00f4te d'Azur (FR)"
+  },
+  "district": "Hautes-Alpes",
+  "meta": {
+   "data": {
+    "exposure": {
+     "value": "Varie"
+    },
+    "alt_top": {
+     "value": ""
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 0,
+      "lng": 0
+     }
+    }
+   }
+  }
+ }
+}
