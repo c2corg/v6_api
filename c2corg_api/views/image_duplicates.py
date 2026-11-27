@@ -33,7 +33,7 @@ from c2corg_api.models.image_embed import ImageEmbed
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int, Seq
 from c2corg_api.views.document_trash import _user, _users
-from c2corg_api.views.image_embeds import document_titles
+from c2corg_api.views.image_embeds import document_locales, title_fields
 from c2corg_api.views.image_orphans import _created, _iso
 from c2corg_api.views.resource import write
 
@@ -121,7 +121,7 @@ def list_duplicate_images(offset, limit, same_document=False):
     embeds = _embeds(ids)
     linked = _linked(ids)
     users = _users([user_id for _, user_id in created.values()])
-    titles = document_titles(
+    titles = document_locales(
         ids
         + [d['document_id'] for ds in links.values() for d in ds]
         + [e['document_id'] for es in embeds.values() for e in es]
@@ -311,7 +311,7 @@ def _image(row, created, users, links, embeds, linked, titles):
         'document_id': row.document_id,
         'filename': row.filename,
         'image_type': row.image_type,
-        'title': titles.get(row.document_id),
+        'title': titles.get(row.document_id, (None, None))[0],
         'file_size': row.file_size,
         'width': row.width,
         'height': row.height,
@@ -320,15 +320,15 @@ def _image(row, created, users, links, embeds, linked, titles):
         'created_at': _iso(at),
         'author': _user(users, user_id),
         'documents': [
-            {**d, 'title': titles.get(d['document_id'])}
+            {**d, **title_fields(titles, d['document_id'])}
             for d in links.get(row.document_id, [])
         ],
         'embedded_in': [
-            {**e, 'title': titles.get(e['document_id'])}
+            {**e, **title_fields(titles, e['document_id'])}
             for e in embeds.get(row.document_id, [])
         ],
         'linked_from': [
-            {**e, 'title': titles.get(e['document_id'])}
+            {**e, **title_fields(titles, e['document_id'])}
             for e in linked.get(row.document_id, [])
         ],
     }

@@ -17,6 +17,7 @@ from c2corg_api.models.deleted_document import RETENTION, DeletedDocument
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.image_embed import ImageEmbed
+from c2corg_api.models.route import RouteLocale
 
 LIMIT_DEFAULT = 30
 LIMIT_MAX = 100
@@ -69,21 +70,49 @@ def images_embedded_elsewhere(image_ids, document_id):
 
 def document_titles(ids):
     """Return a title of each document, in the first of the default langs."""
-    titles = {}
+    return {
+        document_id: title for document_id, (title, _) in document_locales(ids).items()
+    }
+
+
+def document_locales(ids):
+    """Return the title and title prefix of each document: {id: (title, prefix)}.
+
+    The prefix of a route is the title of its main waypoint (None for the
+    other types). Both in the first of the default langs.
+    """
+    locales = {}
     if not ids:
-        return titles
-    for document_id, lang, title in DBSession.execute(
+        return locales
+    # the table of the route locales only: the prefix of their title
+    route_locales = RouteLocale.__table__
+    for document_id, lang, title, prefix in DBSession.execute(
         select(
-            DocumentLocale.document_id, DocumentLocale.lang, DocumentLocale.title
-        ).where(DocumentLocale.document_id.in_(list(ids)))
+            DocumentLocale.document_id,
+            DocumentLocale.lang,
+            DocumentLocale.title,
+            route_locales.c.title_prefix,
+        )
+        .outerjoin(route_locales, route_locales.c.id == DocumentLocale.id)
+        .where(DocumentLocale.document_id.in_(list(ids)))
     ):
-        titles.setdefault(document_id, {})[lang] = title
+        locales.setdefault(document_id, {})[lang] = (title, prefix or None)
     return {
         document_id: next(
-            (by_lang[lang] for lang in default_langs if lang in by_lang), None
+            (by_lang[lang] for lang in default_langs if lang in by_lang),
+            (None, None),
         )
-        for document_id, by_lang in titles.items()
+        for document_id, by_lang in locales.items()
     }
+
+
+def title_fields(locales, document_id, key='title'):
+    """Return the fields `key` and `key`_prefix of a document (an answer).
+
+    `locales` is the result of document_locales.
+    """
+    title, prefix = locales.get(document_id, (None, None))
+    return {key: title, key + '_prefix': prefix}
 
 
 def restorable_documents(cutoff, document_type=IMAGE_TYPE):
@@ -163,7 +192,7 @@ def list_broken_embeds(offset, limit):
     ).all()
     deleted = entries({row.entry_id for row in rows} - {None})
     # the titles of the documents, and of those of the ids that are not images
-    titles = document_titles(
+    titles = document_locales(
         {row.document_id for row in rows}
         | {row.image_id for row in rows if row.image_document_type is not None}
     )
@@ -173,14 +202,14 @@ def list_broken_embeds(offset, limit):
             {
                 'document_id': row.document_id,
                 'document_type': row.document_type,
-                'title': titles.get(row.document_id),
+                **title_fields(titles, row.document_id),
                 'langs': row.langs,
                 'image_id': row.image_id,
                 'reason': _reason(row),
                 # the document of this id when it is not an image
                 'image_document_type': row.image_document_type,
                 'image_document_title': (
-                    titles.get(row.image_id)
+                    titles.get(row.image_id, (None, None))[0]
                     if row.image_document_type is not None
                     else None
                 ),

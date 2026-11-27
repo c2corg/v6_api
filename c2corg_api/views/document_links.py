@@ -28,9 +28,11 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.views.image_embeds import (
     LIMIT_DEFAULT,
     LIMIT_MAX,
+    document_locales,
     document_titles,
     entries,
     restorable_documents,
+    title_fields,
 )
 
 # the types of v5, which the site redirects (/summits/123 to /waypoints/123):
@@ -193,7 +195,7 @@ def list_broken_links(offset, limit):
         .limit(limit)
     ).all()
     deleted = entries({row.entry_id for row in rows} - {None})
-    titles = document_titles(
+    titles = document_locales(
         {row.document_id for row in rows}
         | {row.target_id for row in rows if row.target_document_type is not None}
     )
@@ -203,7 +205,7 @@ def list_broken_links(offset, limit):
             {
                 'document_id': row.document_id,
                 'document_type': row.document_type,
-                'title': titles.get(row.document_id),
+                **title_fields(titles, row.document_id),
                 'langs': row.langs,
                 'target_id': row.target_id,
                 # as written: "routes", "summits"...
@@ -212,10 +214,10 @@ def list_broken_links(offset, limit):
                 'reason': _reason(row),
                 # the document of this id, when it exists
                 'target_document_type': row.target_document_type,
-                'target_document_title': (
-                    titles.get(row.target_id)
-                    if row.target_document_type is not None
-                    else None
+                **title_fields(
+                    titles if row.target_document_type is not None else {},
+                    row.target_id,
+                    'target_document_title',
                 ),
                 'deleted': deleted.get(row.entry_id),
             }
