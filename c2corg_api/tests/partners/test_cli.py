@@ -114,14 +114,26 @@ def test_shapes_retyped_key_is_breaking(site, capsys):
 
 def test_shapes_gulliver_nested_path_removed(site, capsys):
     def remove(data):
-        for route in data if isinstance(data, list) else [data]:
-            route['meta']['geo'].pop('coords')
+        for route in data.values():
+            route['meta']['geo'].pop('coords', None)
 
     for path in site.glob('gulliver/routes_id*.json'):
-        if path.name != 'routes_id61022.json':
-            _edit(path, remove)
+        _edit(path, remove)
     assert cli.main(['shapes', 'gulliver']) == 1
-    assert 'routes: meta.geo.coords.lat is missing' in capsys.readouterr().out
+    assert 'routes: *.meta.geo.coords.value.lat is missing' in capsys.readouterr().out
+
+
+def test_shapes_gulliver_front_page_selector_gone(site, capsys):
+    """The links of the HTML fragment in the JSON of the front page are checked."""
+
+    def rename(data):
+        data['content'] = data['content'].replace('btn-ghost', 'btn-other')
+
+    _edit(site / 'gulliver/comments_sortingid.json', rename)
+    assert cli.main(['shapes', 'gulliver']) == 1
+    out = capsys.readouterr().out
+    assert 'front_page_comments: content a.btn-ghost' in out
+    assert 'no longer matches' in out
 
 
 def test_shapes_unparsable_answer_exits_1(site, capsys):
@@ -244,7 +256,9 @@ def test_record_writes_fixtures(site, tmp_path, capsys):
 
 def test_record_trims_payloads(site, tmp_path):
     def many(data):
-        data[:] = [dict(data[0], ID=i) for i in range(1000, 1050)]
+        first = next(iter(data.values()))
+        data.clear()
+        data.update({str(i): dict(first, ID=str(i)) for i in range(1000, 1050)})
 
     _edit(site / 'gulliver/commentglobal_page1.json', many)
     out = tmp_path / 'recorded'
@@ -253,42 +267,60 @@ def test_record_trims_payloads(site, tmp_path):
     assert len(comments) == contract.MAX_ITEMS
 
 
-def test_record_drops_gulliver_free_text(site, tmp_path):
-    """Licence: nothing the adapter does not read is written, new fields included."""
+def test_record_drops_and_redacts_gulliver_free_text(site, tmp_path):
+    """Licence: what the adapter does not read is dropped, its texts redacted."""
 
     def add_text(data):
-        for comment in data:
+        for comment in data.values():
             comment['content'] = '<p>COMMENT-TEXT</p>'
-            comment['tracks'] = [{'gpx': 'TRACK-DATA'}]
+            comment['tracks'] = [
+                {
+                    'guid': 'https://www.gulliver.it/wp-content/uploads/a.gpx',
+                    'gpx': 'TRACK-DATA',
+                    'user_nicename': 'TRACK-AUTHOR',
+                }
+            ]
             comment['new_field'] = 'NEW-FREE-TEXT'
-            comment['meta'].update(
-                access='ACCESS-TEXT', obs='OBS-TEXT', skimo_equip='EQUIP-TEXT'
-            )
+            comment['meta'] = {
+                'access': {'label': 'Accesso', 'value': 'ACCESS-TEXT'},
+                'obs': {'label': 'Osservazioni', 'value': 'OBS-TEXT'},
+                'skimo_equip': {'label': 'Equip', 'value': 'EQUIP-TEXT'},
+                'snow_top': {'label': 'Neve', 'value': 'SNOW-TEXT'},
+                'snow_alt': {'label': 'Quota', 'value': '1500'},
+            }
 
     def add_route_text(data):
-        data['media'] = [{'url': 'MEDIA'}]
-        data['description'] = 'ROUTE-DESCRIPTION'
-        data['meta']['data']['note'] = 'ROUTE-NOTE'
+        for route in data.values():
+            route['media'] = [{'url': 'MEDIA'}]
+            route['content'] = 'ROUTE-DESCRIPTION'
+            route['meta']['data']['note'] = {'value': 'ROUTE-NOTE'}
+            route['meta']['geo']['coords']['value']['address'] = 'ROUTE-ADDRESS'
 
     _edit(site / 'gulliver/commentglobal_page1.json', add_text)
-    _edit(site / 'gulliver/routes_id57949.json', add_route_text)
+    for path in site.glob('gulliver/routes_id*.json'):
+        _edit(path, add_route_text)
     out = tmp_path / 'recorded'
     assert cli.main(['record', 'gulliver', '--out', str(out)]) == 0
     recorded = ''.join(p.read_text() for p in (out / 'gulliver').iterdir())
     for text in (
         'COMMENT-TEXT',
         'TRACK-DATA',
+        'TRACK-AUTHOR',
         'NEW-FREE-TEXT',
         'ACCESS-TEXT',
         'OBS-TEXT',
         'EQUIP-TEXT',
+        'SNOW-TEXT',
+        'Accesso',
         'MEDIA',
         'ROUTE-DESCRIPTION',
         'ROUTE-NOTE',
+        'ROUTE-ADDRESS',
     ):
         assert text not in recorded
-    # what the adapter reads is kept
-    comment = json.loads((out / 'gulliver/commentglobal_page1.json').read_text())[0]
+    # what the adapter reads is kept, its texts as placeholders
+    page = json.loads((out / 'gulliver/commentglobal_page1.json').read_text())
+    comment = next(iter(page.values()))
     assert set(comment) == {
         'ID',
         'comment_date',
@@ -296,14 +328,25 @@ def test_record_drops_gulliver_free_text(site, tmp_path):
         'permalink',
         'term',
         'user_nicename',
+        'content',
+        'tracks',
         'meta',
     }
-    assert set(comment['meta']) == {'snow_top', 'snow_low', 'snow_alt'}
-    route = json.loads((out / 'gulliver/routes_id57949.json').read_text())
-    assert route['meta']['data']['grade_skimo']
-    assert route['meta']['data']['alt_top']
-    assert route['district'] is not None
-    assert route['region']
+    assert comment['content'] == '[text 19 chars]'
+    assert comment['meta']['access'] == {'value': '[text 11 chars]'}
+    assert comment['meta']['snow_alt'] == {'value': '1500'}
+    assert comment['tracks'] == [
+        {'guid': 'https://www.gulliver.it/wp-content/uploads/a.gpx'}
+    ]
+    assert comment['user_nicename'].startswith('user')
+    route = json.loads((out / 'gulliver/routes_id88735.json').read_text())['88735']
+    assert route['meta']['data']['grade_skimo'] == {'value': 'MS'}
+    assert set(route['meta']['geo']['coords']['value']) == {'lat', 'lng'}
+    assert route['district'] == 'Hautes-Alpes'
+    # the HTML fragment of the front page keeps the report links only
+    front = json.loads((out / 'gulliver/comments_sortingid.json').read_text())
+    assert set(front) == {'content'}
+    assert 'combo-review' in front['content']
 
 
 def test_record_drops_skitour_free_text(site, tmp_path):

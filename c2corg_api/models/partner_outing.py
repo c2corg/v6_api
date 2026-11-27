@@ -98,6 +98,13 @@ class PartnerOuting(Base):
     orientations = Column(ArrayOfEnum(enums.orientation_type))
     # small structured figures only
     snow = Column(JSONB)
+    # the public GPX file of the report on the partner site: a link only, the
+    # file is never fetched nor stored
+    gpx_url = Column(String(500))
+    # the free texts of the report, plain text keyed by kind ('narrative',
+    # 'conditions', 'access'...: see HarvestedOuting.texts). Stored, NEVER
+    # served by the API (the partners' licences forbid republishing them).
+    texts = Column(JSONB)
     geom = Column(Geometry(geometry_type='POINT', srid=3857, spatial_index=False))
     geom_quality = Column(
         String(16), nullable=False, default='none', server_default='none'

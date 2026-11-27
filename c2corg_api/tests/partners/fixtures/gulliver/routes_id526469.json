@@ -1,0 +1,33 @@
+{
+ "526469": {
+  "title": "Serena (Testa di) da Mottes per il Canale delle Sirene",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "1230"
+    },
+    "alt_top": {
+     "value": "2830"
+    },
+    "exposure": {
+     "value": "Nord"
+    },
+    "grade_skimo": {
+     "value": "OS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.820374977444914,
+      "lng": 7.1470911265903325
+     }
+    }
+   }
+  }
+ }
+}

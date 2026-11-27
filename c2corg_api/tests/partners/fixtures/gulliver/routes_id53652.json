@@ -1,0 +1,33 @@
+{
+ "53652": {
+  "title": "Flassin (Mont) dal Vallone del Flassin",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "1387"
+    },
+    "alt_top": {
+     "value": "2757"
+    },
+    "exposure": {
+     "value": "Nord"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.81999201902386,
+      "lng": 7.196270224884049
+     }
+    }
+   }
+  }
+ }
+}

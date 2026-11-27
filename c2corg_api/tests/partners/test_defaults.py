@@ -21,7 +21,8 @@ def test_env_default_is_safe_for_production():
     assert env['partners_transport'] == 'http'
     assert env['partners_allow_synthetic'] == 'false'
     assert env['partners_lookup_retention'] == '30'
-    assert env['partners_retention'] == '31'
+    # empty: the outings are kept forever (the API lists 31 days at most)
+    assert env['partners_retention'] == ''
 
 
 def test_only_the_dev_stack_allows_synthetic_fixtures():

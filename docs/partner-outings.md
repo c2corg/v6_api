@@ -21,9 +21,19 @@ harvest_tick (c2corg_api/harvest) -> PartnerHarvester partners.<name> (jobs/harv
   off after errors, `harvest_sources` keeps its schedule and errors, and `/health` reports it under `harvest`.
 - The job locates the outings published without coordinates from their hints (summit name, region, country: see
   [Outings without coordinates](#outings-without-coordinates)), stores the rows (one per source and external id),
-  assigns the c2c areas that contain the point of each outing, records the health of each source, and a second job purges the outings and the lookups older than the retention.
-  That purge job is scheduled even when the harvest is off (`harvest_partners_enabled="false"`): the rows must not
-  outlive the retention.
+  assigns the c2c areas that contain the point of each outing, records the health of each source, and a second job purges
+  the lookups older than their retention (and the outings older than theirs when `partners_retention` is set: by default
+  the outings are kept forever; the API lists 31 days at most anyway). That purge job is scheduled even when the harvest
+  is off (`harvest_partners_enabled="false"`).
+- **Stored, never served.** A partner outing row also keeps `texts`: the free texts of the report (plain text, keyed by
+  kind: `narrative`, `conditions`, `access`, `snow`, `equipment`; `TEXT_KINDS` in `partners/model.py`), for later uses
+  (search, statistics) under the partners' agreement. They are never in an answer of the API (`GET /partner-outings`
+  selects its columns, a test checks no text leaks), and never real in a fixture (see the recording). `gpx_url` is the
+  link to the public GPX file of the report (gulliver.it: its first track), served as a link: the file itself is not
+  fetched by the harvest of the outings.
+- **Backfill.** The harvest only reads the latest reports. Importing the history of a site is not done
+  ([c2corg/v6_api#2763](https://github.com/c2corg/v6_api/issues/2763)); the design allows it: rows are upserted by
+  `(source, external_id)`, kept forever by default, and an adapter can page further back with a wider `since`.
 - The design is in `doc/meta/A2_HARVESTER.md` of c2corg/metaskirando-archive.
 
 ## Configuration
@@ -36,7 +46,7 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 | `harvest_partners_enabled` | `harvest.partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests the partner sources, whatever `harvest.enabled`; `make harvest-partners` refuses to run unless a source is on or `--force` is given |
 | `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak`, `gipfelbuch` and `skitourenportal`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
 | `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
-| `partners_retention` | `partners.retention_days` | `31` | outings older than that are not stored, and purged |
+| `partners_retention` | `partners.retention_days` | empty | empty or `0`: the outings are kept forever (the API lists 31 days at most). Set: outings older than that many days are not stored, and purged |
 | `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route, detail and summit lookups, and the job's resolutions of location hints) older than that are purged |
 | `partners_transport` | `partners.transport` | `http` (`fixtures` in `env.dev`) | `http`: the real sites; `fixtures`: recorded answers, no network |
 | `partners_fixtures_dir` | `partners.fixtures_dir` | empty | empty: `c2corg_api/tests/partners/fixtures` |
@@ -117,15 +127,17 @@ titles of the demo (production has about 25 times more: about 1.5 s, only on run
 
 ## Local demo
 
-Fixture mode runs the real job and the real adapters on recorded (here: synthetic) answers of the partner sites,
-so the whole chain works offline. The fixtures hold 10 skitour.fr and 9 gulliver.it outings with coordinates in the
-Alps (Vanoise, Belledonne, Vercors, Aosta valley...), some without coordinates, one old one, and a few items that do
-not parse on purpose: both sources end `degraded`, which is the expected demo status. When the job runs, the dates
-are shifted so that the newest fixture outings are dated today.
+Fixture mode runs the real job and the real adapters on recorded answers of the partner sites, so the whole chain
+works offline. The fixtures are real recordings: 30 skitour.fr outings (2026-11-25) and 124 gulliver.it reports
+(2026-11-27, every activity, 34 with the start point of their route, mostly in Piedmont and the Aosta valley, 7 with a
+GPX link; texts redacted, authors pseudonymised). Both sources end `ok` on the first run. When the job runs, the dates
+are shifted so that the newest fixture outings are dated today. A second run of the same day asks gulliver for other
+routes than the recording holds: it ends `degraded` (`3 lookups failed`), as expected offline.
 
 With the dev stack of the README (`scripts/sandbox-up.sh`, or the dev container, with the anonymized dev
 database): `config/env.dev` already has `harvest_partners_enabled="true"`, `partners_transport="fixtures"` and
-`partners_allow_synthetic="true"` (the demo fixtures are synthetic; without it the sources end `failing`).
+`partners_allow_synthetic="true"` (the demo fixtures are real recordings now; the flag only matters for a synthetic
+set).
 
 ```bash
 # in the app container (docker compose ... exec app bash), from the repository
@@ -208,11 +220,19 @@ the real transport, through a `RecordingTransport`, and writes into
 
 Payloads are trimmed before they are written, by an **allow-list**: only the
 paths an adapter lists in its `REQUIRED_PATHS` are kept, everything else is
-dropped, and lists are cut to 30 items. No partner free text (skitour
-`conditions`, `recit`, `photos`; gulliver `content`, `meta.access`, `meta.obs`,
-`tracks`...) reaches a fixture, whatever new fields the site adds: their licence
-forbids reusing it. A test scans the committed fixtures for such keys. Secrets come from the
-environment (`SKITOUR_API_KEY`) and are never written.
+dropped, and lists are cut to 30 items (also the objects keyed by ids: a
+`*` in a path stands for any key, `*.ID` for gulliver's `{"350636": {...}}`).
+No real partner free text reaches a fixture, whatever new fields the site adds:
+the texts an adapter does not read are dropped (skitour `recit`, `photos`...),
+and the texts it reads to store them (`HarvestedOuting.texts`: gulliver
+`content`, `meta.access`, `meta.obs`...) are listed in `REDACT_PATHS` (JSON) or
+`REDACT_SELECTORS` (HTML): the recorder replaces each of them by a placeholder,
+`[text 491 chars]`. The authors are pseudonymised (`PSEUDONYMISE_PATHS`). Of the
+gulliver tracks only the GPX link (`tracks[].guid`) is kept. An HTML fragment
+inside a JSON answer (gulliver's front page) is declared in `EMBEDDED_HTML` and
+trimmed like a page. `test_fixtures_licence.py` checks the committed files: a
+free-text key holds placeholders only. Secrets come from the environment
+(`SKITOUR_API_KEY`) and are never written.
 
 The recording is made aside and installed only when it succeeded: a blocked or
 down site leaves the existing fixtures untouched. Review `git diff`, run the
@@ -311,7 +331,7 @@ contract change. Use `-rs` to see the reasons.
 | Source | From the dev sandbox | `record` / `shapes` / live test |
 |---|---|---|
 | skitour.fr | no key, so exit 2 / skip "disabled: SKITOUR_API_KEY not set"; unreachable from the dev container ("down") | needs `SKITOUR_API_KEY` |
-| gulliver.it | Cloudflare challenge (403): "blocked", exit 2 / skip | needs an allowed network or a Gulliver allow-list |
+| gulliver.it | Cloudflare challenge (403) from cloud addresses: "blocked", exit 2 / skip; reachable from a home connection with the camptocamp User-Agent (2026-11-27) | `record` makes up to 45 requests, 2 s apart (about 1.5 min) |
 | bivouak.net | reachable | `record` makes up to 15 requests, 10 s apart |
 | gipfelbuch.ch | reachable (robots.txt allows all) | `record` makes up to 17 requests, 2 s apart |
 | skitourenportal.eu | reachable, without `www` (recorded 2026-11-25) | no key |
@@ -327,10 +347,11 @@ they only report why they could not run.
 - **User agent.** The job identifies itself: `camptocamp.org partner-index (+https://www.camptocamp.org)`. Keep it,
   so that the partners can recognize, throttle or contact us.
 - **Gulliver allowlisting.** `gulliver.it` is behind a Cloudflare JavaScript challenge: from datacenter addresses the
-  source is `blocked` (403 with a challenge page). Ask Gulliver to allowlist our egress address or user agent (or to
+  source is `blocked` (403 with a challenge page); a home connection gets through with our User-Agent. Its terms
+  ("Contributi e proprietà") allow reuse only with prior permission: ask before enabling it. Ask Gulliver to allowlist our egress address or user agent (or to
   give a token: it would be `GULLIVER_API_TOKEN`, read like `SKITOUR_API_KEY`). Never try to bypass the challenge.
 - **Rate limits.** Each adapter declares its politeness (`rate` in `partners/sources/*.py`): a minimum delay between
-  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 40 requests; bivouak: 10 s, 15 requests; gipfelbuch: 2 s, 18 requests). A spent budget
+  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 45 requests; bivouak: 10 s, 15 requests; gipfelbuch: 2 s, 18 requests). A spent budget
   makes the run `down`.
 - **Enabling.** Keep `harvest_partners_enabled="false"` and `partners_transport="http"` (the defaults) until the
   agreements are there; then set `harvest_partners_enabled="true"` (or one source with
@@ -338,9 +359,9 @@ they only report why they could not run.
 - **Monitoring.** `/health` lists each source under `harvest` (`partners.skitour: {sources, failing, last_success}`)
   without ever failing the check; look at
   `/partner-outings/sources` (`status_detail`, `last_success_at`, `last_skipped`) when a source is not `ok`.
-- **Fixtures.** The recorded fixtures are synthetic (`manifest.json` says `synthetic: true`): the partner sites are not
-  reachable from the sandboxes. Replace them with real recordings when the agreements allow it, and keep the
-  adapters tested against them (`c2corg_api/tests/partners`).
+- **Fixtures.** Every source has a real recording now (`manifest.json` says `synthetic: false`); the edge cases a
+  recording lacks are in separate synthetic directories (`skitour_synthetic`, `gulliver_synthetic`), used by the
+  adapter tests only.
 
 ## gipfelbuch.ch
 
@@ -362,3 +383,35 @@ URL redirects there, and the `src_conditions_type` filter is not a GET parameter
   outings get `geom_quality = 'summit'`. The others keep the hints for the job's resolver
   ([Outings without coordinates](#outings-without-coordinates)): `summit_match`, else their country.
 - **Parsing.** By labelled element (`REQUIRED_SELECTORS`, via `htmlparse`), never by position.
+
+## gulliver.it
+
+The trip reports ("gite") of the WordPress API of the site (`/wp-json/gulliver/`), every activity, recorded live on
+2026-11-27 (`sources/gulliver.py` has the details of the format).
+
+- **Discovery.** `mobile/commentglobal?page=1..5`: 30 reports a page, an object keyed by report id, sorted by the date
+  of the OUTING (a day) with many ties: the pages overlap (37 duplicates in 150) and skip reports (about a quarter of
+  the reports of the last days never show up). So the adapter also reads `front_page/comments?sorting=id`, the HTML
+  fragment of the home page with the 50 most recently posted reports (the site's own script asks for it): the reports
+  it lists that the pages did not hold, dated from `since - 7 days` (late posts about older outings), are read with
+  `mobile/comments?id=` (at most 15 a run). Paging stops at the first page that reaches back before `since`. No cursor:
+  every report read is kept in `partner_lookups` (`report:<id>`), so a report is asked for once.
+- **Routes.** `mobile/routes?id=` (heavy: about 600 KB with the media) gives the title, region, start point
+  (`geom_quality = 'start'`), top altitude, height difference, exposure and grade. At most 24 new routes a run, those of
+  the ski reports first; each kept in `partner_lookups` (`route:<id>`, the extracted fields only; an unknown id, which
+  answers an empty skeleton, as `{"empty": true}`). A report whose route is not known yet keeps the title of the route
+  summary of `comments?id=` or of its link, and is completed by a later run.
+- **Budget.** 5 pages + 1 front page + 15 reports + 24 routes = 45 requests, 2 s apart, at most (about 1.5 min); a
+  run in the steady state makes a handful (the lookups are cached).
+- **Activities** (`term.code`): `skimo` and `skisteep` (steep: `true`) to `skitouring`, `snowshoe` to `snowshoeing`,
+  `hike` to `hiking`, `climb` and `crag` to `rock_climbing`, `mountain` to `mountain_climbing`, `iceclimb` to
+  `ice_climbing`, `ferrata` to `via_ferrata`, `mtb` to `mountain_biking`. `cycle` (road cycling) and `skinord` (Nordic
+  skiing) have no c2c activity: `unmapped_activity:<code>` in `last_skipped`.
+- **Grades.** `grade_skimo` is a Blachère grade (`MS`, `BS`, `OS`, `A` suffix: `rating_system = 'blachere'`, `OS` is
+  steep); `grade_skisteep` a c2c-like ski rating (`4.1`: `c2c_ski`, steep from 4.1). The exposure is Italian
+  (`Nord-Est`...; `Varie`, `Tutte`: none). The snow line (`snow_alt`) is `snow.line_m`; the snow qualities
+  (`Polverosa`...) are texts (`texts.snow`).
+- **Region and country.** `<region> - <district>` (`Valle d'Aosta - AO`); the country is `FR` for a region ending
+  with `(FR)` (and so on), else `IT`.
+- **GPX.** The first track of a report (`tracks[0].guid`) is `gpx_url` when it is an `https` link to a `.gpx` file on
+  gulliver.it. The files are public, but hold personal data (times, heart rate) and fall under the terms of the site.

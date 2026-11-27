@@ -3,8 +3,8 @@ the real skitour and gulliver adapters, then `GET /partner-outings`.
 
 This is the local demo (docs/partner-outings.md) run as a test: no network, the
 fixtures of c2corg_api/tests/partners/fixtures, test areas around the places of
-the fixtures, and a few c2c outings next to the partner ones. The skitour fixtures
-are a real recording (2026-11-25); the gulliver ones are still synthetic.
+the fixtures, and a few c2c outings next to the partner ones. Both are real
+recordings: skitour of 2026-11-25, gulliver of 2026-11-27 (texts redacted).
 """
 
 import datetime
@@ -23,9 +23,9 @@ from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.partner_outing import PartnerOuting, PartnerSource
 
 UTC = datetime.UTC
-# gulliver was recorded (synthetic) on 2026-11-24, skitour (real) on 2026-11-25:
-# harvesting later shifts the dates of the outings, as the demo does every day
-RECORDED = datetime.date(2026, 11, 24)
+# gulliver was recorded on 2026-11-27, skitour on 2026-11-25: harvesting later
+# shifts the dates of the outings, as the demo does every day
+RECORDED = datetime.date(2026, 11, 27)
 SKITOUR_RECORDED = datetime.date(2026, 11, 25)
 NOW = datetime.datetime(2026, 12, 1, 12, 0, tzinfo=UTC)
 TODAY = NOW.date()
@@ -38,10 +38,10 @@ SETTINGS = {
     'harvest.partners.skitour.enabled': 'true',
     'harvest.partners.gulliver.enabled': 'true',
     'partners.interval_minutes': '15',
-    'partners.retention_days': '31',
+    'partners.retention_days': '',  # the default: kept forever
     'partners.transport': 'fixtures',
     'partners.fixtures_dir': '',
-    'partners.allow_synthetic': 'true',
+    'partners.allow_synthetic': 'false',  # both recordings are real
 }
 
 # what the fixtures hold, by external id (lon, lat of the point; date as
@@ -60,9 +60,18 @@ SKITOUR_PARIS_DAY = {
     ).date()
     for item in SKITOUR_ITEMS
 }
-GULLIVER_WITH_POINT = {'48181', '48188', '48190', '48199', '48204', '48207', '48213'}
-GULLIVER_IN_AOSTA = {'48181', '48190', '48199', '48204', '48207', '48213'}
-GULLIVER_ALL = GULLIVER_WITH_POINT | {'48196', '48210'}
+# gulliver: the first run asks from 16 days before (`since` 2026-11-11 on the
+# day of the recording): 124 reports, 34 with the start point of their route
+# (the ski routes are looked up first, 24 a run), 18 of them in the Aosta box
+GULLIVER_COUNT = 124
+# the default window of the listing (14 days) leaves out the oldest (2026-11-14)
+GULLIVER_LISTED = GULLIVER_COUNT - 1
+GULLIVER_IN_AOSTA = {
+    *('350455', '350456', '350457', '350475', '350484', '350485', '350510'),
+    *('350536', '350577', '350594', '350596', '350599', '350600', '350609'),
+    *('350610', '350625', '350635', '350643'),
+}
+GULLIVER_STEEP = {'350448', '350609', '350634'}
 
 
 def mercator(lon, lat):
@@ -135,6 +144,7 @@ def world(session, db_connection):
 
 
 def listing(client, **params):
+    params.setdefault('limit', 200)  # every item of the window
     return client.get('/partner-outings', params=params, status=200).json
 
 
@@ -154,7 +164,7 @@ def test_harvested_outings_are_listed_with_c2c_ones(client, world):
     answer = listing(client)
     assert len(SKITOUR_IN_WINDOW) == 30
     assert external(answer, 'skitour') == SKITOUR_IN_WINDOW
-    assert external(answer, 'gulliver') == GULLIVER_ALL
+    assert len(external(answer, 'gulliver')) == GULLIVER_LISTED
     assert {world['c2c_skiing'], world['c2c_hiking']} <= set(ids(answer))
     assert answer['total'] == len(answer['items'])
     # the day desc: the list is ordered, all the sources mixed
@@ -164,10 +174,17 @@ def test_harvested_outings_are_listed_with_c2c_ones(client, world):
 
 def test_dates_are_shifted_to_the_days_before_today(client, db_connection, world):
     answer = listing(client)
-    partner_days = {item['date'] for item in answer['items'] if item['source'] != 'c2c'}
+
+    def days(source):
+        return {i['date'] for i in answer['items'] if i['source'] == source}
+
+    partner_days = days('skitour') | days('gulliver')
     # the newest skitour outings are of the day before the recording (the API
-    # dates them at 00:00 and lists them the day after), so yesterday here
-    assert max(partner_days) == (TODAY - datetime.timedelta(days=1)).isoformat()
+    # dates them at 00:00 and lists them the day after), so yesterday here;
+    # gulliver has a report of the day of its recording, so today
+    yesterday = TODAY - datetime.timedelta(days=1)
+    assert max(days('skitour')) == yesterday.isoformat()
+    assert max(days('gulliver')) == TODAY.isoformat()
     assert min(partner_days) >= (TODAY - datetime.timedelta(days=14)).isoformat()
     by_id = {item['id']: item for item in answer['items']}
     # skitour: recorded on 2026-11-25 (the epochs are Paris midnights), harvested
@@ -193,13 +210,29 @@ def test_items_carry_credit_rating_and_areas(client, world):
     start = by_id['skitour:188880']
     assert start['geometry']['quality'] == 'start'
     assert [a['document_id'] for a in start['areas']] == [world['vanoise']]
-    cheneil = by_id['gulliver:48213']
-    assert cheneil['credit']['site'] == 'gulliver.it'
-    assert cheneil['geometry']['quality'] == 'start'
-    assert [a['document_id'] for a in cheneil['areas']] == [world['aosta']]
-    # no coordinates: no geometry, no area, still listed
-    assert by_id['gulliver:48210']['geometry'] is None
-    assert by_id['gulliver:48210']['areas'] == []
+    pila = by_id['gulliver:350643']
+    assert pila['credit']['site'] == 'gulliver.it'
+    assert pila['geometry']['quality'] == 'start'
+    assert [a['document_id'] for a in pila['areas']] == [world['aosta']]
+    # no coordinates: no geometry, no area, still listed; its GPX linked
+    assert by_id['gulliver:350553']['geometry'] is None
+    assert by_id['gulliver:350553']['areas'] == []
+    assert by_id['gulliver:350553']['gpx_url'] == (
+        'https://www.gulliver.it/wp-content/uploads/2026/11/2026-11-22-10-05-42.gpx'
+    )
+    assert by_id['skitour:188880']['gpx_url'] is None
+
+
+def test_texts_are_stored_never_served(client, session, world):
+    row = (
+        session.query(PartnerOuting)
+        .filter_by(source='gulliver', external_id='350645')
+        .one()
+    )
+    assert row.texts['narrative'] == '[text 491 chars]'
+    answer = client.get('/partner-outings', status=200)
+    assert '[text ' not in answer.text
+    assert all('texts' not in item for item in answer.json['items'])
 
 
 def test_areas_are_assigned_by_the_point(db_connection, session, world):
@@ -219,7 +252,7 @@ def test_areas_are_assigned_by_the_point(db_connection, session, world):
         rows[('skitour', ext)] == [] for ext in SKITOUR_IN_WINDOW - SKITOUR_IN_VANOISE
     )
     # no point at all
-    assert rows[('gulliver', '48210')] == []
+    assert rows[('gulliver', '350553')] == []
 
 
 def test_area_filter(client, world):
@@ -237,27 +270,29 @@ def test_area_filter(client, world):
 
 def test_other_filters(client, world):
     sources = listing(client, sources='gulliver')
-    assert external(sources, 'gulliver') == GULLIVER_ALL
+    assert len(external(sources, 'gulliver')) == GULLIVER_LISTED
     assert {i['source'] for i in sources['items']} == {'gulliver'}
-    assert sources['total'] == len(GULLIVER_ALL)
+    assert sources['total'] == GULLIVER_LISTED
 
     only_c2c = listing(client, sources='c2c')
     assert {i['source'] for i in only_c2c['items']} == {'c2c'}
 
     snowshoeing = listing(client, act='snowshoeing')
-    assert ids(snowshoeing) == ['gulliver:48204']
+    assert ids(snowshoeing) == ['gulliver:350602']
 
     hiking = listing(client, act='hiking')
-    assert 'gulliver:48190' in ids(hiking)
+    assert 'gulliver:350553' in ids(hiking)
     assert world['c2c_hiking'] in ids(hiking)
     assert not any(i.startswith('skitour:') for i in ids(hiking))
 
     steep = listing(client, steep='true', sources='skitour,gulliver')
-    assert set(ids(steep)) == {'skitour:188878', 'gulliver:48207'}
+    gulliver_steep = {f'gulliver:{ext}' for ext in GULLIVER_STEEP}
+    assert set(ids(steep)) == {'skitour:188878', *gulliver_steep}
 
-    # ski rating 4.1 and more: the 4.3 of skitour and the canalone of gulliver
+    # ski rating 4.1 and more: the 4.3 of skitour, the skisteep 4.1 and the two
+    # OS (4.1-5.6) of gulliver
     rated = listing(client, trat='4.1,', sources='skitour,gulliver')
-    assert set(ids(rated)) == {'skitour:188878', 'gulliver:48207'}
+    assert set(ids(rated)) == {'skitour:188878', *gulliver_steep}
 
     # a day
     recorded_day = datetime.date(2026, 11, 24)  # Paris day of 14 of the outings
@@ -277,8 +312,8 @@ def test_paging_keeps_the_total(client, world):
 
 
 def test_sources_are_degraded_on_purpose(client, world):
-    # the real skitour recording parses completely: `ok`. The synthetic gulliver
-    # set has an item that does not parse: its run is `degraded`
+    # the real skitour recording parses completely: `ok`. Gulliver too, but its
+    # cold lookup cache leaves routes for the next runs (not a failure: `ok`)
     answer = client.get('/partner-outings/sources', status=200).json
     sources = {s['source']: s for s in answer['sources']}
     # the sources switched off (harvest.partners.<name>.enabled): off by default
@@ -290,13 +325,14 @@ def test_sources_are_degraded_on_purpose(client, world):
     assert sources['skitour']['status'] == 'ok'
     assert sources['skitour']['status_detail'] is None
     assert sources['skitour']['last_fetched'] == 30
-    assert sources['gulliver']['status'] == 'degraded'
-    assert sources['gulliver']['status_detail'] == '1 items failed to parse'
-    assert sources['gulliver']['last_fetched'] == 9
+    assert sources['gulliver']['status'] == 'ok'
+    assert sources['gulliver']['status_detail'] is None
+    assert sources['gulliver']['last_fetched'] == GULLIVER_COUNT
     assert sources['gulliver']['last_skipped'] == {
-        'too_old': 1,
-        'route_lookup_deferred': 1,
-        'unmapped_activity:kayak': 1,
+        'duplicate': 37,
+        'too_old': 2,
+        'route_lookup_deferred': 90,
+        'unmapped_activity:cycle': 1,
     }
     for name in ('skitour', 'gulliver'):
         assert sources[name]['last_success_at'] == NOW.isoformat()
@@ -306,7 +342,7 @@ def test_sources_are_degraded_on_purpose(client, world):
     listed = {s['source']: s['status'] for s in listing(client)['sources']}
     assert listed == {
         'skitour': 'ok',
-        'gulliver': 'degraded',
+        'gulliver': 'ok',
         'bivouak': 'disabled',
         'gipfelbuch': 'disabled',
         'skitourenportal': 'disabled',
@@ -329,7 +365,14 @@ def test_second_harvest_is_idempotent(client, session, world):
     # a later run, the same day: same rows, same answer
     job.harvest_partner_outings(SETTINGS, now=NOW + datetime.timedelta(hours=1))
     session.expire_all()
-    assert session.query(PartnerOuting).count() == 39
+    assert session.query(PartnerOuting).count() == 30 + GULLIVER_COUNT
+    # the second gulliver run asks for 2 days only: page 1 and the front page,
+    # whose reports are all in the lookup cache now. The routes the first run
+    # left over were not recorded: 3 failed lookups, then the others deferred
+    gulliver = session.get(PartnerSource, 'gulliver')
+    assert gulliver.status == 'degraded'
+    assert gulliver.status_detail == '3 lookups failed'
+    assert gulliver.last_requests == 1 + 1 + 3
     assert session.get(PartnerSource, 'skitour').consecutive_failures == 0
     after = listing(client)
     assert ids(after) == ids(before)

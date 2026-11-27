@@ -68,6 +68,7 @@ def trim(
     selectors: Collection[str],
     pseudonymise: Collection[str] = (),
     names: dict | None = None,
+    redact: Collection[str] = (),
 ) -> str:
     """Keep only what `selectors` match, and their ancestors' bare tags.
 
@@ -78,6 +79,9 @@ def trim(
     The elements `pseudonymise` matches are then replaced by pseudonyms
     (`pseudonymise_element`); `names` is shared by the pages of one recording,
     so that the same author gets the same pseudonym everywhere.
+
+    The elements `redact` matches hold partner free text (a narrative...):
+    their text is replaced by a placeholder (`redact_element`).
     """
     soup = parse(text)
     # an unclosed void element (`<link>`) swallows what follows it: the markup
@@ -114,8 +118,29 @@ def trim(
     for selector in pseudonymise:
         for tag in soup.select(selector):
             pseudonymise_element(tag, names)
+    for selector in redact:
+        for tag in soup.select(selector):
+            redact_element(tag)
     head = '<!doctype html>\n<meta charset="utf-8">\n'
     return head + soup.prettify()
+
+
+REDACTED = re.compile(r'\[text \d+ chars\]')
+
+
+def redact_element(tag: Tag) -> None:
+    """Replace the text of an element by `[text N chars]` (idempotent).
+
+    The child tags stay, emptied; the attributes that may repeat a text go.
+    """
+    text = text_of(tag)
+    if not text or REDACTED.fullmatch(text):
+        return
+    for string in list(tag.find_all(string=True)):
+        string.extract()
+    tag.append(NavigableString(f'[text {len(text)} chars]'))
+    for attr in _NAME_ATTRS:
+        tag.attrs.pop(attr, None)
 
 
 def _clean(tag: Tag) -> None:

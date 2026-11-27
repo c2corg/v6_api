@@ -159,6 +159,8 @@ def data(session, user_ids) -> Data:
         geom_quality='summit',
         area_ids=[area_a],
         snow={'top_cm': 40},
+        gpx_url='https://skitour.example/ext1.gpx',
+        texts={'narrative': 'SECRET-NARRATIVE', 'conditions': 'SECRET-CONDITIONS'},
     )
     _partner(
         session,
@@ -472,6 +474,7 @@ class TestItems:
             'height_diff_up': 900,
             'orientations': [],
             'snow': None,
+            'gpx_url': None,
             'region': None,
             'geometry': {
                 'geom': '{"type":"Point","coordinates":[100,100]}',
@@ -548,6 +551,7 @@ class TestItems:
             'height_diff_up': 1500,
             'orientations': ['N', 'NE'],
             'snow': {'top_cm': 40},
+            'gpx_url': 'https://skitour.example/ext1.gpx',
             'region': 'Grandes Rousses',
             'geometry': {
                 'geom': '{"type":"Point","coordinates":[110,110]}',
@@ -562,6 +566,15 @@ class TestItems:
             ],
             'credit': {'site': 'skitour.fr', 'site_url': 'https://skitour.fr'},
         }
+
+    def test_texts_are_never_served(self, client, data):
+        """The partner texts are stored (`texts`), never in an answer."""
+        for params in ({}, {'sources': 'skitour'}, {'limit': 1}):
+            response = listing(client, **params)
+            assert 'SECRET-' not in response.text
+            assert all('texts' not in item for item in response.json['items'])
+        sources = client.get('/partner-outings/sources', status=200)
+        assert 'SECRET-' not in sources.text
 
     def test_partner_area_titles_follow_pl(self, client, data):
         for pl, title in (('en', 'Belledonne Range'), ('fr', 'Belledonne')):

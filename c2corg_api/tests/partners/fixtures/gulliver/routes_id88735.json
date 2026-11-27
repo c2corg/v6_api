@@ -1,0 +1,33 @@
+{
+ "88735": {
+  "title": "Anges (Sommet des), Fort du Gondran da Montgenèvre",
+  "region": {
+   "name": "Provence-Alpes-Côte d'Azur (FR)"
+  },
+  "district": "Hautes-Alpes",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "605"
+    },
+    "alt_top": {
+     "value": "2455"
+    },
+    "exposure": {
+     "value": "Nord-Est"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 44.92904607594178,
+      "lng": 6.7189930079040705
+     }
+    }
+   }
+  }
+ }
+}

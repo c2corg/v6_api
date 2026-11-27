@@ -12,16 +12,18 @@ from c2corg_api.models.common.attributes import orientation_types, ski_ratings
 # source -> source activity code -> (c2c activities, steep). The skitour
 # activities are handled in its adapter (all skitouring, steep from the rating).
 ACTIVITY_MAP: dict[str, dict[str, tuple[tuple[str, ...], bool]]] = {
+    # the `term.code` of gulliver.it (all seen live on 2026-11-27). Not mapped:
+    # `cycle` (road cycling) and `skinord` (Nordic skiing), which c2c has no
+    # activity for: counted as `unmapped_activity:<code>`
     'gulliver': {
-        'skimo': (('skitouring',), False),
-        'skisteep': (('skitouring',), True),
-        'snowshoe': (('snowshoeing',), False),
-        'ciaspole': (('snowshoeing',), False),
-        'hike': (('hiking',), False),
-        'climb': (('rock_climbing',), False),
-        # assumed codes, to confirm on the first live recording
-        'alpinism': (('mountain_climbing',), False),
-        'ice': (('ice_climbing',), False),
+        'skimo': (('skitouring',), False),  # "Sci Alpinismo"
+        'skisteep': (('skitouring',), True),  # "Sci Ripido": steep skiing
+        'snowshoe': (('snowshoeing',), False),  # "Ciaspole"
+        'hike': (('hiking',), False),  # "Escursionismo"
+        'climb': (('rock_climbing',), False),  # multi-pitch "Arrampicata"
+        'crag': (('rock_climbing',), False),  # "Falesia": single pitches
+        'mountain': (('mountain_climbing',), False),  # "Alpinismo"
+        'iceclimb': (('ice_climbing',), False),  # "Cascate di ghiaccio"
         'ferrata': (('via_ferrata',), False),
         'mtb': (('mountain_biking',), False),
     },

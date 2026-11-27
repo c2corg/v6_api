@@ -1,0 +1,26 @@
+{
+ "350612": {
+  "ID": "350612",
+  "user_nicename": "user99",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "511066",
+  "permalink": "https://www.gulliver.it/itinerari/coudrey-monte-eravamo-5-amici-albard/2026/11/21/350612/",
+  "content": "[text 101 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "route": {
+   "title": "Albard, Coudrey (Monte) &#8211; Eravamo 5 Amici alBARd",
+   "region": {
+    "name": "Valle d'Aosta"
+   },
+   "district": "AO"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 6 chars]"
+   }
+  }
+ }
+}

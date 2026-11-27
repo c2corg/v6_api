@@ -1,0 +1,33 @@
+{
+ "12105": {
+  "title": "Crevacol (Testa di) da Crevacol per il versante sud",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "942"
+    },
+    "alt_top": {
+     "value": "2609"
+    },
+    "exposure": {
+     "value": "Sud"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.82038031146243,
+      "lng": 7.14712135714723
+     }
+    }
+   }
+  }
+ }
+}

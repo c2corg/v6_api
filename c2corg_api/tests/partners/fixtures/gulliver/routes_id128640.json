@@ -1,0 +1,33 @@
+{
+ "128640": {
+  "title": "Saurel (Cima) da Claviere",
+  "region": {
+   "name": "Piemonte"
+  },
+  "district": "TO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "700"
+    },
+    "alt_top": {
+     "value": "2430"
+    },
+    "exposure": {
+     "value": "Nord"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 44.93992866769128,
+      "lng": 6.751908846601999
+     }
+    }
+   }
+  }
+ }
+}

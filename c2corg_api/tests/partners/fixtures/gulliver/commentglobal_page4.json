@@ -1,0 +1,591 @@
+{
+ "350546": {
+  "ID": "350546",
+  "user_nicename": "user68",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "352060",
+  "permalink": "https://www.gulliver.it/itinerari/vallone-cima-del-da-traversella-per-il-colle-pian-spergiurati/2026/11/21/350546/",
+  "content": "[text 577 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 27 chars]"
+   }
+  }
+ },
+ "350577": {
+  "ID": "350577",
+  "user_nicename": "user69",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "57949",
+  "permalink": "https://www.gulliver.it/itinerari/teodulo-rifugio-da-cervinia/2026/11/21/350577/",
+  "content": "[text 267 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 178 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 23 chars]"
+   },
+   "snow_alt": {
+    "value": "1800"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350489": {
+  "ID": "350489",
+  "user_nicename": "user64",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "468311",
+  "permalink": "https://www.gulliver.it/itinerari/traya-pointe-de-pilier-des-italiens/2026/11/21/350489/",
+  "content": "[text 377 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "   "
+   }
+  }
+ },
+ "350555": {
+  "ID": "350555",
+  "user_nicename": "user45",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "566957",
+  "permalink": "https://www.gulliver.it/itinerari/berlinghera-monte-la-vita-e-bella/2026/11/21/350555/",
+  "content": "[text 213 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 18 chars]"
+   }
+  }
+ },
+ "350515": {
+  "ID": "350515",
+  "user_nicename": "user42",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "903997",
+  "permalink": "https://www.gulliver.it/itinerari/oira-placche-di-sulle-spalle-dei-giganti/2026/11/21/350515/",
+  "content": "[text 201 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350536": {
+  "ID": "350536",
+  "user_nicename": "user70",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "57949",
+  "permalink": "https://www.gulliver.it/itinerari/teodulo-rifugio-da-cervinia/2026/11/21/350536/",
+  "content": "[text 170 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 102 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 16 chars]"
+   },
+   "snow_low": {
+    "value": "[text 16 chars]"
+   },
+   "snow_alt": {
+    "value": "2000"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350567": {
+  "ID": "350567",
+  "user_nicename": "user71",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "829944",
+  "permalink": "https://www.gulliver.it/itinerari/alben-monte-corna-piatta-drycula/2026/11/21/350567/",
+  "content": "[text 1305 chars]",
+  "term": {
+   "code": "mountain"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 34 chars]"
+   }
+  }
+ },
+ "350475": {
+  "ID": "350475",
+  "user_nicename": "user10",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "12105",
+  "permalink": "https://www.gulliver.it/itinerari/crevacol-testa-da-sud/2026/11/21/350475/",
+  "content": "[text 488 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 14 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1600"
+   },
+   "skimo_equip": {
+    "value": ""
+   }
+  }
+ },
+ "350513": {
+  "ID": "350513",
+  "user_nicename": "user42",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "903992",
+  "permalink": "https://www.gulliver.it/itinerari/oira-placche-di-stay-alive/2026/11/21/350513/",
+  "content": "[text 265 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350505": {
+  "ID": "350505",
+  "user_nicename": "user55",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "248365",
+  "permalink": "https://www.gulliver.it/itinerari/talucco-torrione-del-i-fiori-di-yangon/2026/11/21/350505/",
+  "content": "[text 1019 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 10 chars]"
+   }
+  }
+ },
+ "350500": {
+  "ID": "350500",
+  "user_nicename": "user72",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "250712",
+  "permalink": "https://www.gulliver.it/itinerari/costafiorita-punta-di-da-comba-anello-per-rocca-sella-e-monte-sapei/2026/11/21/350500/",
+  "content": "[text 288 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 18 chars]"
+   }
+  }
+ },
+ "350495": {
+  "ID": "350495",
+  "user_nicename": "user73",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "418726",
+  "permalink": "https://www.gulliver.it/itinerari/antoroto-monte-cima-ciuaiera-da-cascine-traversata-est-ovest-delle-panne/2026/11/21/350495/",
+  "content": "[text 656 chars]",
+  "term": {
+   "code": "mountain"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 94 chars]"
+   }
+  }
+ },
+ "350482": {
+  "ID": "350482",
+  "user_nicename": "user9",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "397600",
+  "permalink": "https://www.gulliver.it/itinerari/coudrey-monte-pilier-del-forte/2026/11/21/350482/",
+  "content": "[text 689 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 98 chars]"
+   }
+  }
+ },
+ "350531": {
+  "ID": "350531",
+  "user_nicename": "user74",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "467578",
+  "permalink": "https://www.gulliver.it/itinerari/caprie-paretine-superiori/2026/11/21/350531/",
+  "content": "[text 596 chars]",
+  "term": {
+   "code": "crag"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 17 chars]"
+   }
+  }
+ },
+ "350576": {
+  "ID": "350576",
+  "user_nicename": "user75",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "498444",
+  "permalink": "https://www.gulliver.it/itinerari/durand-cima-da-artesina-3/2026/11/21/350576/",
+  "content": "[text 682 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 9 chars]"
+   }
+  }
+ },
+ "350523": {
+  "ID": "350523",
+  "user_nicename": "user50",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "656123",
+  "permalink": "https://www.gulliver.it/itinerari/ezendola-cimae-dosso-bi-da-villa-di-lozio/2026/11/21/350523/",
+  "content": "[text 974 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 48 chars]"
+   }
+  }
+ },
+ "350449": {
+  "ID": "350449",
+  "user_nicename": "user38",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "483469",
+  "permalink": "https://www.gulliver.it/itinerari/campra-alpe-da-orcesco/2026/11/21/350449/",
+  "content": "[text 145 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 22 chars]"
+   }
+  }
+ },
+ "350526": {
+  "ID": "350526",
+  "user_nicename": "user76",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "280153",
+  "permalink": "https://www.gulliver.it/itinerari/colombano-monte-da-ciaine/2026/11/21/350526/",
+  "content": "[text 276 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 23 chars]"
+   }
+  }
+ },
+ "350522": {
+  "ID": "350522",
+  "user_nicename": "user77",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "935994",
+  "permalink": "https://www.gulliver.it/itinerari/mompellato-falesia-di-altri-2-tiri/2026/11/21/350522/",
+  "content": "[text 608 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350518": {
+  "ID": "350518",
+  "user_nicename": "user78",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "246631",
+  "permalink": "https://www.gulliver.it/itinerari/bisalta-o-besimauda-monte-cresta-n-ne/2026/11/21/350518/",
+  "content": "[text 870 chars]",
+  "term": {
+   "code": "mountain"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 28 chars]"
+   }
+  }
+ },
+ "350491": {
+  "ID": "350491",
+  "user_nicename": "user67",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "214487",
+  "permalink": "https://www.gulliver.it/itinerari/loggia-dei-massoni-viaggio-in-birmania/2026/11/21/350491/",
+  "content": "[text 176 chars]",
+  "term": {
+   "code": "crag"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350507": {
+  "ID": "350507",
+  "user_nicename": "user79",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "223682",
+  "permalink": "https://www.gulliver.it/itinerari/corso-del-cavallo-est-e-ovest-monte-da-aisone-per-la-testa-di-peitagu-anello/2026/11/21/350507/",
+  "content": "[text 503 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": [
+   {
+    "guid": "https://www.gulliver.it/wp-content/uploads/2026/11/activity_25153121956.gpx"
+   }
+  ],
+  "meta": {
+   "access": {
+    "value": "[text 116 chars]"
+   }
+  }
+ },
+ "350558": {
+  "ID": "350558",
+  "user_nicename": "user80",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "180833",
+  "permalink": "https://www.gulliver.it/itinerari/ex-base-nato-da-finalborgo-discesa-sentiero-h/2026/11/21/350558/",
+  "content": "[text 632 chars]",
+  "term": {
+   "code": "mtb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 17 chars]"
+   }
+  }
+ },
+ "350462": {
+  "ID": "350462",
+  "user_nicename": "user81",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "140387",
+  "permalink": "https://www.gulliver.it/itinerari/rosselli-monte-da-givoletto-per-il-monte-baron/2026/11/21/350462/",
+  "content": "[text 42 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350446": {
+  "ID": "350446",
+  "user_nicename": "user47",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "88735",
+  "permalink": "https://www.gulliver.it/itinerari/anges-sommet-des-fort-du-gondran-da-montgenevre/2026/11/21/350446/",
+  "content": "[text 202 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 14 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 17 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1800"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350524": {
+  "ID": "350524",
+  "user_nicename": "user53",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "169960",
+  "permalink": "https://www.gulliver.it/itinerari/vaccera-colle-da-torre-pellice-giro-per-il-ponte-di-barmafreida/2026/11/21/350524/",
+  "content": "[text 298 chars]",
+  "term": {
+   "code": "mtb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 1 chars]"
+   }
+  }
+ },
+ "350447": {
+  "ID": "350447",
+  "user_nicename": "user35",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "584266",
+  "permalink": "https://www.gulliver.it/itinerari/sentiero-balcone-di-usseglio/2026/11/21/350447/",
+  "content": "[text 86 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350569": {
+  "ID": "350569",
+  "user_nicename": "user82",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "151001",
+  "permalink": "https://www.gulliver.it/itinerari/muzzerone-chi-vuol-essere-lieto-sia/2026/11/21/350569/",
+  "content": "[text 500 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 57 chars]"
+   }
+  }
+ },
+ "350504": {
+  "ID": "350504",
+  "user_nicename": "user83",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "123294",
+  "permalink": "https://www.gulliver.it/itinerari/sbarua-roccasperone-cinquetti-via-cinquetti-burdino/2026/11/21/350504/",
+  "content": "[text 221 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 40 chars]"
+   }
+  }
+ },
+ "350510": {
+  "ID": "350510",
+  "user_nicename": "user37",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "12335",
+  "permalink": "https://www.gulliver.it/itinerari/aiguille-de-lesache/2026/11/21/350510/",
+  "content": "[text 921 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   },
+   "obs": {
+    "value": "[text 28 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 9 chars]"
+   },
+   "snow_alt": {
+    "value": "1700"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ }
+}
