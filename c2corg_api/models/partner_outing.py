@@ -99,8 +99,8 @@ class PartnerOuting(Base):
     orientations = Column(ArrayOfEnum(enums.orientation_type))
     # small structured figures only
     snow = Column(JSONB)
-    # the public GPX file of the report on the partner site: a link only, the
-    # file is never fetched nor stored
+    # the public GPX file of the report on the partner site; the tracks phase
+    # of the job fetches it and stores its points in partner_tracks
     gpx_url = Column(String(500))
     # the free texts of the report, plain text keyed by kind ('narrative',
     # 'conditions', 'access'...: see HarvestedOuting.texts). Stored, NEVER

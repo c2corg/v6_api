@@ -24,6 +24,11 @@ EARTH = 6378137.0
 SWITZERLAND = 14067
 AUSTRIA = 14257
 SALZBURG = 282687
+# partners/regions/onice.json and gulliver.json
+ITALY = 14270
+AOSTA = 280072
+TORINO = 280066
+CUNEO = 280000
 SETTINGS = {
     'partners.retention_days': '31',
     'partners.transport': 'http',
@@ -300,6 +305,58 @@ def test_region_area_without_geometry_falls_back_to_the_country(db):
     assert area_ids == {('skitourenportal', '1'): [AUSTRIA]}
 
 
+@pytest.fixture
+def italy(db):
+    make_area(db, SWITZERLAND, 'country', box(6.0, 45.8, 10.0, 47.0), 'Switzerland')
+    make_area(db, ITALY, 'country', box(6.6, 37.0, 18.5, 47.0), 'Italy')
+    make_area(db, AOSTA, 'admin_limits', box(6.8, 45.5, 7.9, 46.0), "Valle d'Aosta")
+    make_area(db, TORINO, 'admin_limits', box(6.6, 44.8, 8.0, 45.5), 'Torino')
+    make_area(db, CUNEO, 'admin_limits', box(6.8, 44.0, 8.2, 44.8), 'Cuneo')
+
+
+def test_onice_italian_region(db, italy):
+    located, area_ids, counts = resolve(
+        db,
+        outing(source='onice', region="Valle d'Aosta", country='IT', summit_name='Nix'),
+        outing('2', source='onice', region='Svizzera', country='CH'),
+        outing('3', source='onice', region='Altro'),
+    )
+    o = located['1']
+    assert o.geom_quality == 'area_centroid'
+    assert (o.lon, o.lat) == (pytest.approx(7.35), pytest.approx(45.75, abs=0.01))
+    assert sorted(area_ids[('onice', '1')]) == [ITALY, AOSTA]
+    # a country in Italian: the country only
+    assert located['2'].geom_quality == 'none'
+    assert area_ids[('onice', '2')] == [SWITZERLAND]
+    assert ('onice', '3') not in area_ids
+    assert counts == Counter(area_centroid=1, country=1, unresolved=1)
+
+
+def test_onice_region_of_several_provinces(db, italy):
+    located, area_ids, _ = resolve(
+        db, outing(source='onice', region='Piemonte', country='IT')
+    )
+    # the centroid of the first province, the areas of all those in the database
+    assert located['1'].geom_quality == 'area_centroid'
+    assert located['1'].lon == pytest.approx(7.3)
+    assert {TORINO, CUNEO, ITALY} <= set(area_ids[('onice', '1')])
+
+
+def test_gulliver_province_code(db, italy):
+    located, area_ids, counts = resolve(
+        db,
+        outing(source='gulliver', region='Piemonte - CN', country='IT'),
+        outing('2', source='gulliver', region='Valais (CH) - Brig', country='CH'),
+    )
+    o = located['1']
+    assert o.geom_quality == 'area_centroid'
+    assert (o.lon, o.lat) == (pytest.approx(7.5), pytest.approx(44.4, abs=0.01))
+    assert sorted(area_ids[('gulliver', '1')]) == [ITALY, CUNEO]
+    assert located['2'].geom_quality == 'none'
+    assert area_ids[('gulliver', '2')] == [SWITZERLAND]
+    assert counts == Counter(area_centroid=1, country=1)
+
+
 # ----------------------------------------------------------------- the job
 
 
@@ -385,3 +442,32 @@ def test_failed_lookups_make_the_run_degraded(db, world):
     assert source.last_skipped == {'lookup_failed': 2}
     assert source.consecutive_failures == 0
     assert len(rows(db)) == 1
+
+
+@pytest.mark.parametrize(
+    ('source', 'region', 'areas'),
+    [
+        ('onice', "Valle d'Aosta", [ITALY, AOSTA]),
+        ('gulliver', 'Piemonte - CN', [ITALY, CUNEO]),
+    ],
+)
+def test_the_job_stores_italian_regions(db, italy, source, region, areas):
+    class Fake:
+        name = source
+        site_name = f'{source}.example'
+        site_url = f'https://{source}.example'
+        required_secrets = ()
+        rate = RateLimit(0, 10, 5)
+
+        def fetch(self, ctx):
+            return FetchResult(
+                outings=[outing(source=source, region=region, country='IT')]
+            )
+
+    job.run_source(db, Fake(), FakeTransport(), MemoryLookupCache(), NOW, SETTINGS)
+    job.assign_areas(db)
+    db.expire_all()
+    row = db.scalars(select(PartnerOuting).where(PartnerOuting.source == source)).one()
+    assert row.geom_quality == 'area_centroid'
+    assert row.geom is not None
+    assert row.area_ids == areas
