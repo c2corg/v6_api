@@ -1,5 +1,9 @@
 FROM debian:trixie-slim
 
+# the packages of the Debian release, with its security updates: a pinned
+# version leaves the archive at the next update and breaks the build (as in
+# docker/Dockerfile of the API)
+# hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl jq tippecanoe \
