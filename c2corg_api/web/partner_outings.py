@@ -5,18 +5,22 @@
 
 from typing import Annotated
 
-from fastapi import Query, Response
+from fastapi import Path, Query, Response
 
+from c2corg_api.httpexceptions import HTTPNotFound
 from c2corg_api.views.partner_outings import (
     DEFAULT_DAYS,
     DEFAULT_LIMIT,
     MAX_LIMIT,
     MAX_SPAN_DAYS,
+    TRACK_CACHE_SECONDS,
     InvalidParam,
     list_partner_outings,
     list_sources,
     parse_params,
+    read_track,
 )
+from c2corg_api.web.answers import http_error
 from c2corg_api.web.db import request_session
 from c2corg_api.web.errors import error_response
 
@@ -30,6 +34,7 @@ def include(app):
     for path, endpoint in (
         ('/partner-outings', partner_outings),
         ('/partner-outings/sources', partner_outings_sources),
+        ('/partner-outings/{id}/track', partner_outing_track),
     ):
         app.add_api_route(
             path,
@@ -108,6 +113,28 @@ def partner_outings_sources():
         return list_sources(session)
 
 
+def partner_outing_track(
+    response: Response,
+    id: Annotated[
+        str,
+        Path(description='The id of a listing item: `<source>:<id on the source>`.'),
+    ],
+):
+    """Return the GPX track of a partner outing: a GeoJSON Feature (EPSG:4326).
+
+    Its points only (the times, heart rates and names of the file are never
+    kept), simplified when longer than 2000 points; `properties` give the
+    report, the GPX file, the author, the `attribution` to show and the
+    `licence`. 404 when the outing has no track (yet).
+    """
+    with request_session() as session:
+        feature = read_track(session, id)
+    if feature is None:
+        return http_error(HTTPNotFound('no track for this outing'))
+    response.headers['Cache-Control'] = f'public, max-age={TRACK_CACHE_SECONDS}'
+    return feature
+
+
 def _invalid(name):
     return error_response([('querystring', name, f'invalid {name}')], 400)
 
@@ -116,3 +143,5 @@ partner_outings.described = True
 partner_outings.response_schema = 'PartnerOutings'
 partner_outings_sources.described = True
 partner_outings_sources.response_schema = 'PartnerSources'
+partner_outing_track.described = True
+partner_outing_track.response_schema = 'PartnerTrack'

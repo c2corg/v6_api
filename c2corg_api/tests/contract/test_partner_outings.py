@@ -7,11 +7,16 @@ from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_api.models.partner_outing import PartnerOuting, PartnerSource
+from c2corg_api.models.partner_outing import (
+    PartnerOuting,
+    PartnerSource,
+    PartnerTrack,
+)
 from c2corg_api.tests.contract import check_snapshot, contract
 
 LISTING = ('GET', '/partner-outings')
 SOURCES = ('GET', '/partner-outings/sources')
+TRACK = ('GET', '/partner-outings/{id}/track')
 
 DAY = date(2026, 11, 22)
 
@@ -74,6 +79,20 @@ def rows(session, user_ids, monkeypatch):
             area_ids=[area.document_id],
         )
     )
+    session.flush()
+    session.add(
+        PartnerTrack(
+            source='skitour',
+            external_id='123456',
+            gpx_url='https://skitour.fr/sorties/123456.gpx',
+            status='ok',
+            attempts=1,
+            last_attempt_at=datetime(2026, 11, 24, 10, 15, tzinfo=UTC),
+            fetched_at=datetime(2026, 11, 24, 10, 15, tzinfo=UTC),
+            geom='SRID=3857;MULTILINESTRING((100 100, 120 130))',
+            point_count=2,
+        )
+    )
     session.add(
         PartnerSource(
             source='skitour',
@@ -124,3 +143,17 @@ class TestPartnerOutingsSources:
         response = browser.get('/partner-outings/sources')
         check_snapshot('partner_outings_sources', response)
         assert 'cursor' not in response.text
+
+
+class TestPartnerOutingTrack:
+    @contract(TRACK)
+    def test_track(self, browser):
+        response = browser.get('/partner-outings/skitour:123456/track')
+        check_snapshot('partner_outing_track', response)
+        assert response.json['type'] == 'Feature'
+        assert response.json['geometry']['type'] == 'MultiLineString'
+
+    @contract(TRACK)
+    def test_no_track(self, browser):
+        response = browser.get('/partner-outings/skitour:999/track', status=404)
+        check_snapshot('partner_outing_track_not_found', response)

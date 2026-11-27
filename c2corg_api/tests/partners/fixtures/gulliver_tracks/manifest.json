@@ -1,0 +1,26 @@
+{
+  "source": "gulliver_tracks",
+  "recorded_at": "2026-11-27",
+  "synthetic": true,
+  "note": "SYNTHETIC GPX tracks (made-up loops; a fake time, heart rate and author in one of them) at the GPX links of the three newest reports with a GPX of the gulliver/ recording, for the track phase of the demo and the tests. Not the track of anyone; never re-record it.",
+  "entries": [
+    {
+      "url": "https://www.gulliver.it/wp-content/uploads/2026/11/AnelloBorgateMontecrestese.gpx",
+      "status": 200,
+      "content_type": "application/gpx+xml",
+      "file": "AnelloBorgateMontecrestese.gpx"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-content/uploads/2026/11/2026-11-22-10-05-42.gpx",
+      "status": 200,
+      "content_type": "application/gpx+xml",
+      "file": "2026-11-22-10-05-42.gpx"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-content/uploads/2026/11/2026-11-21_3401462373_Escursione-alpinistica-komoot.gpx",
+      "status": 200,
+      "content_type": "application/gpx+xml",
+      "file": "2026-11-21_3401462373_Escursione-alpinistica-komoot.gpx"
+    }
+  ]
+}

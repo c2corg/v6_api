@@ -1,0 +1,33 @@
+{
+  "body": {
+    "geometry": {
+      "coordinates": [
+        [
+          [
+            "float"
+          ]
+        ]
+      ],
+      "type": "str"
+    },
+    "id": "str",
+    "properties": {
+      "attribution": "str",
+      "author": "str",
+      "gpx_url": "str",
+      "licence": "null",
+      "point_count": "int",
+      "simplified": "bool",
+      "source": "str",
+      "url": "str"
+    },
+    "type": "str"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "public, max-age=3600",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}
