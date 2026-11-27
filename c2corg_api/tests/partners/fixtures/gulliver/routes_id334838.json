@@ -1,0 +1,33 @@
+{
+ "334838": {
+  "title": "Gimont (Mont) o Grand Charvia da Montgenevre",
+  "region": {
+   "name": "Provence-Alpes-Côte d'Azur (FR)"
+  },
+  "district": "Hautes-Alpes",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "800"
+    },
+    "alt_top": {
+     "value": "2650"
+    },
+    "exposure": {
+     "value": "Nord-Ovest"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 44.93398500639186,
+      "lng": 6.732451915484132
+     }
+    }
+   }
+  }
+ }
+}

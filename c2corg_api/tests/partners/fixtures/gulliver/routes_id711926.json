@@ -1,0 +1,33 @@
+{
+ "711926": {
+  "title": "Bortsalet (Mont) da Crevacol",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "866"
+    },
+    "alt_top": {
+     "value": "2516"
+    },
+    "exposure": {
+     "value": "Sud"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.82040480812963,
+      "lng": 7.147129786230462
+     }
+    }
+   }
+  }
+ }
+}

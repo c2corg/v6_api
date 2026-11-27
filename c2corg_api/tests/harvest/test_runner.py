@@ -309,6 +309,29 @@ def test_enabled(settings, enabled):
 
 
 @pytest.mark.parametrize(
+    ('settings', 'enabled'),
+    [
+        ({'harvest.enabled': 'true'}, True),
+        # the most specific switch set wins: the harvester, its group, all
+        ({'harvest.enabled': 'true', 'harvest.group.enabled': 'false'}, False),
+        ({'harvest.group.enabled': 'true'}, True),
+        (
+            {'harvest.group.enabled': 'true', 'harvest.group.fake.enabled': 'false'},
+            False,
+        ),
+        (
+            {'harvest.group.enabled': 'false', 'harvest.group.fake.enabled': 'true'},
+            True,
+        ),
+        ({'harvest.group.enabled': 'false', 'harvest.group.fake.enabled': ''}, False),
+        ({'harvest.enabled': 'true', 'harvest.group.enabled': ''}, True),
+    ],
+)
+def test_enabled_by_group(settings, enabled):
+    assert runner.harvest_enabled(settings, 'group.fake') is enabled
+
+
+@pytest.mark.parametrize(
     ('switches', 'on'),
     [
         ({'harvest.enabled': 'false'}, False),
@@ -333,10 +356,25 @@ def test_enabled_harvesters():
     names = [
         h.name
         for h in runner.enabled_harvesters(
-            {'harvest.enabled': 'true', 'harvest.avalanche.meteofrance.enabled': 'no'}
+            {
+                'harvest.enabled': 'true',
+                'harvest.avalanche.meteofrance.enabled': 'no',
+                'harvest.partners.enabled': 'false',
+            }
         )
     ]
     assert names == ['avalanche.caaml']
+
+
+def test_harvest_now(harvest_session, clock):
+    # by hand: all the sources, due or not
+    harvester = FakeHarvester({'a': Payload(b'new a'), 'b': Payload(b'b')})
+    tick(harvester)
+    harvester.answers = {'a': Payload(b'new a2'), 'b': Payload(b'b2')}
+    clock.now += timedelta(minutes=1)
+    runner.harvest_now([harvester])
+    assert harvester.stored[-2:] == [('a', b'new a2'), ('b', b'b2')]
+    assert sources(harvest_session)['fake:a'].last_success == clock.now
 
 
 def test_health(client, harvest_session, clock, monkeypatch):

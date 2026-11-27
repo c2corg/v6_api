@@ -1,0 +1,33 @@
+{
+ "248823": {
+  "title": "Soma (Clot della) da Pragelato",
+  "region": {
+   "name": "Piemonte"
+  },
+  "district": "TO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "900"
+    },
+    "alt_top": {
+     "value": "2420"
+    },
+    "exposure": {
+     "value": "Nord"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 44.981988513677216,
+      "lng": 6.923033089965838
+     }
+    }
+   }
+  }
+ }
+}

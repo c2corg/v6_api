@@ -1,0 +1,33 @@
+{
+ "193229": {
+  "title": "Couis (Punta del) e Bivacco Arno da Pila",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "798"
+    },
+    "alt_top": {
+     "value": "2662"
+    },
+    "exposure": {
+     "value": "Nord"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.68738586398257,
+      "lng": 7.310747340704848
+     }
+    }
+   }
+  }
+ }
+}

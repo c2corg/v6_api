@@ -1,0 +1,18 @@
+{
+  "source": "skitour",
+  "recorded_at": "2026-11-25",
+  "synthetic": false,
+  "entries": [
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "file": "sorties_c1_l200_p1.json",
+      "params": {
+        "c": "1",
+        "l": "200",
+        "p": "1"
+      }
+    }
+  ]
+}

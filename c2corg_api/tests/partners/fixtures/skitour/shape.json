@@ -1,0 +1,30 @@
+{
+ "sorties_c1_l200_p1.json": [
+  {
+   "auteur": {
+    "pseudo": "str"
+   },
+   "date": "str",
+   "denivele": "str",
+   "depart": {
+    "lat": "str",
+    "lng": "str"
+   },
+   "dif_ski": "str",
+   "id": "str",
+   "massif": {
+    "nom": "str"
+   },
+   "orientation": "str",
+   "sommets": [
+    {
+     "altitude": "str",
+     "lat": "str",
+     "lng": "str",
+     "sommet": "str"
+    }
+   ],
+   "titre": "str"
+  }
+ ]
+}

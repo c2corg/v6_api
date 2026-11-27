@@ -10,7 +10,7 @@
     "repository": {
       "url": "https://github.com/c2corg/v6_api/",
       "provider": "github",
-      "revision": "d26f65d1d284fe5b64cde6d11776ea5b3143794e"
+      "revision": "3aa92ec80fa5a65ada0644bce38a06d380c9164f"
     }
   },
   "components": [
@@ -27,8 +27,8 @@
         },
         {
           "path": "c2corg_api/jobs/__init__.py",
-          "line": 25,
-          "end_line": 33,
+          "line": 29,
+          "end_line": 37,
           "label": "cron 0:00"
         }
       ],
@@ -54,8 +54,8 @@
         },
         {
           "path": "c2corg_api/jobs/__init__.py",
-          "line": 35,
-          "end_line": 44,
+          "line": 39,
+          "end_line": 48,
           "label": "cron :30"
         }
       ],
@@ -81,8 +81,8 @@
         },
         {
           "path": "c2corg_api/jobs/__init__.py",
-          "line": 46,
-          "end_line": 54,
+          "line": 50,
+          "end_line": 58,
           "label": "cron 1:00"
         }
       ],
@@ -108,8 +108,8 @@
         },
         {
           "path": "c2corg_api/jobs/__init__.py",
-          "line": 56,
-          "end_line": 66,
+          "line": 60,
+          "end_line": 70,
           "label": "cron :15, switched on"
         },
         {
@@ -138,14 +138,14 @@
       "sources": [
         {
           "path": "c2corg_api/jobs/__init__.py",
-          "line": 68,
-          "end_line": 81,
+          "line": 72,
+          "end_line": 85,
           "label": "interval 1 min, max_instances=1"
         },
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 65,
-          "end_line": 85,
+          "line": 92,
+          "end_line": 119,
           "label": "harvest_tick"
         }
       ],
@@ -171,8 +171,8 @@
         },
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 203,
-          "end_line": 219,
+          "line": 256,
+          "end_line": 272,
           "label": "prune_payloads"
         },
         {
@@ -226,8 +226,8 @@
       "sources": [
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 88,
-          "end_line": 132
+          "line": 141,
+          "end_line": 185
         }
       ],
       "pos": [
@@ -247,8 +247,8 @@
       "sources": [
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 135,
-          "end_line": 162
+          "line": 188,
+          "end_line": 215
         }
       ],
       "pos": [
@@ -268,8 +268,8 @@
       "sources": [
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 287,
-          "end_line": 304
+          "line": 340,
+          "end_line": 352
         }
       ],
       "pos": [
@@ -290,13 +290,13 @@
       "sources": [
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 165,
-          "end_line": 200
+          "line": 218,
+          "end_line": 253
         },
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 246,
-          "end_line": 260,
+          "line": 299,
+          "end_line": 313,
           "label": "_keep payload"
         }
       ],
@@ -322,8 +322,8 @@
         },
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 263,
-          "end_line": 284,
+          "line": 316,
+          "end_line": 337,
           "label": "_record_error"
         }
       ],
@@ -391,6 +391,77 @@
       ]
     },
     {
+      "id": "h_partners",
+      "type": "backend",
+      "label": "PartnerHarvester ×6",
+      "sublabel": "partners.<name> · metaskirando",
+      "tag": "click: partner outings",
+      "explanation": "One harvester per partner adapter (skitour.fr, gulliver.it, bivouak.net, gipfelbuch.ch, skitourenportal.eu, on-ice.it), each with one source partners.<name>:outings every 15 minutes. fetch() runs the adapter, locates and upserts the outings, records the health, then reads a few GPX tracks. Details: metaskirando.html.",
+      "href": "metaskirando.html",
+      "pos": [
+        680,
+        920
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 520,
+          "end_line": 620
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 48,
+          "end_line": 64
+        }
+      ]
+    },
+    {
+      "id": "u_partners",
+      "type": "external",
+      "label": "Partner sites",
+      "sublabel": "skitour.fr, gulliver.it +4",
+      "pos": [
+        1000,
+        800
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/__init__.py",
+          "line": 16,
+          "end_line": 23
+        }
+      ]
+    },
+    {
+      "id": "t_partners",
+      "type": "database",
+      "label": "partner_*",
+      "sublabel": "outings · sources · lookups · tracks",
+      "pos": [
+        1000,
+        920
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/models/partner_outing.py",
+          "line": 51,
+          "end_line": 231
+        }
+      ]
+    },
+    {
       "id": "h_next",
       "type": "backend",
       "label": "Next harvester",
@@ -406,8 +477,8 @@
         },
         {
           "path": "c2corg_api/harvest/runner.py",
-          "line": 38,
-          "end_line": 45,
+          "line": 48,
+          "end_line": 64,
           "label": "harvesters()"
         }
       ],
@@ -466,11 +537,11 @@
       "id": "u_next",
       "type": "external",
       "label": "Next service",
-      "sublabel": "stations, partner sites, webcams",
+      "sublabel": "weather stations, webcams…",
       "emphasis": true,
       "pos": [
-        680,
-        920
+        1000,
+        1160
       ],
       "size": [
         200,
@@ -626,8 +697,8 @@
         },
         {
           "path": "Makefile",
-          "line": 148,
-          "end_line": 149
+          "line": 149,
+          "end_line": 150
         }
       ],
       "pos": [
@@ -855,6 +926,12 @@
       "variant": "emphasis"
     },
     {
+      "id": "r_run-h_partners",
+      "from": "r_run",
+      "to": "h_partners",
+      "label": "fetch: run_source"
+    },
+    {
       "id": "r_run-r_policy",
       "from": "r_run",
       "to": "r_policy",
@@ -939,6 +1016,18 @@
       "from": "h_caaml",
       "to": "t_weather",
       "label": "SLF weather"
+    },
+    {
+      "id": "h_partners-u_partners",
+      "from": "h_partners",
+      "to": "u_partners",
+      "label": "JSON / HTML"
+    },
+    {
+      "id": "h_partners-t_partners",
+      "from": "h_partners",
+      "to": "t_partners",
+      "label": "upsert"
     }
   ],
   "cards": [
@@ -964,13 +1053,14 @@
     },
     {
       "dot": "emerald",
-      "title": "Adding a harvester (weather stations, partner sites, webcams…)",
+      "title": "Adding a harvester (weather stations, webcams…)",
       "items": [
         "Subclass Harvester (harvest/harvester.py): name, policy, sources(), url(), fetch(), store(); requests_per_minute for a quota, keep_payloads_days",
         "store() writes only with the session it gets, never DBSession; return Stored(published=True) on a new publication",
         "Add it to runner.harvesters(), its tables to models/ and an alembic migration",
         "Switch: harvest.<name>.enabled in common.ini.in and harvest_<name>_enabled in config/env.default (empty: as harvest.enabled)",
-        "Test it with a fake service (tests/harvest/), and add its pruning to prune_harvest if its data grows"
+        "Test it with a fake service (tests/harvest/), and add its pruning to prune_harvest if its data grows",
+        "The partner outings (metaskirando.html) are an example: one PartnerHarvester per adapter of partners/sources/, whose fetch() stores the whole run itself (store() is a no-op)"
       ]
     },
     {
@@ -979,7 +1069,8 @@
       "items": [
         "harvest.enabled (false by default) or harvest.<name>.enabled: with no harvester on, harvest_tick, prune_harvest and compact_avalanche_bulletins are not registered",
         "Without METEOFRANCE_API_KEY the Météo-France harvester lists no source: its sources get disabled",
-        "process_removals runs only with users.removals.auto, and does nothing while the forum is disabled"
+        "process_removals runs only with users.removals.auto, and does nothing while the forum is disabled",
+        "Partner outings: harvest.partners.enabled and harvest.partners.<name>.enabled (whatever harvest.enabled); purge_partner_outings runs daily at 01:40 even when they are off"
       ]
     },
     {

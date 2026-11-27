@@ -1,0 +1,97 @@
+"""Static tables `region text -> c2c areas`, for the outings without coordinates.
+
+`regions/<source>.json` holds, for each region text a partner site publishes,
+the c2c area ids to give the outing and its country. Used by the job for the
+rows that have a `region` but no position: `area_ids` from the table and
+`geom_quality='area_centroid'` with the centroid of the first area.
+
+    {"source": "...", "countries": {"AT": <id>}, "regions": {
+        "Salzburg": {"country": "AT", "area_ids": [<id>, ...], "range_ids": [...]}}}
+
+A region of several areas (an Italian region: its provinces) lists them all.
+`area_ids` are the areas the region IS (first: the one whose centroid stands for
+the region), `range_ids` the mountain ranges it overlaps, for information (an
+outing of Salzburg is not in every range of Salzburg). An entry without
+`area_ids` gives the country only (on-ice.it's 'Svizzera').
+"""
+
+import json
+import re
+import unicodedata
+from dataclasses import dataclass
+from functools import cache
+from pathlib import Path
+
+DIRECTORY = Path(__file__).resolve().parent / 'regions'
+_FOLD = str.maketrans({'ß': 'ss', 'ø': 'o', 'æ': 'ae', 'œ': 'oe'})
+
+
+@dataclass(frozen=True, slots=True)
+class RegionAreas:
+    country: str | None
+    area_ids: tuple[int, ...]
+    range_ids: tuple[int, ...] = ()
+
+
+def fold(text: str) -> str:
+    """Casefold and drop accents: 'Kärnten', ' kaernten ' -> 'karnten'/'kaernten'.
+
+    German transliterations (ae/oe/ue) are folded to the plain letter too, so
+    both spellings of a region meet.
+    """
+    text = unicodedata.normalize('NFKC', text).casefold().translate(_FOLD)
+    text = re.sub(r'([aou])e', r'\1', text)
+    text = ''.join(
+        c for c in unicodedata.normalize('NFD', text) if not unicodedata.combining(c)
+    )
+    return re.sub(r'[^a-z0-9]+', ' ', text).strip()
+
+
+@cache
+def load(source: str) -> dict[str, RegionAreas]:
+    """Return the table of a source, by folded region text; empty if it has none."""
+    path = DIRECTORY / f'{source}.json'
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding='utf-8'))
+    table = {}
+    for name, entry in data['regions'].items():
+        table[fold(name)] = RegionAreas(
+            country=entry.get('country'),
+            area_ids=tuple(entry['area_ids']),
+            range_ids=tuple(entry.get('range_ids', ())),
+        )
+    return table
+
+
+def lookup(source: str, region: str | None) -> RegionAreas | None:
+    """Return the areas of a region text of a source, None if it is not in the table.
+
+    A text of two parts, 'Region - District' (gulliver's 'Piemonte - TO'), is
+    looked up whole, then by its district, then by its region.
+    """
+    if not region:
+        return None
+    table = load(source)
+    parts = [region, *reversed(region.split(' - '))] if ' - ' in region else [region]
+    for part in parts:
+        found = table.get(fold(part))
+        if found is not None:
+            return found
+    return None
+
+
+@cache
+def _countries() -> dict[str, int]:
+    data = json.loads((DIRECTORY / 'countries.json').read_text(encoding='utf-8'))
+    return {code.upper(): area_id for code, area_id in data['countries'].items()}
+
+
+def country_area(code: str | None) -> int | None:
+    """Return the c2c country area of an ISO 3166-1 alpha-2 code ('CH'), or None.
+
+    `regions/countries.json`: the countries partners publish and their neighbours.
+    """
+    if not code:
+        return None
+    return _countries().get(code.strip().upper())

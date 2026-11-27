@@ -1,0 +1,26 @@
+{
+ "350614": {
+  "ID": "350614",
+  "user_nicename": "user98",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "211445",
+  "permalink": "https://www.gulliver.it/itinerari/capezzone-monte-da-campello-monti/2026/11/21/350614/",
+  "content": "[text 630 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "route": {
+   "title": "Capezzone (Monte) da Campello Monti",
+   "region": {
+    "name": "Piemonte"
+   },
+   "district": "VB"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 111 chars]"
+   }
+  }
+ }
+}

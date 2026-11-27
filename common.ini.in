@@ -94,6 +94,35 @@ harvest.enabled = {harvest_enabled}
 harvest.avalanche.meteofrance.enabled = {harvest_meteofrance_enabled}
 harvest.avalanche.caaml.enabled = {harvest_caaml_enabled}
 
+# partner outings harvester (see jobs/harvest_partner_outings.py): the
+# harvesters `partners.<source>` of c2corg_api.harvest. On or off as switched
+# here (on in env.default), whatever harvest.enabled; for one source, else
+# (empty) as harvest.partners.enabled. The secrets (SKITOUR_API_KEY) are read
+# from the environment, never from here: without one, the source is disabled
+harvest.partners.enabled = {harvest_partners_enabled}
+harvest.partners.skitour.enabled = {harvest_partners_skitour_enabled}
+harvest.partners.gulliver.enabled = {harvest_partners_gulliver_enabled}
+harvest.partners.bivouak.enabled = {harvest_partners_bivouak_enabled}
+harvest.partners.gipfelbuch.enabled = {harvest_partners_gipfelbuch_enabled}
+harvest.partners.skitourenportal.enabled = {harvest_partners_skitourenportal_enabled}
+harvest.partners.onice.enabled = {harvest_partners_onice_enabled}
+# minutes between two runs of a source, and the base of its backoff
+partners.interval_minutes = {partners_interval}
+# days a partner outing is kept; empty or 0 (the default): forever
+partners.retention_days = {partners_retention}
+# days a partner_lookups row (a cache, not data) is kept
+partners.lookup_retention_days = {partners_lookup_retention}
+# http | fixtures
+partners.transport = {partners_transport}
+# empty: c2corg_api/tests/partners/fixtures
+partners.fixtures_dir = {partners_fixtures_dir}
+# fixture mode accepts synthetic fixtures (dev only)
+partners.allow_synthetic = {partners_allow_synthetic}
+# GPX tracks read after the outings of a run (0: none), and the seconds
+# between two of them (10 at least)
+partners.tracks_per_run = {partners_tracks_per_run}
+partners.tracks_interval_seconds = {partners_tracks_interval}
+
 # the scheduler checks the links to other sites (c2corg_api.linkcheck)
 link_checker.enabled = {link_checker_enabled}
 

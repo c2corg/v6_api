@@ -1,0 +1,33 @@
+{
+ "57949": {
+  "title": "Teodulo (Rifugio) da Cervinia",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "1400"
+    },
+    "alt_top": {
+     "value": "3317"
+    },
+    "exposure": {
+     "value": "Sud-Ovest"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.936982365219016,
+      "lng": 7.6296508311483136
+     }
+    }
+   }
+  }
+ }
+}

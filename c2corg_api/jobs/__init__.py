@@ -5,6 +5,10 @@ from apscheduler.events import EVENT_JOB_ERROR
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from c2corg_api.harvest.runner import enabled_harvesters, harvest_tick
+
+# the module, not its function of the same name: importing the function here
+# would hide the submodule (`c2corg_api.jobs.harvest_partner_outings`)
+from c2corg_api.jobs import harvest_partner_outings as partner_outings
 from c2corg_api.jobs.harvest import compact_avalanche_bulletins, prune_harvest
 from c2corg_api.jobs.link_checker import check_links, link_checker_enabled
 from c2corg_api.jobs.process_removals import process_removals, removals_auto
@@ -66,9 +70,9 @@ def configure_scheduler_from_config(settings):
             kwargs={'settings': settings},
         )
 
-    # harvest the sources (avalanche bulletins...) once switched on
-    # (harvest.enabled, harvest.<name>.enabled): each source says when it is
-    # due; a tick still running makes the next wait
+    # harvest the sources (avalanche bulletins, partner outings...) once
+    # switched on (harvest.enabled, harvest.<name>.enabled): each source says
+    # when it is due; a tick still running makes the next wait
     if enabled_harvesters(settings):
         scheduler.add_job(
             harvest_tick,
@@ -114,6 +118,29 @@ def configure_scheduler_from_config(settings):
             coalesce=True,
             kwargs={'settings': settings},
         )
+
+    # run `purge_partner_outings_job` at 1:40, whether the harvest is on or not:
+    # it expires the lookup cache; the outings and their tracks are kept
+    # forever unless a retention is set (`partners.retention_days`)
+    scheduler.add_job(
+        partner_outings.purge_partner_outings_job,
+        id='purge_partner_outings',
+        name='Purge the old partner outings and lookups',
+        trigger='cron',
+        hour=1,
+        minute=40,
+        kwargs={'settings': settings},
+    )
+
+    # mark the partner sources switched off as disabled, once at the start:
+    # the switches (harvest.partners[.<name>].enabled) change with a restart
+    scheduler.add_job(
+        partner_outings.mark_unconfigured_sources,
+        id='mark_unconfigured_partner_sources',
+        name='Mark the partner sources switched off as disabled',
+        trigger='date',
+        kwargs={'settings': settings},
+    )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)
 

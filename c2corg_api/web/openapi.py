@@ -149,7 +149,185 @@ _VERSION = {
         'next_version_id': {'type': ['integer', 'null']},
     },
 }
+_PARTNER_CREDIT = {
+    'type': 'object',
+    'required': ['site', 'site_url'],
+    'properties': {'site': {'type': 'string'}, 'site_url': {'type': 'string'}},
+}
+_PARTNER_OUTING = {
+    'title': 'PartnerOuting',
+    'type': 'object',
+    'description': 'An outing of a partner site, or of c2c (`source` `c2c`).',
+    'required': ['id', 'source', 'title', 'date', 'activities', 'credit'],
+    'properties': {
+        'id': {
+            'type': 'string',
+            'description': '`<source>:<id on the source>`, `c2c:<document_id>`.',
+        },
+        'source': {'type': 'string', 'description': 'A source, or `c2c`.'},
+        'document_id': {
+            'type': ['integer', 'null'],
+            'description': 'The outing, for a c2c outing only.',
+        },
+        'url': {
+            'type': ['string', 'null'],
+            'description': 'The report on the partner site, `null` for c2c.',
+        },
+        'title': {'type': 'string'},
+        'lang': {'type': ['string', 'null']},
+        'date': {'type': 'string', 'format': 'date'},
+        'author': {
+            'type': ['object', 'null'],
+            'properties': {
+                'name': {'type': ['string', 'null']},
+                'url': {'type': ['string', 'null']},
+            },
+        },
+        'activities': {'type': 'array', 'items': {'type': 'string'}},
+        'source_activity': {'type': ['string', 'null']},
+        'rating': {
+            'type': ['object', 'null'],
+            'properties': {
+                'ski_rating_min': {'type': ['string', 'null']},
+                'ski_rating_max': {'type': ['string', 'null']},
+                'raw': {'type': ['string', 'null']},
+                'system': {'type': ['string', 'null']},
+            },
+        },
+        'steep': {'type': 'boolean'},
+        'elevation_max': {'type': ['integer', 'null']},
+        'height_diff_up': {'type': ['integer', 'null']},
+        'orientations': {'type': 'array', 'items': {'type': 'string'}},
+        'snow': {'type': ['object', 'null'], 'additionalProperties': True},
+        'gpx_url': {
+            'type': ['string', 'null'],
+            'description': 'The public GPX file of the report on the partner site '
+            '(a link, under the terms of the site), `null` for c2c.',
+        },
+        'has_track': {
+            'type': 'boolean',
+            'description': 'The outing has a track: `GET /partner-outings/{id}/track`.',
+        },
+        'region': {'type': ['string', 'null']},
+        'geometry': {
+            'type': ['object', 'null'],
+            'description': '`geom` is a GeoJSON string (EPSG:3857).',
+            'properties': {
+                'geom': {'type': 'string'},
+                'quality': {'type': 'string'},
+            },
+        },
+        'areas': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'document_id': {'type': 'integer'},
+                    'area_type': {'type': 'string'},
+                    'title': {'type': 'string'},
+                },
+            },
+        },
+        'credit': _PARTNER_CREDIT,
+    },
+}
+_PARTNER_SOURCE = {
+    'title': 'PartnerSource',
+    'type': 'object',
+    'required': ['source', 'status'],
+    'properties': {
+        'source': {'type': 'string'},
+        'site_name': {'type': 'string'},
+        'site_url': {'type': 'string'},
+        'status': {
+            'type': 'string',
+            'enum': [
+                'never_run',
+                'ok',
+                'degraded',
+                'blocked',
+                'down',
+                'failing',
+                'disabled',
+            ],
+        },
+        'status_detail': {'type': ['string', 'null']},
+        'last_success_at': {'type': ['string', 'null'], 'format': 'date-time'},
+        'last_run_at': {'type': ['string', 'null'], 'format': 'date-time'},
+        'last_fetched': {'type': ['integer', 'null']},
+        'last_skipped': {
+            'type': 'object',
+            'description': 'The items skipped by reason, e.g. `parse_error`.',
+            'additionalProperties': {'type': 'integer'},
+        },
+    },
+}
+_PARTNER_OUTINGS = {
+    'title': 'PartnerOutings',
+    'type': 'object',
+    'required': ['total', 'items', 'sources'],
+    'properties': {
+        'total': {'type': 'integer'},
+        'items': {
+            'type': 'array',
+            'items': {'$ref': '#/components/schemas/PartnerOuting'},
+        },
+        'sources': {
+            'type': 'array',
+            'description': 'The health of the sources: `source`, `status` and '
+            '`last_success_at`.',
+            'items': {'$ref': '#/components/schemas/PartnerSource'},
+        },
+    },
+}
+_PARTNER_SOURCES = {
+    'title': 'PartnerSources',
+    'type': 'object',
+    'required': ['sources'],
+    'properties': {
+        'sources': {
+            'type': 'array',
+            'items': {'$ref': '#/components/schemas/PartnerSource'},
+        }
+    },
+}
+_PARTNER_TRACK = {
+    'title': 'PartnerTrack',
+    'type': 'object',
+    'description': 'A GeoJSON Feature, its geometry in EPSG:4326.',
+    'required': ['type', 'id', 'geometry', 'properties'],
+    'properties': {
+        'type': {'type': 'string', 'enum': ['Feature']},
+        'id': {'type': 'string'},
+        'geometry': {
+            'type': 'object',
+            'description': 'A MultiLineString: lon, lat (WGS 84).',
+        },
+        'properties': {
+            'type': 'object',
+            'properties': {
+                'source': {'type': 'string'},
+                'url': {'type': 'string', 'description': 'The report.'},
+                'gpx_url': {'type': 'string', 'description': 'The GPX file.'},
+                'author': {'type': ['string', 'null']},
+                'attribution': {
+                    'type': 'string',
+                    'description': 'To show with the track: '
+                    '`© <author> / <site> — <licence>`.',
+                },
+                'licence': {'type': ['string', 'null']},
+                'point_count': {'type': ['integer', 'null']},
+                'simplified': {'type': 'boolean'},
+            },
+        },
+    },
+}
 RESPONSES = {
+    'PartnerTrack': _PARTNER_TRACK,
+    'PartnerOuting': _PARTNER_OUTING,
+    'PartnerSource': _PARTNER_SOURCE,
+    'PartnerOutings': _PARTNER_OUTINGS,
+    'PartnerSources': _PARTNER_SOURCES,
     'License': _LICENSE,
     'Document': _DOCUMENT,
     'Documents': _DOCUMENTS,

@@ -4,19 +4,21 @@ Published with GitHub Pages (Settings > Pages > Deploy from a branch: `master`, 
 
 - `index.html`: the landing page.
 - `architecture/<name>.html`: one standalone diagram per subject (preprod infra, legacy production infra, frontend, backend, background jobs
-  and harvesters (`batch`), images, tracker, local development, CI/CD).
+  and harvesters (`batch`), partner outings (`metaskirando`, linked from `batch`), images, tracker, local development,
+  CI/CD).
 - `architecture/src/<name>.json`: the source of each diagram.
 - `architecture/<name>.png`: a static export shown in the READMEs and wikis of the repositories, each linking to its interactive page.
 
 Other documentation:
 
-- [`harvest.md`](harvest.md): the background harvester and the stored avalanche bulletins.
+- [`harvest.md`](harvest.md): the background harvester, the stored avalanche bulletins, and how the partner outings
+  run on it ([`partner-outings.md`](partner-outings.md), drawn in `architecture/metaskirando.html`).
 
 These pages are public: never put IP addresses, secrets or access policies in a diagram.
 
 ## Updating a diagram
 
-The diagrams are made with [Archify](https://github.com/tt-a1i/archify) 3.3.1 (an agent skill and its CLI, not vendored
+The diagrams are made with [Archify](https://github.com/tt-a1i/archify) 3.3.2 (an agent skill and its CLI, not vendored
 here). Install it for Claude Code with `npx -y skills@latest add https://archify.si --skill archify --agent claude-code
 --global --copy --yes`, or copy the `archify/` folder of the GitHub repository; its
 [llms.txt](https://raw.githubusercontent.com/tt-a1i/archify/main/llms.txt) explains the other agents. `<archify>` below

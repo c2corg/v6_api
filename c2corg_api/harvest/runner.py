@@ -45,31 +45,48 @@ def _jitter():
     return random.random()  # nosec B311
 
 
-def harvesters():
-    """Return all the harvesters."""
+def harvesters(settings=None):
+    """Return all the harvesters.
+
+    `settings`: the .ini settings, for the harvesters configured by them (the
+    partner outings: transport, retention, interval); None for their names.
+    """
     from c2corg_api.avalanche_bulletins.harvesters import (
         CaamlHarvester,
         MeteoFranceHarvester,
     )
+    from c2corg_api.jobs.harvest_partner_outings import partner_harvesters
 
-    return [MeteoFranceHarvester(), CaamlHarvester()]
+    return [
+        MeteoFranceHarvester(),
+        CaamlHarvester(),
+        *partner_harvesters(settings or {}),
+    ]
 
 
 def harvest_enabled(settings, name=None):
     """Tell whether the scheduler harvests (`harvest.enabled`).
 
-    For a harvester: `harvest.<name>.enabled`, else `harvest.enabled`.
+    For a harvester, the most specific switch set wins: for
+    `partners.skitour`, `harvest.partners.skitour.enabled`, else
+    `harvest.partners.enabled`, else `harvest.enabled`.
     """
     value = settings.get('harvest.enabled', 'false')
     if name is not None:
-        # empty (the .ini templates): as harvest.enabled
-        value = str(settings.get(f'harvest.{name}.enabled', '')).strip() or value
+        parts = name.split('.')
+        for end in range(len(parts), 0, -1):
+            key = 'harvest.' + '.'.join(parts[:end]) + '.enabled'
+            # empty (the .ini templates): as the next, less specific one
+            specific = str(settings.get(key, '')).strip()
+            if specific:
+                value = specific
+                break
     return str(value).strip().lower() in ('true', '1', 'yes', 'on')
 
 
 def enabled_harvesters(settings):
     """Return the harvesters the settings switch on."""
-    return [h for h in harvesters() if harvest_enabled(settings, h.name)]
+    return [h for h in harvesters(settings) if harvest_enabled(settings, h.name)]
 
 
 def harvest_tick(settings=None, all_harvesters=None, workers=WORKERS):
@@ -100,6 +117,25 @@ def harvest_tick(settings=None, all_harvesters=None, workers=WORKERS):
     with ThreadPoolExecutor(workers, thread_name_prefix='harvest') as executor:
         # run_source records its errors: nothing to collect
         list(executor.map(_run_lane, lanes))
+
+
+def harvest_now(all_harvesters):
+    """Fetch all the sources of these harvesters now, due or not, one by one.
+
+    For a run by hand (make harvest-partners): the sources are synced first,
+    and not claimed: a scheduler running meanwhile may fetch one too.
+    """
+    with Session(DBSession.get_bind()) as session:
+        sync_sources(session, all_harvesters)
+        tasks = []
+        for harvester in all_harvesters:
+            ids = [harvester.source_id(source) for source in harvester.sources()]
+            rows = session.scalars(
+                select(HarvestSource).where(HarvestSource.id.in_(ids))
+            ).all()
+            tasks += [(harvester, row.id, _state_of(row)) for row in rows]
+    for task in tasks:
+        run_source(*task)
 
 
 def sync_sources(session, all_harvesters):

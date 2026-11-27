@@ -1,0 +1,118 @@
+{
+  "source": "bivouak",
+  "recorded_at": "2026-11-25",
+  "synthetic": false,
+  "entries": [
+    {
+      "url": "https://www.bivouak.net/rss/outings/outings.rss",
+      "status": 200,
+      "content_type": "application/rss+xml",
+      "file": "outings_rss.xml"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport1.html",
+      "params": {
+        "id_sport": "1"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport2.html",
+      "params": {
+        "id_sport": "2"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport8.html",
+      "params": {
+        "id_sport": "8"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport4.html",
+      "params": {
+        "id_sport": "4"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport16.html",
+      "params": {
+        "id_sport": "16"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30061-belle-descente.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_30061_belle_descente.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30885-tour-angle-est.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_30885_tour_angle_est.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30888-.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_30888.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30889-rocher-walkyrie.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_30889_rocher_walkyrie.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-29975-privatisation-station-pour-sunset.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_29975_privatisation_station_pour_sunset.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30883-.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_30883.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30876-col-espone-vtt.html",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "sortie_30876_col_espone_vtt.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30887-.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_30887.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-29958-.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_29958.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30886-.html",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "sortie_30886.html"
+    }
+  ]
+}

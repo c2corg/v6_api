@@ -1,0 +1,622 @@
+{
+ "350452": {
+  "ID": "350452",
+  "user_nicename": "user7",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "126719",
+  "permalink": "https://www.gulliver.it/itinerari/sises-monte-da-sestriere/2026/11/21/350452/",
+  "content": "[text 545 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 42 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 16 chars]"
+   },
+   "snow_low": {
+    "value": "[text 16 chars]"
+   },
+   "snow_alt": {
+    "value": "2000"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350447": {
+  "ID": "350447",
+  "user_nicename": "user35",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "584266",
+  "permalink": "https://www.gulliver.it/itinerari/sentiero-balcone-di-usseglio/2026/11/21/350447/",
+  "content": "[text 86 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350523": {
+  "ID": "350523",
+  "user_nicename": "user50",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "656123",
+  "permalink": "https://www.gulliver.it/itinerari/ezendola-cimae-dosso-bi-da-villa-di-lozio/2026/11/21/350523/",
+  "content": "[text 974 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 48 chars]"
+   }
+  }
+ },
+ "350476": {
+  "ID": "350476",
+  "user_nicename": "user51",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "758268",
+  "permalink": "https://www.gulliver.it/itinerari/albard-coudrey-monte-rock-experience/2026/11/21/350476/",
+  "content": "[text 64 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350482": {
+  "ID": "350482",
+  "user_nicename": "user9",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "397600",
+  "permalink": "https://www.gulliver.it/itinerari/coudrey-monte-pilier-del-forte/2026/11/21/350482/",
+  "content": "[text 689 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 98 chars]"
+   }
+  }
+ },
+ "350561": {
+  "ID": "350561",
+  "user_nicename": "user52",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "905037",
+  "permalink": "https://www.gulliver.it/itinerari/albard-chaveran-o-cheverine-truc-paranoid/2026/11/21/350561/",
+  "content": "[text 285 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 17 chars]"
+   }
+  }
+ },
+ "350485": {
+  "ID": "350485",
+  "user_nicename": "user2",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "58707",
+  "permalink": "https://www.gulliver.it/itinerari/grevon-piatta-di-da-pila/2026/11/21/350485/",
+  "content": "[text 235 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 29 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 9 chars]"
+   },
+   "snow_alt": {
+    "value": "1800"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350524": {
+  "ID": "350524",
+  "user_nicename": "user53",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "169960",
+  "permalink": "https://www.gulliver.it/itinerari/vaccera-colle-da-torre-pellice-giro-per-il-ponte-di-barmafreida/2026/11/21/350524/",
+  "content": "[text 298 chars]",
+  "term": {
+   "code": "mtb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 1 chars]"
+   }
+  }
+ },
+ "350456": {
+  "ID": "350456",
+  "user_nicename": "user29",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "57949",
+  "permalink": "https://www.gulliver.it/itinerari/teodulo-rifugio-da-cervinia/2026/11/21/350456/",
+  "content": "[text 13 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 5 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 9 chars]"
+   },
+   "snow_alt": {
+    "value": "1900"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350530": {
+  "ID": "350530",
+  "user_nicename": "user54",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "112355",
+  "permalink": "https://www.gulliver.it/itinerari/lities-rocca-di-adesso-basta/2026/11/21/350530/",
+  "content": "[text 169 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 7 chars]"
+   }
+  }
+ },
+ "350512": {
+  "ID": "350512",
+  "user_nicename": "user55",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "244848",
+  "permalink": "https://www.gulliver.it/itinerari/talucco-torrione-del-via-storica-riveduta-e-corretta/2026/11/21/350512/",
+  "content": "[text 1092 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 10 chars]"
+   }
+  }
+ },
+ "350540": {
+  "ID": "350540",
+  "user_nicename": "user56",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "523169",
+  "permalink": "https://www.gulliver.it/itinerari/cheverine-truc-albard-la-nouvelle/2026/11/21/350540/",
+  "content": "[text 673 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350487": {
+  "ID": "350487",
+  "user_nicename": "user57",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "898054",
+  "permalink": "https://www.gulliver.it/itinerari/50-scuola-piersandro-muzio-falesia/2026/11/21/350487/",
+  "content": "[text 893 chars]",
+  "term": {
+   "code": "crag"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350490": {
+  "ID": "350490",
+  "user_nicename": "user58",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "288038",
+  "permalink": "https://www.gulliver.it/itinerari/rian-corneitempio-del-vento/2026/11/21/350490/",
+  "content": "[text 879 chars]",
+  "term": {
+   "code": "crag"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 27 chars]"
+   }
+  }
+ },
+ "350534": {
+  "ID": "350534",
+  "user_nicename": "user59",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "328558",
+  "permalink": "https://www.gulliver.it/itinerari/perti-rocca-di-pilastro-josephine-con-variante-superwalter/2026/11/21/350534/",
+  "content": "[text 418 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 27 chars]"
+   }
+  }
+ },
+ "350455": {
+  "ID": "350455",
+  "user_nicename": "user48",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "57949",
+  "permalink": "https://www.gulliver.it/itinerari/teodulo-rifugio-da-cervinia/2026/11/21/350455/",
+  "content": "[text 1019 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 89 chars]"
+   },
+   "obs": {
+    "value": "[text 31 chars]"
+   },
+   "snow_top": {
+    "value": "[text 16 chars]"
+   },
+   "snow_low": {
+    "value": "[text 7 chars]"
+   },
+   "snow_alt": {
+    "value": "1800"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350488": {
+  "ID": "350488",
+  "user_nicename": "user60",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "519915",
+  "permalink": "https://www.gulliver.it/itinerari/cordespino-monte-il-leone-di-nemea/2026/11/21/350488/",
+  "content": "[text 292 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 19 chars]"
+   }
+  }
+ },
+ "350565": {
+  "ID": "350565",
+  "user_nicename": "user61",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "316634",
+  "permalink": "https://www.gulliver.it/itinerari/cuculo-truc-del-da-seleiraut-anello-per-il-rifugio-selleries/2026/11/21/350565/",
+  "content": "[text 478 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": [
+   {
+    "guid": "https://www.gulliver.it/wp-content/uploads/2026/11/truc-del-cuculo-anello-selleries.gpx"
+   }
+  ],
+  "meta": {
+   "access": {
+    "value": "[text 160 chars]"
+   }
+  }
+ },
+ "350453": {
+  "ID": "350453",
+  "user_nicename": "user23",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "143510",
+  "permalink": "https://www.gulliver.it/itinerari/bossola-cima-da-rueglio-anello/2026/11/21/350453/",
+  "content": "[text 115 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350448": {
+  "ID": "350448",
+  "user_nicename": "user39",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "489579",
+  "permalink": "https://www.gulliver.it/itinerari/querellet-monte-dorsale-monte-querellet-monte-sises-itinerari-vari/2026/11/21/350448/",
+  "content": "[text 230 chars]",
+  "term": {
+   "code": "skisteep"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 6 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": ""
+   }
+  }
+ },
+ "350513": {
+  "ID": "350513",
+  "user_nicename": "user42",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "903992",
+  "permalink": "https://www.gulliver.it/itinerari/oira-placche-di-stay-alive/2026/11/21/350513/",
+  "content": "[text 265 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350537": {
+  "ID": "350537",
+  "user_nicename": "user19",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "909630",
+  "permalink": "https://www.gulliver.it/itinerari/mondrone-uja-di-contrafforti-vie-varie/2026/11/21/350537/",
+  "content": "[text 236 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 5 chars]"
+   }
+  }
+ },
+ "350475": {
+  "ID": "350475",
+  "user_nicename": "user10",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "12105",
+  "permalink": "https://www.gulliver.it/itinerari/crevacol-testa-da-sud/2026/11/21/350475/",
+  "content": "[text 488 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 14 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1600"
+   },
+   "skimo_equip": {
+    "value": ""
+   }
+  }
+ },
+ "350521": {
+  "ID": "350521",
+  "user_nicename": "user62",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "242299",
+  "permalink": "https://www.gulliver.it/itinerari/castelluzzo-punta-o-castellus-o-bars-dla-tajola-da-bonnet-concatenamento/2026/11/21/350521/",
+  "content": "[text 673 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 28 chars]"
+   }
+  }
+ },
+ "350474": {
+  "ID": "350474",
+  "user_nicename": "user63",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "88735",
+  "permalink": "https://www.gulliver.it/itinerari/anges-sommet-des-fort-du-gondran-da-montgenevre/2026/11/21/350474/",
+  "content": "[text 329 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 73 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 16 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1800"
+   },
+   "skimo_equip": {
+    "value": "[text 8 chars]"
+   }
+  }
+ },
+ "350489": {
+  "ID": "350489",
+  "user_nicename": "user64",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "468311",
+  "permalink": "https://www.gulliver.it/itinerari/traya-pointe-de-pilier-des-italiens/2026/11/21/350489/",
+  "content": "[text 377 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "   "
+   }
+  }
+ },
+ "350548": {
+  "ID": "350548",
+  "user_nicename": "user65",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "475921",
+  "permalink": "https://www.gulliver.it/itinerari/san-valeriano-placche-di-la-carica-dei-108/2026/11/21/350548/",
+  "content": "[text 573 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 24 chars]"
+   }
+  }
+ },
+ "350477": {
+  "ID": "350477",
+  "user_nicename": "user40",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "172002",
+  "permalink": "https://www.gulliver.it/itinerari/vandalino-monte-da-sea-di-torre/2026/11/21/350477/",
+  "content": "[text 247 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 36 chars]"
+   }
+  }
+ },
+ "350525": {
+  "ID": "350525",
+  "user_nicename": "user66",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "511066",
+  "permalink": "https://www.gulliver.it/itinerari/coudrey-monte-eravamo-5-amici-albard/2026/11/21/350525/",
+  "content": "[text 627 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": [
+   {
+    "guid": "https://www.gulliver.it/wp-content/uploads/2026/11/Avvicinamento-5-Amici-Albard.gpx"
+   }
+  ],
+  "meta": {
+   "access": {
+    "value": "[text 25 chars]"
+   }
+  }
+ },
+ "350491": {
+  "ID": "350491",
+  "user_nicename": "user67",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "214487",
+  "permalink": "https://www.gulliver.it/itinerari/loggia-dei-massoni-viaggio-in-birmania/2026/11/21/350491/",
+  "content": "[text 176 chars]",
+  "term": {
+   "code": "crag"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ }
+}

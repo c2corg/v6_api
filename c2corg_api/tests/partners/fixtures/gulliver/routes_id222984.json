@@ -1,0 +1,33 @@
+{
+ "222984": {
+  "title": "Hohture da Rothwald-Ganterwald",
+  "region": {
+   "name": "Valais (CH)"
+  },
+  "district": "Brig",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "683"
+    },
+    "alt_top": {
+     "value": "2407"
+    },
+    "exposure": {
+     "value": "Nord-Ovest"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 46.279692,
+      "lng": 8.037466
+     }
+    }
+   }
+  }
+ }
+}
