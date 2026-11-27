@@ -67,14 +67,15 @@ def _conditions(host=None, reviewed=False):
     conditions = [LinkCheck.url.in_(_shown_urls())]
     if host:
         conditions.append(LinkCheck.host == host.lower())
-    # reviewed: a link said genuine, or one of a trusted host; a link taken
-    # over stays listed until it is removed
-    # (no review: NULL, which NOT would keep NULL)
+    # reviewed: a link said genuine, or one of a trusted host (no takeover);
+    # a link taken over stays listed until removed. A review does not keep a
+    # page from being gone: the dead and failing links are listed either way
     is_reviewed = or_(
         func.coalesce(LinkCheck.review, '') == GENUINE,
         func.coalesce(LinkHost.review, '') == TRUSTED,
     )
-    conditions.append(is_reviewed if reviewed else ~is_reviewed)
+    failed = LinkCheck.status.in_((DEAD, FAILING))
+    conditions.append(is_reviewed if reviewed else or_(~is_reviewed, failed))
     return conditions
 
 

@@ -151,10 +151,17 @@ def test_review_link(client, session, links, user_ids):
 
 
 def test_review_host_and_recheck(client, session, links):
-    _post(client, 'review-host', {'host': 'Dead.example', 'review': 'trusted'})
-    assert 'http://dead.example/a' not in _urls(_list(client).json)
-    _post(client, 'review-host', {'host': 'dead.example'})
-    assert 'http://dead.example/a' in _urls(_list(client).json)
+    _post(client, 'review-host', {'host': 'Parked.example', 'review': 'trusted'})
+    assert 'http://parked.example/' not in _urls(_list(client).json)
+    _post(client, 'review-host', {'host': 'parked.example'})
+    assert 'http://parked.example/' in _urls(_list(client).json)
+
+    # a trusted host, a genuine link: still listed once gone (dead, failing)
+    _post(client, 'review-host', {'host': 'dead.example', 'review': 'trusted'})
+    body = _list(client).json
+    assert 'http://dead.example/a' in _urls(body)
+    assert body['links'][0]['host_review'] == 'trusted'
+    assert 'http://dead.example/a' in _urls(_list(client, '?reviewed=true').json)
 
     before = datetime.now(UTC)
     _post(client, 'recheck', {'url': 'http://dead.example/a'})
