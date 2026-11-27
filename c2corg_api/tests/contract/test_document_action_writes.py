@@ -86,8 +86,10 @@ DELETED_DOCUMENT_ROUTES = [
     ('GET', '/documents/deleted'),
     ('GET', '/documents/deleted/{id}'),
     ('POST', '/documents/deleted/{id}/restore'),
+    ('POST', '/documents/merged/{id}/unmerge'),
     ('GET', '/images/orphans'),
     ('GET', '/images/broken-embeds'),
+    ('GET', '/documents/broken-links'),
     ('GET', '/images/duplicates'),
     ('POST', '/images/duplicates/dismiss'),
 ]
@@ -130,6 +132,12 @@ def test_broken_embeds(browser):
     check_snapshot('images_broken_embeds', response)
 
 
+@contract(('GET', '/documents/broken-links'))
+def test_broken_links(browser):
+    response = browser.get('/documents/broken-links', user='moderator')
+    check_snapshot('documents_broken_links', response)
+
+
 @contract(('GET', '/images/duplicates'))
 def test_duplicate_images(browser):
     response = browser.get('/images/duplicates', user='moderator')
@@ -147,6 +155,14 @@ def test_dismiss_duplicate_images_unknown(browser):
     check_snapshot('images_duplicates_dismiss_unknown', response)
 
 
+@contract(('POST', '/images/rotate'))
+def test_rotate_unknown_image(browser):
+    response = browser.post(
+        '/images/rotate', {'document_id': 9999999}, user='moderator', status=400
+    )
+    check_snapshot('images_rotate_unknown', response)
+
+
 @contract(
     ('GET', '/documents/deleted/{id}'), ('POST', '/documents/deleted/{id}/restore')
 )
@@ -156,3 +172,11 @@ def test_deleted_document_unknown(browser):
     check_snapshot('documents_deleted_unknown_get', response)
     response = browser.post(f'{url}/restore', {}, user='moderator', status=404)
     check_snapshot('documents_deleted_unknown_restore', response)
+
+
+@contract(('POST', '/documents/merged/{id}/unmerge'))
+def test_merge_unknown(browser):
+    response = browser.post(
+        '/documents/merged/9999999/unmerge', {}, user='moderator', status=404
+    )
+    check_snapshot('documents_merged_unknown_unmerge', response)

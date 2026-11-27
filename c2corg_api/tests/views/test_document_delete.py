@@ -375,7 +375,7 @@ def docs(session, user_ids) -> Docs:
     session.add(article2)
     session.flush()
 
-    # Make the article older than 24h old
+    # Make the article older than the deletion period (30 days)
     written_at = datetime.datetime(2016, 1, 1, 0, 0, 0)
     create_new_version(article2, user_id, written_at)
     update_feed_document_create(article2, user_id)
@@ -1023,6 +1023,76 @@ def test_delete_image_error_deleting_files(client, session, settings, docs):
         scenarios.check_cache_version(session, docs.outing1.document_id, 2)
 
 
+def test_delete_image_with_merged_image_in_feed(client, session, user_ids, docs):
+    """An image merged into the deleted one goes with it, feed references too."""
+    user_id = user_ids['contributor']
+    merged = Image(
+        filename='merged.jpg',
+        activities=['paragliding'],
+        image_type='collaborative',
+        locales=[DocumentLocale(lang='en', title='Copy')],
+    )
+    session.add(merged)
+    session.flush()
+    create_new_version(merged, user_id)
+    # uploaded to an outing, shown in its feed item, then merged as a copy
+    update_feed_images_upload(
+        [merged],
+        [
+            {
+                'filename': 'merged.jpg',
+                'activities': ['paragliding'],
+                'image_type': 'collaborative',
+                'locales': [{'lang': 'en', 'title': 'Copy'}],
+                'associations': {
+                    'outings': [{'document_id': docs.outing2.document_id}],
+                },
+            }
+        ],
+        user_id,
+    )
+    # merged as the merge view does: the archive version redirects too
+    merged.redirects_to = docs.image1.document_id
+    session.flush()
+    update_version(
+        merged,
+        user_id,
+        f'merged with {docs.image1.document_id}',
+        [UpdateType.FIGURES],
+        [],
+    )
+    session.flush()
+    assert (
+        session.query(DocumentChange)
+        .filter(DocumentChange.image1_id == merged.document_id)
+        .count()
+        > 0
+    )
+
+    @all_requests
+    def image_service_mock(url, request):
+        return {'status_code': 200, 'content': ''}
+
+    with HTTMock(image_service_mock):
+        client.delete_json(
+            PREFIX + str(docs.image1.document_id),
+            {},
+            headers=auth_headers(username='moderator'),
+            status=200,
+        )
+
+    assert (
+        session.query(Image).filter(Image.document_id == merged.document_id).count()
+        == 0
+    )
+    references = or_(
+        DocumentChange.image1_id == merged.document_id,
+        DocumentChange.image2_id == merged.document_id,
+        DocumentChange.image3_id == merged.document_id,
+    )
+    assert session.query(DocumentChange).filter(references).count() == 0
+
+
 def test_delete_collaborative_doc(client, docs):
     # Collaborative documents cannot be deleted, even by their authors:
     headers = auth_headers(username='contributor')
@@ -1063,7 +1133,7 @@ def test_delete_personal_doc_not_author(client, docs):
     )
 
 
-def test_delete_personal_doc_author_less_24h(client, docs):
+def test_delete_personal_doc_author_in_deletion_period(client, docs):
     # article1 has just been created by 'contributor'
     headers = auth_headers(username='contributor')
     client.delete_json(
@@ -1074,14 +1144,91 @@ def test_delete_personal_doc_author_less_24h(client, docs):
     )
 
 
-def test_delete_personal_doc_author_more_24h(client, docs):
-    # article2 is older than 24h
+def test_delete_personal_doc_author_after_deletion_period(client, docs):
+    # article2 is older than 30 days
     headers = auth_headers(username='contributor')
     client.delete_json(
         PREFIX + str(docs.article2.document_id),
         {},
         headers=headers,
         status=400,
+    )
+
+
+@pytest.mark.parametrize(('days', 'status'), [(29, 200), (31, 400)])
+def test_delete_personal_doc_deletion_period(client, session, docs, days, status):
+    from c2corg_api.models.document_history import DELETION_PERIOD, DocumentVersion
+
+    # the first version of article1, moved back in time
+    version = (
+        session.query(DocumentVersion)
+        .filter(DocumentVersion.document_id == docs.article1.document_id)
+        .order_by(DocumentVersion.id)
+        .first()
+    )
+    version.history_metadata.written_at = datetime.datetime.now(
+        datetime.UTC
+    ) - datetime.timedelta(days=days)
+    session.flush()
+    assert DELETION_PERIOD == datetime.timedelta(days=30)
+
+    response = client.delete_json(
+        PREFIX + str(docs.article1.document_id),
+        {},
+        headers=auth_headers(username='contributor'),
+        status=status,
+    )
+
+    if status == 400:
+        assert response.json['errors'][0]['description'] == (
+            'Only documents less than 30 days old can be deleted'
+        )
+
+
+def test_delete_outing_with_other_users(client, session, user_ids, docs):
+    from c2corg_api.models.user_profile import UserProfile
+
+    outing_id = docs.outing1.document_id
+    contributor = session.get(UserProfile, user_ids['contributor'])
+    contributor2 = session.get(UserProfile, user_ids['contributor2'])
+    _add_association(session, user_ids, contributor, docs.outing1)
+    _add_association(session, user_ids, contributor2, docs.outing1)
+    session.flush()
+    headers = auth_headers(username='contributor')
+
+    # the outing is also the one of contributor2: not deleted by its author
+    response = client.delete_json(
+        PREFIX + str(outing_id), {}, headers=headers, status=400
+    )
+    assert response.json['errors'][0]['description'] == (
+        'This outing has other participants: unlink them first'
+    )
+
+    # once alone, it is
+    client.delete_json(
+        '/associations',
+        {
+            'parent_document_id': user_ids['contributor2'],
+            'child_document_id': outing_id,
+        },
+        headers=headers,
+        status=200,
+    )
+    client.delete_json(PREFIX + str(outing_id), {}, headers=headers, status=200)
+
+
+def test_delete_outing_with_other_users_by_a_moderator(client, session, user_ids, docs):
+    from c2corg_api.models.user_profile import UserProfile
+
+    contributor2 = session.get(UserProfile, user_ids['contributor2'])
+    _add_association(session, user_ids, contributor2, docs.outing1)
+    session.flush()
+
+    client.delete_json(
+        PREFIX + str(docs.outing1.document_id),
+        {},
+        headers=auth_headers(username='moderator'),
+        status=200,
     )
 
 

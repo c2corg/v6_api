@@ -134,6 +134,7 @@ def test_duplicate_images(client, docs, copies):  # noqa: F811
             'document_id': docs.outing2.document_id,
             'document_type': 'o',
             'title': docs.outing2.locales[0].title,
+            'title_prefix': None,
         }
     ]
     assert images[1]['documents'][0]['document_type'] == 'r'
@@ -265,6 +266,8 @@ def test_dismissed_pairs_kept_by_the_soft_delete(client, session, copies):
 def test_texts_showing_an_image(client, session, user_ids, docs, copies):  # noqa: F811
     personal, collaborative, twice = copies
     route_locale = docs.route1.locales[0]
+    # a route: the title of its main waypoint before its title
+    route_locale.title_prefix = 'Mont Blanc'
     # an older copy already merged into the collaborative image
     merged = _image_file(session, user_ids, 'old copy', file_size=1)
     merged.redirects_to = collaborative.document_id
@@ -293,6 +296,7 @@ def test_texts_showing_an_image(client, session, user_ids, docs, copies):  # noq
         'document_type': 'r',
         'lang': route_locale.lang,
         'title': route_locale.title,
+        'title_prefix': 'Mont Blanc',
     }
     assert images[0]['embedded_in'] == [{**expected, 'image_id': personal.document_id}]
     assert images[1]['embedded_in'] == [{**expected, 'image_id': merged.document_id}]
@@ -340,3 +344,43 @@ def test_without_exif_date_by_one_user(client, session, user_ids):
     _uploaded_at(session, second, TAKEN + datetime.timedelta(days=400))
 
     assert _list(client).json['total'] == 1
+
+
+def test_texts_linking_to_an_image(client, session, user_ids, docs, copies):  # noqa: F811
+    from c2corg_api.models.document_link import DocumentLink
+
+    personal, collaborative, twice = copies
+    route_locale = docs.route1.locales[0]
+    route_locale.title_prefix = 'Mont Blanc'
+    common = {
+        'document_locale_id': route_locale.id,
+        'document_id': docs.route1.document_id,
+        'lang': route_locale.lang,
+        'is_url': False,
+    }
+    session.add_all(
+        [
+            DocumentLink(
+                **common, target_id=personal.document_id, target_type='images'
+            ),
+            # a link to a route: does not show the image
+            DocumentLink(
+                **common, target_id=collaborative.document_id, target_type='routes'
+            ),
+        ]
+    )
+    session.flush()
+
+    images = _list(client, '?offset=1').json['sets'][0]['images']
+
+    assert images[0]['linked_from'] == [
+        {
+            'document_id': docs.route1.document_id,
+            'document_type': 'r',
+            'lang': route_locale.lang,
+            'title': route_locale.title,
+            'title_prefix': 'Mont Blanc',
+            'image_id': personal.document_id,
+        }
+    ]
+    assert images[1]['linked_from'] == []

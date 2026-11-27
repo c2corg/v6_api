@@ -30,6 +30,7 @@ AOSTA = 280072
 TORINO = 280066
 CUNEO = 280000
 SETTINGS = {
+    # not the default (empty: kept forever): a retention, to test the purge
     'partners.retention_days': '31',
     'partners.transport': 'http',
 }

@@ -81,8 +81,8 @@ requests a minute, shared with the PDFs the API fetches on demand. The CAAML ser
   `harvest_meteofrance_enabled`, `harvest.avalanche.caaml.enabled` from `harvest_caaml_enabled`) overrides it for one
   harvester: `true` or `false`, empty (the default) to follow `harvest.enabled`. The most specific switch set wins:
   for `partners.skitour`, `harvest.partners.skitour.enabled`, else `harvest.partners.enabled` (a group), else
-  `harvest.enabled`. The templates set `harvest.partners.enabled` to `false`: the partner sources stay off until
-  switched on on purpose, whatever `harvest.enabled`. Set them in an env file
+  `harvest.enabled`. `config/env.default` sets `harvest.partners.enabled` to `true` (`false` in `env.test`): the
+  partner sources run whatever `harvest.enabled`, unless switched off. Set them in an env file
   (`config/env.local`, or the one given with `make CONFIG=... load-env`), then `make load-env`.
 - With no harvester switched on, the scheduler registers none of the harvest jobs (tick, pruning, compaction).
 - Without `METEOFRANCE_API_KEY`, the Météo-France harvester lists no source: its sources get disabled.
@@ -250,8 +250,8 @@ Choices:
 
 - **One framework.** The tick, the claims, the lanes, the policy, the switches and the health check are this
   framework's. The partner interval job and its backoff are gone; the purge of the partner rows stays a job of its own,
-  scheduled even with the harvest off (the licences), with a job marking the sources switched off `disabled` when the
-  scheduler starts.
+  scheduled even with the harvest off (it expires the lookup cache; the outings only when a retention is set), with a
+  job marking the sources switched off `disabled` when the scheduler starts.
 - **Why `fetch` stores.** An adapter makes several requests (pages, route lookups cached in `partner_lookups`) and
   normalises the outings: there is no single content to hash and store later. The partner run keeps its own
   transaction (outings, lookups, cursor and status together); a failed run raises `PartnerRunFailed` (`blocked: HTTP

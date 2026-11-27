@@ -78,14 +78,14 @@ def test_orphan_images_reserved_to_the_moderators(client):
 
 def _embed(session, document, *image_ids):
     """Show these images in the text of the first locale of a document."""
-    from c2corg_api.views.markdown import update_image_embeds
+    from c2corg_api.views.markdown import update_text_references
 
     locale = document.locales[0]
     locale.description = 'Text\n\n' + '\n\n'.join(
         f'[img={image_id} right/]' for image_id in image_ids
     )
     session.flush()
-    update_image_embeds([locale])
+    update_text_references([locale])
     session.flush()
 
 

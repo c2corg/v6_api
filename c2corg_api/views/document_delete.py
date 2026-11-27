@@ -22,7 +22,7 @@ from c2corg_api.models.document_history import (
     HistoryMetaData,
     get_creators,
     has_been_created_by,
-    is_less_than_24h_old,
+    is_in_deletion_period,
 )
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
@@ -44,6 +44,7 @@ from c2corg_api.models.route import (
     RouteLocale,
 )
 from c2corg_api.models.topo_map_association import TopoMapAssociation
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
     ArchiveWaypoint,
@@ -59,9 +60,13 @@ from c2corg_api.models.xreport import (
     XreportLocale,
 )
 from c2corg_api.search.notify_sync import notify_es_syncer
+from c2corg_api.views.document_links import linking_documents
 from c2corg_api.views.document_trash import keep_deleted_document, keep_deleted_locale
 from c2corg_api.views.image import delete_all_files_for_image
-from c2corg_api.views.image_embeds import images_embedded_elsewhere
+from c2corg_api.views.image_embeds import (
+    embedding_documents,
+    images_embedded_elsewhere,
+)
 from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id, validate_lang
 
@@ -149,6 +154,17 @@ def validate_document(request, **kwargs):
             return
 
 
+def _has_other_users(outing_id, user_id):
+    """Tell whether other users than this one are linked to the outing."""
+    return DBSession.query(
+        exists().where(
+            Association.parent_document_type == USERPROFILE_TYPE,
+            Association.child_document_id == outing_id,
+            Association.parent_document_id != user_id,
+        )
+    ).scalar()
+
+
 def _is_main_waypoint_of_route(document_id):
     return DBSession.query(
         exists().where(Route.main_waypoint_id == document_id)
@@ -224,11 +240,11 @@ def validate_requestor(request, **kwargs):
         )
         return
 
-    if not is_less_than_24h_old(document_id):
+    if not is_in_deletion_period(document_id):
         request.errors.add(
             'querystring',
             'document_id',
-            'Only document less than 24h old can be deleted',
+            'Only documents less than 30 days old can be deleted',
         )
         return
 
@@ -240,6 +256,13 @@ def validate_requestor(request, **kwargs):
                 'querystring',
                 'document_id',
                 'Only the initial author can delete this document',
+            )
+        elif document_type == OUTING_TYPE and _has_other_users(document_id, user_id):
+            # the outing is theirs too: its author unlinks them first
+            request.errors.add(
+                'querystring',
+                'document_id',
+                'This outing has other participants: unlink them first',
             )
         return
 
@@ -343,10 +366,13 @@ def personal_images_deleted_with(request, document_id, document_type, images=Non
     ]
     if not request.has_permission('moderator'):
         # only the images the user could delete (see validate_requestor)
-        image_ids = [i for i in image_ids if is_less_than_24h_old(i)]
-    # an image shown in the text of another document ([img=ID]) stays
-    embedded = images_embedded_elsewhere(image_ids, document_id)
-    return sorted(i for i in image_ids if i not in embedded)
+        image_ids = [i for i in image_ids if is_in_deletion_period(i)]
+    # an image shown in the text of another document ([img=ID]), or linked
+    # from it ([[images/ID|label]]), stays
+    kept = images_embedded_elsewhere(image_ids, document_id) | set(
+        linking_documents(image_ids, IMAGE_TYPE, excluded_document_id=document_id)
+    )
+    return sorted(i for i in image_ids if i not in kept)
 
 
 def read_images_of_deletion(request):
@@ -356,10 +382,15 @@ def read_images_of_deletion(request):
         `GET` `/documents/delete/{id}/images`
 
     Response: how many images are deleted with it, and how many stay linked
-    to no document, by type (shown before deleting):
+    to no document, by type; and the texts of other documents that show it
+    (an image, [img=ID]) or link to it ([[type/ID|label]], a URL): they break
+    (shown before deleting):
 
         {'deleted': 3,
-         'orphaned': {'collaborative': 2, 'personal': 1, 'copyright': 0}}
+         'orphaned': {'collaborative': 2, 'personal': 1, 'copyright': 0},
+         'embedded_in': [{'document_id': 12, 'document_type': 'r',
+                          'title': '...', 'langs': ['fr']}],
+         'linked_from': [...]}
     """
     document_id = request.validated['id']
     document_type = request.validated['document_type']
@@ -371,13 +402,26 @@ def read_images_of_deletion(request):
     for image_id, image_type in images.items():
         if image_id not in deleted and image_type in orphaned:
             orphaned[image_type] += 1
-    return {'deleted': len(deleted), 'orphaned': orphaned}
+    embedded_in = (
+        embedding_documents([document_id]).get(document_id, [])
+        if document_type == IMAGE_TYPE
+        else []
+    )
+    linked_from = linking_documents([document_id], document_type).get(document_id, [])
+    return {
+        'deleted': len(deleted),
+        'orphaned': orphaned,
+        'embedded_in': embedded_in,
+        'linked_from': linked_from,
+    }
 
 
 def _delete_document(request, document_id, document_type, redirecting=False):
     # Check if documents are redirecting (merged) to the document to delete
     # If yes, delete them first.
     _remove_merged_documents(request, document_id, document_type)
+    # the old versions of the documents unmerged since still redirect to it
+    _remove_redirects_of_archives(document_id)
 
     remove_from_cache(document_id)
 
@@ -393,8 +437,9 @@ def _delete_document(request, document_id, document_type, redirecting=False):
     if not redirecting:
         _remove_from_feed(document_id)
 
-    if not redirecting and document_type == IMAGE_TYPE:
-        # Remove the references of this image from the feed
+    if document_type == IMAGE_TYPE:
+        # Remove the references of this image from the feed: also for an image
+        # merged into the deleted one (a copy shown in the feed of its upload)
         _remove_image_from_feed(document_id)
 
     if document_type == WAYPOINT_TYPE:
@@ -404,11 +449,20 @@ def _delete_document(request, document_id, document_type, redirecting=False):
     )
 
 
+def _remove_redirects_of_archives(document_id):
+    DBSession.query(ArchiveDocument).filter(
+        ArchiveDocument.redirects_to == document_id
+    ).update({ArchiveDocument.redirects_to: None}, synchronize_session=False)
+
+
 def _remove_merged_documents(request, document_id, document_type):
+    # the documents redirecting to this one now: not those whose merge was
+    # undone since (views.document_unmerge), whose old versions still redirect
+    # (the same as views.document_trash._capture_document)
     merged_document_ids = [
         row[0]
-        for row in DBSession.query(ArchiveDocument.document_id)
-        .filter(ArchiveDocument.redirects_to == document_id)
+        for row in DBSession.query(Document.document_id)
+        .filter(Document.redirects_to == document_id)
         .all()
     ]
     for merged_document_id in merged_document_ids:

@@ -100,7 +100,7 @@ def rows(session, user_ids, monkeypatch):
             last_success_at=datetime(2026, 11, 24, 10, 15, tzinfo=UTC),
             last_run_at=datetime(2026, 11, 24, 10, 15, tzinfo=UTC),
             last_fetched=10,
-            cursor={'secret': 'x'},
+            cursor={'secret': 'x'},  # nosec B105 (a fake cursor)
         )
     )
     session.flush()

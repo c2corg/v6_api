@@ -36,7 +36,16 @@ associations_to_include = {
         'xreports',
     },
     ROUTE_TYPE: {'waypoints', 'routes', 'images', 'articles', 'books', 'xreports'},
-    OUTING_TYPE: {'routes', 'images', 'users', 'articles', 'xreports'},
+    # `route_waypoints`: the waypoints of the routes of an outing, which has none of
+    # its own (for its map). Not an association: the outing is not linked to them.
+    OUTING_TYPE: {
+        'routes',
+        'route_waypoints',
+        'images',
+        'users',
+        'articles',
+        'xreports',
+    },
     IMAGE_TYPE: {
         'waypoints',
         'routes',
@@ -86,6 +95,8 @@ def get_associations(document, lang, editing_view):
             pass
         else:
             associations['routes'] = get_linked_routes(document, lang)
+    if 'route_waypoints' in types_to_include:
+        associations['route_waypoints'] = get_route_waypoints(document, lang)
     if 'users' in types_to_include:
         associations['users'] = get_linked_users(document, lang)
     if 'images' in types_to_include:
@@ -153,6 +164,33 @@ def get_linked_waypoints(document, lang):
                 Association.child_document_id == document.document_id,
             )
         )
+        .group_by(Waypoint.document_id)
+        .all()
+    )
+
+    return get_documents_for_ids(waypoint_ids, lang, waypoint_documents_config).get(
+        'documents'
+    )
+
+
+def get_route_waypoints(document, lang):
+    """Return the waypoints linked to the routes linked to the document.
+
+    The cache version of the document is not incremented when one of these
+    waypoints changes (two associations away): its cached copy is refreshed when
+    the document or one of its routes changes, or when the cache entry expires.
+    """
+    route_ids = (
+        DBSession.query(Route.document_id)
+        .filter(Route.redirects_to.is_(None))
+        .join(Association, Association.parent_document_id == Route.document_id)
+        .filter(Association.child_document_id == document.document_id)
+    )
+    waypoint_ids = get_first_column(
+        DBSession.query(Waypoint.document_id)
+        .filter(Waypoint.redirects_to.is_(None))
+        .join(Association, Association.parent_document_id == Waypoint.document_id)
+        .filter(Association.child_document_id.in_(route_ids))
         .group_by(Waypoint.document_id)
         .all()
     )

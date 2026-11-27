@@ -58,6 +58,8 @@ def test_broken_embeds(client, session, user_ids, docs, outing_images):  # noqa:
         docs.waypoint1.document_id,
     ]
     _embed(session, docs.route1, *embedded)
+    # a route: the title of its main waypoint before its title
+    docs.route1.locales[0].title_prefix = 'Mont Blanc'
     # a merged document is not shown
     _embed(session, docs.route2, 9999998)
     docs.route2.redirects_to = docs.route1.document_id
@@ -94,6 +96,7 @@ def test_broken_embeds(client, session, user_ids, docs, outing_images):  # noqa:
     assert first['document_id'] == route1_id
     assert first['document_type'] == 'r'
     assert first['title'] == 'Mont Blanc from the air'
+    assert first['title_prefix'] == 'Mont Blanc'
     assert first['langs'] == ['en']
     outing_entry = _entry(session, docs.outing2.document_id)
     assert first['deleted']['entry_id'] == outing_entry.id
