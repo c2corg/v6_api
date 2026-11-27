@@ -8,7 +8,7 @@ review the results, and genuine links will lose rel="nofollow ugc".
 """
 
 import logging
-import random
+import secrets
 import time
 import urllib.robotparser
 from datetime import UTC, datetime, timedelta
@@ -59,9 +59,13 @@ FORGET_AFTER = timedelta(days=90)
 CANARY_URL = 'https://www.wikipedia.org/robots.txt'
 
 
+# the system's random source (Bandit B311 on the random module)
+_random = secrets.SystemRandom()
+
+
 def _jitter(interval):
     """Spread the checks: ±20 %."""
-    return interval * random.uniform(0.8, 1.2)
+    return interval * _random.uniform(0.8, 1.2)
 
 
 def sync_link_checks(session, now):
