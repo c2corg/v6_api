@@ -379,3 +379,36 @@ def test_one_run_at_a_time(db_engine, monkeypatch):
                 text('select pg_advisory_unlock(:key)'), {'key': checker._LOCK_KEY}
             )
             other.commit()
+
+
+def test_nul_characters_dropped(network):
+    network['http://example.com/'] = FakeResponse(
+        200, {'Content-Type': 'text/html'}, b'<title>To\x00po</title>\x00'
+    )
+    answer = f.fetch('http://example.com/')
+    assert (answer.title, '\x00' in answer.text) == ('Topo', False)
+
+
+def test_an_error_does_not_stop_the_run(network, session, docs, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(checker.time, 'sleep', lambda s: None)
+    monkeypatch.setattr(checker, 'network_ok', lambda: True)
+    _write(
+        session, docs.route1, '[a](http://example.com/a) [o](http://other.example/o)'
+    )
+    network['http://other.example/o'] = _page('Topo O')
+    real_fetch = checker.fetch
+
+    def fetch(url, read_body=True):
+        if url == 'http://example.com/a':
+            raise RuntimeError('odd page')
+        return real_fetch(url, read_body)
+
+    monkeypatch.setattr(checker, 'fetch', fetch)
+    _robots(network, '')
+    checker.run_in(DBSession, 10, NOW)
+
+    session.expire_all()
+    odd = session.get(LinkCheck, 'http://example.com/a')
+    assert odd.status == UNCHECKED
+    assert odd.next_check_at.astimezone(UTC) == NOW + checker.FAILING_INTERVAL
+    assert session.get(LinkCheck, 'http://other.example/o').status == OK

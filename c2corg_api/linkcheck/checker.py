@@ -227,6 +227,17 @@ def check_link(session, check, host_row, now):
     return requests
 
 
+def _postpone(session, url, host, now):
+    """Check a URL again later, after an unexpected error (logged)."""
+    session.query(LinkCheck).filter(LinkCheck.url == url).update(
+        {LinkCheck.next_check_at: now + FAILING_INTERVAL}, synchronize_session=False
+    )
+    session.query(LinkHost).filter(LinkHost.host == host).update(
+        {LinkHost.next_request_at: now + HOST_INTERVAL}, synchronize_session=False
+    )
+    session.commit()
+
+
 def network_ok():
     """Tell whether a well-known site answers: else the run is skipped."""
     return fetch(CANARY_URL, read_body=False).http_status is not None
@@ -267,8 +278,15 @@ def run_in(session, requests_per_run, now=None):
     for check in due_checks(session, start, requests_per_run):
         if requests >= requests_per_run:
             break
-        host_row = session.get(LinkHost, check.host)
-        requests += check_link(session, check, host_row, now or datetime.now(UTC))
-        session.commit()
+        url, host = check.url, check.host
+        try:
+            host_row = session.get(LinkHost, host)
+            requests += check_link(session, check, host_row, now or datetime.now(UTC))
+            session.commit()
+        except Exception:
+            # one odd page must not stop the runs: it waits, the others go on
+            log.exception('Link checker: checking %s failed', url)
+            session.rollback()
+            _postpone(session, url, host, now or datetime.now(UTC))
     log.info('Link checker: %d requests', requests)
     return requests

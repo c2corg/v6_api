@@ -202,9 +202,11 @@ def _decode(body, content_type):
     if isinstance(charset, bytes):
         charset = charset.decode('ascii', 'replace')
     try:
-        return body.decode(charset, 'replace')
+        text = body.decode(charset, 'replace')
     except LookupError:
-        return body.decode('utf-8', 'replace')
+        text = body.decode('utf-8', 'replace')
+    # PostgreSQL refuses NUL characters in texts (some sites send some)
+    return text.replace('\x00', '')
 
 
 def page_title(text):
