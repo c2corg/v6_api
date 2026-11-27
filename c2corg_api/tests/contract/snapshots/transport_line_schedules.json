@@ -1,0 +1,46 @@
+{
+  "body": {
+    "associations": {
+      "outings": [],
+      "routes": [],
+      "waypoint_ids": [],
+      "waypoints": []
+    },
+    "date": "str",
+    "directions": [
+      {
+        "direction": "str",
+        "stops": [
+          {
+            "id": "str",
+            "name": "str",
+            "stop_area_id": "str"
+          }
+        ],
+        "trips": [
+          {
+            "on_demand": "bool",
+            "times": [
+              "str"
+            ]
+          }
+        ]
+      }
+    ],
+    "line": {
+      "line_id": "str",
+      "name": "str"
+    },
+    "next_date": "null",
+    "stop_area_ids": [
+      "str"
+    ]
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "public, max-age=3600",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

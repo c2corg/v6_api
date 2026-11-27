@@ -21,7 +21,7 @@ cache_status = None
 def create_region(name):
     return make_region(
         # prefix all keys (e.g. returns 'c2corg_main:detail:38575-1')
-        key_mangler=lambda key: f'{KEY_PREFIX}:{name}:{key}'
+        key_mangler=lambda key: f'{KEY_PREFIX}:{name}:{key}',
     )
 
 
@@ -42,6 +42,9 @@ cache_avalanche_bulletin = create_region('avalanche_bulletin')
 cache_image_duplicates = create_region('image_duplicates')
 # the listing of the partner outings (see views.partner_outings)
 cache_partner_outings = create_region('partner_outings')
+# planned timetables of the public transport, and the Navitia coverage of a
+# place (see views.transport): Navitia is paid per request
+cache_transport = create_region('transport')
 
 # how long the total of a listing is kept (seconds): counting all the
 # documents of a type reads the whole table (about 1 s for the images)
@@ -60,6 +63,7 @@ caches = [
     cache_avalanche_bulletin,
     cache_image_duplicates,
     cache_partner_outings,
+    cache_transport,
 ]
 
 

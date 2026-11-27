@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="test">
+  <node id="1" version="1" lat="45.0" lon="6.0"/>
+  <node id="2" version="1" lat="45.0" lon="6.01"><tag k="name" v="Mairie"/></node>
+  <node id="3" version="1" lat="45.0" lon="6.02"><tag k="name" v="Gare"/></node>
+  <node id="4" version="1" lat="45.0" lon="6.03"/>
+  <node id="5" version="1" lat="45.001" lon="6.01"><tag k="name" v="Mairie"/></node>
+  <node id="6" version="1" lat="46.0" lon="7.0"/>
+  <node id="7" version="1" lat="46.0" lon="7.01"/>
+  <node id="8" version="1" lat="46.1" lon="7.0"/>
+  <node id="9" version="1" lat="46.1" lon="7.01"/>
+  <way id="10" version="1"><nd ref="1"/><nd ref="2"/><nd ref="3"/></way>
+  <way id="11" version="1"><nd ref="3"/><nd ref="4"/></way>
+  <way id="12" version="1"><nd ref="6"/><nd ref="7"/></way>
+  <way id="13" version="1">
+    <nd ref="8"/>
+    <nd ref="9"/>
+    <tag k="railway" v="abandoned"/>
+  </way>
+  <relation id="100" version="1">
+    <member type="way" ref="10" role=""/>
+    <member type="way" ref="11" role=""/>
+    <member type="node" ref="2" role="stop"/>
+    <member type="node" ref="3" role="stop"/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="A"/>
+    <tag k="network" v="Sibra"/>
+    <tag k="colour" v="#ff0000"/>
+    <tag k="from" v="Annecy"/>
+    <tag k="to" v="Seynod"/>
+  </relation>
+  <relation id="101" version="1">
+    <member type="way" ref="11" role=""/>
+    <member type="way" ref="10" role=""/>
+    <member type="node" ref="5" role="platform"/>
+    <member type="node" ref="2" role="stop"/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="A"/>
+    <tag k="network" v="Sibra"/>
+  </relation>
+  <relation id="102" version="1">
+    <member type="way" ref="12" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="train"/>
+    <tag k="name" v="TER Lyon - Geneve"/>
+  </relation>
+  <relation id="103" version="1">
+    <member type="way" ref="12" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="hiking"/>
+  </relation>
+  <relation id="104" version="1">
+    <member type="way" ref="12" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="Z"/>
+    <tag k="disused" v="yes"/>
+  </relation>
+  <relation id="105" version="1">
+    <member type="way" ref="12" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="Y"/>
+    <tag k="end_date" v="2020-06"/>
+  </relation>
+  <relation id="106" version="1">
+    <member type="way" ref="12" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="W"/>
+    <tag k="seasonal" v="winter"/>
+    <tag k="opening_hours" v="Dec-Apr"/>
+    <tag k="website" v="https://example.org/w"/>
+  </relation>
+  <relation id="107" version="1">
+    <member type="way" ref="12" role=""/>
+    <member type="way" ref="13" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="train"/>
+    <tag k="name" v="TER Annecy"/>
+  </relation>
+  <relation id="108" version="1">
+    <member type="way" ref="12" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="V"/>
+    <tag k="start_date" v="2999"/>
+  </relation>
+  <relation id="200" version="1">
+    <member type="relation" ref="100" role=""/>
+    <member type="relation" ref="101" role=""/>
+    <tag k="type" v="route_master"/>
+    <tag k="route_master" v="bus"/>
+    <tag k="ref" v="A"/>
+  </relation>
+</osm>

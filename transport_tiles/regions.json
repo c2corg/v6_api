@@ -1,0 +1,8 @@
+[
+  {"id": "rhone-alpes", "url": "https://download.geofabrik.de/europe/france/rhone-alpes-latest.osm.pbf"},
+  {"id": "provence-alpes-cote-d-azur", "url": "https://download.geofabrik.de/europe/france/provence-alpes-cote-d-azur-latest.osm.pbf"},
+  {"id": "aquitaine", "url": "https://download.geofabrik.de/europe/france/aquitaine-latest.osm.pbf"},
+  {"id": "midi-pyrenees", "url": "https://download.geofabrik.de/europe/france/midi-pyrenees-latest.osm.pbf"},
+  {"id": "languedoc-roussillon", "url": "https://download.geofabrik.de/europe/france/languedoc-roussillon-latest.osm.pbf"},
+  {"id": "switzerland", "url": "https://download.geofabrik.de/europe/switzerland-latest.osm.pbf"}
+]

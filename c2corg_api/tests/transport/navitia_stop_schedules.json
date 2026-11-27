@@ -1,0 +1,134 @@
+{
+ "stop_schedules": [
+  {
+   "route": {
+    "id": "route:R74:HAUTExSAVOIE:Line:1007006:LOC",
+    "line": {
+     "id": "line:R74:HAUTExSAVOIE:Line:1007006:LOC"
+    }
+   },
+   "display_informations": {
+    "code": "Y02",
+    "label": "Y02",
+    "name": "ANNEMASSE > SIXT-FER-A-CHEVAL",
+    "color": "AFCA0B",
+    "text_color": "FFFFFF",
+    "network": "Haute-Savoie - Réseau interurbain 74",
+    "commercial_mode": "Coach",
+    "direction": "Gare Routière (Sixt-Fer-à-Cheval)"
+   },
+   "date_times": []
+  },
+  {
+   "route": {
+    "id": "route:R74:HAUTExSAVOIE:Line:1007006:LOC_R",
+    "line": {
+     "id": "line:R74:HAUTExSAVOIE:Line:1007006:LOC"
+    }
+   },
+   "display_informations": {
+    "code": "Y02",
+    "label": "Y02",
+    "name": "ANNEMASSE > SIXT-FER-A-CHEVAL",
+    "color": "AFCA0B",
+    "text_color": "FFFFFF",
+    "network": "Haute-Savoie - Réseau interurbain 74",
+    "commercial_mode": "Coach",
+    "direction": "Annemasse (Annemasse)"
+   },
+   "date_times": [
+    {
+     "date_time": "20261026T060500",
+     "base_date_time": "20261026T060500",
+     "additional_informations": [],
+     "data_freshness": "base_schedule"
+    },
+    {
+     "date_time": "20261026T065500",
+     "base_date_time": "20261026T065500",
+     "additional_informations": [],
+     "data_freshness": "base_schedule"
+    },
+    {
+     "date_time": "20261026T094000",
+     "base_date_time": "20261026T094000",
+     "additional_informations": [
+      "on_demand_transport"
+     ],
+     "data_freshness": "base_schedule"
+    },
+    {
+     "date_time": "20261026T123000",
+     "base_date_time": "20261026T123000",
+     "additional_informations": [],
+     "data_freshness": "base_schedule"
+    },
+    {
+     "date_time": "20261026T153000",
+     "base_date_time": "20261026T153000",
+     "additional_informations": [],
+     "data_freshness": "base_schedule"
+    }
+   ]
+  },
+  {
+   "route": {
+    "id": "route:R74:HAUTExSAVOIE:Line:1007025:LOC",
+    "line": {
+     "id": "line:R74:HAUTExSAVOIE:Line:1007025:LOC"
+    }
+   },
+   "display_informations": {
+    "code": "Y94",
+    "label": "Y94",
+    "name": "CLUSES > SIXT-FER-A-CHEVAL",
+    "color": "497728",
+    "text_color": "FFFFFF",
+    "network": "Haute-Savoie - Réseau interurbain 74",
+    "commercial_mode": "Coach",
+    "direction": "Gare Routière (Sixt-Fer-à-Cheval)"
+   },
+   "date_times": []
+  },
+  {
+   "route": {
+    "id": "route:R74:HAUTExSAVOIE:Line:1007025:LOC_R",
+    "line": {
+     "id": "line:R74:HAUTExSAVOIE:Line:1007025:LOC"
+    }
+   },
+   "display_informations": {
+    "code": "Y94",
+    "label": "Y94",
+    "name": "CLUSES > SIXT-FER-A-CHEVAL",
+    "color": "497728",
+    "text_color": "FFFFFF",
+    "network": "Haute-Savoie - Réseau interurbain 74",
+    "commercial_mode": "Coach",
+    "direction": "Gare Routière (Cluses)"
+   },
+   "date_times": [
+    {
+     "date_time": "20261026T064500",
+     "base_date_time": "20261026T064500",
+     "additional_informations": [],
+     "data_freshness": "base_schedule"
+    },
+    {
+     "date_time": "20261026T101500",
+     "base_date_time": "20261026T101500",
+     "additional_informations": [
+      "on_demand_transport"
+     ],
+     "data_freshness": "base_schedule"
+    },
+    {
+     "date_time": "20261026T191500",
+     "base_date_time": "20261026T191500",
+     "additional_informations": [],
+     "data_freshness": "base_schedule"
+    }
+   ]
+  }
+ ]
+}
