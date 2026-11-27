@@ -80,7 +80,7 @@ def _broken(client, query=''):
     ],
 )
 def test_text_links(text, links):
-    assert get_text_references(text) == ([], links)
+    assert get_text_references(text)[:2] == ([], links)
 
 
 def test_links_stored(session, docs):  # noqa: F811
@@ -123,7 +123,7 @@ def test_rebuild(session, docs):  # noqa: F811
     DBSession.query(DocumentLink).delete()
     DBSession.flush()
 
-    _, _, links = rebuild_image_embeds(DBSession, batch_size=1)
+    _, _, links, _ = rebuild_image_embeds(DBSession, batch_size=1)
 
     assert links == 1
     assert _links(session, docs.route1.document_id) == [(3, 'waypoints', False)]
@@ -256,7 +256,10 @@ def test_parse_code_link_type_resolver():
     assert 'c2c:document-id="3" c2c:document-type="waypoints"' in html
     assert 'c2c:document-id="4" c2c:document-type="routes"' in html
     # the links stored are the ones written
-    assert get_text_references('[[summits/3|a]]') == ([], [('summits', 3, False)])
+    assert get_text_references('[[summits/3|a]]')[:2] == (
+        [],
+        [('summits', 3, False)],
+    )
 
 
 def test_cook_leads_wrong_types_to_the_document(docs):  # noqa: F811

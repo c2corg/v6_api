@@ -1,8 +1,9 @@
-"""Fill again the images shown and the documents linked in the texts of the locales.
+"""Fill again the images shown and the links in the texts of the locales.
 
-The images are the [img=ID] tags, the links the [[type/id|label]] and the
-full URLs of the site. The API keeps `guidebook.image_embeds` and
-`guidebook.document_links` up to date when a locale is saved. This script
+The images are the [img=ID] tags, the document links the [[type/id|label]]
+and the full URLs of the site, the external links the other http(s) links.
+The API keeps `guidebook.image_embeds`, `guidebook.document_links` and
+`guidebook.external_links` up to date when a locale is saved. This script
 fills them from the current texts: once after the migrations that create
 the tables, and later to repair it (e.g. after a change of the markdown parser,
 or of texts written by SQL). It can run while the API runs.
@@ -21,6 +22,7 @@ from c2corg_api.config import get_appsettings, setup_logging
 from c2corg_api.models import DBSession, commit_or_rollback
 from c2corg_api.models.document import DocumentLocale
 from c2corg_api.models.document_link import DocumentLink
+from c2corg_api.models.external_link import ExternalLink
 from c2corg_api.models.image_embed import ImageEmbed
 from c2corg_api.views.markdown import NOT_MARKDOWN_PROPERTY, update_text_references
 
@@ -49,19 +51,19 @@ def main(argv=sys.argv):
     DBSession.configure(bind=engine_from_config(settings, 'sqlalchemy.'))
 
     start = time.monotonic()
-    locales, embeds, links = rebuild_image_embeds(DBSession, args.batch_size)
+    locales, embeds, links, external = rebuild_image_embeds(DBSession, args.batch_size)
     print(
-        f'{locales} locales read, {embeds} embeds and {links} links stored, '
-        f'in {time.monotonic() - start:.0f} s'
+        f'{locales} locales read, {embeds} embeds, {links} document links and '
+        f'{external} external links stored, in {time.monotonic() - start:.0f} s'
     )
 
 
 def rebuild_image_embeds(session, batch_size=1000):
     """Store the embeds and links of every locale; return the counts."""
-    # (locales read, embeds stored, links stored). The locales read: the ones
-    # whose texts have "[img=", "[[" or "camptocamp.org", and the ones that
-    # have embeds or links stored (their texts may have lost them). Each batch is a
-    # transaction, recomputed from the texts as they are then.
+    # (locales read, embeds, document links and external links stored). The
+    # locales read: the ones whose texts have "[img=", "[[" or "://", and the
+    # ones that have embeds or links stored (their texts may have lost them).
+    # Each batch is a transaction, recomputed from the texts as they are then.
     ids = sorted(session.execute(_candidate_locale_ids()).scalars())
     log.info(f'{len(ids)} locales to read')
     locales = with_polymorphic(DocumentLocale, '*')
@@ -75,7 +77,8 @@ def rebuild_image_embeds(session, batch_size=1000):
         log.info(f'{start + len(batch)} / {len(ids)} locales')
     embeds = session.query(ImageEmbed).count()
     links = session.query(DocumentLink).count()
-    return len(ids), embeds, links
+    external = session.query(ExternalLink).count()
+    return len(ids), embeds, links, external
 
 
 def _candidate_locale_ids():
@@ -98,12 +101,13 @@ def _candidate_locale_ids():
             if isinstance(column.type, String)
             and column.key not in NOT_MARKDOWN_PROPERTY
             and column.key != 'type'
-            for pattern in ('%[img=%', '%[[%', '%camptocamp.org%')
+            for pattern in ('%[img=%', '%[[%', '%://%')
         ]
     with_tags = select(base.c.id).select_from(joined).where(or_(*conditions))
     embeds = select(ImageEmbed.document_locale_id)
     links = select(DocumentLink.document_locale_id)
-    return union(with_tags, embeds, links)
+    external = select(ExternalLink.document_locale_id)
+    return union(with_tags, embeds, links, external)
 
 
 if __name__ == '__main__':
