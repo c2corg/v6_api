@@ -44,7 +44,7 @@ dependencies = [
     "python-dotenv==1.2.4",
     # Discourse API client
     "pydiscourse==1.7.0",
-    "pydantic==2.14.3",
+    "pydantic==2.14.4",
     "fastapi==0.162.7",
     # parses the XML of the Météo-France avalanche bulletins
     "defusedxml==0.7.1",
