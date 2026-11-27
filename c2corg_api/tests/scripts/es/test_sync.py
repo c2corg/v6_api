@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import event
 
 from c2corg_api.models import es_sync
+from c2corg_api.models.article import Article
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
@@ -19,6 +20,7 @@ from c2corg_api.scripts.es.sync import (
     create_search_documents,
     get_changed_documents,
     get_changed_documents_for_associations,
+    get_changed_outings_oc,
     get_changed_routes_and_outings_wr,
     get_changed_users,
     get_deleted_locale_documents,
@@ -433,3 +435,34 @@ def _create_mock_match(actions):
             pass
 
     return MockBatch
+
+
+def test_get_changed_outings_oc(session, user_ids, docs):
+    last_update, _ = es_sync.get_status(session)
+    article = Article(categories=['site_info'], article_type='collab')
+    session.add(article)
+    session.flush()
+    association = Association.create(docs.outing1, article)
+    session.add_all([association, association.get_log(user_ids['contributor'])])
+    session.flush()
+
+    # O1 lists the ids of its articles, it has to be updated
+    assert get_changed_outings_oc(session, last_update) == [
+        (docs.outing1.document_id, 'o')
+    ]
+    assert get_changed_outings_oc(session, last_update + datetime.timedelta(0, 1)) == []
+
+
+def test_create_search_documents_outing_articles(session, docs):
+    article = Article(categories=['site_info'], article_type='collab')
+    session.add(article)
+    session.flush()
+    session.add(Association.create(docs.outing1, article))
+    session.flush()
+    session.expire(docs.outing1)
+
+    search_documents = []
+    batch_mock = _create_mock_match(search_documents)(None, 1000)
+    create_search_documents('o', [docs.outing1], batch_mock)
+
+    assert search_documents[0]['articles'] == [article.document_id]

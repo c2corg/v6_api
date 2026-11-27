@@ -305,6 +305,16 @@ def test_get_collection_for_route(client, session, docs):
     assert response.json['total'] == 1
 
 
+def test_get_collection_for_article(client, session, docs):
+    reset_search_index(session)
+    response = client.get(
+        OUTINGS.prefix + '?c=' + str(docs.article1.document_id), status=200
+    )
+    documents = response.json['documents']
+    assert [doc['document_id'] for doc in documents] == [docs.outing.document_id]
+    assert response.json['total'] == 1
+
+
 def test_get_collection_has_geom(client, session, docs):
     reset_search_index(session)
     response = client.get(

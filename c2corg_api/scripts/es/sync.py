@@ -7,6 +7,7 @@ from sqlalchemy.sql.expression import and_, or_, union
 
 from c2corg_api.models import document_locale_types, document_types, es_sync
 from c2corg_api.models.area import Area
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.association_views import (
     WaypointsForOutingsView,
@@ -138,6 +139,7 @@ def get_changed_routes_from_associations(session, last_update):
         get_changed_routes_and_outings_wr(session, last_update)
         + get_changed_routes_and_outings_ww(session, last_update)
         + get_changed_outings_ro_uo(session, last_update)
+        + get_changed_outings_oc(session, last_update)
     )
 
 
@@ -326,6 +328,30 @@ def get_changed_outings_ro_uo(session, last_update):
     )
 
 
+def get_changed_outings_oc(session, last_update):
+    """Return the outings whose article associations changed.
+
+    E.g. when an association between outing O1 and article C1 is created,
+    outing O1 has to be updated so that C1 is listed under
+    `associated_articles_ids`. The outing is the parent of the association.
+    """
+    return (
+        session.query(
+            AssociationLog.parent_document_id.label('outing_id'),
+            literal(OUTING_TYPE).label('type'),
+        )
+        .filter(
+            and_(
+                AssociationLog.parent_document_type == OUTING_TYPE,
+                AssociationLog.child_document_type == ARTICLE_TYPE,
+            )
+        )
+        .filter(AssociationLog.written_at >= last_update)
+        .group_by('outing_id', 'type')
+        .all()
+    )
+
+
 def get_deleted_locale_documents(session, last_update):
     """Return the ids of documents that had locales deleted since the last update."""
     return (
@@ -487,6 +513,8 @@ association_types_to_check = {
     (ROUTE_TYPE, OUTING_TYPE),
     # needed to update user ids for outings
     (USERPROFILE_TYPE, OUTING_TYPE),
+    # needed to update article ids for outings
+    (OUTING_TYPE, ARTICLE_TYPE),
 }
 
 

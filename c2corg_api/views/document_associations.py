@@ -295,6 +295,8 @@ def get_linked_outings(document, lang):
             ),
         )
         .group_by(Outing.document_id)
+        # the most recent outings first, as in the outing listings
+        .order_by(Outing.date_end.desc(), Outing.document_id.desc())
         .all()
     )
 

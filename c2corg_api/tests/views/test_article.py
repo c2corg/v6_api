@@ -1,3 +1,4 @@
+import datetime
 from dataclasses import dataclass
 
 import pytest
@@ -14,6 +15,7 @@ from c2corg_api.models.document import (
     DocumentLocale,
 )
 from c2corg_api.models.document_history import DocumentVersion
+from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.waypoint import Waypoint
 from c2corg_api.tests import assert_required, auth_headers, send_json
 from c2corg_api.tests.search import reset_search_index
@@ -793,3 +795,36 @@ def test_put_as_non_author(client, docs):
 
 def test_get_associations_history(client, docs):
     scenarios.get_association_logs(client, docs.article1)
+
+
+def test_get_outings_most_recent_first(client, session, user_ids, docs):
+    # the outing created first is the most recent one
+    outing_recent = Outing(
+        activities=['hiking'],
+        date_start=datetime.date(2024, 7, 1),
+        date_end=datetime.date(2024, 7, 2),
+        locales=[OutingLocale(lang='en', title='Recent')],
+    )
+    outing_old = Outing(
+        activities=['hiking'],
+        date_start=datetime.date(2016, 1, 1),
+        date_end=datetime.date(2016, 1, 1),
+        locales=[OutingLocale(lang='en', title='Old')],
+    )
+    session.add_all([outing_recent, outing_old])
+    session.flush()
+    assert outing_recent.document_id < outing_old.document_id
+    for outing in (outing_recent, outing_old):
+        create_new_version(outing, user_ids['contributor'])
+        session.add(
+            Association.create(parent_document=outing, child_document=docs.article2)
+        )
+    session.flush()
+
+    response = client.get(f'/articles/{docs.article2.document_id}', status=200)
+
+    outings = response.json['associations']['outings']
+    assert [outing['document_id'] for outing in outings] == [
+        outing_recent.document_id,
+        outing_old.document_id,
+    ]
