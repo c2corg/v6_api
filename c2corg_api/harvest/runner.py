@@ -290,7 +290,7 @@ def status(session, names=None):
         name: {
             'sources': count,
             'failing': failing,
-            'last_success': last_success.isoformat() if last_success else None,
+            'last_run': last_success.isoformat() if last_success else None,
         }
         for name, count, failing, last_success in rows
     }

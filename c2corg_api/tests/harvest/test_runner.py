@@ -283,7 +283,7 @@ def test_status(harvest_session, clock):
         'fake': {
             'sources': 2,
             'failing': 1,
-            'last_success': clock.now.isoformat(),
+            'last_run': clock.now.isoformat(),
         }
     }
     # a harvester of another version of the code
@@ -382,7 +382,7 @@ def test_health(client, harvest_session, clock, monkeypatch):
     monkeypatch.setattr(runner, 'harvesters', lambda: [harvester])
     tick(harvester)
     assert client.get('/health').json['harvest'] == {
-        'fake': {'sources': 1, 'failing': 0, 'last_success': clock.now.isoformat()}
+        'fake': {'sources': 1, 'failing': 0, 'last_run': clock.now.isoformat()}
     }
 
 

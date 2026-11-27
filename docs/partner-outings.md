@@ -441,7 +441,7 @@ they only report why they could not run.
   Switch one off with `harvest_partners_<name>_enabled="false"` (or all with `harvest_partners_enabled="false"`) while
   an agreement is missing, and put `SKITOUR_API_KEY` in the environment of the background-jobs container: without it
   skitour stays `disabled`.
-- **Monitoring.** `/health` lists each source under `harvest` (`partners.skitour: {sources, failing, last_success}`)
+- **Monitoring.** `/health` lists each source under `harvest` (`partners.skitour: {sources, failing, last_run}`)
   without ever failing the check; look at
   `/partner-outings/sources` (`status_detail`, `last_success_at`, `last_skipped`) when a source is not `ok`.
 - **Fixtures.** Every source has a real recording now (`manifest.json` says `synthetic: false`); the edge cases a
