@@ -143,7 +143,7 @@ def test_review_link(client, session, links, user_ids):
     assert (check.review, check.reviewed_by) == ('genuine', user_ids['moderator'])
     # genuine until its title changes completely: from the title seen now
     assert check.first_title == 'parked.example'
-    assert url not in _urls(_list(client).json)
+    assert _urls(_list(client).json).count(url) == 0
 
     _post(client, 'review', {'url': url})
     session.expire_all()
@@ -153,16 +153,18 @@ def test_review_link(client, session, links, user_ids):
 
 def test_review_host_and_recheck(client, session, links):
     _post(client, 'review-host', {'host': 'Parked.example', 'review': 'trusted'})
-    assert 'http://parked.example/' not in _urls(_list(client).json)
+    assert _urls(_list(client).json).count('http://parked.example/') == 0
     _post(client, 'review-host', {'host': 'parked.example'})
-    assert 'http://parked.example/' in _urls(_list(client).json)
+    assert _urls(_list(client).json).count('http://parked.example/') == 1
 
     # a trusted host, a genuine link: still listed once gone (dead, failing)
     _post(client, 'review-host', {'host': 'dead.example', 'review': 'trusted'})
     body = _list(client).json
-    assert 'http://dead.example/a' in _urls(body)
+    assert _urls(body).count('http://dead.example/a') == 1
     assert body['links'][0]['host_review'] == 'trusted'
-    assert 'http://dead.example/a' in _urls(_list(client, '?reviewed=true').json)
+    assert (
+        _urls(_list(client, '?reviewed=true').json).count('http://dead.example/a') == 1
+    )
 
     _post(client, 'recheck', {'url': 'http://dead.example/a'})
     session.expire_all()
