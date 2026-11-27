@@ -31,6 +31,7 @@ from c2corg_api.web import (
     search,
     sitemaps,
     stopareas,
+    transport,
     user_actions,
     users,
 )
@@ -131,6 +132,7 @@ def create_fastapi_app(settings, registry=None):
     navitia.include(app)
     avalanche_bulletins.include(app)
     partner_outings.include(app)
+    transport.include(app)
     user_actions.include(app)
     favourites.include(app)
     document_actions.include(app)

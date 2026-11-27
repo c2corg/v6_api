@@ -1,0 +1,306 @@
+{
+ "route_schedules": [
+  {
+   "display_informations": {
+    "direction": "Gare Routière (Sixt-Fer-à-Cheval)",
+    "code": "Y02",
+    "network": "Haute-Savoie - Réseau interurbain 74",
+    "color": "AFCA0B",
+    "text_color": "FFFFFF",
+    "name": "ANNEMASSE > SIXT-FER-A-CHEVAL",
+    "label": "Y02",
+    "commercial_mode": "Coach"
+   },
+   "table": {
+    "headers": [
+     {
+      "additional_informations": [
+       "odt_with_stop_time"
+      ],
+      "display_informations": {
+       "direction": "Gare Routière (Sixt-Fer-à-Cheval)",
+       "headsign": "Sixt-Fer-à-Cheval - Gare Routiere"
+      }
+     },
+     {
+      "additional_informations": [
+       "regular"
+      ],
+      "display_informations": {
+       "direction": "Gare Routière (Sixt-Fer-à-Cheval)",
+       "headsign": "Sixt-Fer-à-Cheval - Gare Routiere"
+      }
+     },
+     {
+      "additional_informations": [
+       "odt_with_stop_time"
+      ],
+      "display_informations": {
+       "direction": "Gare Routière (Sixt-Fer-à-Cheval)",
+       "headsign": "Sixt-Fer-à-Cheval - Gare Routiere"
+      }
+     }
+    ],
+    "rows": [
+     {
+      "stop_point": {
+       "id": "stop_point:R74:FR:74012:ZE:57669:HAUTExSAVOIE",
+       "name": "Gare Routière",
+       "coord": {
+        "lat": "46.199624",
+        "lon": "6.238124"
+       },
+       "stop_area": {
+        "id": "stop_area:SNC:StopArea:OCE87745497",
+        "name": "Annemasse"
+       }
+      },
+      "date_times": [
+       {
+        "date_time": "20261026T083500",
+        "base_date_time": "20261026T083500",
+        "additional_informations": [
+         "on_demand_transport"
+        ],
+        "data_freshness": "base_schedule"
+       },
+       {
+        "date_time": "20261026T110000",
+        "base_date_time": "20261026T110000",
+        "additional_informations": [],
+        "data_freshness": "base_schedule"
+       },
+       {
+        "date_time": "20261026T142000",
+        "base_date_time": "20261026T142000",
+        "additional_informations": [
+         "on_demand_transport"
+        ],
+        "data_freshness": "base_schedule"
+       }
+      ]
+     },
+     {
+      "stop_point": {
+       "id": "stop_point:R74:FR:74012:ZE:75325:HAUTExSAVOIE",
+       "name": "Romagny",
+       "coord": {
+        "lat": "46.195735",
+        "lon": "6.242850"
+       },
+       "stop_area": {
+        "id": "stop_area:ANN:Navitia:annroma1",
+        "name": "Romagny"
+       }
+      },
+      "date_times": [
+       {
+        "date_time": "20261026T083800",
+        "base_date_time": "20261026T083800",
+        "additional_informations": [
+         "on_demand_transport"
+        ],
+        "data_freshness": "base_schedule"
+       },
+       {
+        "date_time": "20261026T110300",
+        "base_date_time": "20261026T110300",
+        "additional_informations": [],
+        "data_freshness": "base_schedule"
+       },
+       {
+        "date_time": "20261026T142300",
+        "base_date_time": "20261026T142300",
+        "additional_informations": [
+         "on_demand_transport"
+        ],
+        "data_freshness": "base_schedule"
+       }
+      ]
+     },
+     {
+      "stop_point": {
+       "id": "stop_point:R74:FR:74012:ZE:57918:HAUTExSAVOIE",
+       "name": "Lycée les Glières",
+       "coord": {
+        "lat": "46.190120",
+        "lon": "6.242701"
+       },
+       "stop_area": {
+        "id": "stop_area:ANN:Navitia:annlgli1",
+        "name": "Lycée des Glières"
+       }
+      },
+      "date_times": [
+       {
+        "date_time": "",
+        "base_date_time": null,
+        "additional_informations": null,
+        "data_freshness": null
+       },
+       {
+        "date_time": "",
+        "base_date_time": null,
+        "additional_informations": null,
+        "data_freshness": null
+       },
+       {
+        "date_time": "",
+        "base_date_time": null,
+        "additional_informations": null,
+        "data_freshness": null
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "display_informations": {
+    "direction": "Annemasse (Annemasse)",
+    "code": "Y02",
+    "network": "Haute-Savoie - Réseau interurbain 74",
+    "color": "AFCA0B",
+    "text_color": "FFFFFF",
+    "name": "ANNEMASSE > SIXT-FER-A-CHEVAL",
+    "label": "Y02",
+    "commercial_mode": "Coach"
+   },
+   "table": {
+    "headers": [
+     {
+      "additional_informations": [
+       "regular"
+      ],
+      "display_informations": {
+       "direction": "Gare Routière (Annemasse)",
+       "headsign": "Annemasse - Gare Routiere"
+      }
+     },
+     {
+      "additional_informations": [
+       "regular"
+      ],
+      "display_informations": {
+       "direction": "Gare Routière (Annemasse)",
+       "headsign": "Annemasse - Gare Routiere"
+      }
+     },
+     {
+      "additional_informations": [
+       "regular"
+      ],
+      "display_informations": {
+       "direction": "Gare Routière (Annemasse)",
+       "headsign": "Annemasse - Gare Routiere"
+      }
+     }
+    ],
+    "rows": [
+     {
+      "stop_point": {
+       "id": "stop_point:R74:FR:74273:ZE:57640:HAUTExSAVOIE",
+       "name": "Gare Routière",
+       "coord": {
+        "lat": "46.053724",
+        "lon": "6.773715"
+       },
+       "stop_area": {
+        "id": "stop_area:R74:1141485",
+        "name": "Gare Routière"
+       }
+      },
+      "date_times": [
+       {
+        "date_time": "20261026T060500",
+        "base_date_time": "20261026T060500",
+        "additional_informations": [],
+        "data_freshness": "base_schedule"
+       },
+       {
+        "date_time": "",
+        "base_date_time": null,
+        "additional_informations": null,
+        "data_freshness": null
+       },
+       {
+        "date_time": "20261026T065500",
+        "base_date_time": "20261026T065500",
+        "additional_informations": [],
+        "data_freshness": "base_schedule"
+       }
+      ]
+     },
+     {
+      "stop_point": {
+       "id": "stop_point:R74:FR:74258:ZE:58244:HAUTExSAVOIE",
+       "name": "Le Sougey",
+       "coord": {
+        "lat": "46.063652",
+        "lon": "6.744704"
+       },
+       "stop_area": {
+        "id": "stop_area:R74:1143525",
+        "name": "Le Sougey"
+       }
+      },
+      "date_times": [
+       {
+        "date_time": "20261026T060900",
+        "base_date_time": "20261026T060900",
+        "additional_informations": [],
+        "data_freshness": "base_schedule"
+       },
+       {
+        "date_time": "",
+        "base_date_time": null,
+        "additional_informations": null,
+        "data_freshness": null
+       },
+       {
+        "date_time": "20261026T070000",
+        "base_date_time": "20261026T070000",
+        "additional_informations": [],
+        "data_freshness": "base_schedule"
+       }
+      ]
+     },
+     {
+      "stop_point": {
+       "id": "stop_point:R74:FR:74258:ZE:58246:HAUTExSAVOIE",
+       "name": "Les Vallons d'en Haut",
+       "coord": {
+        "lat": "46.067055",
+        "lon": "6.746101"
+       },
+       "stop_area": {
+        "id": "stop_area:R74:1143529",
+        "name": "Les Vallons d'en Haut"
+       }
+      },
+      "date_times": [
+       {
+        "date_time": "20261026T061000",
+        "base_date_time": "20261026T061000",
+        "additional_informations": [],
+        "data_freshness": "base_schedule"
+       },
+       {
+        "date_time": "",
+        "base_date_time": null,
+        "additional_informations": null,
+        "data_freshness": null
+       },
+       {
+        "date_time": "20261026T070100",
+        "base_date_time": "20261026T070100",
+        "additional_informations": [],
+        "data_freshness": "base_schedule"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}
