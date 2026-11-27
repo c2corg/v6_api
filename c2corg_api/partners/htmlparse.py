@@ -16,10 +16,11 @@ for JSON.
 """
 
 import re
-from collections.abc import Collection
+import warnings
+from collections.abc import Collection, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup, Comment, XMLParsedAsHTMLWarning
 from bs4.element import NavigableString, Tag
 
 PARSER = 'html.parser'
@@ -43,7 +44,10 @@ _NAME_ATTRS = ('title', 'alt', 'aria-label', 'data-name', 'data-tooltip')
 
 
 def parse(text: str) -> BeautifulSoup:
-    return BeautifulSoup(text, PARSER)
+    """Parse a page; an RSS feed too (bivouak.net), read with the same selectors."""
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', XMLParsedAsHTMLWarning)
+        return BeautifulSoup(text, PARSER)
 
 
 def text_of(node: Tag | None) -> str:
@@ -69,6 +73,7 @@ def trim(
     pseudonymise: Collection[str] = (),
     names: dict | None = None,
     redact: Collection[str] = (),
+    limits: Mapping[str, int] | None = None,
 ) -> str:
     """Keep only what `selectors` match, and their ancestors' bare tags.
 
@@ -82,6 +87,9 @@ def trim(
 
     The elements `redact` matches hold partner free text (a narrative...):
     their text is replaced by a placeholder (`redact_element`).
+
+    `limits` (selector -> n) keeps only the first n elements a selector
+    matches (the cards of a list), as the JSON lists are cut to `MAX_ITEMS`.
     """
     soup = parse(text)
     # an unclosed void element (`<link>`) swallows what follows it: the markup
@@ -89,6 +97,9 @@ def trim(
     for tag in soup.find_all(_VOID_TAGS):
         if tag.contents:
             tag.unwrap()
+    for selector, count in (limits or {}).items():
+        for tag in soup.select(selector)[count:]:
+            tag.decompose()
     matched: list[Tag] = []
     for selector in selectors:
         matched.extend(soup.select(selector))

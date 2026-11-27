@@ -50,7 +50,7 @@ budget makes the run `down`). Every request carries our User-Agent.
 | skitour.fr | JSON API `https://skitour.fr/api/sorties` (`c=1&l=200&j=<days>&p=<page>`), header `cle: $SKITOUR_API_KEY` | pages of 200 outings | 1.1 s, 10 | coordinates in the answer |
 | gulliver.it | WordPress REST JSON `wp-json/gulliver/`: `mobile/commentglobal?page=1..5`, `mobile/comments?id=` (≤ 15), `mobile/routes?id=` (≤ 24 new, cached); the HTML fragment `front_page/comments?sorting=id` for the reports the paging misses | 5 + 1 + 15 + 24 at most | 2 s, 45 | start point of the route; Cloudflare challenge from datacenter addresses (`blocked`) |
 | gulliver.it GPX | public `https://` `.gpx` files on gulliver.it (`gpx_url`), second phase `jobs/partner_tracks.py` | `partners.tracks_per_run` (3) | `partners.tracks_interval_seconds` (10 s at least) | the track, in `partner_tracks` |
-| bivouak.net | HTML scraping: `topos/liste_des_sorties.php?id_sport=1\|2\|8\|4\|16`, then `sortie-<id>-*.html` detail pages (≤ 10 new, cached) | 5 + 10 | 10 s (`robots.txt`), 15 | `data-lat`/`data-lng` of the detail page, else hints |
+| bivouak.net | RSS feed `rss/outings/outings.rss` (change detector), then HTML scraping: `topos/liste_des_sorties.php?id_sport=1\|2\|8\|4\|16` (only the sports new in the feed, all every 3 h), then `sortie-<id>-*.html` detail pages (≤ 10 new, cached) | 1 when nothing is new; 1 + 5 + 10 at most | 10 s (`robots.txt`), 16 | `data-lat`/`data-lng` of the detail page, else hints |
 | gipfelbuch.ch | HTML scraping: `/verhaeltnisse/uebersicht`, then the page of a report for its map, once per summit (≤ 15 new, cached) | 1 + 15 (+ 2 spare) | 2 s, 18 | `data-lat`/`data-lon` of the map, else hints |
 | skitourenportal.eu | HTML scraping: the portal pages of 5 Austrian states (`/salzburg`...), 2 pages each (`?page=2`); no detail page | 10 at most | 3 s, 12 | map markers of the pages, else region (`regions/skitourenportal.json`) and hints |
 | on-ice.it | HTML scraping over plain `http`, ISO-8859-1: `onice_reports.php?type=0` (+ the second page while new), `onice_view_report.php?type=&id=` detail pages (≤ 15 new, cached) | 2 + 15 | 2 s, 17 | none on the site: hints only |
@@ -244,7 +244,8 @@ the real transport, through a `RecordingTransport`, and writes into
 Payloads are trimmed before they are written, by an **allow-list**: only the
 paths an adapter lists in its `REQUIRED_PATHS` are kept, everything else is
 dropped, and lists are cut to 30 items (also the objects keyed by ids: a
-`*` in a path stands for any key, `*.ID` for gulliver's `{"350636": {...}}`).
+`*` in a path stands for any key, `*.ID` for gulliver's `{"350636": {...}}`;
+an HTML adapter cuts its lists with `RECORD_LIMITS`, selector -> number kept).
 No real partner free text reaches a fixture, whatever new fields the site adds:
 the texts an adapter does not read are dropped (skitour `recit`, `photos`...),
 and the texts it reads to store them (`HarvestedOuting.texts`: gulliver
@@ -273,13 +274,31 @@ its last path segment without extension and without an id (`sortie-30061-x.html`
 The elements holding a partner user's identity (author name and profile link) are listed in `PSEUDONYMISE_SELECTORS`:
 the recorder replaces their text and the last segment of their link by `user1`, `user2`... (stable within a recording),
 as `PSEUDONYMISE_PATHS` does for JSON, and `test_fixtures_licence.py` fails on any other value in a real recording.
+An RSS feed is read the same way (CSS selectors such as `item > guid`) and recorded as `.xml`, trimmed to its
+selectors like a page.
 
 bivouak.net: one list per sport (`liste_des_sorties.php?id_sport=1|2|8|4|16`: ski, hiking, snowshoeing, mountain
 biking, paragliding; `data-sport` of a card is a bit mask, an outing can have several), then the detail page of an outing
 for its coordinates (`data-lat`, `data-lng` of the map): at most 10 new detail pages per run, the sports taking turns,
 each answer kept in the lookup cache (`sortie:<id>`). Outings over the cap keep the massif (`region`), the country and the
 summit named in the title, and are located by the job. `robots.txt` asks the crawlers for 10 s between two requests: the
-adapter waits that long (5 lists + 10 pages = 15 requests, about 2.5 minutes per run at most).
+adapter waits that long.
+
+The site also publishes an RSS feed of its last 50 outings, all sports together (`rss/outings/outings.rss`, UTF-8,
+linked from every page; no feed per sport). An item has the link (the outing id), the title, the author's name, the
+date, a single sport (`<category>`: `Ski de Rando`, `Rando / Trail`, `VTT`, `Parapente`...) and an excerpt with a photo; no massif, elevation, height difference, rating, position or GPX. It seems rebuilt
+once a day (`lastBuildDate` still 04:04 at 15:20 on 2026-11-27), and 50 items span two months, three quarters of them paragliding
+in autumn. So it does not replace the lists (it lacks most fields, and would hold back an outing until the next
+rebuild): it is read first, as a change detector. The cursor keeps the ids of the last feed; the lists are read only
+for the sports of the items new in the feed and the sports whose lists still had outings waiting for their detail page.
+Every list is read on the first run, when the feed fails or is empty, when it has nothing in common with the last one
+(outings may have come and gone), when a sport has a name the adapter does not know, and when the last full read is
+`LIST_MAX_AGE` (3 h) old, which catches the reports published since the last rebuild. A run with nothing new makes one
+request instead of five: about 140 requests a day (96 feeds, 8 full reads) instead of 480, detail pages aside; at most
+1 + 5 + 10 = 16 requests, about 2.7 minutes.
+
+A recording of bivouak keeps the first 3 cards of each list and the first 10 items of the feed (`RECORD_LIMITS`): the
+first turns of the detail pages, which is what the tests need.
 
 ### skitourenportal.eu (HTML)
 
@@ -396,7 +415,7 @@ contract change. Use `-rs` to see the reasons.
 |---|---|---|
 | skitour.fr | no key, so exit 2 / skip "disabled: SKITOUR_API_KEY not set"; unreachable from the dev container ("down") | needs `SKITOUR_API_KEY` |
 | gulliver.it | Cloudflare challenge (403) from cloud addresses: "blocked", exit 2 / skip; reachable from a home connection with the camptocamp User-Agent (2026-11-27) | `record` makes up to 45 requests, 2 s apart (about 1.5 min) |
-| bivouak.net | reachable | `record` makes up to 15 requests, 10 s apart |
+| bivouak.net | reachable | `record` makes up to 16 requests, 10 s apart |
 | gipfelbuch.ch | reachable (robots.txt allows all) | `record` makes up to 17 requests, 2 s apart |
 | skitourenportal.eu | reachable, without `www` (recorded 2026-11-25) | no key |
 | on-ice.it | reachable over plain `http` (recorded 2026-11-27) | `record` makes up to 17 requests, 2 s apart |
@@ -416,7 +435,7 @@ they only report why they could not run.
   ("Contributi e proprietà") allow reuse only with prior permission: ask before enabling it. Ask Gulliver to allowlist our egress address or user agent (or to
   give a token: it would be `GULLIVER_API_TOKEN`, read like `SKITOUR_API_KEY`). Never try to bypass the challenge.
 - **Rate limits.** Each adapter declares its politeness (`rate` in `partners/sources/*.py`): a minimum delay between
-  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 45 requests; bivouak: 10 s, 15 requests; gipfelbuch: 2 s, 18 requests; on-ice.it: 2 s, 17 requests). A spent budget
+  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 45 requests; bivouak: 10 s, 16 requests; gipfelbuch: 2 s, 18 requests; on-ice.it: 2 s, 17 requests). A spent budget
   makes the run `down`.
 - **Enabling.** All the sources are on by default (`harvest_partners_enabled="true"`, `partners_transport="http"`).
   Switch one off with `harvest_partners_<name>_enabled="false"` (or all with `harvest_partners_enabled="false"`) while

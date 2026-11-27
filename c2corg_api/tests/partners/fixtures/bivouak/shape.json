@@ -34,6 +34,10 @@
   "article.post_sortie .bk-pill": "str",
   "article.post_sortie a.bk-author": "str"
  },
+ "outings_rss.xml": {
+  "item > category": "str",
+  "item > guid": "str"
+ },
  "sortie_29958.html": {
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str"
@@ -48,10 +52,6 @@
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str",
   ".bk-viewer[data-lat][data-lng]": "str"
- },
- "sortie_30880_chamechaude_par_pas_arche_et_rampe_ecureuils.html": {
-  ".bk-crumbs a[href*=\"massif-\"]": "str",
-  ".bk-crumbs a[href*=\"sommet-\"]": "str"
  },
  "sortie_30883.html": {
   ".bk-crumbs a[href*=\"massif-\"]": "str",

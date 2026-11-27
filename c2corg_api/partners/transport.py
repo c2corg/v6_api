@@ -325,6 +325,8 @@ class RecordingTransport:
             ext = 'json'
         elif 'html' in content_type:
             ext = 'html'
+        elif 'xml' in content_type:  # an RSS feed
+            ext = 'xml'
         else:
             ext = 'txt'
         base = f'{endpoint}{suffix}'

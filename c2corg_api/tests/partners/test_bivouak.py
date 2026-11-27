@@ -16,6 +16,9 @@ from c2corg_api.partners.transport import FixtureTransport, HttpResponse
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 LIST = 'https://www.bivouak.net/topos/liste_des_sorties.php'
+FEED = 'https://www.bivouak.net/rss/outings/outings.rss'
+# the outing ids of the recorded feed
+FEED_IDS = [30882, 30883, 30884, 30885, 30886, 30887, 30888, 30889, 30891, 30892]
 SINCE = datetime.date(2026, 2, 15)
 NOW = datetime.datetime(2026, 11, 25, 8, 0, tzinfo=datetime.UTC)
 
@@ -38,8 +41,15 @@ class Spy:
     def lists(self):
         return [str(p['id_sport']) for u, p in self.calls if u == LIST]
 
+    def feeds(self):
+        return [u for u, _ in self.calls if u == FEED]
+
     def details(self):
-        return [u.split('sortie-')[1].split('-')[0] for u, _ in self.calls if u != LIST]
+        return [
+            u.split('sortie-')[1].split('-')[0]
+            for u, _ in self.calls
+            if u not in (LIST, FEED)
+        ]
 
 
 class Canned:
@@ -111,19 +121,23 @@ def test_registered_and_credited():
     assert BivouakAdapter.required_secrets == ()
     # robots.txt: 10 s between two requests, and a request budget for the run
     assert BivouakAdapter.rate.min_interval_s >= 10
-    assert BivouakAdapter.rate.max_requests_per_run == 5 + bivouak.MAX_DETAIL_FETCHES
+    assert BivouakAdapter.rate.max_requests_per_run == (
+        1 + 5 + bivouak.MAX_DETAIL_FETCHES
+    )
 
 
 def test_fixtures_are_recorded_not_synthetic():
     manifest = json.loads((FIXTURES / 'bivouak' / 'manifest.json').read_text())
     assert manifest['synthetic'] is False
     assert {e['file'] for e in manifest['entries']} == {
-        p.name for p in (FIXTURES / 'bivouak').glob('*.html')
+        p.name for p in (FIXTURES / 'bivouak').glob('*.*ml')
     }
 
 
 def test_one_list_per_sport_and_the_detail_cap():
     result, spy, lookups = run()
+    # the first run: the feed, then every list
+    assert spy.calls[0] == (FEED, {})
     assert spy.lists() == ['1', '2', '8', '4', '16']
     # the cap, the sports taking turns (ski, hiking, mountain biking,
     # paragliding; no recent snowshoeing), the newest of each first
@@ -140,12 +154,20 @@ def test_one_list_per_sport_and_the_detail_cap():
         '30883',
     ]
     assert len(spy.details()) == bivouak.MAX_DETAIL_FETCHES
-    assert spy.request_count == 5 + bivouak.MAX_DETAIL_FETCHES
+    assert spy.request_count == 1 + 5 + bivouak.MAX_DETAIL_FETCHES
     assert result.item_errors == 0
-    assert len(result.outings) == 112
+    # the recording keeps 3 cards per list (RECORD_LIMITS); no recent
+    # snowshoeing
+    assert len(result.outings) == 12
     # the others are deferred, and counted
-    assert result.skipped == {'location_deferred': 102, 'too_old': 34}
-    assert result.cursor is None
+    assert result.skipped == {'location_deferred': 2, 'too_old': 3}
+    # the ids of the feed, when the lists were read, the sports still to
+    # look up (mountain biking and paragliding: one outing each)
+    assert result.cursor == {
+        'feed': FEED_IDS,
+        'lists_at': NOW.isoformat(),
+        'pending': [4, 16],
+    }
     # every looked up outing is cached, with or without coordinates
     assert set(lookups._data) == {f'sortie:{i}' for i in spy.details()}
 
@@ -153,10 +175,10 @@ def test_one_list_per_sport_and_the_detail_cap():
 def test_sports_of_the_fixtures():
     result, _, _ = run()
     assert Counter(o.source_activity for o in result.outings) == {
-        'ski': 22,
-        'rando': 30,
-        'vtt': 30,
-        'parapente': 30,
+        'ski': 3,
+        'rando': 3,
+        'vtt': 3,
+        'parapente': 3,
     }
     activities = {o.source_activity: set() for o in result.outings}
     for o in result.outings:
@@ -366,20 +388,46 @@ def test_blocked_detail_page_stops_the_run(tmp_path):
 # -- multi-activity ----------------------------------------------------------
 
 
-def test_multi_sport_card_has_every_activity(monkeypatch):
-    monkeypatch.setattr(bivouak, 'MAX_DETAIL_FETCHES', 0)
-    result, _, _ = run(since=datetime.date(2000, 1, 1))
-    outing = by_id(result)['13720']  # data-sport="9": ski and snowshoe
+def test_multi_sport_card_has_every_activity(no_details, tmp_path):
+    directory = fixture_copy(
+        tmp_path,
+        **{
+            'liste_des_sorties_id_sport8.html': (
+                'data-sport="8" id="sortie_20454"',
+                'data-sport="9" id="sortie_20454"',  # ski and snowshoe
+            )
+        },
+    )
+    result, _, _ = run_copy(directory, since=datetime.date(2000, 1, 1))
+    outing = by_id(result)['20454']
     assert outing.activities == ('skitouring', 'snowshoeing')
     assert outing.source_activity == 'ski+raquettes'
-    assert (outing.ski_rating_min, outing.rating_system) == ('2.1', 'c2c_ski')
-    assert outing.date == datetime.date(2015, 2, 8)
+    assert outing.rating_raw == 'R2'  # a snowshoe rating: not a ski one
+    assert outing.rating_system is None
+    assert outing.date == datetime.date(2023, 3, 22)
     snowshoe = Counter(
         o.activities for o in result.outings if 'snowshoeing' in o.activities
     )
-    assert snowshoe[('snowshoeing',)] > 0
+    assert snowshoe[('snowshoeing',)] == 2
+
+
+def test_report_abroad_has_the_country(no_details, tmp_path):
+    directory = fixture_copy(
+        tmp_path,
+        **{
+            'liste_des_sorties_id_sport8.html': (
+                '<a href="../topos/massif-16-devoluy.html">\n             Dévoluy',
+                '<a href="../topos/massif-99-norvege.html">\n             Norvège',
+            )
+        },
+    )
+    result, _, _ = run_copy(directory, since=datetime.date(2000, 1, 1))
     # a report abroad: the "massif" is the country
-    assert by_id(result)['1320'].country == 'NO'
+    assert (by_id(result)['20454'].region, by_id(result)['20454'].country) == (
+        'Norvège',
+        'NO',
+    )
+    assert by_id(result)['20453'].country == 'FR'
 
 
 def test_unmapped_sports_are_counted(no_details, tmp_path):
@@ -447,8 +495,8 @@ def test_unknown_ski_rating_stays_raw(no_details, tmp_path):
 def test_old_outings_are_skipped(no_details):
     result, _, _ = run(since=datetime.date(2026, 11, 1))
     assert {o.source_activity for o in result.outings} == {'rando', 'vtt', 'parapente'}
-    assert len(result.outings) == 16
-    assert result.skipped['too_old'] == 130
+    assert len(result.outings) == 8
+    assert result.skipped['too_old'] == 7
 
 
 def test_an_outing_in_two_lists_is_kept_once(no_details, tmp_path):
@@ -477,7 +525,7 @@ def test_unparsable_card_counts_as_an_item_error(no_details, tmp_path):
     assert result.item_errors == 1
     assert '30061' not in by_id(result)
     assert 'parse_error' not in result.skipped  # counted once
-    assert len(by_id(result)) == 111
+    assert len(by_id(result)) == 11
 
 
 def test_bad_sport_mask_is_an_item_error(no_details, tmp_path):
@@ -510,9 +558,121 @@ def test_http_error_on_a_list_is_a_parse_error():
         run(Canned(404, b'not found'))
 
 
-def test_cursor_is_kept():
-    cursor = {'x': 1}
-    assert run(cursor=cursor)[0].cursor == cursor
+# -- the feed: which lists a run reads ---------------------------------------
+
+
+def cursor_of(feed=FEED_IDS, age=datetime.timedelta(hours=1), pending=()):
+    return {
+        'feed': list(feed),
+        'lists_at': (NOW - age).isoformat(),
+        'pending': list(pending),
+    }
+
+
+def test_nothing_new_in_the_feed_reads_no_list():
+    cursor = cursor_of()
+    result, spy, _ = run(cursor=cursor)
+    assert spy.calls == [(FEED, {})]  # one request instead of five
+    assert result.outings == []
+    assert result.cursor == cursor  # the same feed, the lists of an hour ago
+
+
+def test_new_outings_of_the_feed_read_the_lists_of_their_sports():
+    # 30892 (ski) and 30888 (mountain biking) were not in the last feed
+    result, spy, _ = run(
+        cursor=cursor_of([i for i in FEED_IDS if i not in (30888, 30892)])
+    )
+    assert spy.lists() == ['1', '4']
+    assert {o.source_activity for o in result.outings} == {'ski', 'vtt'}
+    assert result.cursor['feed'] == FEED_IDS
+    # only some lists were read: the date of the full read stays
+    assert result.cursor['lists_at'] == (NOW - datetime.timedelta(hours=1)).isoformat()
+    # the page of 30871 is not in the recording: its list is read next run
+    assert result.cursor['pending'] == [4]
+
+
+def test_lists_with_outings_to_look_up_are_read_again():
+    lookups = MemoryLookupCache()
+    for i in ('30889', '30887'):
+        lookups.put(f'sortie:{i}', bivouak._extract_detail(None))
+    result, spy, _ = run(cursor=cursor_of(pending=[16]), lookups=lookups)
+    assert spy.lists() == ['16']
+    assert spy.details() == ['30884']  # the one not looked up yet
+    # its page failed (not in the recording): asked again next run
+    assert result.skipped['lookup_failed'] == 1
+    assert result.cursor['pending'] == [16]
+    lookups.put('sortie:30884', bivouak._extract_detail(None))
+    result, spy, _ = run(cursor=result.cursor, lookups=lookups)
+    assert spy.lists() == ['16'] and spy.details() == []
+    assert result.cursor['pending'] == []  # done: the next run reads no list
+
+
+def test_every_list_is_read_again_after_a_while():
+    result, spy, _ = run(cursor=cursor_of(age=bivouak.LIST_MAX_AGE))
+    assert spy.lists() == ['1', '2', '8', '4', '16']
+    assert result.cursor['lists_at'] == NOW.isoformat()
+
+
+@pytest.mark.parametrize(
+    'cursor',
+    [
+        None,
+        {'x': 1},  # an older cursor
+        cursor_of(feed=[1, 2, 3]),  # nothing in common: outings may be missed
+        {**cursor_of(), 'lists_at': 'yesterday'},
+        {**cursor_of(), 'lists_at': '2026-11-25T07:00:00'},  # not aware
+    ],
+)
+def test_every_list_is_read_without_a_usable_cursor(no_details, cursor):
+    assert run(cursor=cursor)[1].lists() == ['1', '2', '8', '4', '16']
+
+
+def test_a_new_sport_name_in_the_feed_reads_every_list(no_details, tmp_path):
+    directory = fixture_copy(tmp_path, **{'outings_rss.xml': ('[VTT]', '[Escalade]')})
+    cursor = cursor_of([i for i in FEED_IDS if i != 30888])
+    assert run_copy(directory, cursor=cursor)[1].lists() == ['1', '2', '8', '4', '16']
+
+
+def test_sports_of_the_feed():
+    words = {
+        'Ski de Rando': 1,
+        'Rando / Trail': 2,
+        'Raquettes': 8,
+        'VTT': 4,
+        'Parapente': 16,
+        'Ski + Raquettes': 1,
+    }
+    for category, bit in words.items():
+        lowered = category.lower()
+        assert next(b for w, b in bivouak.FEED_SPORTS if w in lowered) == bit
+
+
+@pytest.mark.parametrize('status', [404, 503])
+def test_a_failing_feed_reads_every_list(no_details, tmp_path, status):
+    fixture_copy(tmp_path)
+    path = tmp_path / 'bivouak' / 'manifest.json'
+    manifest = json.loads(path.read_text())
+    assert manifest['entries'][0]['url'] == FEED
+    manifest['entries'][0]['status'] = status
+    path.write_text(json.dumps(manifest))
+    cursor = cursor_of()
+    result, spy, _ = run_copy(tmp_path, cursor=cursor)
+    assert spy.lists() == ['1', '2', '8', '4', '16']
+    assert len(result.outings) == 12
+    # the last feed is kept, to compare with the next one
+    assert result.cursor['feed'] == cursor['feed']
+
+
+def test_a_feed_without_items_reads_every_list(no_details, tmp_path):
+    directory = fixture_copy(tmp_path)
+    (directory / 'bivouak' / 'outings_rss.xml').write_text('<rss></rss>')
+    assert run_copy(directory, cursor=cursor_of())[1].lists() == [
+        '1',
+        '2',
+        '8',
+        '4',
+        '16',
+    ]
 
 
 def test_challenge_page_is_blocked(tmp_path):
@@ -535,7 +695,8 @@ def test_site_down(tmp_path):
     fixture_copy(tmp_path)
     path = tmp_path / 'bivouak' / 'manifest.json'
     manifest = json.loads(path.read_text())
-    manifest['entries'][0].update(status=503)
+    assert manifest['entries'][1]['url'] == LIST
+    manifest['entries'][1].update(status=503)
     path.write_text(json.dumps(manifest))
     with pytest.raises(SourceDown):
         run_copy(tmp_path)
@@ -546,6 +707,7 @@ def test_site_down(tmp_path):
 
 def test_endpoint_names_of_the_site():
     assert contract.endpoint_of(LIST) == 'liste_des_sorties'
+    assert contract.endpoint_of(FEED) == 'outings_rss'
     assert (
         contract.endpoint_of('https://www.bivouak.net/topos/sortie-30061-x-y.html')
         == 'sortie'
@@ -621,6 +783,41 @@ def test_trim_pseudonymises_the_authors():
     # through the recorder: the selectors of the adapter
     body = contract.trim_body('bivouak', LIST, page.encode(), {}).decode()
     assert 'Pila' not in body and 'user2' in body
+
+
+def test_a_recording_keeps_the_first_cards_and_feed_items():
+    card = (
+        '<article class="bk-card post_sortie" data-sport="1" id="sortie_{n}">'
+        '<span class="bk-pill">Ski</span></article>'
+    )
+    page = '<html><body><main>{}</main></body></html>'.format(
+        ''.join(card.format(n=n) for n in range(5))
+    )
+    body = contract.trim_body('bivouak', LIST, page.encode()).decode()
+    assert [a['id'] for a in htmlparse.parse(body).select(bivouak.CARD)] == [
+        'sortie_0',
+        'sortie_1',
+        'sortie_2',
+    ]
+    assert (
+        htmlparse.trim(body, contract.read_selectors('bivouak', 'liste_des_sorties'))
+        == body
+    )
+    item = (
+        '<item><guid>https://www.bivouak.net/topos/sortie-{n}-x.html</guid>'
+        '<title><![CDATA[Un titre]]></title><author>Michel Pila</author>'
+        '<description><![CDATA[<p>Un long récit</p>]]></description>'
+        '<category><![CDATA[Parapente]]></category></item>'
+    )
+    feed = (
+        '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'
+        '<title>Dernières sorties</title>{}</channel></rss>'
+    ).format(''.join(item.format(n=n) for n in range(12)))
+    body = contract.trim_body('bivouak', FEED, feed.encode()).decode()
+    assert 'Pila' not in body and 'récit' not in body and 'titre' not in body
+    soup = htmlparse.parse(body)
+    assert len(soup.select('item > guid')) == 10
+    assert htmlparse.text_of(soup.select_one('item > category')) == 'Parapente'
 
 
 def test_trim_body_keeps_other_bodies_as_they_are():
