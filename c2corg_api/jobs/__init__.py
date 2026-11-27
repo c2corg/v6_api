@@ -6,6 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from c2corg_api.harvest.runner import enabled_harvesters, harvest_tick
 from c2corg_api.jobs.harvest import compact_avalanche_bulletins, prune_harvest
+from c2corg_api.jobs.link_checker import check_links, link_checker_enabled
 from c2corg_api.jobs.process_removals import process_removals, removals_auto
 from c2corg_api.jobs.purge_deleted_documents import purge_deleted_documents
 from c2corg_api.jobs.purge_expired_tokens import purge_token
@@ -97,6 +98,21 @@ def configure_scheduler_from_config(settings):
             day=1,
             hour=3,
             minute=0,
+        )
+
+    # check the links to other sites every 10 minutes, a few at a time, once
+    # switched on (link_checker.enabled); a run still going on makes the next
+    # wait
+    if link_checker_enabled(settings):
+        scheduler.add_job(
+            check_links,
+            id='check_links',
+            name='Check the links to other sites',
+            trigger='interval',
+            minutes=10,
+            max_instances=1,
+            coalesce=True,
+            kwargs={'settings': settings},
         )
 
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)

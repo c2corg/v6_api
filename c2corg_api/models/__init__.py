@@ -62,6 +62,7 @@ from c2corg_api.models import account_removal  # noqa
 from c2corg_api.models import deleted_document  # noqa
 from c2corg_api.models import document_link  # noqa
 from c2corg_api.models import external_link  # noqa
+from c2corg_api.models import link_check  # noqa
 from c2corg_api.models import merged_document  # noqa
 from c2corg_api.models import image_embed  # noqa
 from c2corg_api.models import image_duplicate  # noqa
