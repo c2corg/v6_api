@@ -29,7 +29,7 @@ dependencies = [
     "Markdown==3.11.3",
     "psycopg2-binary==2.9.13",
     "pyjwt==2.15.1",
-    "pymdown-extensions==12.3",
+    "pymdown-extensions==13.1",
     "pyproj==3.8.0",
     "python-json-logger==4.2.0",
     "python-slugify==9.2.0",
