@@ -35,6 +35,11 @@
         "geom_detail": "null",
         "version": "int"
       },
+      "license": {
+        "attribution_url": "str",
+        "id": "str",
+        "url": "str"
+      },
       "locales": [
         {
           "conditions": "null",
@@ -71,6 +76,7 @@
     "version": {
       "comment": "str",
       "masked": "bool",
+      "moderator": "bool",
       "name": "str",
       "user_id": "int",
       "version_id": "int",

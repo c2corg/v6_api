@@ -1,0 +1,792 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "v6_api backend: modules and processes",
+    "output": "backend.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/c2corg/v6_api/",
+      "provider": "github",
+      "revision": "d26f65d1d284fe5b64cde6d11776ea5b3143794e"
+    }
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "Browser / c2c_ui",
+      "sublabel": "web and mobile clients",
+      "pos": [
+        360,
+        40
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "tracking",
+      "type": "external",
+      "label": "c2c_tracking",
+      "sublabel": "shares the API's JWTs",
+      "pos": [
+        40,
+        130
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/views/user.py",
+          "line": 591,
+          "end_line": 597,
+          "label": "read_token"
+        }
+      ]
+    },
+    {
+      "id": "sngm",
+      "type": "external",
+      "label": "SNGM (pro-montagne)",
+      "sublabel": "SSO partner service",
+      "pos": [
+        40,
+        250
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/views/sso.py",
+          "line": 54,
+          "end_line": 60,
+          "label": "sso_sync_validator"
+        }
+      ]
+    },
+    {
+      "id": "haproxy",
+      "type": "cloud",
+      "label": "HAProxy + Varnish",
+      "sublabel": "api.camptocamp.org",
+      "pos": [
+        360,
+        180
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "gunicorn",
+      "type": "backend",
+      "label": "gunicorn",
+      "sublabel": "UvicornWorker x3 · asgi:app",
+      "tag": "api0..2",
+      "pos": [
+        360,
+        320
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docker/Dockerfile",
+          "line": 39,
+          "end_line": 41,
+          "label": "CMD gunicorn"
+        },
+        {
+          "path": "c2corg_api/asgi.py",
+          "line": 1,
+          "end_line": 19
+        }
+      ]
+    },
+    {
+      "id": "fastapi",
+      "type": "backend",
+      "label": "FastAPI app (web/)",
+      "sublabel": "CORS → token → routes",
+      "pos": [
+        360,
+        460
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/app.py",
+          "line": 70,
+          "end_line": 108,
+          "label": "create_fastapi_app"
+        },
+        {
+          "path": "c2corg_api/__init__.py",
+          "line": 17,
+          "end_line": 50,
+          "label": "create_app"
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "type": "security",
+      "label": "auth & roles",
+      "sublabel": "JWT HS256 · token hashes",
+      "pos": [
+        680,
+        320
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/web/auth.py",
+          "line": 65,
+          "end_line": 102,
+          "label": "TokenValidationMiddleware"
+        },
+        {
+          "path": "c2corg_api/security/roles.py",
+          "line": 33,
+          "end_line": 59,
+          "label": "hash_token, is_valid_token"
+        }
+      ]
+    },
+    {
+      "id": "views",
+      "type": "backend",
+      "label": "views/",
+      "sublabel": "documents · users · map · search",
+      "pos": [
+        360,
+        600
+      ],
+      "size": [
+        170,
+        150
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/web/handlers.py",
+          "line": 50,
+          "end_line": 63,
+          "label": "serve_read / serve_write"
+        },
+        {
+          "path": "c2corg_api/views/document_map.py",
+          "line": 403,
+          "end_line": 432,
+          "label": "map overlays"
+        },
+        {
+          "path": "c2corg_api/caching.py",
+          "line": 21,
+          "end_line": 38,
+          "label": "dogpile regions"
+        }
+      ]
+    },
+    {
+      "id": "models",
+      "type": "backend",
+      "label": "models/",
+      "sublabel": "SQLAlchemy 2.1 · GeoAlchemy2",
+      "pos": [
+        360,
+        800
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/models/__init__.py",
+          "line": 9,
+          "end_line": 32
+        },
+        {
+          "path": "c2corg_api/__init__.py",
+          "line": 94,
+          "end_line": 100,
+          "label": "waypoint save hook"
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL + PostGIS",
+      "sublabel": "guidebook · users · sympa",
+      "pos": [
+        360,
+        940
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/models/__init__.py",
+          "line": 9,
+          "end_line": 11,
+          "label": "schemas"
+        }
+      ]
+    },
+    {
+      "id": "es",
+      "type": "database",
+      "label": "Elasticsearch",
+      "sublabel": "client 2.4 · ES 8 on a branch",
+      "pos": [
+        940,
+        460
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/search/__init__.py",
+          "line": 43,
+          "end_line": 62
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis",
+      "sublabel": "cache · queue · jobs · rate",
+      "pos": [
+        680,
+        643
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/caching.py",
+          "line": 57,
+          "end_line": 93
+        },
+        {
+          "path": "c2corg_api/search/__init__.py",
+          "line": 64,
+          "end_line": 77,
+          "label": "ES sync queue"
+        }
+      ]
+    },
+    {
+      "id": "syncer",
+      "type": "backend",
+      "label": "syncer",
+      "sublabel": "kombu consumer → ES",
+      "tag": "workers VM",
+      "pos": [
+        940,
+        643
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/scripts/es/syncer.py",
+          "line": 16,
+          "end_line": 58
+        },
+        {
+          "path": "c2corg_api/scripts/es/sync.py",
+          "line": 42,
+          "end_line": 72,
+          "label": "sync_es"
+        }
+      ]
+    },
+    {
+      "id": "scheduler",
+      "type": "backend",
+      "label": "scheduler",
+      "sublabel": "APScheduler: purges · harvest",
+      "tag": "workers VM",
+      "pos": [
+        680,
+        800
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 21,
+          "end_line": 104,
+          "label": "configure_scheduler_from_config"
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 65,
+          "end_line": 85,
+          "label": "harvest_tick"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/harvesters.py",
+          "line": 16,
+          "end_line": 85,
+          "label": "the avalanche harvesters"
+        }
+      ],
+      "href": "batch.html"
+    },
+    {
+      "id": "bulletins",
+      "type": "backend",
+      "label": "avalanche_bulletins/",
+      "sublabel": "stored first · else on demand",
+      "pos": [
+        680,
+        460
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/web/avalanche_bulletins.py",
+          "line": 67,
+          "end_line": 87,
+          "label": "routes: latest, ratings, {day}"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/regions.py",
+          "line": 27,
+          "end_line": 57,
+          "label": "latest_bulletins, day_bulletins"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/cache.py",
+          "line": 48,
+          "end_line": 60,
+          "label": "on-demand cache"
+        }
+      ]
+    },
+    {
+      "id": "bulletin_services",
+      "type": "external",
+      "label": "Avalanche services",
+      "sublabel": "Météo-France · EAWS CAAML",
+      "pos": [
+        940,
+        320
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/avalanche_bulletins/meteofrance.py",
+          "line": 63,
+          "end_line": 79,
+          "label": "Météo-France DPBRA"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/caaml.py",
+          "line": 47,
+          "end_line": 128,
+          "label": "SLF, ALBINA, lawinen-warnung, AINEVA..."
+        }
+      ]
+    },
+    {
+      "id": "bulletin_tables",
+      "type": "database",
+      "label": "bulletin tables",
+      "sublabel": "PostgreSQL · guidebook schema",
+      "pos": [
+        680,
+        940
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/models/harvest.py",
+          "line": 18,
+          "end_line": 78,
+          "label": "harvest_sources, harvest_payloads"
+        },
+        {
+          "path": "c2corg_api/models/avalanche_bulletin.py",
+          "line": 19,
+          "end_line": 124,
+          "label": "avalanche_bulletins, _regions"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/store.py",
+          "line": 46,
+          "end_line": 85,
+          "label": "store.save"
+        }
+      ]
+    },
+    {
+      "id": "smtp",
+      "type": "external",
+      "label": "SMTP relay",
+      "sublabel": "account emails",
+      "pos": [
+        40,
+        560
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/emails/email_service.py",
+          "line": 53,
+          "end_line": 70
+        }
+      ]
+    },
+    {
+      "id": "images",
+      "type": "external",
+      "label": "c2c_images service",
+      "sublabel": "upload, resize, S3",
+      "pos": [
+        40,
+        640
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/views/image.py",
+          "line": 150,
+          "end_line": 200
+        }
+      ]
+    },
+    {
+      "id": "discourse",
+      "type": "external",
+      "label": "Discourse forum",
+      "sublabel": "SSO · comment topics",
+      "pos": [
+        40,
+        720
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/security/discourse_client.py",
+          "line": 233,
+          "end_line": 250,
+          "label": "discourse.enabled"
+        }
+      ]
+    },
+    {
+      "id": "navitia",
+      "type": "external",
+      "label": "Navitia",
+      "sublabel": "public transport stops",
+      "pos": [
+        40,
+        804
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/__init__.py",
+          "line": 167,
+          "end_line": 180
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Outside the API",
+      "wraps": [
+        "tracking",
+        "sngm",
+        "smtp",
+        "images",
+        "discourse",
+        "navitia"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "c-https",
+      "from": "client",
+      "to": "haproxy",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-token",
+      "from": "tracking",
+      "to": "haproxy",
+      "label": "GET /users/token",
+      "variant": "security"
+    },
+    {
+      "id": "c-sso",
+      "from": "sngm",
+      "to": "haproxy",
+      "label": "POST /sso_sync",
+      "variant": "security"
+    },
+    {
+      "id": "c-lb",
+      "from": "haproxy",
+      "to": "gunicorn",
+      "label": ":8080",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-asgi",
+      "from": "gunicorn",
+      "to": "fastapi",
+      "label": "ASGI",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-auth",
+      "from": "fastapi",
+      "to": "security",
+      "label": "verify JWT",
+      "variant": "security"
+    },
+    {
+      "id": "c-handlers",
+      "from": "fastapi",
+      "to": "views",
+      "label": "handlers",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-orm",
+      "from": "views",
+      "to": "models",
+      "label": "ORM",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-sql",
+      "from": "models",
+      "to": "pg",
+      "label": "SQL",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-search",
+      "from": "views",
+      "to": "es",
+      "label": "search"
+    },
+    {
+      "id": "c-redis",
+      "from": "views",
+      "to": "redis",
+      "label": "cache, notify"
+    },
+    {
+      "id": "c-queue",
+      "from": "redis",
+      "to": "syncer",
+      "label": "queue",
+      "variant": "dashed"
+    },
+    {
+      "id": "c-index",
+      "from": "syncer",
+      "to": "es",
+      "label": "bulk index"
+    },
+    {
+      "id": "c-changed",
+      "from": "syncer",
+      "to": "pg",
+      "label": "changed docs",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "labelDx": 300
+    },
+    {
+      "id": "c-purge",
+      "from": "scheduler",
+      "to": "pg",
+      "label": "purge"
+    },
+    {
+      "id": "c-mail",
+      "from": "views",
+      "to": "smtp",
+      "label": "emails"
+    },
+    {
+      "id": "c-img",
+      "from": "views",
+      "to": "images",
+      "label": "publish"
+    },
+    {
+      "id": "c-forum",
+      "from": "views",
+      "to": "discourse",
+      "label": "SSO, topics"
+    },
+    {
+      "id": "c-navitia",
+      "from": "models",
+      "to": "navitia",
+      "label": "on save"
+    },
+    {
+      "id": "c-bulletins",
+      "from": "fastapi",
+      "to": "bulletins",
+      "label": "/avalanche-bulletins"
+    },
+    {
+      "id": "c-bulletin-cache",
+      "from": "bulletins",
+      "to": "redis",
+      "label": "cache",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "c-bulletin-read",
+      "from": "bulletins",
+      "to": "bulletin_tables",
+      "label": "stored bulletins",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "id": "c-bulletin-fallback",
+      "from": "bulletins",
+      "to": "bulletin_services",
+      "label": "on demand",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-harvest-fetch",
+      "from": "scheduler",
+      "to": "bulletin_services",
+      "label": "harvest: conditional GET",
+      "fromSide": "right",
+      "toSide": "right"
+    },
+    {
+      "id": "c-harvest-store",
+      "from": "scheduler",
+      "to": "bulletin_tables",
+      "label": "store · prune · compact",
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Request path",
+      "items": [
+        "FastAPI replaced Pyramid (#2365): web/ routes call the unchanged views/ logic",
+        "gunicorn runs uvicorn workers; each worker serves server.threads requests at once",
+        "Reads go through dogpile caches in Redis; writes notify the syncer after commit",
+        "Searches query ES for ids, then load the documents from PostgreSQL"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Avalanche bulletins (harvest)",
+      "items": [
+        "The scheduler ticks every minute: harvest_sources says which sources are due (claimed FOR UPDATE SKIP LOCKED)",
+        "Météo-France DPBRA (35 massifs, METEOFRANCE_API_KEY) and the EAWS CAAML files (SLF, avalanche.report, lawinen-warnung, AINEVA...)",
+        "Tables: harvest_sources, harvest_payloads (30 days), avalanche_bulletins, avalanche_bulletin_regions (kept forever), region_weather_hours/_periods (SLF)",
+        "Reads: Redis, then PostgreSQL; a region not harvested is fetched on demand as before",
+        "Switched on by harvest.enabled (or harvest.<name>.enabled): see docs/harvest.md; every scheduled job and the harvest tick: batch.html (click the scheduler)"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Recent changes (since Sept 2026)",
+      "items": [
+        "Map overlays /outings/map/heatmap and /map/tracks (on master, after v6.33.1); TRACKS_OVERLAY_ENABLED and TRACKS_OVERLAY_MAX_TRACKS",
+        "GET /users/token lets c2c_tracking check that a token was not revoked",
+        "Tokens and SSO keys stored as SHA-256 hashes",
+        "discourse.enabled = false runs the API without a forum (preprod)",
+        "Route suggestions from a GPS track, /users/partners, forum comment topics renamed and watched",
+        "The syncer reads only the changed documents; Python 3.15 and uv"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Elasticsearch",
+      "items": [
+        "master still uses the elasticsearch 2.4 client",
+        "The ES 8 client is PR #2550, run on preprod as the es8-preprod image tag",
+        "The API reaches ES through HAProxy :9200"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Not drawn",
+      "items": [
+        "alembic migrations and initialize_c2corg_api_es / fill_es_index, run by hand",
+        "reCAPTCHA check on registration; Navitia journeys proxied by views/navitia.py (job state in Redis)",
+        "Anonymous rate limiting in Redis; the scheduler also logs expired users out of the forum"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<?xml-stylesheet type="text/xsl" href="../web/bra.xslt"?>
+<BULLETINS_NEIGE_AVALANCHE xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" TYPEBULLETIN="BRA" ID="6" MASSIF="Haute-Tarentaise" DATEBULLETIN="2026-11-21T16:00:00" DATEECHEANCE="2026-11-22T18:00:00" DATEVALIDITE="2026-11-22T18:00:00" DATEDIFFUSION="2026-11-21T16:01:00" AMENDEMENT="false">
+  <DateValidite>2026-11-22T18:00:00</DateValidite>
+  <CARTOUCHERISQUE>
+    <RISQUE RISQUE1="3" EVOLURISQUE1="" LOC1="&lt;2500" ALTITUDE="2500" RISQUE2="3" EVOLURISQUE2="4" LOC2="&gt;2500" RISQUEMAXI="4" COMMENTAIRE="Au-dessus de 2500m indice de risque marqué évoluant en fort, plus bas indice marqué." RISQUEMAXIJ2="4" DATE_RISQUE_J2="2026-11-23T00:00:00"/>
+    <PENTE NE="true" E="true" SE="true" S="true" SW="true" W="true" NW="true" N="true" COMMENTAIRE=""/>
+    <ACCIDENTEL><![CDATA[nombreuses structures de plaques au-delà de 2500 m. ]]></ACCIDENTEL>
+    <NATUREL><![CDATA[fortes activité naturelle, en neige lourde ou en neige sèche, en fonction de l'altitude.]]></NATUREL>
+    <RESUME><![CDATA[Départs spontanés : fortes activité naturelle, en neige lourde ou en neige sèche, en fonction de l'altitude.
+Déclenchements skieurs : nombreuses structures de plaques au-delà de 2500 m. ]]></RESUME>
+    <RisqueJ2><![CDATA[Indice de risque fort]]></RisqueJ2>
+    <CommentaireRisqueJ2><![CDATA[Poursuite des chutes de neige dans un contexte venté et frais. L'activité naturelle et le risque de déclencher une plaque demeurent élevés. ]]></CommentaireRisqueJ2>
+    <AVIS>FORT RISQUE D'AVALANCHE</AVIS>
+    <VIGILANCE/>
+    <ImageRisque>montagne_risques_6.png</ImageRisque>
+    <ImagePente>rose_pentes_6.png</ImagePente>
+  </CARTOUCHERISQUE>
+  <STABILITE>
+    <SitAvalTyp SAT1="2" SAT2="4"/>
+    <TITRE><![CDATA[Manteau neigeux instable dans un contexte tempétueux, de redoux. ]]></TITRE>
+    <TEXTESANSTITRE><![CDATA[Déclenchements provoqués : dans un contexte de neige de redoux et de fort vent en altitude, de nombreuses plaques se forment au fil des heures. On les rencontre en tous versants mais préférentiellement en Ouest à Est en passant par le Nord, dès que la neige est suffisamment sèche (au-dessus de 2500 m ?). Elles gagnent en réactivité et en épaisseur avec l'altitude. Combinées aux récentes et abondantes chutes de neige dans ce massif, ces plaques engendrent souvent des avalanches de taille 2 (moyenne). Observables : transport de la neige par le vent en direct, forte accumulation locale, fissure devant les skis. En moyenne montagne, le redoux remplace le risque de déclencher une plaque par celui de faire couler sous ses skis de la neige lourde.Départs spontanés : au fil des chutes de neige, accompagnées d'un vent fort (orientation Ouest majoritaire), les départs d'avalanche se multiplient à toutes altitudes et dans toutes les orientations. Elles sont en neige lourde et de petite taille (1) voire de taille moyenne (2) sous  ~2500 m. Elles sont en neige sèche, souvent de taille moyenne (2) plus haut en altitude. De plus, de grandes avalanches (taille 3) avec aérosols sont possibles dans les grands versants d'altitude, au-delà de 2800 m, en priorité en versant NO à E. Les volumes mobilisés sont conséquents avec des cassures dépassants facilement 1m. ]]></TEXTESANSTITRE>
+    <TEXTE><![CDATA[Manteau neigeux instable dans un contexte tempétueux, de redoux. 
+
+Déclenchements provoqués : dans un contexte de neige de redoux et de fort vent en altitude, de nombreuses plaques se forment au fil des heures. On les rencontre en tous versants mais préférentiellement en Ouest à Est en passant par le Nord, dès que la neige est suffisamment sèche (au-dessus de 2500 m ?). Elles gagnent en réactivité et en épaisseur avec l'altitude. Combinées aux récentes et abondantes chutes de neige dans ce massif, ces plaques engendrent souvent des avalanches de taille 2 (moyenne). Observables : transport de la neige par le vent en direct, forte accumulation locale, fissure devant les skis. En moyenne montagne, le redoux remplace le risque de déclencher une plaque par celui de faire couler sous ses skis de la neige lourde.Départs spontanés : au fil des chutes de neige, accompagnées d'un vent fort (orientation Ouest majoritaire), les départs d'avalanche se multiplient à toutes altitudes et dans toutes les orientations. Elles sont en neige lourde et de petite taille (1) voire de taille moyenne (2) sous  ~2500 m. Elles sont en neige sèche, souvent de taille moyenne (2) plus haut en altitude. De plus, de grandes avalanches (taille 3) avec aérosols sont possibles dans les grands versants d'altitude, au-delà de 2800 m, en priorité en versant NO à E. Les volumes mobilisés sont conséquents avec des cassures dépassants facilement 1m. ]]></TEXTE>
+  </STABILITE>
+  <QUALITE>
+    <TEXTE><![CDATA[Enneigement : désormais excellent pour la saison dès 1800 m environ, grâce au défilé de perturbation enduré cette semaine.Limite skiable : dès 1500/1700 m sur l'herbe, plutôt 1800 m sur du terrain moins favorable. Gare aux requins tout de même car l'ancienne sous-couche dure se situe plutôt vers 2200 m en Nord et 2500 m en Sud. Qualité de la neige : neige poudreuse s'humidifiant sous l'effet du redoux jusqu'à 2300/2500 m. En altitude, poudreuse densifiée par le vent.]]></TEXTE>
+  </QUALITE>
+  <ENNEIGEMENT DATE="2026-11-21T00:00:00" LimiteSud="1400" LimiteNord="1400">
+    <NIVEAU ALTI="1500" N="8" S="8"/>
+    <NIVEAU ALTI="2000" N="80" S="60"/>
+    <NIVEAU ALTI="2500" N="120" S="90"/>
+    <ImageEnneigement>montagne_enneigement_6.png</ImageEnneigement>
+  </ENNEIGEMENT>
+  <NEIGEFRAICHE ALTITUDESS="1800">
+    <NEIGE24H DATE="2026-11-18T00:00:00" SS24Min="0" SS24Max="0" RR24="45"/>
+    <NEIGE24H DATE="2026-11-19T00:00:00" SS24Min="5" SS24Max="20" RR24="20"/>
+    <NEIGE24H DATE="2026-11-20T00:00:00" SS24Min="20" SS24Max="40" RR24="0"/>
+    <NEIGE24H DATE="2026-11-21T00:00:00" SS24Min="20" SS24Max="30" RR24="0"/>
+    <NEIGE24H DATE="2026-11-22T00:00:00" SS24Min="1" SS24Max="5" RR24="0"/>
+    <NEIGE24H DATE="2026-11-23T00:00:00" SS24Min="20" SS24Max="30" RR24="1"/>
+    <ImageNeigeFraiche>graphe_neige_fraiche_6.png</ImageNeigeFraiche>
+  </NEIGEFRAICHE>
+  <METEO ALTITUDEVENT1="2500" ALTITUDEVENT2="3500">
+    <COMMENTAIRE>Neige continue au-dessus de 1800 m. Vent tempétueux l'après-midi.</COMMENTAIRE>
+    <ECHEANCE DATE="2026-11-22T06:00:00" FF1="25" DD1="S" FF2="45" DD2="SO" ISO0="2600" PLUIENEIGE="1400" TEMPSSENSIBLE="80" MERNUAGES="-1"/>
+    <ECHEANCE DATE="2026-11-22T12:00:00" FF1="40" DD1="O" FF2="70" DD2="O" ISO0="2400" PLUIENEIGE="1800" TEMPSSENSIBLE="63" MERNUAGES="-1"/>
+    <ECHEANCE DATE="2026-11-22T18:00:00" FF1="60" DD1="NO" FF2="85" DD2="O" ISO0="1900" PLUIENEIGE="1500" TEMPSSENSIBLE="63" MERNUAGES="-1"/>
+    <ECHEANCE DATE="2026-11-23T00:00:00" FF1="65" DD1="O" FF2="85" DD2="O" ISO0="1700" PLUIENEIGE="1300" TEMPSSENSIBLE="63" MERNUAGES="-1"/>
+    <ImageMeteo>apercu_meteo_6.png</ImageMeteo>
+  </METEO>
+  <BSH>
+    <METEO>
+      <ECHEANCE DATE="2026-11-15T06:00:00" FF1="20" DD1="NE" FF2="35" DD2="SO" ISO0="2200" PLUIENEIGE="1900" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-15T12:00:00" FF1="25" DD1="SO" FF2="45" DD2="SO" ISO0="2400" PLUIENEIGE="-1" TEMPSSENSIBLE="71"/>
+      <ECHEANCE DATE="2026-11-15T18:00:00" FF1="30" DD1="SO" FF2="50" DD2="SO" ISO0="2500" PLUIENEIGE="-1" TEMPSSENSIBLE="4"/>
+      <ECHEANCE DATE="2026-11-16T00:00:00" FF1="30" DD1="SO" FF2="55" DD2="SO" ISO0="2400" PLUIENEIGE="2100" TEMPSSENSIBLE="51"/>
+      <ECHEANCE DATE="2026-11-16T06:00:00" FF1="30" DD1="SO" FF2="55" DD2="O" ISO0="2300" PLUIENEIGE="1800" TEMPSSENSIBLE="51"/>
+      <ECHEANCE DATE="2026-11-16T12:00:00" FF1="40" DD1="O" FF2="55" DD2="O" ISO0="1900" PLUIENEIGE="-1" TEMPSSENSIBLE="4"/>
+      <ECHEANCE DATE="2026-11-16T18:00:00" FF1="35" DD1="O" FF2="60" DD2="O" ISO0="2100" PLUIENEIGE="-1" TEMPSSENSIBLE="4"/>
+      <ECHEANCE DATE="2026-11-17T00:00:00" FF1="25" DD1="O" FF2="60" DD2="O" ISO0="2400" PLUIENEIGE="-1" TEMPSSENSIBLE="4"/>
+      <ECHEANCE DATE="2026-11-17T06:00:00" FF1="25" DD1="O" FF2="65" DD2="O" ISO0="2400" PLUIENEIGE="-1" TEMPSSENSIBLE="4"/>
+      <ECHEANCE DATE="2026-11-17T12:00:00" FF1="30" DD1="O" FF2="70" DD2="O" ISO0="3100" PLUIENEIGE="2900" TEMPSSENSIBLE="53"/>
+      <ECHEANCE DATE="2026-11-17T18:00:00" FF1="50" DD1="O" FF2="75" DD2="O" ISO0="2800" PLUIENEIGE="2600" TEMPSSENSIBLE="71"/>
+      <ECHEANCE DATE="2026-11-18T00:00:00" FF1="70" DD1="O" FF2="90" DD2="O" ISO0="2600" PLUIENEIGE="2400" TEMPSSENSIBLE="53"/>
+      <ECHEANCE DATE="2026-11-18T06:00:00" FF1="65" DD1="NO" FF2="80" DD2="O" ISO0="2400" PLUIENEIGE="2000" TEMPSSENSIBLE="58"/>
+      <ECHEANCE DATE="2026-11-18T12:00:00" FF1="65" DD1="NO" FF2="75" DD2="O" ISO0="2300" PLUIENEIGE="1800" TEMPSSENSIBLE="81"/>
+      <ECHEANCE DATE="2026-11-18T18:00:00" FF1="60" DD1="NO" FF2="70" DD2="O" ISO0="2200" PLUIENEIGE="1800" TEMPSSENSIBLE="80"/>
+      <ECHEANCE DATE="2026-11-19T00:00:00" FF1="35" DD1="SO" FF2="45" DD2="O" ISO0="2200" PLUIENEIGE="1800" TEMPSSENSIBLE="80"/>
+      <ECHEANCE DATE="2026-11-19T06:00:00" FF1="40" DD1="O" FF2="60" DD2="SO" ISO0="2500" PLUIENEIGE="2200" TEMPSSENSIBLE="53"/>
+      <ECHEANCE DATE="2026-11-19T12:00:00" FF1="50" DD1="O" FF2="70" DD2="O" ISO0="1900" PLUIENEIGE="1500" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-19T18:00:00" FF1="40" DD1="O" FF2="60" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-20T00:00:00" FF1="45" DD1="O" FF2="60" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-20T06:00:00" FF1="40" DD1="O" FF2="60" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-20T12:00:00" FF1="30" DD1="O" FF2="50" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-20T18:00:00" FF1="40" DD1="O" FF2="60" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-21T00:00:00" FF1="60" DD1="O" FF2="80" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="63"/>
+      <ECHEANCE DATE="2026-11-21T06:00:00" FF1="55" DD1="O" FF2="80" DD2="O" ISO0="1800" PLUIENEIGE="1500" TEMPSSENSIBLE="61"/>
+      <ECHEANCE DATE="2026-11-21T12:00:00" FF1="25" DD1="O" FF2="40" DD2="O" ISO0="1800" PLUIENEIGE="1400" TEMPSSENSIBLE="81"/>
+      <ECHEANCE DATE="2026-11-21T18:00:00" FF1="20" DD1="O" FF2="40" DD2="O" ISO0="2400" PLUIENEIGE="-1" TEMPSSENSIBLE="1"/>
+      <ECHEANCE DATE="2026-11-22T00:00:00" FF1="30" DD1="S" FF2="50" DD2="SO" ISO0="2600" PLUIENEIGE="-1" TEMPSSENSIBLE="3"/>
+    </METEO>
+    <ENNEIGEMENTS>
+      <ENNEIGEMENT DATE="2026-11-15T00:00:00" LimiteSud="1800" LimiteNord="1700">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="3" S="3"/>
+        <NIVEAU ALTI="2500" N="15" S="5"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-16T00:00:00" LimiteSud="1800" LimiteNord="1800">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="12" S="10"/>
+        <NIVEAU ALTI="2500" N="30" S="15"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-17T00:00:00" LimiteSud="2100" LimiteNord="2000">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="12" S="0"/>
+        <NIVEAU ALTI="2500" N="30" S="15"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-18T00:00:00" LimiteSud="1800" LimiteNord="1800">
+        <NIVEAU ALTI="1500" N="0" S="0"/>
+        <NIVEAU ALTI="2000" N="15" S="2"/>
+        <NIVEAU ALTI="2500" N="40" S="25"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-19T00:00:00" LimiteSud="1500" LimiteNord="1500">
+        <NIVEAU ALTI="1500" N="3" S="3"/>
+        <NIVEAU ALTI="2000" N="30" S="10"/>
+        <NIVEAU ALTI="2500" N="60" S="40"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-20T00:00:00" LimiteSud="1300" LimiteNord="1300">
+        <NIVEAU ALTI="1500" N="8" S="8"/>
+        <NIVEAU ALTI="2000" N="60" S="40"/>
+        <NIVEAU ALTI="2500" N="90" S="70"/>
+      </ENNEIGEMENT>
+      <ENNEIGEMENT DATE="2026-11-21T00:00:00" LimiteSud="1400" LimiteNord="1400">
+        <NIVEAU ALTI="1500" N="8" S="8"/>
+        <NIVEAU ALTI="2000" N="80" S="60"/>
+        <NIVEAU ALTI="2500" N="120" S="90"/>
+      </ENNEIGEMENT>
+    </ENNEIGEMENTS>
+    <NEIGEFRAICHE ALTITUDESS="1800">
+      <NEIGE24H DATE="2026-11-16T00:00:00" SS24Min="3" SS24Max="4"/>
+      <NEIGE24H DATE="2026-11-17T00:00:00" SS24Min="0" SS24Max="1"/>
+      <NEIGE24H DATE="2026-11-18T00:00:00" SS24Min="0" SS24Max="0"/>
+      <NEIGE24H DATE="2026-11-19T00:00:00" SS24Min="5" SS24Max="20"/>
+      <NEIGE24H DATE="2026-11-20T00:00:00" SS24Min="20" SS24Max="40"/>
+      <NEIGE24H DATE="2026-11-21T00:00:00" SS24Min="20" SS24Max="30"/>
+    </NEIGEFRAICHE>
+    <RISQUES>
+      <RISQUE DATE="2026-11-15T00:00:00" RISQUEMAXI="2"/>
+      <RISQUE DATE="2026-11-16T00:00:00" RISQUEMAXI="2"/>
+      <RISQUE DATE="2026-11-17T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-18T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-19T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-20T00:00:00" RISQUEMAXI="3"/>
+      <RISQUE DATE="2026-11-21T00:00:00" RISQUEMAXI="3"/>
+    </RISQUES>
+    <Image7derniersjours>sept_derniers_jours_6.png</Image7derniersjours>
+    <Image7derniersjours_portrait>sept_derniers_jours_portrait_6.png</Image7derniersjours_portrait>
+  </BSH>
+  <TexteMeta>
+    <Vigilance>Pour consulter la vigilance en cours, veuillez vous rendre sur le site <a href="https://vigilance.meteofrance.fr/fr">https://vigilance.meteofrance.fr/fr</a></Vigilance>
+    <EnteteGenerique/>
+    <BasDePageGenerique/>
+    <LienDocumentation>La documentation utile à la bonne lecture de ce BRA est disponible sur <a href="https://meteofrance.fr/sites/meteofrance.fr/files/files/editorial/guide-avalanche-2025-meteo-france.pdf">le guide avalanche 2025</a></LienDocumentation>
+    <Partenaires>Rédigé par Météo-France avec la contribution des observateurs du réseau nivo-météorologique. Partenariat : ANMSM (Maires de Stations de Montagne), DSF (Domaines Skiables de France), ADSP (Directeurs de Pistes et de la Sécurité des Stations de Sports d'Hiver) et autres acteurs de la montagne.</Partenaires>
+  </TexteMeta>
+</BULLETINS_NEIGE_AVALANCHE>

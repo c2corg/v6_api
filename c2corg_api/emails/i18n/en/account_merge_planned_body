@@ -1,0 +1,10 @@
+Hello
+
+Your Camptocamp.org account "%(name)s" will be merged into the account "%(target)s" from %(date)s.
+
+The contributions and the forum posts of "%(name)s" will go to "%(target)s". You will only be able to log in with "%(target)s".
+
+If you did not ask for this, or if you changed your mind, write to the moderators on the forum before this date: %(forum)s
+
+Thank you very much
+The Camptocamp.org team

@@ -7,27 +7,8 @@ uv sync --frozen
 echo "==> Installing the git pre-commit hook (ruff)..."
 uv run --frozen pre-commit install
 
-echo "==> Copying env.local.sample to env.local (if not present)..."
-if [ ! -f config/env.local ]; then
-  cp config/env.local.sample config/env.local
-fi
-
-# Override hosts to point to docker-compose service names
-# (inside the devcontainer network, services are reachable by name)
-cat > config/env.devcontainer <<'EOF'
-#!/bin/sh
-version=0.0.0dev0
-db_host=postgresql
-tests_db_host=postgresql
-elasticsearch_host=elasticsearch
-redis_url=redis://redis:6379/
-EOF
-
 echo "==> Generating config files from templates..."
-./scripts/env_replace config/env.default config/env.dev config/env.devcontainer < alembic.ini.in > alembic.ini
-./scripts/env_replace config/env.default config/env.dev config/env.devcontainer < common.ini.in > common.ini
-./scripts/env_replace config/env.default config/env.dev config/env.devcontainer < development.ini.in > development.ini
-./scripts/env_replace config/env.default config/env.dev config/env.devcontainer < test.ini.in > test.ini
+make CONFIG=config/env.devcontainer load-env
 
 echo "==> Waiting for PostgreSQL to be ready..."
 until pg_isready -h postgresql -U postgres; do
@@ -60,7 +41,10 @@ fi
 # Only on a fresh database: initialize_c2corg_api_db is not idempotent (it inserts the default langs).
 # Not "|| true": a failure here leaves an empty database, and the API then fails on every request.
 if psql -d "${DBNAME}" -tAc "SELECT 1 FROM alembic.alembic_version" > /dev/null 2>&1; then
-  echo "  Dev database already initialized"
+  # The image of the dev database is at the alembic revision of the code it was published with: bring it to
+  # the one of this checkout (it does nothing when it is already there).
+  echo "  Dev database already initialized, migrating it to the latest revision"
+  alembic upgrade head
 else
   initialize_c2corg_api_db development.ini
 fi
@@ -84,19 +68,20 @@ SQL
 fi
 
 echo "==> Waiting for Elasticsearch to be ready..."
-until curl -s http://elasticsearch:9200 > /dev/null 2>&1; do
+until curl -fsS 'http://elasticsearch:9200/_cluster/health?wait_for_status=yellow&timeout=4s' > /dev/null; do
   echo "  Elasticsearch not ready yet, retrying in 5s..."
   sleep 5
 done
 
-echo "==> Initializing Elasticsearch indexes..."
-fill_es_index development.ini || true
+echo "==> Initializing the Elasticsearch index..."
+make ES_INDEX_URL=http://elasticsearch:9200/c2corg init-elastic
 
 echo ""
 echo "============================================="
 echo "  Dev container setup complete!"
 echo ""
-echo "  Run the API:   pserve development.ini --reload"
+echo "  Log in with the account moderator, user... (password: c2c)"
+echo "  Run the API:   C2C_API_CONFIG=development.ini uvicorn c2corg_api.asgi:app --reload --host 0.0.0.0 --port 6543"
 echo "  Run tests:     pytest"
 echo "  Run linter:    ruff check c2corg_api es_migration"
 echo "  Format code:   make format (also done on save in VS Code)"

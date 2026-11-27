@@ -8,71 +8,72 @@ version = "0.0"
 description = "c2corg_api"
 readme = "README.md"
 requires-python = "==3.15.*"
-keywords = ["web", "wsgi", "bfg", "pylons", "pyramid"]
+keywords = ["web", "asgi", "fastapi"]
 classifiers = [
     "Programming Language :: Python",
-    "Framework :: Pyramid",
+    "Framework :: FastAPI",
     "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
 ]
 dependencies = [
-    "alembic==1.20.0",
+    "alembic==1.20.1",
     "apscheduler==3.11.3",
     "bcrypt==5.0.0",
-    "nh3==0.3.7",
+    "nh3==0.3.8",
     "dogpile.cache==1.5.0",
     "elasticsearch==2.4.1",
     "elasticsearch_dsl==2.2.0",
-    "geoalchemy2==0.20.0",
+    "geoalchemy2==0.21.0",
     "geojson==3.3.0",
     "geomet==1.1.0",
-    "kombu==5.6.2",
-    "Markdown==3.10.3",
+    "kombu==5.7.0",
+    "Markdown==3.11.3",
     "psycopg2-binary==2.9.13",
     "pyjwt==2.15.1",
-    "pymdown-extensions==12.1",
+    "pymdown-extensions==12.3",
     "pyproj==3.8.0",
-    "pyramid_jwt==1.6.1",
-    "pyramid==1.10.8",
-    "pyramid_debugtoolbar==4.12.1",
-    "pyramid_mailer==0.15.1",
-    "pyramid_tm==2.6",
     "python-json-logger==4.2.0",
     "python-slugify==9.1.3",
-    "redis==6.4.0",
+    "redis==7.4.1",
     "requests==2.34.2",
-    "setuptools==78.1.1",
     "Shapely==2.2.0",
     "SQLAlchemy==2.1.4",
-    "transaction==5.1",
-    "waitress==3.0.2",
-    "zope.sqlalchemy==4.1",
     "gunicorn==26.2.0",
+    # the ASGI server, run by gunicorn: -k uvicorn_worker.UvicornWorker
+    "uvicorn==0.54.0",
+    "uvicorn-worker==0.4.0",
     "python-dotenv==1.2.4",
-    "cornice==6.1.0",
     # Discourse API client
     "pydiscourse==1.7.0",
-    "pydantic==2.14.1",
+    "pydantic==2.14.3",
+    "fastapi==0.162.7",
+    # parses the XML of the Météo-France avalanche bulletins
+    "defusedxml==0.7.1",
+    "tldextract==5.4.0",
+    "beautifulsoup4==4.14.3",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff==0.17.1",
-    "pre-commit==4.6.2",
-    "WebTest==3.0.7",
+    "ruff==0.17.5",
+    "pre-commit==4.7.0",
+    # the client of FastAPI's TestClient, for the tests
+    "httpx2==2.16.2",
     "ipdb==0.13.13",
     "httmock==1.4.0",
-    "pytest==9.1.1",
+    "pytest==9.2.0",
     "pytest-cov==7.1.0",
+    "pytest-xdist==3.8.0",
 ]
-
-[project.entry-points."paste.app_factory"]
-main = "c2corg_api:main"
 
 [project.scripts]
 initialize_c2corg_api_db = "c2corg_api.scripts.initializedb:main"
 initialize_c2corg_api_es = "c2corg_api.scripts.initializees:main"
 fill_es_index = "c2corg_api.scripts.es.fill_index:main"
+reindex_es = "c2corg_api.scripts.es.reindex:main"
+es_index_fingerprint = "c2corg_api.scripts.es.fingerprint:main"
+recompute_outing_quality = "c2corg_api.scripts.outings.recompute_quality:main"
+rebuild_image_embeds = "c2corg_api.scripts.images.rebuild_embeds:main"
+update_navitia_coverages = "c2corg_api.scripts.navitia.update_coverages:main"
 
 [tool.setuptools]
 zip-safe = false
@@ -80,6 +81,11 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["c2corg_api*"]
+
+[tool.uv]
+# fastapi's dependency, held to a release older than two weeks (the
+# cooldown we apply to every dependency); drop when the next bump allows it
+constraint-dependencies = ["starlette<=1.7.0"]
 
 [tool.ruff]
 line-length = 88
@@ -142,5 +148,20 @@ exclude_also = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov=c2corg_api"
-filterwarnings = ["ignore::DeprecationWarning"]
+# partner_live tests hit the real partner sites: opt in with
+# `PARTNER_LIVE=1 pytest -m partner_live` (the last -m wins over this one)
+addopts = "--cov=c2corg_api -m 'not partner_live'"
+markers = [
+    "partner_live: hits the real partner sites (PARTNER_LIVE=1)",
+]
+# a new warning fails the tests: fix it rather than hide it
+filterwarnings = [
+    "error",
+    # shown, not raised: they come from the Elasticsearch 2 client (invalid
+    # escapes in its code, seen when it is compiled) and the urllib3 1.26 it
+    # holds (its vendored six changes http.client's __spec__); they go with
+    # the move to Elasticsearch 8 (#2550)
+    "default::SyntaxWarning:elasticsearch",
+    "default::DeprecationWarning:elasticsearch",
+    "default:Module globals:DeprecationWarning",
+]

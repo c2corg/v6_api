@@ -1,0 +1,33 @@
+{
+ "489579": {
+  "title": "Querellet (Monte) &#8211; Monte Sises, itinerari vari della dorsale",
+  "region": {
+   "name": "Piemonte"
+  },
+  "district": "TO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "620"
+    },
+    "alt_top": {
+     "value": "2658"
+    },
+    "exposure": {
+     "value": "Nord-Est"
+    },
+    "grade_skisteep": {
+     "value": "4.1"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 44.956618070101115,
+      "lng": 6.879764109328792
+     }
+    }
+   }
+  }
+ }
+}

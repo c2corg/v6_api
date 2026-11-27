@@ -3,10 +3,9 @@ import os
 import signal
 import sys
 
-from pyramid.paster import get_appsettings, setup_logging
-from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
 
+from c2corg_api.config import get_appsettings, parse_vars, setup_logging
 from c2corg_api.jobs import configure_scheduler_from_config
 from c2corg_api.models import DBSession
 

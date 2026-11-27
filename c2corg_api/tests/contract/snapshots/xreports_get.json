@@ -27,6 +27,7 @@
       "waypoints": []
     },
     "author": {
+      "created_at": "str",
       "name": "str",
       "user_id": "int"
     },
@@ -45,6 +46,11 @@
       "geom": "str",
       "geom_detail": "null",
       "version": "int"
+    },
+    "license": {
+      "attribution_url": "str",
+      "id": "str",
+      "url": "str"
     },
     "locales": [
       {

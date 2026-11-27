@@ -16,6 +16,11 @@
         "version": "int"
       },
       "document_id": "int",
+      "license": {
+        "attribution_url": "str",
+        "id": "str",
+        "url": "str"
+      },
       "locales": [
         {
           "description": "null",
@@ -35,6 +40,7 @@
     "version": {
       "comment": "str",
       "masked": "bool",
+      "moderator": "bool",
       "name": "str",
       "user_id": "int",
       "version_id": "int",

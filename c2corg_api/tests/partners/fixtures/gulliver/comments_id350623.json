@@ -1,0 +1,29 @@
+{
+ "350623": {
+  "ID": "350623",
+  "user_nicename": "user96",
+  "comment_date": "2026-11-20 00:00:00",
+  "comment_post_ID": "390600",
+  "permalink": "https://www.gulliver.it/itinerari/alta-val-martello-sx-cascata-dell/2026/11/20/350623/",
+  "content": "[text 151 chars]",
+  "term": {
+   "code": "iceclimb"
+  },
+  "route": {
+   "title": "Val Martello (Cascata della) colata sx",
+   "region": {
+    "name": "Trentino-Alto Adige"
+   },
+   "district": "BZ"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 46 chars]"
+   },
+   "snow_alt": {
+    "value": ""
+   }
+  }
+ }
+}

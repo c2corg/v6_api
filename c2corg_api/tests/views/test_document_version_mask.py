@@ -1,106 +1,119 @@
+from dataclasses import dataclass
+
+import pytest
 from sqlalchemy.sql.expression import and_
 
 from c2corg_api.models.document import UpdateType
 from c2corg_api.models.document_history import DocumentVersion
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.user import User
-from c2corg_api.tests.views import BaseTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.tests import assert_errors_contain, auth_headers, send_json
+from c2corg_api.views.document import create_new_version, update_version
 
 
-class BaseMaskTest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
+@dataclass
+class Docs:
+    """The documents of the tests, built by `docs`."""
 
-        self.contributor = self.session.get(User, self.global_userids['contributor'])
-        contributor_id = self.global_userids['contributor']
-        self.moderator = self.session.get(User, self.global_userids['moderator'])
+    contributor: User
+    moderator: User
+    route: Route
 
-        self.route = Route(
-            activities=['skitouring'], locales=[RouteLocale(lang='en', title='Route')]
-        )
-        self.session.add(self.route)
-        self.session.flush()
 
-        DocumentRest.create_new_version(self.route, contributor_id)
-        self.session.flush()
+@pytest.fixture(autouse=True)
+def docs(session, user_ids) -> Docs:
+    contributor = session.get(User, user_ids['contributor'])
+    contributor_id = user_ids['contributor']
+    moderator = session.get(User, user_ids['moderator'])
 
-        self.route.activities = ['skitouring', 'hiking']
-        self.session.flush()
+    route = Route(
+        activities=['skitouring'], locales=[RouteLocale(lang='en', title='Route')]
+    )
+    session.add(route)
+    session.flush()
 
-        DocumentRest.update_version(
-            self.route, contributor_id, 'new version', [UpdateType.FIGURES], []
-        )
-        self.session.flush()
+    create_new_version(route, contributor_id)
+    session.flush()
 
-    def mask(self, version_id):
-        version = self.session.get(DocumentVersion, version_id)
-        version.masked = True
-        self.session.flush()
+    route.activities = ['skitouring', 'hiking']
+    session.flush()
 
-        assert self.is_masked(version_id)
+    update_version(route, contributor_id, 'new version', [UpdateType.FIGURES], [])
+    session.flush()
+    return Docs(contributor=contributor, moderator=moderator, route=route)
 
-    def is_masked(self, version_id):
-        version = self.session.get(DocumentVersion, version_id)
-        self.session.refresh(version)
-        return version.masked
 
-    def _get_first_version_params(self):
-        document_id = self.route.document_id
-        lang = 'en'
-        (first_version_id,) = (
-            self.session.query(DocumentVersion.id)
-            .filter(
-                and_(
-                    DocumentVersion.document_id == document_id,
-                    DocumentVersion.lang == lang,
-                )
+def mask(session, version_id):
+    version = session.get(DocumentVersion, version_id)
+    version.masked = True
+    session.flush()
+
+    assert is_masked(session, version_id)
+
+
+def is_masked(session, version_id):
+    version = session.get(DocumentVersion, version_id)
+    session.refresh(version)
+    return version.masked
+
+
+def _get_first_version_params(docs, session):
+    document_id = docs.route.document_id
+    lang = 'en'
+    (first_version_id,) = (
+        session.query(DocumentVersion.id)
+        .filter(
+            and_(
+                DocumentVersion.document_id == document_id,
+                DocumentVersion.lang == lang,
             )
-            .order_by(DocumentVersion.id.asc())
-            .first()
         )
-        return {
-            'document_id': document_id,
-            'lang': lang,
-            'version_id': first_version_id,
-        }
-
-    def _get_version(self, prefix, document_id, lang, version_id, user=None):
-        headers = {} if not user else self.add_authorization_header(username=user)
-        response = self.app.get(
-            f'/{prefix}/{document_id}/{lang}/{version_id}',
-            headers=headers,
-            status=200,
-        )
-        assert response.content_type == 'application/json'
-
-        body = response.json
-        assert 'document' in body
-        assert 'version' in body
-        assert 'masked' in body['version']
-
-        return body
+        .order_by(DocumentVersion.id.asc())
+        .first()
+    )
+    return {
+        'document_id': document_id,
+        'lang': lang,
+        'version_id': first_version_id,
+    }
 
 
-class TestVersionMaskRest(BaseMaskTest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/versions/mask'
+def _get_version(client, prefix, document_id, lang, version_id, user=None):
+    headers = {} if not user else auth_headers(username=user)
+    response = client.get(
+        f'/{prefix}/{document_id}/{lang}/{version_id}',
+        headers=headers,
+        status=200,
+    )
+    assert response.content_type == 'application/json'
 
-    def test_mask_unauthorized(self):
-        self.app_post_json(self._prefix, {}, status=403)
+    body = response.json
+    assert 'document' in body
+    assert 'version' in body
+    assert 'masked' in body['version']
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(self._prefix, {}, headers=headers, status=403)
+    return body
 
-    def test_mask_invalid_document_id(self):
+
+class TestVersionMaskRest:
+    PREFIX = '/versions/mask'
+
+    def test_mask_unauthorized(self, client):
+        send_json(client, 'post', self.PREFIX, {}, status=403)
+
+        headers = auth_headers(username='contributor')
+        send_json(client, 'post', self.PREFIX, {}, headers=headers, status=403)
+
+    def test_mask_invalid_document_id(self, client):
         request_body = {'document_id': -1, 'lang': 'en', 'version_id': 123456}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=400, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=400, headers=headers
+        )
 
-    def test_mask_invalid_version_id(self):
-        document_id = self.route.document_id
+    def test_mask_invalid_version_id(self, client, docs):
+        document_id = docs.route.document_id
         lang = 'en'
         version_id = 123456
         request_body = {
@@ -109,21 +122,21 @@ class TestVersionMaskRest(BaseMaskTest):
             'version_id': version_id,
         }
 
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers
+        headers = auth_headers(username='moderator')
+        response = send_json(
+            client, 'post', self.PREFIX, request_body, status=400, headers=headers
         )
-        self.assertErrorsContain(
+        assert_errors_contain(
             response.json,
             'Bad Request',
             f'Unknown version {document_id}/{lang}/{version_id}',
         )
 
-    def test_mask_latest_version(self):
-        document_id = self.route.document_id
+    def test_mask_latest_version(self, client, session, docs):
+        document_id = docs.route.document_id
         lang = 'en'
         (latest_version_id,) = (
-            self.session.query(DocumentVersion.id)
+            session.query(DocumentVersion.id)
             .filter(
                 and_(
                     DocumentVersion.document_id == document_id,
@@ -139,113 +152,129 @@ class TestVersionMaskRest(BaseMaskTest):
             'version_id': latest_version_id,
         }
 
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers
+        headers = auth_headers(username='moderator')
+        response = send_json(
+            client, 'post', self.PREFIX, request_body, status=400, headers=headers
         )
-        self.assertErrorsContain(
+        assert_errors_contain(
             response.json,
             'Bad Request',
             f'Version {document_id}/{lang}/{latest_version_id} is the latest one',
         )
 
-    def test_mask(self):
-        request_body = self._get_first_version_params()
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+    def test_mask(self, client, session, docs):
+        request_body = _get_first_version_params(docs, session)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=200, headers=headers
+        )
 
         version_id = request_body['version_id']
-        assert self.is_masked(version_id)
+        assert is_masked(session, version_id)
 
-    def test_not_masked_version(self):
-        request_body = self._get_first_version_params()
+    def test_not_masked_version(self, client, session, docs):
+        request_body = _get_first_version_params(docs, session)
         document_id, lang, version_id = request_body.values()
 
         # anonymous
-        body = self._get_version('routes', document_id, lang, version_id)
+        body = _get_version(client, 'routes', document_id, lang, version_id)
         assert not body['version']['masked']
         assert body['document']['activities'] == ['skitouring']
 
         # authenticated
-        body = self._get_version('routes', document_id, lang, version_id, 'contributor')
+        body = _get_version(
+            client, 'routes', document_id, lang, version_id, 'contributor'
+        )
         assert not body['version']['masked']
         assert body['document'] is not None
         assert body['document']['activities'] == ['skitouring']
 
-    def test_masked_version(self):
-        request_body = self._get_first_version_params()
+    def test_masked_version(self, client, session, docs):
+        request_body = _get_first_version_params(docs, session)
         document_id, lang, version_id = request_body.values()
-        self.mask(version_id)
+        mask(session, version_id)
 
         # check masked version is referenced in the document history
-        body = self.app.get(
+        body = client.get(
             '/document/{}/history/{}'.format(document_id, 'en'), status=200
         )
         for version in body.json['versions']:
             assert version['masked'] == (version['version_id'] == version_id)
 
         # anonymous
-        body = self._get_version('routes', document_id, lang, version_id)
+        body = _get_version(client, 'routes', document_id, lang, version_id)
         assert body['version']['masked']
         assert body['document'] is None
 
         # authenticated but not moderator
-        body = self._get_version('routes', document_id, lang, version_id, 'contributor')
+        body = _get_version(
+            client, 'routes', document_id, lang, version_id, 'contributor'
+        )
         assert body['version']['masked']
         assert body['document'] is None
 
         # moderator
-        body = self._get_version('routes', document_id, lang, version_id, 'moderator')
+        body = _get_version(
+            client, 'routes', document_id, lang, version_id, 'moderator'
+        )
         assert body['version']['masked']
         assert body['document'] is not None
         assert body['document']['activities'] == ['skitouring']
 
-    def test_updated_cache(self):
-        request_body = self._get_first_version_params()
+    def test_updated_cache(self, client, session, docs):
+        request_body = _get_first_version_params(docs, session)
         document_id, lang, version_id = request_body.values()
 
-        body = self.app.get(
+        body = client.get(
             '/document/{}/history/{}'.format(document_id, 'en'), status=200
         )
         assert not body.json['versions'][0]['masked']
-        body = self._get_version('routes', document_id, lang, version_id, 'contributor')
+        body = _get_version(
+            client, 'routes', document_id, lang, version_id, 'contributor'
+        )
         assert not body['version']['masked']
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=200, headers=headers
+        )
 
-        body = self.app.get(
+        body = client.get(
             '/document/{}/history/{}'.format(document_id, 'en'), status=200
         )
         assert body.json['versions'][0]['masked']
-        body = self._get_version('routes', document_id, lang, version_id, 'contributor')
+        body = _get_version(
+            client, 'routes', document_id, lang, version_id, 'contributor'
+        )
         assert body['version']['masked']
 
 
-class TestVersionUnmaskRest(BaseMaskTest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/versions/unmask'
+class TestVersionUnmaskRest:
+    PREFIX = '/versions/unmask'
 
-    def test_unmask_unauthorized(self):
-        self.app_post_json(self._prefix, {}, status=403)
+    def test_unmask_unauthorized(self, client):
+        send_json(client, 'post', self.PREFIX, {}, status=403)
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(self._prefix, {}, headers=headers, status=403)
+        headers = auth_headers(username='contributor')
+        send_json(client, 'post', self.PREFIX, {}, headers=headers, status=403)
 
-    def test_unmask(self):
-        request_body = self._get_first_version_params()
+    def test_unmask(self, client, session, docs):
+        request_body = _get_first_version_params(docs, session)
         document_id, lang, version_id = request_body.values()
 
         # first mask a version
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json('/versions/mask', request_body, status=200, headers=headers)
-        assert self.is_masked(version_id)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', '/versions/mask', request_body, status=200, headers=headers
+        )
+        assert is_masked(session, version_id)
 
         # then check it's possible to unmask it
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
-        assert not self.is_masked(version_id)
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=200, headers=headers
+        )
+        assert not is_masked(session, version_id)
 
-        body = self._get_version('routes', document_id, lang, version_id)
+        body = _get_version(client, 'routes', document_id, lang, version_id)
         assert not body['version']['masked']
         assert body['document']['activities'] == ['skitouring']

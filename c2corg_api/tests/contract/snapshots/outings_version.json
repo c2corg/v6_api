@@ -39,6 +39,11 @@
       "hiking_rating": "null",
       "hut_status": "null",
       "length_total": "null",
+      "license": {
+        "attribution_url": "str",
+        "id": "str",
+        "url": "str"
+      },
       "lift_status": "null",
       "locales": [
         {
@@ -70,6 +75,7 @@
     "version": {
       "comment": "str",
       "masked": "bool",
+      "moderator": "bool",
       "name": "str",
       "user_id": "int",
       "version_id": "int",

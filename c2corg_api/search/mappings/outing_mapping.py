@@ -48,6 +48,9 @@ class SearchOuting(SearchDocument):
     # array of route ids
     routes = QLong('r', is_id=True)
 
+    # array of article ids
+    articles = QLong('c', is_id=True)
+
     activities = QEnumArray('act', model_field=Outing.activities)
     frequentation = QEnumRange(
         'ofreq',
@@ -58,6 +61,8 @@ class SearchOuting(SearchDocument):
     height_diff_up = QInteger('odif', range=True)
     length_total = QInteger('olen', range=True)
     public_transport = QBoolean('owpt', is_bool=True)
+    # the outing has a track, not only a point
+    has_track = QBoolean('trk', is_bool=True)
     elevation_access = QInteger('oparka', range=True)
     elevation_up_snow = QInteger('swlu', range=True)
     elevation_down_snow = QInteger('swld', range=True)
@@ -175,6 +180,7 @@ class SearchOuting(SearchDocument):
             return search_document
 
         SearchDocument.copy_fields(search_document, document, SearchOuting.FIELDS)
+        search_document['has_track'] = SearchDocument.has_track(document)
 
         SearchDocument.copy_enum_range_fields(
             search_document, document, SearchOuting.ENUM_RANGE_FIELDS, SearchOuting
@@ -194,6 +200,10 @@ class SearchOuting(SearchDocument):
         if document.associated_routes_ids:
             # add the document ids of associated routes
             search_document['routes'] = document.associated_routes_ids.route_ids
+
+        if document.associated_articles_ids:
+            # add the document ids of associated articles
+            search_document['articles'] = document.associated_articles_ids.article_ids
 
         return search_document
 

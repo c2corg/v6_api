@@ -1,17 +1,16 @@
 import os
 import sys
 
-import transaction
 from alembic.command import upgrade
 from alembic.config import Config
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-)
-from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
 
-from c2corg_api.models import DBSession, document
+from c2corg_api.config import (
+    get_appsettings,
+    parse_vars,
+    setup_logging,
+)
+from c2corg_api.models import DBSession, commit_or_rollback, document
 from c2corg_api.models.common.attributes import default_langs
 from c2corg_api.models.es_sync import ESSyncStatus
 
@@ -43,7 +42,7 @@ def main(argv=sys.argv):
 def setup_db(alembic_config, session):
     upgrade(alembic_config, 'head')
 
-    with transaction.manager:
+    with commit_or_rollback(session):
         # add default languages
         session.add_all([document.Lang(lang=lang) for lang in default_langs])
 

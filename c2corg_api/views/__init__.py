@@ -1,31 +1,25 @@
 import collections.abc
 import datetime
+import json
 import logging
 import math
+import re
 
-from cornice import Errors
-from cornice.renderer import JSONError
-from cornice.resource import view
 from geoalchemy2 import WKBElement
-from pyramid.httpexceptions import (
-    HTTPError,
-    HTTPForbidden,
-    HTTPNotFound,
-    HTTPNotModified,
-)
-from pyramid.interfaces import IRendererFactory
-from pyramid.view import view_config
 from sqlalchemy.inspection import inspect
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.ext.wkb import geojson_from_wkbelement
+from c2corg_api.httpexceptions import (
+    HTTPNotModified,
+)
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.attributes import langs_priority
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.document_history import get_creators
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE
-from c2corg_api.models.user import AccountNotValidated
+from c2corg_api.models.user import AccountNotValidated as AccountNotValidated
 from c2corg_api.views.markdown import cook
 
 log = logging.getLogger(__name__)
@@ -34,14 +28,13 @@ log = logging.getLogger(__name__)
 # local dev. server started without going through `make load-env`).
 DEFAULT_CORS_ORIGINS = ('http://localhost:6553',)
 
-# NB: `origins` is deliberately not "*". Cornice's CORS support allows
+# NB: `origins` is deliberately not "*". The CORS support (web.cors) allows
 # requests carrying the `Authorization` header (used here for JWT bearer
 # tokens) to be echoed back with `Access-Control-Allow-Origin` set to the
 # requesting origin whenever it matches an allowed entry; with a wildcard,
 # *any* website would be allowed to make credentialed cross-origin calls
 # to this API on behalf of a logged-in user. `configure_cors_policy` below
-# overrides this dict (in place, before the view modules using it are
-# imported by `config.scan()`) with the origins configured in the ini
+# overrides this dict (in place) with the origins configured in the ini
 # settings.
 cors_policy = dict(headers=('Content-Type'), origins=DEFAULT_CORS_ORIGINS)
 
@@ -51,10 +44,8 @@ def configure_cors_policy(settings):
     Configure the CORS origins allowed to call the API.
 
     Reads the `cors.allowed_origins` setting (a space separated list of
-    origins, see common.ini.in). Must be called once, before
-    `config.scan()`: Cornice reads the `cors_policy` dict when each
-    `@resource`-decorated view is registered, which happens as a side
-    effect of importing the view modules during the scan.
+    origins, see common.ini.in). web.cors reads the origins of the
+    `cors_policy` dict for each request.
     """
     raw_origins = settings.get('cors.allowed_origins') or ''
     tokens = raw_origins.split()
@@ -77,92 +68,24 @@ def configure_cors_policy(settings):
             'back to the default origins: %s',
             ', '.join(DEFAULT_CORS_ORIGINS),
         )
+        # reset, not keep: the origins of a previous configuration would otherwise stay
+        cors_policy['origins'] = DEFAULT_CORS_ORIGINS
         return
 
     cors_policy['origins'] = origins
     log.info('CORS allowed origins: %s', ', '.join(origins))
 
 
-@view_config(context=HTTPNotFound)
-@view_config(context=HTTPError)
-@view_config(context=HTTPForbidden)
-def http_error_handler(exc, request):
-    """Return the details of an HTTP error as JSON.
-
-    In case of a HTTP error, return the error details as JSON, e.g.:
-
-    {
-        "status": "error",
-        "errors": [
-            {
-                "location": "body",
-                "name": "Not Found",
-                "description": "document not found"
-            }
-        ]
-    }
-    """
-    if isinstance(exc, JSONError):
-        # if it is an error from Cornice, just return it
-        return exc
-
-    request.errors = Errors(exc.code)
-    request.errors.add('body', exc.title, exc.detail)
-
-    return json_error(request)
-
-
-@view_config(context=Exception)
-def catch_all_error_handler(exc, request):
-    log.exception(f'Unexpected error: {exc}')
-
-    show_debugger_for_errors = request.registry.settings.get(
-        'show_debugger_for_errors', ''
-    )
-    if show_debugger_for_errors == 'true':
-        raise exc
-
-    request.errors = Errors(500)
-    request.errors.add('body', 'unexpected error', 'please consult the server logs')
-
-    return json_error(request)
-
-
-@view_config(context=AccountNotValidated)
-def account_error_handler(exc, request):
-    request.errors = Errors(400)
-    request.errors.add('body', 'Error', exc.args)
-
-    return json_error(request)
-
-
-def json_view(**kw):
-    """Cornice view that expects 'application/json' as content-type.
-
-    A Cornice view that expects 'application/json' as content-type.
-    """
-    kw['content_type'] = 'application/json'
-    return view(**kw)
-
-
-def restricted_json_view(**kw):
-    """Cornice view for restricted JSON resources.
-
-    A Cornice view that handles restricted json resources.
-    """
-    if 'permission' not in kw:
-        kw['permission'] = 'authenticated'
-    return json_view(**kw)
-
-
-def restricted_view(**kw):
-    """Cornice view for restricted resources.
-
-    A Cornice view that handles restricted resources.
-    """
-    if 'permission' not in kw:
-        kw['permission'] = 'authenticated'
-    return view(**kw)
+def invalid_json_body(request):
+    """Return the error of the invalid JSON body of a request, or None."""
+    content_type = request.content_type or ''
+    if not request.body or not re.match(r'^application/(.*?)json$', content_type):
+        return None
+    try:
+        json.loads(request.body.decode(request.charset or 'utf-8'))
+    except ValueError as e:
+        return e
+    return None
 
 
 def to_json_dict(
@@ -188,6 +111,7 @@ def to_json_dict(
         'forum_username',
         'creator',
         'img_count',
+        'hut_category',
     ]
     for attr in special_attributes:
         if hasattr(obj, attr):
@@ -375,11 +299,3 @@ def etag_cache(request, key):
 
 def set_private_cache_header(request):
     request.response.headers['Cache-Control'] = 'private'
-
-
-def json_error(request):
-    # Get the cornice renderer and use its render_errors method
-    return request.registry.queryUtility(
-        provided=IRendererFactory,
-        name='cornicejson',
-    ).render_errors(request)

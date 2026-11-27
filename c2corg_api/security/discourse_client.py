@@ -1,18 +1,31 @@
 import hashlib
 import hmac
 import logging
+import time
 import urllib.error
 from base64 import b64decode, b64encode
 from urllib.parse import parse_qs, urlparse
 
 import requests
 from pydiscourse.client import DiscourseClient
-from pyramid.httpexceptions import HTTPBadRequest
+from pydiscourse.exceptions import DiscourseClientError
+
+from c2corg_api.httpexceptions import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 
 
+# Discourse's notification level of a topic that notifies each new post
+WATCHING = 3
+
+# How long the answer of is_moderator is kept: each call is a request to the
+# admin API, whose rate is limited for the whole site (SSO sync, topics...).
+MODERATOR_CACHE_SECONDS = 60
+
+
 class APIDiscourseClient:
+    enabled = True
+
     def __init__(self, settings):
         self.settings = settings
         self.timeout = int(settings['url.timeout'])
@@ -33,6 +46,8 @@ class APIDiscourseClient:
         } | {host.strip() for host in extra_hosts.split(',') if host.strip()}
 
         self.discourse_userid_cache = {}
+        # user id: (time.monotonic() of the answer, is a moderator)
+        self.moderator_cache = {}
 
         self.client = DiscourseClient(
             self.discourse_base_url,
@@ -75,25 +90,95 @@ class APIDiscourseClient:
         discourse_userid = self.get_userid(userid)
         return self.client.unsuspend(discourse_userid)
 
-    def invite_user_to_topic(self, username, topic_id):
-        """Invite a forum user, by username, to a topic."""
-        # pydiscourse only invites by e-mail (invite_user_to_topic); the
-        # c2corg fork used to add this call by username.
-        return self.client._post(f'/t/{topic_id}/invite.json', user=username)
+    def is_moderator(self, userid):
+        """Tell whether a user is a moderator (or an admin) of the forum."""
+        # a user without a forum account (404) is not one; any other error
+        # (the forum is down) is raised, the caller decides
+        now = time.monotonic()
+        cached = self.moderator_cache.get(userid)
+        if cached is not None and now - cached[0] < MODERATOR_CACHE_SECONDS:
+            return cached[1]
+        try:
+            discourse_user = self.client.by_external_id(userid)
+            moderator = bool(
+                discourse_user.get('moderator') or discourse_user.get('admin')
+            )
+        except DiscourseClientError as e:
+            if e.response is None or e.response.status_code != 404:
+                raise
+            moderator = False
+        self.moderator_cache[userid] = (now, moderator)
+        return moderator
+
+    def get_forum_user(self, discourse_userid):
+        """Return the forum account (a dict with its username...) of a forum id."""
+        return self.client.user_by_id(discourse_userid)
+
+    def merge_user(self, userid, target_discourse_userid):
+        """Merge a forum account into another one: posts, topics... are moved."""
+        discourse_userid = self.get_userid(userid)
+        target = self.get_forum_user(target_discourse_userid)
+        # the merge removes the source account in the forum
+        result = self.client._put(
+            f'/admin/users/{discourse_userid}/merge.json',
+            target_username=target['username'],
+        )
+        self.discourse_userid_cache.pop(userid, None)
+        return result
+
+    def delete_user(self, userid, delete_posts=False):
+        """Delete a forum account, and its posts if asked."""
+        discourse_userid = self.get_userid(userid)
+        kwargs = {'delete_posts': 'true'} if delete_posts else {}
+        result = self.client.delete_user(discourse_userid, **kwargs)
+        self.discourse_userid_cache.pop(userid, None)
+        return result
+
+    def watch_topic(self, username, topic_id):
+        """Make a forum user watch a topic: notified of each new post."""
+        # Only the user can set their notification level: the call is made in
+        # their name (Api-Username), which needs an API key for all users.
+        client = DiscourseClient(
+            self.discourse_base_url,
+            api_username=username,
+            api_key=self.api_key,
+            timeout=self.timeout,
+        )
+        return client._post(
+            f'/t/{topic_id}/notifications.json', notification_level=WATCHING
+        )
+
+    def topic_is_gone(self, topic_id):
+        """Whether visitors get a 404 for a topic: deleted, or moved out of sight."""
+        # Anonymous request: the admin API key sees deleted topics and every category.
+        # Any other answer, or no answer, keeps the topic.
+        try:
+            r = requests.get(
+                f'{self.discourse_base_url}/t/{topic_id}.json', timeout=self.timeout
+            )
+        except requests.exceptions.RequestException:
+            log.warning(f'Checking the forum topic {topic_id} failed', exc_info=True)
+            return False
+        return r.status_code == 404
 
     # Below this: SSO provider
     def decode_payload(self, payload):
+        """Return the parameters of an SSO payload, or raise a ValueError."""
+        # binascii.Error and UnicodeDecodeError are ValueErrors too
         decoded = b64decode(payload.encode('utf-8')).decode('utf-8')
-        assert 'nonce' in decoded
-        assert len(payload) > 0
-        return decoded
+        params = parse_qs(decoded)
+        if not params.get('nonce'):
+            raise ValueError('no nonce in the SSO payload')
+        return params
 
     def check_signature(self, payload, signature):
         key = self.sso_key.encode('utf-8')
         h = hmac.new(key, payload.encode('utf-8'), digestmod=hashlib.sha256)
-        this_signature = h.hexdigest()
-
-        if this_signature != signature:
+        # a constant-time comparison, of bytes: compare_digest refuses a str
+        # that is not ASCII
+        if not hmac.compare_digest(
+            h.hexdigest().encode('ascii'), str(signature).encode('utf-8')
+        ):
             log.error('Signature mismatch')
             raise HTTPBadRequest('discourse login failed')
 
@@ -101,7 +186,8 @@ class APIDiscourseClient:
         url = f'{self.discourse_base_url}/session/sso'
         try:
             r = requests.get(url, allow_redirects=False, timeout=self.timeout)
-            assert r.status_code == 302
+            if r.status_code != 302:
+                raise ValueError(f'unexpected status {r.status_code}')
         except Exception as e:
             log.error('Could not request nonce', exc_info=True)
             raise Exception('Could not request nonce') from e
@@ -113,12 +199,9 @@ class APIDiscourseClient:
         sig = params['sig'][0]
 
         self.check_signature(sso, sig)
-        payload = self.decode_payload(sso)
-        return parse_qs(payload)['nonce'][0]
+        return self.decode_payload(sso)['nonce'][0]
 
     def create_response_payload(self, user, nonce, return_sso_url):
-        assert nonce is not None, 'No nonce passed'
-
         params = {
             'nonce': nonce,
             'email': user.email,
@@ -137,9 +220,9 @@ class APIDiscourseClient:
     def get_nonce_from_sso(self, sso, sig):
         payload = urllib.parse.unquote(sso)
         try:
-            decoded = self.decode_payload(payload)
-        except Exception as e:
-            log.error('Failed to decode payload', e)
+            qs = self.decode_payload(payload)
+        except ValueError as e:
+            log.error('Failed to decode payload: %s', e)
             raise HTTPBadRequest('discourse login failed') from e
 
         self.check_signature(payload, sig)
@@ -152,8 +235,8 @@ class APIDiscourseClient:
         # itself were ever compromised, an attacker could otherwise sign a
         # payload pointing anywhere; only forward users to hosts we
         # explicitly expect, over https.
-        qs = parse_qs(decoded)
-        return_sso_url = qs['return_sso_url'][0]
+        # a missing return_sso_url is not https, so refused below
+        return_sso_url = qs.get('return_sso_url', [''])[0]
         parsed_return_url = urlparse(return_sso_url)
         if (
             parsed_return_url.scheme != 'https'
@@ -175,13 +258,72 @@ class APIDiscourseClient:
         )
 
 
+class DisabledDiscourseClient:
+    """Stand-in for an API run without a forum (`discourse.enabled = false`).
+
+    What only needs the forum to be kept in sync (accounts, sessions,
+    suspensions) does nothing, so that logging in, registering or editing a
+    profile work without Discourse; what needs the forum itself (a Discourse
+    handshake, creating a topic) is refused by the views.
+    """
+
+    enabled = False
+
+    def get_userid(self, userid):
+        return None
+
+    def sync_sso(self, user):
+        return None
+
+    def logout(self, userid):
+        return None
+
+    def suspend(self, userid, duration, reason):
+        return None
+
+    def unsuspend(self, userid):
+        return None
+
+    def is_moderator(self, userid):
+        return False
+
+    def get_forum_user(self, discourse_userid):
+        return None
+
+    def merge_user(self, userid, target_discourse_userid):
+        return None
+
+    def delete_user(self, userid, delete_posts=False):
+        return None
+
+    def watch_topic(self, username, topic_id):
+        return None
+
+    def redirect(self, user, sso, signature):
+        raise HTTPBadRequest('The forum is disabled')
+
+    def redirect_without_nonce(self, user):
+        # no session to open in the forum: the UI only follows it when set
+        return None
+
+
+def discourse_enabled(settings):
+    """Is the forum used? On unless `discourse.enabled` says otherwise."""
+    value = str(settings.get('discourse.enabled', 'true')).strip().lower()
+    return value not in ('false', '0', 'no', 'off')
+
+
 c = None
 
 
 def get_discourse_client(settings):
     global c
     if c is None:
-        c = APIDiscourseClient(settings)
+        c = (
+            APIDiscourseClient(settings)
+            if discourse_enabled(settings)
+            else DisabledDiscourseClient()
+        )
     return c
 
 

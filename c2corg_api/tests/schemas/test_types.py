@@ -17,6 +17,7 @@ from c2corg_api.schemas.types import (
     Map,
     OneOf,
     Seq,
+    SmallInt,
     Str,
     email_check,
     function_check,
@@ -48,9 +49,15 @@ class Example(Schema):
     point: Geometry(['POINT']) = None
 
 
+def _messages(errors):
+    # the errors as FastAPI answers them: the field, in the body, and its text
+    assert all(error['loc'][0] == 'body' for error in errors)
+    return {'.'.join(map(str, error['loc'][1:])): error['msg'] for error in errors}
+
+
 def _check(body):
     validated, errors = validate(Example, {'required': 'r', **body})
-    return validated, dict(errors)
+    return validated, _messages(errors)
 
 
 def _value(body, name):
@@ -67,9 +74,10 @@ def _error(body, name):
 
 class TestMissingValues:
     def test_required(self):
-        assert dict(validate(Example, {})[1]) == {'required': 'Required'}
+        # a missing field, or an empty one (left out): pydantic's text
+        assert _messages(validate(Example, {})[1]) == {'required': 'Field required'}
         for value in (None, '', 0, False, []):
-            assert _error({'required': value}, 'required') == 'Required'
+            assert _error({'required': value}, 'required') == 'Field required'
 
     def test_defaults(self):
         validated, _ = _check({})
@@ -100,6 +108,27 @@ class TestConversions:
         assert _error({'number': 'x'}, 'number') == '"x" is not a number'
         assert _error({'number': '1.5'}, 'number') == '"1.5" is not a number'
 
+    def test_integer_range(self):
+        # the range of an integer column, as pydantic's error types
+        assert _value({'number': 2**31 - 1}, 'number') == 2**31 - 1
+        assert _error({'number': 2**31}, 'number') == (
+            'Greater than maximum value 2147483647'
+        )
+        assert _error({'number': -(2**31) - 1}, 'number') == (
+            'Less than minimum value -2147483648'
+        )
+
+        class Small(Schema):
+            number: SmallInt = None
+
+        _, errors = validate(Small, {'number': '32768'})
+        assert errors[0]['type'] == 'less_than_equal'
+        assert errors[0]['ctx'] == {'le': 32767}
+        _, errors = validate(Small, {'number': -32769})
+        assert errors[0]['type'] == 'greater_than_equal'
+        assert errors[0]['ctx'] == {'ge': -32768}
+        assert validate(Small, {'number': -32768})[1] == []
+
     def test_string(self):
         assert _error({'text': 12}, 'text') == "12 is not a string: {'text': ''}"
         assert _error({'items': [5]}, 'items.0') == "5 is not a string: {'': ''}"
@@ -111,7 +140,7 @@ class TestConversions:
             items: Seq(OneOf(['a', 'b'])) = None
 
         _, errors = validate(Choices, {'items': ['a', 'c']})
-        assert dict(errors) == {'items.1': '"c" is not one of a, b'}
+        assert _messages(errors) == {'items.1': '"c" is not one of a, b'}
 
     def test_sequence_and_mapping(self):
         assert _error({'items': 'abc'}, 'items') == '"abc" is not iterable'
@@ -119,7 +148,7 @@ class TestConversions:
         assert _error({'mapping': 'x'}, 'mapping') == (
             '"x" is not a mapping type: Does not implement dict-like functionality.'
         )
-        assert _error({'mapping': {}}, 'mapping.document_id') == 'Required'
+        assert _error({'mapping': {}}, 'mapping.document_id') == 'Field required'
 
     def test_boolean(self):
         for value in ('false', 'FALSE', '0', 0, False):

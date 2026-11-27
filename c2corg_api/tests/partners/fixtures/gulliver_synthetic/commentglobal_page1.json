@@ -1,0 +1,103 @@
+{
+ "900001": {
+  "ID": "900001",
+  "user_nicename": "synthetic-author",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "700001",
+  "permalink": "https://www.gulliver.it/itinerari/cima-di-prova-da-test/2026/11/26/900001/",
+  "content": "[text 120 chars]",
+  "term": {
+   "code": "skisteep"
+  },
+  "tracks": null,
+  "meta": {
+   "snow_alt": {
+    "value": "1800"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   }
+  }
+ },
+ "900002": {
+  "ID": "900002",
+  "user_nicename": "synthetic-author",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "700002",
+  "permalink": "https://www.gulliver.it/itinerari/cima-di-prova-da-test/2026/11/26/900002/",
+  "content": "[text 120 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": [
+   {
+    "guid": "http://www.gulliver.it/wp-content/uploads/2026/11/plain-http.gpx"
+   }
+  ],
+  "meta": {}
+ },
+ "900003": {
+  "ID": "900003",
+  "user_nicename": "synthetic-author",
+  "comment_date": "2026-11-25 00:00:00",
+  "comment_post_ID": "700003",
+  "permalink": "https://www.gulliver.it/itinerari/cima-di-prova-da-test/2026/11/25/900003/",
+  "content": "[text 120 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": [
+   {
+    "guid": "https://evil.example/wp-content/uploads/x.gpx"
+   }
+  ],
+  "meta": {
+   "snow_alt": {
+    "value": "abc"
+   }
+  }
+ },
+ "broken": {
+  "comment_date": "2026-11-25 00:00:00",
+  "permalink": "https://www.gulliver.it/itinerari/x/"
+ },
+ "900005": {
+  "ID": "900005",
+  "user_nicename": "synthetic-author",
+  "comment_date": "yesterday",
+  "comment_post_ID": "700003",
+  "permalink": "https://www.gulliver.it/itinerari/cima-di-prova-da-test/2026/11/25/900005/",
+  "content": "[text 120 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {}
+ },
+ "900006": {
+  "ID": "900006",
+  "user_nicename": "synthetic-author",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "700003",
+  "permalink": "https://www.gulliver.it/itinerari/cima-di-prova-da-test/2026/11/24/900006/",
+  "content": "[text 120 chars]",
+  "term": {
+   "code": "skinord"
+  },
+  "tracks": null,
+  "meta": {}
+ },
+ "900007": {
+  "ID": "900007",
+  "user_nicename": "synthetic-author",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "700004",
+  "permalink": "https://www.gulliver.it/itinerari/cima-di-prova-da-test/2026/11/24/900007/",
+  "content": "[text 120 chars]",
+  "term": {
+   "code": "mtb"
+  },
+  "tracks": null,
+  "meta": {}
+ }
+}

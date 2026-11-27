@@ -2,14 +2,14 @@ import abc
 import enum
 
 from geoalchemy2 import Geometry, WKBElement
-from pyramid.httpexceptions import HTTPInternalServerError
 from shapely import wkt
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, Column, ForeignKey, Index, Integer, String, func, text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import column_property, declared_attr, relationship
 from sqlalchemy.sql.schema import UniqueConstraint
 
+from c2corg_api.httpexceptions import HTTPInternalServerError
 from c2corg_api.models import Base, DBSession, enums, schema
 from c2corg_api.models.common import document_types
 from c2corg_api.models.common.attributes import quality_types
@@ -189,6 +189,17 @@ class ArchiveDocument(Base, _DocumentMixin):
             'version', 'document_id', name='uq_documents_archives_document_id_version'
         ),
         Base.__table_args__,
+    )
+
+
+# The few merged documents (redirecting to another one), looked up when a
+# document is merged or deleted: a seq scan of the tables without these
+# indexes. Here, not in __table_args__, which the document types inherit.
+for _table in (Document.__table__, ArchiveDocument.__table__):
+    Index(
+        f'ix_guidebook_{_table.name}_redirects_to',
+        _table.c.redirects_to,
+        postgresql_where=text('redirects_to IS NOT NULL'),
     )
 
 

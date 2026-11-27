@@ -1,0 +1,38 @@
+{
+  "body": {
+    "sources": [
+      {
+        "last_fetched": {
+          "any_of": [
+            "\"int\"",
+            "\"null\""
+          ]
+        },
+        "last_run_at": {
+          "any_of": [
+            "\"null\"",
+            "\"str\""
+          ]
+        },
+        "last_skipped": {},
+        "last_success_at": {
+          "any_of": [
+            "\"null\"",
+            "\"str\""
+          ]
+        },
+        "site_name": "str",
+        "site_url": "str",
+        "source": "str",
+        "status": "str",
+        "status_detail": "null"
+      }
+    ]
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

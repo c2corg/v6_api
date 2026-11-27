@@ -2,18 +2,17 @@ import logging
 import os
 import sys
 from datetime import UTC, datetime, timedelta
+from typing import NamedTuple
 
-import transaction
-from pyramid.paster import (
-    get_appsettings,
-    setup_logging,
-)
-from pyramid.scripts.common import parse_vars
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm.session import sessionmaker
-from zope.sqlalchemy import register
 
-from c2corg_api.models import document_types, es_sync
+from c2corg_api.config import (
+    get_appsettings,
+    parse_vars,
+    setup_logging,
+)
+from c2corg_api.models import commit_or_rollback, document_types, es_sync
 from c2corg_api.models.document import Document
 from c2corg_api.scripts.es import sync
 from c2corg_api.scripts.es.es_batch import ElasticBatch
@@ -40,19 +39,33 @@ def main(argv=sys.argv):
     settings = get_appsettings(config_uri, options=options)
     engine = engine_from_config(settings, 'sqlalchemy.')
     Session = sessionmaker()  # noqa
-    register(Session)
     session = Session(bind=engine)
     configure_es_from_config(settings)
 
     batch_size = int(settings.get('elasticsearch.batch_size.fill_index', 1000))
 
-    with transaction.manager:
+    with commit_or_rollback(session):
         fill_index(session, batch_size)
 
 
-def fill_index(session, batch_size=1000):
+class FillResult(NamedTuple):
+    # number of documents sent to ElasticSearch
+    count: int
+    # database time taken before reading the documents: everything modified
+    # since then has to be replayed by the syncer
+    sync_date: datetime
+
+
+def fill_index(session, batch_size=1000, index_name=None, mark_updated=True):
+    """Index every document.
+
+    By default the configured index is filled in place. `index_name` targets
+    another index (see `reindex.py`). `mark_updated=False` leaves the sync
+    status untouched, the caller then has to call `es_sync.mark_as_updated`
+    with the returned `sync_date` once the index is actually in use.
+    """
     client = elasticsearch_config['client']
-    index_name = elasticsearch_config['index']
+    index_name = index_name or elasticsearch_config['index']
 
     status = {'start_time': datetime.now(UTC), 'last_progress_update': None}
 
@@ -71,11 +84,6 @@ def fill_index(session, batch_size=1000):
     count = 0
     with batch:
         for doc_type in document_types:
-            if doc_type not in search_documents:
-                # some document types (e.g. coverages) are not indexed
-                logging.warning(f'Document type {doc_type} is not indexed')
-                continue
-
             logging.info(f'Importing document type {doc_type}')
             to_search_document = search_documents[doc_type].to_search_document
 
@@ -87,10 +95,12 @@ def fill_index(session, batch_size=1000):
                 count += 1
                 progress(count, total)
 
-    es_sync.mark_as_updated(session, date_now)
+    if mark_updated:
+        es_sync.mark_as_updated(session, date_now)
 
     duration = datetime.now(UTC) - status['start_time']
     print(f'Done (duration: {duration})')
+    return FillResult(count, date_now)
 
 
 if __name__ == '__main__':

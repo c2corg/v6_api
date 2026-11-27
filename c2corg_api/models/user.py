@@ -1,5 +1,6 @@
 import binascii
 import datetime
+import logging
 import os
 from enum import Enum
 
@@ -12,6 +13,8 @@ from sqlalchemy.sql.schema import ForeignKey, Index
 from c2corg_api.models import Base, enums, schema, users_schema
 from c2corg_api.models.user_profile import UserProfile
 from c2corg_api.models.utils import ArrayOfEnum
+
+log = logging.getLogger(__name__)
 
 
 class AccountNotValidated(Exception):
@@ -45,7 +48,13 @@ class PasswordUtil:
         if isinstance(encrypted, str):
             encrypted = encrypted.encode('utf-8')
         # checkpw compares in constant time
-        return bcrypt.checkpw(PasswordUtil._bcrypt_input(plain), encrypted)
+        try:
+            return bcrypt.checkpw(PasswordUtil._bcrypt_input(plain), encrypted)
+        except ValueError:
+            # a stored value that is not a bcrypt hash ("Invalid salt", #592):
+            # no password matches it, the user can ask for a new one
+            log.warning('The stored password is not a bcrypt hash')
+            return False
 
 
 class Purpose(Enum):

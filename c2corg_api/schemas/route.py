@@ -10,7 +10,7 @@ from c2corg_api.schemas.document import (
     document_children,
     geometry_schema,
 )
-from c2corg_api.schemas.types import Bool, Float, Int, Map, OneOf, Seq, Str
+from c2corg_api.schemas.types import Bool, Float, Int, Map, OneOf, Seq, SmallInt, Str
 
 RouteGeometrySchema = geometry_schema(['LINESTRING', 'MULTILINESTRING'])
 
@@ -32,16 +32,16 @@ class RouteSchema(DocumentSchema):
     geometry: Map(RouteGeometrySchema) = None
     main_waypoint_id: Int = None
     activities: Seq(OneOf(a.activities), min_length=1)
-    elevation_min: Int = None
-    elevation_max: Int = None
-    height_diff_up: Int = None
-    height_diff_down: Int = None
+    elevation_min: SmallInt = None
+    elevation_max: SmallInt = None
+    height_diff_up: SmallInt = None
+    height_diff_down: SmallInt = None
     route_length: Int = None
     durations: Seq(OneOf(a.route_duration_types)) = None
     calculated_duration: Float = None
-    difficulties_height: Int = None
-    height_diff_access: Int = None
-    height_diff_difficulties: Int = None
+    difficulties_height: SmallInt = None
+    height_diff_access: SmallInt = None
+    height_diff_difficulties: SmallInt = None
     route_types: Seq(OneOf(a.route_types)) = None
     orientations: Seq(OneOf(a.orientation_types)) = None
     glacier_gear: OneOf(a.glacier_gear_types) = 'no'
@@ -73,7 +73,7 @@ class RouteSchema(DocumentSchema):
     rock_types: Seq(OneOf(a.rock_types)) = None
     climbing_outdoor_type: OneOf(a.climbing_outdoor_types) = None
     slackline_type: OneOf(a.slackline_types) = None
-    slackline_height: Int = None
+    slackline_height: SmallInt = None
     public_transportation_rating: OneOf(a.public_transportation_ratings) = None
 
 

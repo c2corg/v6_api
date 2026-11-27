@@ -3,19 +3,17 @@ import logging
 from datetime import UTC, datetime
 from math import ceil
 
-from cornice.resource import resource, view
-from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy.sql.functions import func
 
 from c2corg_api import DBSession, caching
 from c2corg_api.caching import cache_sitemap, get_or_create
+from c2corg_api.httpexceptions import HTTPNotFound
 from c2corg_api.models.cache_version import CacheVersion
 from c2corg_api.models.document import Document, DocumentLocale
 from c2corg_api.models.route import ROUTE_TYPE, RouteLocale
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, etag_cache
-from c2corg_api.views.validation import create_int_validator, validate_document_type
+from c2corg_api.views import etag_cache
+from c2corg_api.views.validation import create_int_validator
 
 log = logging.getLogger(__name__)
 
@@ -29,58 +27,51 @@ PAGES_PER_SITEMAP = 45000
 validate_page = create_int_validator('i')
 
 
-@resource(
-    collection_path='/sitemaps',
-    path='/sitemaps/{doc_type}/{i}',
-    cors_policy=cors_policy,
-)
-class SitemapRest(ACLDefault):
-    @view()
-    def collection_get(self):
-        """Return the information needed to generate a sitemap index file.
+def list_sitemaps(request):
+    """Return the information needed to generate a sitemap index file.
 
-        See: http://www.sitemaps.org/protocol.html.
+    See: http://www.sitemaps.org/protocol.html.
 
-        The response consists of a list of URLs to request the information
-        needed to generate the sitemap linked from the sitemap index.
+    The response consists of a list of URLs to request the information
+    needed to generate the sitemap linked from the sitemap index.
 
-        E.g.
+    E.g.
 
-            {
-                "sitemaps": [
-                    "/sitemaps/w/0",
-                    "/sitemaps/a/0",
-                    "/sitemaps/i/0",
-                    "/sitemaps/i/1",
-                    "/sitemaps/i/2",
-                    "/sitemaps/i/3",
-                    "/sitemaps/i/4",
-                    "/sitemaps/i/5",
-                    ...
-                ]
-            }
-        """
-        cache_key = _get_cache_key()
-        etag_cache(self.request, cache_key)
+        {
+            "sitemaps": [
+                "/sitemaps/w/0",
+                "/sitemaps/a/0",
+                "/sitemaps/i/0",
+                "/sitemaps/i/1",
+                "/sitemaps/i/2",
+                "/sitemaps/i/3",
+                "/sitemaps/i/4",
+                "/sitemaps/i/5",
+                ...
+            ]
+        }
+    """
+    cache_key = _get_cache_key()
+    etag_cache(request, cache_key)
 
-        return get_or_create(cache_sitemap, cache_key, _get_sitemap_index)
+    return get_or_create(cache_sitemap, cache_key, _get_sitemap_index)
 
-    @view(validators=[validate_page, validate_document_type])
-    def get(self):
-        """Return the information to build a sitemap page.
 
-        Returns the information needed to generate a sitemap for a given
-        type and sitemap page number.
-        """
-        doc_type = self.request.validated['doc_type']
-        i = self.request.validated['i']
+def read_sitemap(request):
+    """Return the information to build a sitemap page.
 
-        cache_key = _get_cache_key(doc_type, i)
-        etag_cache(self.request, cache_key)
+    Returns the information needed to generate a sitemap for a given
+    type and sitemap page number.
+    """
+    doc_type = request.validated['doc_type']
+    i = request.validated['i']
 
-        return get_or_create(
-            cache_sitemap, cache_key, functools.partial(_get_sitemap, doc_type, i)
-        )
+    cache_key = _get_cache_key(doc_type, i)
+    etag_cache(request, cache_key)
+
+    return get_or_create(
+        cache_sitemap, cache_key, functools.partial(_get_sitemap, doc_type, i)
+    )
 
 
 def _get_cache_key(doc_type=None, i=None):

@@ -1,15 +1,12 @@
-import transaction  # NOQA
-
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from functools import cache
-from pyramid.settings import asbool
-import smtplib
-
-from c2corg_api.models.common.attributes import default_langs
-
 import logging
 import os
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from functools import cache
+
+from c2corg_api.config import asbool
+from c2corg_api.models.common.attributes import default_langs
 
 log = logging.getLogger(__name__)
 
@@ -116,9 +113,23 @@ class EmailService:
             body=body,
         )
 
+    def send_account_removal(self, address, lang, key, values):
+        """Tell a user about the removal of an account (`key`: its template)."""
+        # key: account_<anonymization|merge>_<planned|done>; values: the
+        # %(name)s of its body
+        self._send_email(
+            address,
+            subject=self._(lang, f'{key}_subject'),
+            body=self._(lang, f'{key}_body') % values,
+        )
+
 
 def get_email_service(request):
+    return get_email_service_from_settings(request.registry.settings)
+
+
+def get_email_service_from_settings(settings):
+    """Return the email service, for the scripts and jobs without a request."""
     if not EmailService.instance:
-        settings = request.registry.settings
         EmailService.instance = EmailService(settings)
     return EmailService.instance

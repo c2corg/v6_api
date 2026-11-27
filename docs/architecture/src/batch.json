@@ -1,0 +1,1095 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "v6_api background jobs and harvesters",
+    "output": "batch.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "parentHref": "backend.html",
+    "repository": {
+      "url": "https://github.com/c2corg/v6_api/",
+      "provider": "github",
+      "revision": "3aa92ec80fa5a65ada0644bce38a06d380c9164f"
+    }
+  },
+  "components": [
+    {
+      "id": "j_account",
+      "type": "backend",
+      "label": "purge_account",
+      "sublabel": "daily 00:00 · unvalidated users",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/purge_non_activated_accounts.py",
+          "line": 15,
+          "end_line": 50
+        },
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 29,
+          "end_line": 37,
+          "label": "cron 0:00"
+        }
+      ],
+      "pos": [
+        360,
+        40
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "j_token",
+      "type": "backend",
+      "label": "purge_token",
+      "sublabel": "hourly :30 · expired tokens",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/purge_expired_tokens.py",
+          "line": 19,
+          "end_line": 62
+        },
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 39,
+          "end_line": 48,
+          "label": "cron :30"
+        }
+      ],
+      "pos": [
+        360,
+        130
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "j_deleted",
+      "type": "backend",
+      "label": "purge_deleted_documents",
+      "sublabel": "daily 01:00 · trash retention",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/purge_deleted_documents.py",
+          "line": 13,
+          "end_line": 22
+        },
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 50,
+          "end_line": 58,
+          "label": "cron 1:00"
+        }
+      ],
+      "pos": [
+        360,
+        220
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "j_removals",
+      "type": "backend",
+      "label": "process_removals",
+      "sublabel": "hourly :15 · removals.auto on",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/process_removals.py",
+          "line": 12,
+          "end_line": 34
+        },
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 60,
+          "end_line": 70,
+          "label": "cron :15, switched on"
+        },
+        {
+          "path": "c2corg_api/scripts/users/process_removals.py",
+          "line": 210,
+          "end_line": 257,
+          "label": "process_removal"
+        }
+      ],
+      "pos": [
+        360,
+        310
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "j_tick",
+      "type": "backend",
+      "label": "harvest_tick",
+      "sublabel": "every minute · one at a time",
+      "tag": "if a harvester is on",
+      "emphasis": true,
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 72,
+          "end_line": 85,
+          "label": "interval 1 min, max_instances=1"
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 92,
+          "end_line": 119,
+          "label": "harvest_tick"
+        }
+      ],
+      "pos": [
+        360,
+        680
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "j_prune",
+      "type": "backend",
+      "label": "prune_harvest",
+      "sublabel": "daily 02:00 · old payloads, bulletins",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/harvest.py",
+          "line": 12,
+          "end_line": 18
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 256,
+          "end_line": 272,
+          "label": "prune_payloads"
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/store.py",
+          "line": 259,
+          "end_line": 284,
+          "label": "prune_superseded"
+        }
+      ],
+      "pos": [
+        40,
+        1300
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "j_compact",
+      "type": "backend",
+      "label": "compact_avalanche_bulletins",
+      "sublabel": "1st of month 03:00 · > 18 months",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/harvest.py",
+          "line": 21,
+          "end_line": 26
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/store.py",
+          "line": 287,
+          "end_line": 318,
+          "label": "compact"
+        }
+      ],
+      "pos": [
+        40,
+        1420
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "r_sync",
+      "type": "backend",
+      "label": "sync_sources",
+      "sublabel": "every 10 min: add, disable, drop",
+      "sources": [
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 141,
+          "end_line": 185
+        }
+      ],
+      "pos": [
+        40,
+        680
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "r_claim",
+      "type": "backend",
+      "label": "claim due sources",
+      "sublabel": "SKIP LOCKED · lease 10 min · ≤ 60",
+      "sources": [
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 188,
+          "end_line": 215
+        }
+      ],
+      "pos": [
+        360,
+        800
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "r_lanes",
+      "type": "backend",
+      "label": "lanes by host",
+      "sublabel": "4 threads · 2 lanes per host",
+      "sources": [
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 340,
+          "end_line": 352
+        }
+      ],
+      "pos": [
+        360,
+        920
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "r_run",
+      "type": "backend",
+      "label": "run_source",
+      "sublabel": "conditional GET · SHA-256 · store",
+      "emphasis": true,
+      "sources": [
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 218,
+          "end_line": 253
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 299,
+          "end_line": 313,
+          "label": "_keep payload"
+        }
+      ],
+      "pos": [
+        360,
+        1040
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "r_policy",
+      "type": "backend",
+      "label": "policy.next_run",
+      "sublabel": "windows · season · backoff",
+      "sources": [
+        {
+          "path": "c2corg_api/harvest/policy.py",
+          "line": 48,
+          "end_line": 80
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 316,
+          "end_line": 337,
+          "label": "_record_error"
+        }
+      ],
+      "pos": [
+        680,
+        800
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "h_mf",
+      "type": "backend",
+      "label": "MeteoFranceHarvester",
+      "sublabel": "35 massifs · ≤ 40 a minute",
+      "sources": [
+        {
+          "path": "c2corg_api/avalanche_bulletins/harvesters.py",
+          "line": 23,
+          "end_line": 51
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/meteofrance.py",
+          "line": 17,
+          "end_line": 20,
+          "label": "API_URL, MASSIFS"
+        }
+      ],
+      "pos": [
+        40,
+        1040
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "h_caaml",
+      "type": "backend",
+      "label": "CaamlHarvester",
+      "sublabel": "a file by service and language",
+      "sources": [
+        {
+          "path": "c2corg_api/avalanche_bulletins/harvesters.py",
+          "line": 54,
+          "end_line": 85
+        },
+        {
+          "path": "c2corg_api/avalanche_bulletins/store.py",
+          "line": 46,
+          "end_line": 85,
+          "label": "store.save"
+        }
+      ],
+      "pos": [
+        360,
+        1160
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "h_partners",
+      "type": "backend",
+      "label": "PartnerHarvester ×6",
+      "sublabel": "partners.<name> · metaskirando",
+      "tag": "click: partner outings",
+      "explanation": "One harvester per partner adapter (skitour.fr, gulliver.it, bivouak.net, gipfelbuch.ch, skitourenportal.eu, on-ice.it), each with one source partners.<name>:outings every 15 minutes. fetch() runs the adapter, locates and upserts the outings, records the health, then reads a few GPX tracks. Details: metaskirando.html.",
+      "href": "metaskirando.html",
+      "pos": [
+        680,
+        920
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 520,
+          "end_line": 620
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 48,
+          "end_line": 64
+        }
+      ]
+    },
+    {
+      "id": "u_partners",
+      "type": "external",
+      "label": "Partner sites",
+      "sublabel": "skitour.fr, gulliver.it +4",
+      "pos": [
+        1000,
+        800
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/__init__.py",
+          "line": 16,
+          "end_line": 23
+        }
+      ]
+    },
+    {
+      "id": "t_partners",
+      "type": "database",
+      "label": "partner_*",
+      "sublabel": "outings · sources · lookups · tracks",
+      "pos": [
+        1000,
+        920
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "c2corg_api/models/partner_outing.py",
+          "line": 51,
+          "end_line": 231
+        }
+      ]
+    },
+    {
+      "id": "h_next",
+      "type": "backend",
+      "label": "Next harvester",
+      "sublabel": "a Harvester subclass",
+      "tag": "plug in here",
+      "emphasis": true,
+      "sources": [
+        {
+          "path": "c2corg_api/harvest/harvester.py",
+          "line": 70,
+          "end_line": 108,
+          "label": "Harvester"
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 48,
+          "end_line": 64,
+          "label": "harvesters()"
+        }
+      ],
+      "pos": [
+        680,
+        1040
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "u_mf",
+      "type": "external",
+      "label": "Météo-France DPBRA",
+      "sublabel": "public-api.meteofrance.fr",
+      "sources": [
+        {
+          "path": "c2corg_api/avalanche_bulletins/meteofrance.py",
+          "line": 63,
+          "end_line": 79
+        }
+      ],
+      "pos": [
+        40,
+        920
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "u_caaml",
+      "type": "external",
+      "label": "EAWS CAAML v6 files",
+      "sublabel": "SLF, avalanche.report, AINEVA…",
+      "sources": [
+        {
+          "path": "c2corg_api/avalanche_bulletins/caaml.py",
+          "line": 47,
+          "end_line": 128
+        }
+      ],
+      "pos": [
+        360,
+        1280
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "u_next",
+      "type": "external",
+      "label": "Next service",
+      "sublabel": "weather stations, webcams…",
+      "emphasis": true,
+      "pos": [
+        1000,
+        1160
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_harvest",
+      "type": "database",
+      "label": "harvest_sources",
+      "sublabel": "+ _payloads: state, contents",
+      "sources": [
+        {
+          "path": "c2corg_api/models/harvest.py",
+          "line": 18,
+          "end_line": 78
+        }
+      ],
+      "pos": [
+        40,
+        800
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_bulletins",
+      "type": "database",
+      "label": "avalanche_bulletins",
+      "sublabel": "+ _regions: danger by day",
+      "sources": [
+        {
+          "path": "c2corg_api/models/avalanche_bulletin.py",
+          "line": 19,
+          "end_line": 124
+        }
+      ],
+      "pos": [
+        40,
+        1160
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_weather",
+      "type": "database",
+      "label": "region_weather_*",
+      "sublabel": "hours, periods: SLF weather",
+      "sources": [
+        {
+          "path": "c2corg_api/models/region_weather.py",
+          "line": 14,
+          "end_line": 55
+        }
+      ],
+      "pos": [
+        680,
+        1160
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_next",
+      "type": "database",
+      "label": "Next tables",
+      "sublabel": "models/ + alembic migration",
+      "emphasis": true,
+      "sources": [
+        {
+          "path": "alembic_migration/versions/5e3c1a7b9d42_add_harvest_and_avalanche_bulletins.py"
+        }
+      ],
+      "pos": [
+        1000,
+        1040
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_core",
+      "type": "database",
+      "label": "user · token",
+      "sublabel": "deleted_documents · documents",
+      "sources": [
+        {
+          "path": "c2corg_api/models/user.py",
+          "line": 66,
+          "end_line": 69
+        },
+        {
+          "path": "c2corg_api/models/token.py",
+          "line": 6,
+          "end_line": 9
+        },
+        {
+          "path": "c2corg_api/models/deleted_document.py",
+          "line": 16,
+          "end_line": 23
+        }
+      ],
+      "pos": [
+        680,
+        40
+      ],
+      "size": [
+        200,
+        334
+      ]
+    },
+    {
+      "id": "redis",
+      "type": "messagebus",
+      "label": "Redis queue",
+      "sublabel": "ES sync notifications",
+      "sources": [
+        {
+          "path": "c2corg_api/search/__init__.py",
+          "line": 64,
+          "end_line": 77
+        }
+      ],
+      "pos": [
+        680,
+        445
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "syncer",
+      "type": "backend",
+      "label": "ES syncer process",
+      "sublabel": "make run-syncer · kombu consumer",
+      "tag": "long-running, not scheduled",
+      "sources": [
+        {
+          "path": "c2corg_api/scripts/es/syncer.py",
+          "line": 16,
+          "end_line": 58
+        },
+        {
+          "path": "Makefile",
+          "line": 149,
+          "end_line": 150
+        }
+      ],
+      "pos": [
+        1000,
+        445
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "es",
+      "type": "database",
+      "label": "Elasticsearch",
+      "sublabel": "search index",
+      "sources": [
+        {
+          "path": "c2corg_api/scripts/es/sync.py",
+          "line": 42,
+          "end_line": 72,
+          "label": "sync_es"
+        }
+      ],
+      "pos": [
+        1000,
+        560
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "discourse",
+      "type": "external",
+      "label": "Discourse forum",
+      "sublabel": "admin API",
+      "sources": [
+        {
+          "path": "c2corg_api/security/discourse_client.py",
+          "line": 233,
+          "end_line": 250
+        }
+      ],
+      "pos": [
+        40,
+        130
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "smtp",
+      "type": "external",
+      "label": "SMTP relay",
+      "sublabel": "removal emails",
+      "sources": [
+        {
+          "path": "c2corg_api/emails/email_service.py",
+          "line": 53,
+          "end_line": 70
+        }
+      ],
+      "pos": [
+        40,
+        310
+      ],
+      "size": [
+        200,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "scheduler: maintenance jobs",
+      "wraps": [
+        "j_account",
+        "j_token",
+        "j_deleted",
+        "j_removals"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "scheduler: harvest tick (harvest/runner.py)",
+      "wraps": [
+        "j_tick",
+        "r_claim",
+        "r_lanes",
+        "r_run"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "j_account-t_core",
+      "from": "j_account",
+      "to": "t_core",
+      "label": "delete users"
+    },
+    {
+      "id": "j_token-t_core",
+      "from": "j_token",
+      "to": "t_core",
+      "label": "delete tokens"
+    },
+    {
+      "id": "j_token-discourse",
+      "from": "j_token",
+      "to": "discourse",
+      "label": "log out",
+      "variant": "dashed"
+    },
+    {
+      "id": "j_deleted-t_core",
+      "from": "j_deleted",
+      "to": "t_core",
+      "label": "delete rows"
+    },
+    {
+      "id": "j_removals-t_core",
+      "from": "j_removals",
+      "to": "t_core",
+      "label": "purge, merge"
+    },
+    {
+      "id": "j_removals-discourse",
+      "from": "j_removals",
+      "to": "discourse",
+      "label": "forum account"
+    },
+    {
+      "id": "j_removals-smtp",
+      "from": "j_removals",
+      "to": "smtp",
+      "label": "emails"
+    },
+    {
+      "id": "j_removals-redis",
+      "from": "j_removals",
+      "to": "redis",
+      "label": "notify sync",
+      "variant": "dashed"
+    },
+    {
+      "id": "redis-syncer",
+      "from": "redis",
+      "to": "syncer",
+      "label": "consume",
+      "variant": "dashed"
+    },
+    {
+      "id": "syncer-es",
+      "from": "syncer",
+      "to": "es",
+      "label": "bulk index"
+    },
+    {
+      "id": "syncer-t_core",
+      "from": "syncer",
+      "to": "t_core",
+      "label": "changed docs"
+    },
+    {
+      "id": "j_tick-r_sync",
+      "from": "j_tick",
+      "to": "r_sync",
+      "label": "every 10 min"
+    },
+    {
+      "id": "j_tick-r_claim",
+      "from": "j_tick",
+      "to": "r_claim",
+      "label": "claim",
+      "variant": "emphasis"
+    },
+    {
+      "id": "r_sync-t_harvest",
+      "from": "r_sync",
+      "to": "t_harvest",
+      "label": "sources"
+    },
+    {
+      "id": "r_claim-t_harvest",
+      "from": "r_claim",
+      "to": "t_harvest",
+      "label": "SKIP LOCKED"
+    },
+    {
+      "id": "r_claim-r_lanes",
+      "from": "r_claim",
+      "to": "r_lanes",
+      "label": "due sources",
+      "variant": "emphasis"
+    },
+    {
+      "id": "r_lanes-r_run",
+      "from": "r_lanes",
+      "to": "r_run",
+      "label": "a lane a worker",
+      "variant": "emphasis"
+    },
+    {
+      "id": "r_run-h_mf",
+      "from": "r_run",
+      "to": "h_mf",
+      "label": "fetch, store"
+    },
+    {
+      "id": "r_run-h_caaml",
+      "from": "r_run",
+      "to": "h_caaml",
+      "label": "fetch, store"
+    },
+    {
+      "id": "r_run-h_next",
+      "from": "r_run",
+      "to": "h_next",
+      "label": "fetch, store",
+      "variant": "emphasis"
+    },
+    {
+      "id": "r_run-h_partners",
+      "from": "r_run",
+      "to": "h_partners",
+      "label": "fetch: run_source"
+    },
+    {
+      "id": "r_run-r_policy",
+      "from": "r_run",
+      "to": "r_policy",
+      "label": "next_run_at"
+    },
+    {
+      "id": "r_run-t_harvest",
+      "from": "r_run",
+      "to": "t_harvest",
+      "label": "payload, state"
+    },
+    {
+      "id": "h_mf-u_mf",
+      "from": "h_mf",
+      "to": "u_mf",
+      "label": "conditional GET"
+    },
+    {
+      "id": "h_caaml-u_caaml",
+      "from": "h_caaml",
+      "to": "u_caaml",
+      "label": "conditional GET"
+    },
+    {
+      "id": "h_next-u_next",
+      "from": "h_next",
+      "to": "u_next",
+      "label": "conditional GET",
+      "variant": "emphasis"
+    },
+    {
+      "id": "h_next-t_next",
+      "from": "h_next",
+      "to": "t_next",
+      "label": "store(session)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "j_prune-t_harvest",
+      "from": "j_prune",
+      "to": "t_harvest",
+      "label": "old payloads",
+      "fromSide": "left",
+      "toSide": "left",
+      "via": [
+        [
+          16,
+          1332
+        ],
+        [
+          16,
+          832
+        ]
+      ]
+    },
+    {
+      "id": "j_prune-t_bulletins",
+      "from": "j_prune",
+      "to": "t_bulletins",
+      "label": "superseded"
+    },
+    {
+      "id": "j_compact-t_bulletins",
+      "from": "j_compact",
+      "to": "t_bulletins",
+      "label": "drop customData"
+    },
+    {
+      "id": "h_mf-t_bulletins",
+      "from": "h_mf",
+      "to": "t_bulletins",
+      "label": "save"
+    },
+    {
+      "id": "h_caaml-t_bulletins",
+      "from": "h_caaml",
+      "to": "t_bulletins",
+      "label": "save"
+    },
+    {
+      "id": "h_caaml-t_weather",
+      "from": "h_caaml",
+      "to": "t_weather",
+      "label": "SLF weather"
+    },
+    {
+      "id": "h_partners-u_partners",
+      "from": "h_partners",
+      "to": "u_partners",
+      "label": "JSON / HTML"
+    },
+    {
+      "id": "h_partners-t_partners",
+      "from": "h_partners",
+      "to": "t_partners",
+      "label": "upsert"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "orange",
+      "title": "Processes",
+      "items": [
+        "One scheduler process (make run-background-jobs, scheduler.py): APScheduler runs every job of this page in its threads; one container (the workers VM, preprod-app on preprod)",
+        "The ES syncer is a second, long-running process (make run-syncer): it consumes the Redis queue, it is not scheduled",
+        "The store of each harvester (avalanche_bulletins/store.py, weather.py) runs inside run_source, in the transaction that records the source"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "The harvest tick",
+      "items": [
+        "Every minute (APScheduler, max_instances=1, coalesce): every 10 min sync the sources, then claim the due ones (next_run_at <= now) with FOR UPDATE SKIP LOCKED; the claim moves next_run_at 10 min later (lease)",
+        "At most 60 sources a tick, and requests_per_minute for a harvester with a quota (Météo-France: 40)",
+        "Lanes by host: 4 worker threads, at most 2 lanes a host, so a service never gets more than 2 requests at once",
+        "304 or same SHA-256: nothing stored. New content: payload kept gzipped, then harvester.store(session) in the same transaction as the source state",
+        "Errors: error_count + 1, backoff 15 min doubled up to 4 h; success: next_run_at = policy.next_run (publication windows 07:00-10:00, 15:30-19:00 Paris)"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Adding a harvester (weather stations, webcams…)",
+      "items": [
+        "Subclass Harvester (harvest/harvester.py): name, policy, sources(), url(), fetch(), store(); requests_per_minute for a quota, keep_payloads_days",
+        "store() writes only with the session it gets, never DBSession; return Stored(published=True) on a new publication",
+        "Add it to runner.harvesters(), its tables to models/ and an alembic migration",
+        "Switch: harvest.<name>.enabled in common.ini.in and harvest_<name>_enabled in config/env.default (empty: as harvest.enabled)",
+        "Test it with a fake service (tests/harvest/), and add its pruning to prune_harvest if its data grows",
+        "The partner outings (metaskirando.html) are an example: one PartnerHarvester per adapter of partners/sources/, whose fetch() stores the whole run itself (store() is a no-op)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Switches",
+      "items": [
+        "harvest.enabled (false by default) or harvest.<name>.enabled: with no harvester on, harvest_tick, prune_harvest and compact_avalanche_bulletins are not registered",
+        "Without METEOFRANCE_API_KEY the Météo-France harvester lists no source: its sources get disabled",
+        "process_removals runs only with users.removals.auto, and does nothing while the forum is disabled",
+        "Partner outings: harvest.partners.enabled and harvest.partners.<name>.enabled (whatever harvest.enabled); purge_partner_outings runs daily at 01:40 even when they are off"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Retention",
+      "items": [
+        "harvest_payloads: 30 days (keep_payloads_days); a source no longer listed: deleted after 30 days, its bulletins stay",
+        "Superseded publications: deleted after 7 days; avalanche_bulletin_regions: kept forever",
+        "customData of bulletins older than 18 months removed (store.COMPACTED), by batches of 500"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Not drawn",
+      "items": [
+        "The scheduler logs job crashes (EVENT_JOB_ERROR); harvest errors are kept in harvest_sources.last_error",
+        "Read by the API (/avalanche-bulletins, /health) and the on-demand fetch when nothing stored is still valid: see the backend diagram",
+        "Scripts run by hand: alembic, fill_es_index, scripts/users/process_removals.py"
+      ]
+    }
+  ]
+}

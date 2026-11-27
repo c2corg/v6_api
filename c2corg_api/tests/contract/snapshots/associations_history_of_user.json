@@ -1,0 +1,45 @@
+{
+  "body": {
+    "associations": [
+      {
+        "child_document": {
+          "document_id": "int",
+          "locales": [
+            {
+              "lang": "str",
+              "title": "str"
+            }
+          ],
+          "type": "str"
+        },
+        "is_creation": "bool",
+        "parent_document": {
+          "document_id": "int",
+          "locales": [
+            {
+              "lang": "str",
+              "title": "str"
+            }
+          ],
+          "type": "str"
+        },
+        "user": {
+          "blocked": "bool",
+          "forum_username": "str",
+          "moderator": "bool",
+          "name": "str",
+          "robot": "bool",
+          "user_id": "int"
+        },
+        "written_at": "str"
+      }
+    ],
+    "count": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

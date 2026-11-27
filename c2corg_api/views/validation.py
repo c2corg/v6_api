@@ -1,12 +1,10 @@
-import functools
+import math
 import urllib
 
-from cornice.errors import Errors
 from dateutil import parser as datetime_parser
-from pyramid.httpexceptions import HTTPBadRequest
-from sqlalchemy.sql.expression import and_, exists
-from webob.descriptors import parse_int_safe
+from sqlalchemy.sql.expression import and_, exists, or_
 
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models import DBSession, article, image
 from c2corg_api.models.area import AREA_TYPE
 from c2corg_api.models.article import ARTICLE_TYPE
@@ -29,6 +27,7 @@ from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.models.xreport import XREPORT_TYPE
 from c2corg_api.views.document_associations import get_first_column
+from c2corg_api.views.resource import Errors
 
 # Validation functions
 
@@ -189,6 +188,57 @@ def validate_token_pagination(request, **kwargs):
     validate_token(request)
 
 
+# half of the width of the world in EPSG:3857 (meters)
+WORLD_EXTENT_3857 = 20037508.342789244
+
+
+def validate_bbox(request, **kwargs):
+    """Check and parse a required `bbox=xmin,ymin,xmax,ymax` query parameter.
+
+    The bbox is in EPSG:3857, stored into `request.validated['bbox']` as a
+    4-tuple of floats, cut to the extent of the world of this projection (a
+    map zoomed out far shows more of it, and it cannot be reprojected).
+
+    This is distinct from `create_bbox_filter` in
+    `c2corg_api.search.search_filters`, which parses the same shape of
+    parameter for an Elasticsearch bounding-box filter and reprojects it
+    to EPSG:4326 in the process. Views that query PostGIS directly want
+    the bbox to stay in EPSG:3857, matching the SRID of the geometry
+    columns.
+    """
+    bbox_param = request.GET.get('bbox')
+    if not bbox_param:
+        request.errors.add('querystring', 'bbox', 'bbox is missing')
+        return
+
+    values = bbox_param.split(',')
+    if len(values) != 4:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    try:
+        xmin, ymin, xmax, ymax = (float(v) for v in values)
+    except ValueError:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    if not all(math.isfinite(value) for value in (xmin, ymin, xmax, ymax)):
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    xmin, xmax = (
+        max(min(value, WORLD_EXTENT_3857), -WORLD_EXTENT_3857) for value in (xmin, xmax)
+    )
+    ymin, ymax = (
+        max(min(value, WORLD_EXTENT_3857), -WORLD_EXTENT_3857) for value in (ymin, ymax)
+    )
+    if xmin >= xmax or ymin >= ymax:
+        request.errors.add('querystring', 'bbox', 'invalid bbox')
+        return
+
+    request.validated['bbox'] = (xmin, ymin, xmax, ymax)
+
+
 def validate_simple_token_pagination(request, **kwargs):
     """Validate token pagination parameters (limit and token) for changes feed."""
     check_get_for_integer_property(request, 'limit', False)
@@ -228,6 +278,16 @@ def validate_body_user_id(request, **kwargs):
 
     if not user_exists:
         request.errors.add('body', 'user_id', f'user {user_id} does not exist')
+
+
+def parse_int_safe(value):
+    """Return the integer of a string, or None (as WebOb's parse_int_safe)."""
+    if value is None or value == '':
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
 
 
 def validate_token(request, **kwargs):
@@ -489,7 +549,44 @@ def association_permission_checker(request, skip_outing_check=False):
 
 
 def association_permission_removal_checker(request):
-    return functools.partial(check_permission_for_association_removal, request)
+    def check(association):
+        check_permission_for_association_removal(request, association)
+        check_image_keeps_a_document(association)
+
+    return check
+
+
+def check_image_keeps_a_document(association):
+    """Refuse to unlink an image from its last document."""
+    # an orphan image is lost for the readers (see views.image_orphans): it is
+    # deleted instead (by its author during the deletion period, else by a
+    # moderator). For everyone, whatever the document: an outing, a route...
+    for side in ('parent', 'child'):
+        if getattr(association, f'{side}_document_type') != IMAGE_TYPE:
+            continue
+        image_id = getattr(association, f'{side}_document_id')
+        other_id = (
+            association.child_document_id
+            if side == 'parent'
+            else association.parent_document_id
+        )
+        other_links = exists().where(
+            or_(
+                and_(
+                    Association.child_document_id == image_id,
+                    Association.parent_document_id != other_id,
+                ),
+                and_(
+                    Association.parent_document_id == image_id,
+                    Association.child_document_id != other_id,
+                ),
+            )
+        )
+        if not DBSession.query(other_links).scalar():
+            raise HTTPBadRequest(
+                'as the last document of the image, this document can not be '
+                'disassociated: delete the image instead'
+            )
 
 
 def check_permission_for_association_removal(request, association):

@@ -13,7 +13,7 @@ One can either source the env file, or update the compose configuration to inclu
 
 If you haven't already, update the database with Alembic (this will create the missing tables and fields) :
 ```bash
-docker-compose exec api .build/venv/bin/alembic upgrade head
+alembic upgrade head   # in the venv, or: uv run alembic upgrade head
 ```
 
 ## "Show Nearby Stops" section
@@ -195,16 +195,16 @@ BACK-END :
 - add **/reachablewaypoints** route to get access waypoints that are associated to a waypoint stop area
 
 `v6_api/c2corg_api/views/coverage.py` : 
-- routes for coverages
+- the coverage lookups: **/getcoverage** (a point) and **/getpolygoncoverage** (a polygon)
 
 `v6_api/c2corg_api/models/coverage.py` : 
-- model for coverages
+- model for coverages (`NavitiaCoverage`, table `guidebook.navitia_coverages`): reference data, not documents
 
-`v6_api/alembic_migration/versions/27bf1b7197a6_add_coverages.py`:
-- create **Coverage** table in database
+`v6_api/alembic_migration/versions/97e65791be32_navitia_coverages.py`:
+- moves the coverages out of the documents (they were documents of type `v` before)
 
 ***
-Script `update_navitia_coverage.sh` :
+Command `update_navitia_coverages` (`c2corg_api/scripts/navitia/update_coverages.py`) :
 
 **When to run** 
 
@@ -212,32 +212,23 @@ Everytime Navitia updates its coverage for France.
 
 **Where to run**
 
-The script can be launched from any machine with access to the API, including the API docker container itself in production.
+In the API container, with `NAVITIA_API_KEY` set:
+
+```sh
+update_navitia_coverages production.ini --dry-run   # read and show them, save nothing
+update_navitia_coverages production.ini
+```
 
 **What does it do**
 
-- Delete all coverages from C2C database (if any)
-- Get all coverages for France from navitia /coverages API
-- Insert all coverages for France in C2C database
-
-The coverages are stored in Coverage table.
+- Get each coverage of France from the Navitia `/coverage/{region}` API, with its whole shape (all its polygons)
+- Replace the coverages in the database, in one transaction, only if every coverage could be read
 
 **Purpose of this script**
 
 Coverages are stored in database so that we don't have to call Navitia API every time we want to get coverage.
 
 Finding the coverage is mandatory for **/isochrone** Navitia calls, and give better results for **/journey** Navitia calls
-
-**Parameters**
-
-- Username ex: 'user123'  
-- Password ex: 'password123' (make sure to escape special characters) 
-- Base API URL ex: 'http://localhost' 
-- API Port ex: '6543' 
-
-**Who can run it**
-
-Any moderators, since deleting documents via API can only be done by moderators.
 
 **Volumetry**
 

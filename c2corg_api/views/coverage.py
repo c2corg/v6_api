@@ -1,163 +1,81 @@
-import functools
+"""The coverages of Navitia (public transport API): which one a place is in."""
+
 import json
 import logging
-import time
+import math
 
-from cornice.resource import resource, view
-from shapely.geometry import Point, shape
+from shapely.errors import ShapelyError
+from shapely.geometry import shape
+from sqlalchemy import func
 
 from c2corg_api.models import DBSession
-from c2corg_api.models.common.fields_coverage import fields_coverage
-from c2corg_api.models.coverage import (
-    COVERAGE_TYPE,
-    Coverage,
-)
-from c2corg_api.models.utils import wkb_to_shape
-from c2corg_api.schemas.base import body_validator
-from c2corg_api.schemas.coverage import (
-    CoverageCreateSchema,
-    CoverageUpdateSchema,
-    coverage_schema,
-)
-from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.views.document import (
-    DocumentRest,
-    make_validator_create,
-    make_validator_update,
-)
-from c2corg_api.views.document_schemas import coverage_documents_config
-from c2corg_api.views.validation import (
-    validate_associations,
-    validate_cook_param,
-    validate_id,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-)
+from c2corg_api.models.coverage import NavitiaCoverage
+from c2corg_api.views.resource import write
 
 log = logging.getLogger(__name__)
 
-validate_coverage_create = make_validator_create(fields_coverage.get('required'))
-validate_coverage_update = make_validator_update(fields_coverage.get('required'))
-validate_associations_create = functools.partial(
-    validate_associations, COVERAGE_TYPE, True
-)
-validate_associations_update = functools.partial(
-    validate_associations, COVERAGE_TYPE, False
-)
+# the coverages are in longitude and latitude
+SRID = 4326
 
 
-@resource(collection_path='/coverages', path='/coverages/{id}', cors_policy=cors_policy)
-class CoverageRest(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
-
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(COVERAGE_TYPE, coverage_documents_config)
-
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            coverage_documents_config, coverage_schema, include_areas=False
-        )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(CoverageCreateSchema),
-            validate_coverage_create,
-            validate_associations_create,
-        ],
-    )
-    def collection_post(self):
-        return self._collection_post(coverage_schema, allow_anonymous=False)
-
-    @restricted_json_view(
-        validators=[
-            body_validator(CoverageUpdateSchema),
-            validate_id,
-            validate_coverage_update,
-            validate_associations_update,
-        ],
-    )
-    def put(self):
-        return self._put(Coverage, coverage_schema)
+def validate_lon_lat(request, **kwargs):
+    """Check that the required lon and lat are finite numbers."""
+    for key in ('lon', 'lat'):
+        try:
+            value = float(request.GET[key])
+            if not math.isfinite(value):
+                raise ValueError
+            request.validated[key] = value
+        except KeyError, ValueError:
+            request.errors.add('querystring', key, 'invalid ' + key)
 
 
-@resource(path='/getcoverage', cors_policy=cors_policy)
-class WaypointCoverageRest(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
+def find_coverage(request):
+    """Return the coverage from a longitude and a latitude."""
+    lon = request.validated['lon']
+    lat = request.validated['lat']
 
-    @view(validators=[])
-    def get(self):
-        """Return the coverage from a longitude and a latitude."""
-        lon = float(self.request.GET['lon'])
-        lat = float(self.request.GET['lat'])
-
-        return get_coverage(lon, lat)
+    return get_coverage(lon, lat)
 
 
-@resource(path='/getpolygoncoverage', cors_policy=cors_policy)
-class PolygonCoverage(DocumentRest):
-    def __init__(self, request, context=None):
-        self.request = request
-
-    @view(validators=[])
-    def post(self):
-        """Return the coverages for a geom_detail polygon.
-
-        Returns the coverages from a geom_detail type polygon
-        (geom_detail has to be EPSG 4326 since isochrone is 4326).
-        """
-        geom_detail = json.loads(json.loads(self.request.body)['geom_detail'])
-        polygon = shape(geom_detail)
-        return get_coverages(polygon)
+def validate_geom_detail(request, **kwargs):
+    """Check that geom_detail is a GeoJSON geometry, given as a string."""
+    # an invalid JSON body raises here: the catch-all error view answers it
+    body = request.json_body
+    try:
+        request.validated['polygon'] = shape(json.loads(body['geom_detail']))
+    except KeyError, TypeError, ValueError, AttributeError, ShapelyError:
+        request.errors.add('body', 'geom_detail', 'invalid geom_detail')
 
 
-# The coverages (and their polygons) almost never change, but parsing all
-# their geometries is costly and done for every Navitia call: keep the parsed
-# polygons in memory for a few minutes. Each worker process has its own copy,
-# so a modified coverage is picked up by every worker after this delay.
-COVERAGES_CACHE_TTL = 300
+@write(validators=[validate_geom_detail], json=False)
+def coverage_of_a_polygon(request):
+    """Return the coverages for a geom_detail polygon.
 
-_coverages_cache = {'loaded_at': None, 'coverages': []}
-
-
-def _get_coverage_polygons():
-    """Return the list of (coverage_type, shapely polygon)."""
-    loaded_at = _coverages_cache['loaded_at']
-    if loaded_at is None or time.monotonic() - loaded_at > COVERAGES_CACHE_TTL:
-        _coverages_cache['coverages'] = [
-            (coverage.coverage_type, wkb_to_shape(coverage.geometry.geom_detail))
-            for coverage in DBSession.query(Coverage).all()
-        ]
-        _coverages_cache['loaded_at'] = time.monotonic()
-
-    return _coverages_cache['coverages']
-
-
-def clear_coverages_cache():
-    """Forget the cached coverage polygons (they are loaded again on demand)."""
-    _coverages_cache['loaded_at'] = None
-    _coverages_cache['coverages'] = []
+    Returns the coverages from a geom_detail type polygon
+    (geom_detail has to be EPSG 4326 since isochrone is 4326).
+    """
+    return get_coverages(request.validated['polygon'])
 
 
 def get_coverage(lon, lat):
-    """Get the coverage that contains a point(lon, lat)."""
-    pt = Point(lon, lat)
-
-    for coverage_type, poly in _get_coverage_polygons():
-        if poly.contains(pt):
-            return coverage_type
-
-    return None
+    """Return the type of the coverage containing a point, or None."""
+    point = func.ST_SetSRID(func.ST_MakePoint(lon, lat), SRID)
+    return (
+        DBSession.query(NavitiaCoverage.coverage_type)
+        .filter(func.ST_Contains(NavitiaCoverage.geom, point))
+        .order_by(NavitiaCoverage.coverage_type)
+        .limit(1)
+        .scalar()
+    )
 
 
 def get_coverages(polygon):
-    """Get all the coverages that intersects a polygon."""
+    """Return the types of the coverages a geometry intersects."""
+    geom = func.ST_GeomFromText(polygon.wkt, SRID)
     return [
         coverage_type
-        for coverage_type, poly in _get_coverage_polygons()
-        if poly.contains(polygon) or poly.intersects(polygon)
+        for (coverage_type,) in DBSession.query(NavitiaCoverage.coverage_type)
+        .filter(func.ST_Intersects(NavitiaCoverage.geom, geom))
+        .order_by(NavitiaCoverage.coverage_type)
     ]

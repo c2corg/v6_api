@@ -11,7 +11,8 @@ class _StopareaMixin:
     stoparea_name = Column(String, nullable=False)
     line = Column(String, nullable=False)
     operator = Column(String, nullable=False)
-    geom = Column(Geometry('POINT', srid=4326))
+    # the SRID of the column created by the migration bb61456d557f
+    geom = Column(Geometry('POINT', srid=3857))
 
 
 attributes = ['navitia_id', 'stoparea_name', 'line', 'operator', 'geom']

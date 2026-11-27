@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import auth_headers
 
 SNAPSHOT_DIR = os.path.join(os.path.dirname(__file__), 'snapshots')
 
@@ -24,6 +24,9 @@ CONTRACT_HEADERS = {
     'Location',
     'Vary',
 }
+
+# headers holding a list
+LIST_HEADERS = {'Access-Control-Allow-Headers', 'Access-Control-Allow-Methods'}
 
 # the (method, path) of the routes a contract test covers, as in routes.txt
 COVERED = set()
@@ -85,26 +88,30 @@ def _merge(a, b):
     return {'any_of': sorted(alternatives)}
 
 
-def response_contract(response):
+def response_contract(response, extra_headers=()):
     """Return what a client relies on in a response."""
     headers = {
         name: response.headers[name]
-        for name in sorted(CONTRACT_HEADERS)
+        for name in sorted(CONTRACT_HEADERS | set(extra_headers))
         if name in response.headers
     }
+    # lists whose order is not part of the contract (Cornice builds some
+    # from a set)
+    for name in LIST_HEADERS & set(headers):
+        headers[name] = ','.join(sorted(v.strip() for v in headers[name].split(',')))
     # the value of an ETag changes with the data, its presence does not
     if 'ETag' in headers:
         headers['ETag'] = '<etag>'
     result = {'status': response.status_int, 'headers': headers}
-    if response.content_type == 'application/json':
+    if response.content_type == 'application/json' and response.body:
         result['body'] = shape(response.json)
     return result
 
 
-def check_snapshot(name, response):
+def check_snapshot(name, response, extra_headers=()):
     """Compare the contract of a response with its snapshot."""
     path = os.path.join(SNAPSHOT_DIR, name + '.json')
-    actual = response_contract(response)
+    actual = response_contract(response, extra_headers)
     if UPDATE:
         os.makedirs(SNAPSHOT_DIR, exist_ok=True)
         with open(path, 'w') as f:
@@ -118,19 +125,26 @@ def check_snapshot(name, response):
     assert actual == expected
 
 
-class ContractTest(BaseTestRest):
-    """Base class of the contract tests: requests as a browser client sends them."""
+class Browser:
+    """Requests as a browser client sends them: from an allowed CORS origin."""
+
+    def __init__(self, client, settings):
+        self.client = client
+        self.origin = settings['cors.allowed_origins'].split()[0]
 
     def request(self, method, url, body=None, user=None, status=200, **kwargs):
         """Send a request from an allowed CORS origin, as `user` if given."""
         headers = kwargs.pop('headers', {})
-        headers['Origin'] = self.settings['cors.allowed_origins'].split()[0]
+        # an allowed origin, unless the test gives one (None: no Origin)
+        headers.setdefault('Origin', self.origin)
+        if headers['Origin'] is None:
+            del headers['Origin']
         if user:
-            self.add_authorization_header(username=user, headers=headers)
+            auth_headers(username=user, headers=headers)
         if body is None:
-            call = getattr(self.app, method.lower())
+            call = getattr(self.client, method.lower())
             return call(url, headers=headers, status=status, **kwargs)
-        call = getattr(self.app, method.lower() + '_json')
+        call = getattr(self.client, method.lower() + '_json')
         return call(url, body, headers=headers, status=status, **kwargs)
 
     def get(self, url, user=None, status=200, **kwargs):
@@ -141,3 +155,7 @@ class ContractTest(BaseTestRest):
 
     def put(self, url, body, user=None, status=200, **kwargs):
         return self.request('PUT', url, body, user=user, status=status, **kwargs)
+
+    def create(self, prefix, body, user='contributor'):
+        """Create a document through the API and return its id."""
+        return self.post(f'/{prefix}', body, user=user).json['document_id']

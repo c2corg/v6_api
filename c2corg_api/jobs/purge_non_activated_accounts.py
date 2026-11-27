@@ -1,46 +1,50 @@
 import logging
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import and_
 
-from c2corg_api.models.document import DocumentLocale
+from c2corg_api.models import DBSession, commit_or_rollback
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import Purpose, User
-from c2corg_api.models.user_profile import UserProfile
+from c2corg_api.scripts.users.merge import _remove_user_account
+from c2corg_api.views.document_delete import remove_from_cache
 
 log = logging.getLogger(__name__)
 
 
-def purge_account(test_session=None):
+def purge_account():
+    """Remove the accounts whose registration was not validated in time."""
     now = datetime.now(UTC)
-    session = sessionmaker()() if not test_session else test_session
 
-    def delete(cls, attr, ids):
-        session.query(cls).filter(attr.in_(ids)).delete(synchronize_session=False)
-
+    # DBSession is scoped by thread: this job's session is closed at the end
     try:
-        ids = (
-            session.query(User.id)
-            .filter(
-                and_(
-                    User.email_validated.is_(False),
-                    User.validation_nonce.like(Purpose.registration.value + '_%'),
-                    User.validation_nonce_expire < now,
+        with commit_or_rollback(DBSession):
+            ids = [
+                row[0]
+                for row in DBSession.query(User.id).filter(
+                    and_(
+                        User.email_validated.is_(False),
+                        User.validation_nonce.like(Purpose.registration.value + '_%'),
+                        User.validation_nonce_expire < now,
+                    )
                 )
-            )
-            .all()
-        )
-        ids = [idwrap[0] for idwrap in ids]
+            ]
 
-        log.info('Deleting %d non activated users: %s', len(ids), ids)
-        if len(ids) > 0:
-            delete(DocumentVersion, DocumentVersion.document_id, ids)
-            delete(HistoryMetaData, HistoryMetaData.user_id, ids)
-            delete(User, User.id, ids)
-            delete(UserProfile, UserProfile.document_id, ids)
-            delete(DocumentLocale, DocumentLocale.document_id, ids)
-            session.commit()
+            log.info('Deleting %d non activated users: %s', len(ids), ids)
+            if ids:
+                # the versions of the profile and their history metadata
+                # refer to the user: removed first
+                DBSession.query(DocumentVersion).filter(
+                    DocumentVersion.document_id.in_(ids)
+                ).delete(synchronize_session=False)
+                DBSession.query(HistoryMetaData).filter(
+                    HistoryMetaData.user_id.in_(ids)
+                ).delete(synchronize_session=False)
+                # The user, then the whole profile document. A bulk delete of
+                # UserProfile would only remove the user_profiles row, and
+                # leave the documents row a polymorphic load fails on.
+                for user_id in ids:
+                    remove_from_cache(user_id)
+                    _remove_user_account(user_id)
     finally:
-        if not test_session:
-            session.close()
+        DBSession.remove()

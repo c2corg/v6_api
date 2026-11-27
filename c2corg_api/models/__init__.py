@@ -1,16 +1,28 @@
+from contextlib import contextmanager
+
 from sqlalchemy.orm import (
     declarative_base,
     scoped_session,
     sessionmaker,
 )
-from zope.sqlalchemy import register
 
 schema = 'guidebook'
 users_schema = 'users'
 sympa_schema = 'sympa'
 
 DBSession = scoped_session(sessionmaker())
-register(DBSession)
+
+
+@contextmanager
+def commit_or_rollback(session):
+    """Commit what the block does, or roll it back if it raises."""
+    # as `with transaction.manager:` did, for the scripts
+    try:
+        yield session
+    except BaseException:
+        session.rollback()
+        raise
+    session.commit()
 
 
 class BaseMixin:
@@ -27,7 +39,7 @@ from c2corg_api.models import waypoint  # noqa
 from c2corg_api.models import route  # noqa
 from c2corg_api.models import document_history  # noqa
 from c2corg_api.models import document_topic  # noqa
-from c2corg_api.models import document_tag  # noqa
+from c2corg_api.models import favourite  # noqa
 from c2corg_api.models import image  # noqa
 from c2corg_api.models import user  # noqa
 from c2corg_api.models import association  # noqa
@@ -46,6 +58,18 @@ from c2corg_api.models import book  # noqa
 from c2corg_api.models import feed  # noqa
 from c2corg_api.models import mailinglist  # noqa
 from c2corg_api.models import sso  # noqa
+from c2corg_api.models import account_removal  # noqa
+from c2corg_api.models import deleted_document  # noqa
+from c2corg_api.models import document_link  # noqa
+from c2corg_api.models import external_link  # noqa
+from c2corg_api.models import link_check  # noqa
+from c2corg_api.models import merged_document  # noqa
+from c2corg_api.models import image_embed  # noqa
+from c2corg_api.models import image_duplicate  # noqa
+from c2corg_api.models import harvest  # noqa
+from c2corg_api.models import avalanche_bulletin  # noqa
+from c2corg_api.models import region_weather  # noqa
+from c2corg_api.models import partner_outing  # noqa
 
 document_types = {
     xreport.XREPORT_TYPE: xreport.Xreport,
@@ -58,7 +82,6 @@ document_types = {
     topo_map.MAP_TYPE: topo_map.TopoMap,
     area.AREA_TYPE: area.Area,
     outing.OUTING_TYPE: outing.Outing,
-    coverage.COVERAGE_TYPE: coverage.Coverage,
 }
 
 document_locale_types = {
@@ -72,5 +95,4 @@ document_locale_types = {
     topo_map.MAP_TYPE: document.DocumentLocale,
     area.AREA_TYPE: document.DocumentLocale,
     outing.OUTING_TYPE: outing.OutingLocale,
-    coverage.COVERAGE_TYPE: document.DocumentLocale,
 }

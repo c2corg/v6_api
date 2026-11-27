@@ -1,0 +1,33 @@
+{
+ "700001": {
+  "title": "Canale &#8211; Nord del Test",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "alt_top": {
+     "value": "3100"
+    },
+    "drop": {
+     "value": "1200"
+    },
+    "exposure": {
+     "value": "Nord-Ovest"
+    },
+    "grade_skisteep": {
+     "value": "4.3"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.8,
+      "lng": 7.2
+     }
+    }
+   }
+  }
+ }
+}

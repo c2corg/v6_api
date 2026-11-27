@@ -1,4 +1,3 @@
-from cornice.resource import resource
 from sqlalchemy import not_
 from sqlalchemy.sql.expression import and_, or_
 from sqlalchemy.sql.functions import func
@@ -10,7 +9,7 @@ from c2corg_api.models.cache_version import (
     update_cache_version_full,
 )
 from c2corg_api.models.document import Document, UpdateType
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
+from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange
 from c2corg_api.models.image import IMAGE_TYPE
 from c2corg_api.models.route import Route
@@ -19,10 +18,10 @@ from c2corg_api.models.waypoint import WAYPOINT_TYPE, Waypoint
 from c2corg_api.schemas.base import Schema, body_validator
 from c2corg_api.schemas.types import Int
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.views.document import update_version
+from c2corg_api.views.document_unmerge import keep_merge
 from c2corg_api.views.image import delete_all_files_for_image
+from c2corg_api.views.resource import write
 from c2corg_api.views.waypoint import update_linked_route_titles
 
 
@@ -109,73 +108,98 @@ def validate_documents(request, **kwargs):
         request.errors.add('body', 'types', 'merging user accounts is not supported')
 
 
-@resource(path='/documents/merge', cors_policy=cors_policy)
-class MergeDocumentRest(ACLDefault):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[body_validator(MergeSchema), validate_documents],
+@write(
+    validators=[body_validator(MergeSchema), validate_documents],
+    permission='moderator',
+    json=True,
+)
+def merge_documents(request):
+    """Merge a document into another document.
+
+    - Associations and favourites of the source document are transferred to
+      the target document.
+    - The association log entries are rewritten to the target document.
+    - The time of the log entries is updated, so that the ES syncer will
+      pick up the new associations of the target document.
+    - The attribute `redirects_to` of the source document is set, and of the
+      documents merged into the source before.
+    - A new version is created for the source document. This makes sure
+      that the ES syncer removes the document from ES index.
+    - Update the cache version of the source document.
+    - Update the cache version of the target document and its associations.
+    - Removes the feed entries of the source document.
+
+
+    Request:
+        `POST` `/documents/merge`
+
+    Request body:
+        {
+            'source_document_id': @document_id@,
+            'target_document_id': @document_id@
+        }
+    """
+    source_document_id = request.validated['source_document_id']
+    target_document_id = request.validated['target_document_id']
+    source_doc = DBSession.get(Document, source_document_id)
+
+    # kept before anything changes, to undo the merge
+    keep_merge(request, source_document_id, target_document_id, source_doc.type)
+
+    # transfer associations from source to target
+    transfer_associations(source_document_id, target_document_id)
+
+    # transfer favourites from source to target
+    transfer_favourites(source_document_id, target_document_id)
+
+    # if waypoint, update main waypoint of routes
+    if source_doc.type == WAYPOINT_TYPE:
+        _transfer_main_waypoint(source_document_id, target_document_id)
+
+    # the documents merged into the source before now redirect to the target:
+    # one level of redirection only (a merged image shows the files of its
+    # target, those of the source are deleted below)
+    redirected_ids = _redirect_merged_documents(source_document_id, target_document_id)
+
+    # set redirection and create a new version
+    source_doc.redirects_to = target_document_id
+    update_version(
+        source_doc,
+        request.authenticated_userid,
+        f'merged with {target_document_id}',
+        [UpdateType.FIGURES],
+        [],
     )
-    def post(self):
-        """Merge a document into another document.
 
-        - Associations and tags of the source document are transferred to
-          the target document.
-        - The association log entries are rewritten to the target document.
-        - The time of the log entries is updated, so that the ES syncer will
-          pick up the new associations of the target document.
-        - The attribute `redirects_to` of the source document is set.
-        - A new version is created for the source document. This makes sure
-          that the ES syncer removes the document from ES index.
-        - Update the cache version of the source document.
-        - Update the cache version of the target document and its associations.
-        - Removes the feed entries of the source document.
+    # update the cache version for the source and target document
+    update_cache_version_direct(source_document_id)
+    for document_id in redirected_ids:
+        update_cache_version_direct(document_id)
+    update_cache_version_full(target_document_id, source_doc.type)
+
+    _remove_feed_entry(source_document_id)
+
+    if source_doc.type == IMAGE_TYPE:
+        delete_all_files_for_image(source_document_id, request)
+
+    notify_es_syncer(request.registry.queue_config)
+
+    return {}
 
 
-        Request:
-            `POST` `/documents/merge`
-
-        Request body:
-            {
-                'source_document_id': @document_id@,
-                'target_document_id': @document_id@
-            }
-        """
-        source_document_id = self.request.validated['source_document_id']
-        target_document_id = self.request.validated['target_document_id']
-        source_doc = DBSession.get(Document, source_document_id)
-
-        # transfer associations from source to target
-        transfer_associations(source_document_id, target_document_id)
-
-        # transfer tags from source to target
-        transfer_tags(source_document_id, target_document_id)
-
-        # if waypoint, update main waypoint of routes
-        if source_doc.type == WAYPOINT_TYPE:
-            _transfer_main_waypoint(source_document_id, target_document_id)
-
-        # set redirection and create a new version
-        source_doc.redirects_to = target_document_id
-        DocumentRest.update_version(
-            source_doc,
-            self.request.authenticated_userid,
-            f'merged with {target_document_id}',
-            [UpdateType.FIGURES],
-            [],
-        )
-
-        # update the cache version for the source and target document
-        update_cache_version_direct(source_document_id)
-        update_cache_version_full(target_document_id, source_doc.type)
-
-        _remove_feed_entry(source_document_id)
-
-        if source_doc.type == IMAGE_TYPE:
-            delete_all_files_for_image(source_document_id, self.request)
-
-        notify_es_syncer(self.request.registry.queue_config)
-
-        return {}
+def _redirect_merged_documents(source_document_id, target_document_id):
+    """Point the documents redirecting to the source to the target."""
+    redirected_ids = (
+        DBSession.query(Document.document_id)
+        .filter(Document.redirects_to == source_document_id)
+        .all()
+    )
+    redirected_ids = [document_id for (document_id,) in redirected_ids]
+    if redirected_ids:
+        DBSession.query(Document).filter(
+            Document.document_id.in_(redirected_ids)
+        ).update({Document.redirects_to: target_document_id}, synchronize_session=False)
+    return redirected_ids
 
 
 def transfer_associations(source_document_id, target_document_id):
@@ -262,43 +286,41 @@ def transfer_associations(source_document_id, target_document_id):
     )
 
 
-def transfer_tags(source_document_id, target_document_id):
-    # get the ids of users that have already tagged the target document
+def transfer_favourites(source_document_id, target_document_id):
+    # get the ids of users that already have the target document in favourites
     target_user_ids_result = (
-        DBSession.query(DocumentTag.user_id)
-        .filter(DocumentTag.document_id == target_document_id)
+        DBSession.query(Favourite.user_id)
+        .filter(Favourite.document_id == target_document_id)
         .all()
     )
     target_user_ids = [user_id for (user_id,) in target_user_ids_result]
 
-    # move the current tags (only if the target document does not
-    # already have been tagged by the same user)
+    # move the current favourites, with their folder and date (only if the
+    # target document is not already a favourite of the same user)
     DBSession.execute(
-        DocumentTag.__table__.update()
+        Favourite.__table__.update()
         .where(
             _and_in(
-                DocumentTag.document_id == source_document_id,
-                DocumentTag.user_id,
+                Favourite.document_id == source_document_id,
+                Favourite.user_id,
                 target_user_ids,
             )
         )
         .values(document_id=target_document_id)
     )
 
-    # remove remaining tags
+    # remove remaining favourites
     DBSession.execute(
-        DocumentTag.__table__.delete().where(
-            DocumentTag.document_id == source_document_id
-        )
+        Favourite.__table__.delete().where(Favourite.document_id == source_document_id)
     )
 
-    # transfer the tag log entries
+    # transfer the favourite log entries
     DBSession.execute(
-        DocumentTagLog.__table__.update()
+        FavouriteLog.__table__.update()
         .where(
             _and_in(
-                DocumentTagLog.document_id == source_document_id,
-                DocumentTagLog.user_id,
+                FavouriteLog.document_id == source_document_id,
+                FavouriteLog.user_id,
                 target_user_ids,
             )
         )
@@ -306,8 +328,8 @@ def transfer_tags(source_document_id, target_document_id):
     )
 
     DBSession.execute(
-        DocumentTagLog.__table__.delete().where(
-            DocumentTagLog.document_id == source_document_id
+        FavouriteLog.__table__.delete().where(
+            FavouriteLog.document_id == source_document_id
         )
     )
 

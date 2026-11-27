@@ -1,0 +1,25 @@
+{
+  "body": {
+    "stopareas": [
+      {
+        "coordinates": {
+          "x": "float",
+          "y": "float"
+        },
+        "distance": "float",
+        "id": "int",
+        "line": "str",
+        "navitia_id": "str",
+        "operator": "str",
+        "stoparea_name": "str"
+      }
+    ],
+    "waypoint_id": "int"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

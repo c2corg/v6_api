@@ -2,9 +2,6 @@ import logging
 import os
 
 import requests
-from pyramid.authorization import ACLAuthorizationPolicy
-from pyramid.config import Configurator
-from pyramid.settings import asbool
 from sqlalchemy import engine_from_config, event, exc, text
 from sqlalchemy.pool import Pool
 
@@ -13,18 +10,13 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route
 from c2corg_api.search import configure_es_from_config, get_queue_config
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import configure_cors_policy
 
 log = logging.getLogger(__name__)
 
 
-class RootFactory(ACLDefault):
-    __name__ = 'RootFactory'
-
-
-def main(global_config, **settings):
-    """Thi function returns a Pyramid WSGI application."""
+def create_app(settings):
+    """Return the FastAPI application of the API, configured by `settings`."""
     # Configure SQLAlchemy
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
@@ -32,57 +24,36 @@ def main(global_config, **settings):
     # Configure ElasticSearch
     configure_es_from_config(settings)
 
-    config = Configurator(settings=settings)
-    config.include('cornice')
-    config.registry.queue_config = get_queue_config(settings)
-
-    # FIXME? Make sure this tween is run after the JWT validation
-    # Using an explicit ordering in config files might be needed.
-    config.add_tween(
-        'c2corg_api.tweens.rate_limiting.' + 'rate_limiting_tween_factory',
-        under='pyramid_tm.tm_tween_factory',
-    )
-
-    bypass_auth = False
-    if 'noauthorization' in settings:
-        bypass_auth = asbool(settings['noauthorization'])
-
-    if not bypass_auth:
-        from c2corg_api.security.jwt_policy import IntegerSubJWTAuthenticationPolicy
-        from c2corg_api.security.roles import groupfinder
-
-        policy = IntegerSubJWTAuthenticationPolicy(
-            private_key=settings['jwt.private_key'],
-            algorithm='HS256',
-            auth_type='JWT',
-            callback=groupfinder,
-        )
-        config.set_authentication_policy(policy)
-        config.set_authorization_policy(ACLAuthorizationPolicy())
-        config.add_request_method(policy.get_claims, 'jwt_claims', reify=True)
-        # Intercept request handling to validate token against the database
-        config.add_tween(
-            'c2corg_api.tweens.jwt_database_validation.'
-            + 'jwt_database_validation_tween_factory'
-        )
-        # Inject ACLs
-        config.set_root_factory(RootFactory)
-    else:
-        log.warning('Bypassing authorization')
-
-    configure_caches(settings)
-    configure_feed(settings, config)
-    configure_anonymous(settings, config)
-
-    # Must happen before `config.scan()`: Cornice captures the allowed CORS
-    # origins from `c2corg_api.views.cors_policy` when each view module is
-    # imported, which is a side effect of the scan below.
+    # the allowed CORS origins, read by web.cors for each request
     configure_cors_policy(settings)
 
-    # Scan MUST be the last call otherwise ACLs will not be set
-    # and the permissions would be bypassed
-    config.scan(ignore='c2corg_api.tests')
-    return config.make_wsgi_app()
+    configure_caches(settings)
+    # imported here: the view modules need the package initialized
+    from c2corg_api.views.license import configure_license
+    from c2corg_api.views.markdown import configure_image_url
+    from c2corg_api.views.navitia import configure_jobs_redis
+
+    configure_jobs_redis(settings)
+    configure_image_url(settings)
+    configure_license(settings)
+
+    # imported here: the FastAPI routes import the views, which need the
+    # package initialized
+    from c2corg_api.app import Registry, create_fastapi_app
+
+    registry = Registry(
+        settings,
+        queue_config=get_queue_config(settings),
+        feed_admin_user_account_id=_account_id(settings, 'feed.admin_user_account'),
+        anonymous_user_id=_account_id(settings, 'guidebook.anonymous_user_account'),
+    )
+    return create_fastapi_app(settings, registry)
+
+
+def _account_id(settings, name):
+    """Return the id of the account of a setting, or None."""
+    value = settings.get(name)
+    return int(value) if value else None
 
 
 # validate db connection before using it
@@ -96,22 +67,6 @@ def ping_connection(dbapi_connection, connection_record, connection_proxy):
         # connecting again up to three times before raising.
         raise exc.DisconnectionError() from e
     cursor.close()
-
-
-def configure_feed(settings, config):
-    account_id = None
-
-    if settings.get('feed.admin_user_account'):
-        account_id = int(settings.get('feed.admin_user_account'))
-    config.registry.feed_admin_user_account_id = account_id
-
-
-def configure_anonymous(settings, config):
-    account_id = None
-
-    if settings.get('guidebook.anonymous_user_account'):
-        account_id = int(settings.get('guidebook.anonymous_user_account'))
-    config.registry.anonymous_user_id = account_id
 
 
 def delete_waypoint_stopareas(connection, waypoint_id):
@@ -665,12 +620,8 @@ def _update_route_duration(connection, route_id, calculated_duration_in_days):
         ),
         {'duration': calculated_duration_in_days, 'route_id': route_id},
     )
-    if calculated_duration_in_days is None:
-        calculated_duration_in_days_str = 'None'
-    else:
-        calculated_duration_in_days_str = '%f', calculated_duration_in_days
     log.info(
         'Route %d: Database updated with calculated_duration = %s days.',
         route_id,
-        calculated_duration_in_days_str,
+        calculated_duration_in_days,
     )

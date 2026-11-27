@@ -34,6 +34,11 @@
       "height_diff_up": "int",
       "hiking_mtb_exposition": "null",
       "hiking_rating": "null",
+      "license": {
+        "attribution_url": "str",
+        "id": "str",
+        "url": "str"
+      },
       "lift_access": "null",
       "locales": [
         {
@@ -63,6 +68,7 @@
     "version": {
       "comment": "str",
       "masked": "bool",
+      "moderator": "bool",
       "name": "str",
       "user_id": "int",
       "version_id": "int",

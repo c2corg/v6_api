@@ -1,12 +1,13 @@
 import datetime
+import hashlib
 import logging
+import secrets
+from typing import NamedTuple
 
 import jwt as pyjwt
-from pyramid.httpexceptions import HTTPForbidden
-from pyramid.interfaces import IAuthenticationPolicy
-from pyramid.security import Authenticated
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
+from c2corg_api.httpexceptions import HTTPForbidden
 from c2corg_api.models import DBSession
 from c2corg_api.models.token import Token
 from c2corg_api.models.user import User
@@ -15,118 +16,164 @@ log = logging.getLogger(__name__)
 
 # The number of days after which a token is expired
 CONST_EXPIRE_AFTER_DAYS = 14
+# the lifetime of a token: "remember me" on the login, or not
+REMEMBERED_LIFETIME = datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
+SESSION_LIFETIME = datetime.timedelta(days=1)
+# how long a renewed token stays valid, for the requests already sent with it
+RENEWAL_GRACE = datetime.timedelta(minutes=1)
 
 
-def extract_token(request):
-    # Extract token from 'JWT token="XXX"' or 'JWT XXX'
-    params = request.authorization[1]
-    if 'token="' in params:
-        splitted = params.split('"')
-        return splitted[1] if len(splitted) >= 2 else None
-    return params
+class IssuedToken(NamedTuple):
+    """A new token, to answer: the database only keeps its hash."""
+
+    value: str
+    expire: datetime.datetime
 
 
-def groupfinder(userid, request):
-    # Pyramid calls this for every read of `request.authenticated_userid`
-    # or `request.effective_principals`, several times per request: query
-    # the database once per request and user.
-    cached = getattr(request, '_c2c_groups', None)
-    if cached is not None and cached[0] == userid:
-        return list(cached[1])
+def hash_token(token):
+    """Return the hash of a token, as the database stores it."""
+    # a plain SHA-256 is enough: a token is long and random, not a password
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
-    is_moderator = (
-        DBSession.query(User).filter(User.id == userid, User.moderator).count() > 0
-    )
-    groups = ['group:moderators'] if is_moderator else [Authenticated]
-    if request is not None:
-        request._c2c_groups = (userid, groups)
-    return list(groups)
+
+def _stored(token):
+    """Return the condition matching the stored row of a token."""
+    return Token.value == hash_token(token)
 
 
 def is_valid_token(token):
+    """Is the token stored and not expired? Raise a 403 for a blocked user."""
+    # one query for the token and its user: it runs on every request with a token
     now = datetime.datetime.now(datetime.UTC)
-    token = (
-        DBSession.query(Token).filter(Token.value == token, Token.expire > now).first()
+    row = (
+        DBSession.query(User.blocked)
+        .join(Token, Token.userid == User.id)
+        .filter(_stored(token), Token.expire > now)
+        .first()
     )
-
-    if not token:
+    if row is None:
         return False
-    else:
-        user_is_blocked = (
-            DBSession.query(User.blocked).filter(User.id == token.userid).scalar()
-        )
-        if user_is_blocked:
-            raise HTTPForbidden('account blocked')
+    if row.blocked:
+        raise HTTPForbidden('account blocked')
     return True
 
 
-def add_or_retrieve_token(value, expire, userid):
-    token = (
-        DBSession.query(Token)
-        .filter(Token.value == value, Token.userid == userid)
-        .first()
+def token_expire(token):
+    """Return when a valid token expires."""
+    now = datetime.datetime.now(datetime.UTC)
+    return (
+        DBSession.query(Token.expire)
+        .filter(_stored(token), Token.expire > now)
+        .scalar()
     )
-    if not token:
-        token = Token(value=value, expire=expire, userid=userid)
-        DBSession.add(token)
-        DBSession.flush()
 
-    return token
+
+def add_token(value, expire, userid):
+    """Store the hash of a new token and return the token."""
+    # every token is unique (its `jti` claim), so it is never stored yet
+    DBSession.add(Token(value=hash_token(value), expire=expire, userid=userid))
+    DBSession.flush()
+    return IssuedToken(value, expire)
 
 
 def remove_token(token):
     now = datetime.datetime.now(datetime.UTC)
-    condition = and_(Token.value == token, Token.expire > now)
+    condition = and_(_stored(token), Token.expire > now)
     result = DBSession.execute(Token.__table__.delete().where(condition))
     if result.rowcount == 0:
-        log.debug(f'Failed to remove token {token}')
+        log.debug('Failed to remove a token')
     DBSession.flush()
 
 
-def create_claims(user, exp):
+def create_claims(user, now, exp):
+    """Return the claims of a new token of the user, issued now."""
+    # jti: a random id, so that two tokens issued in the same second differ
     return {
         'sub': str(user.id),
         'username': user.username,
+        'iat': int(now.timestamp()),
         'exp': int(exp.timestamp()),
+        'jti': secrets.token_urlsafe(16),
     }
 
 
-def try_login(user, password, request):
+def try_login(user, password, request, remember=True):
     if user.email_validated and user.validate_password(password):
-        return log_validated_user_i_know_what_i_do(user, request)
+        return log_validated_user_i_know_what_i_do(user, request, remember)
     else:
         return None
 
 
-def log_validated_user_i_know_what_i_do(user, request):
+def log_validated_user_i_know_what_i_do(user, request, remember=True):
     """Thi method may only be called for validated users.
 
     See the try_login function for a safe version.
     """
-    assert user.email_validated
+    # an explicit check, not an assert: `python -O` would drop it
+    if not user.email_validated:
+        raise ValueError('the email of the user is not validated')
 
     if user.blocked:
         raise HTTPForbidden('account blocked')
 
-    policy = request.registry.queryUtility(IAuthenticationPolicy)
+    lifetime = REMEMBERED_LIFETIME if remember else SESSION_LIFETIME
+    return _new_token(user, request, lifetime)
+
+
+def _new_token(user, request, lifetime):
+    """Issue and store a new token of the user."""
     now = datetime.datetime.now(datetime.UTC)
-    exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
-    claims = create_claims(user, exp)
-    token = pyjwt.encode(claims, key=policy.private_key, algorithm=policy.algorithm)
-    return add_or_retrieve_token(token, exp, user.id)
+    exp = now + lifetime
+    token = _encode(create_claims(user, now, exp), request)
+    return add_token(token, exp, user.id)
+
+
+def _encode(claims, request):
+    """Sign the claims of a token with the key of the settings."""
+    return pyjwt.encode(
+        claims, key=request.registry.settings['jwt.private_key'], algorithm='HS256'
+    )
 
 
 def renew_token(user, request):
-    old_token = extract_token(request)
+    """Replace the token of the request with a new one, or return None."""
+    old_token = request.authorization.token
 
     if is_valid_token(old_token):
-        policy = request.registry.queryUtility(IAuthenticationPolicy)
-        now = datetime.datetime.now(datetime.UTC)
-        exp = now + datetime.timedelta(days=CONST_EXPIRE_AFTER_DAYS)
-        claims = create_claims(user, exp)
-        token_value = pyjwt.encode(
-            claims, key=policy.private_key, algorithm=policy.algorithm
-        )
-        return add_or_retrieve_token(token_value, exp, user.id)
+        lifetime = _lifetime(old_token, request)
+        _expire_soon(old_token)
+        return _new_token(user, request, lifetime)
 
     return None
+
+
+def _expire_soon(token):
+    """Revoke a renewed token at the end of the grace period."""
+    # Not at once: the requests sent with it before the client stored the new
+    # one (the page loading, the other tabs) would be refused. It expires in a
+    # minute, or at its own expiry if sooner.
+    now = datetime.datetime.now(datetime.UTC)
+    DBSession.execute(
+        Token.__table__.update()
+        .where(_stored(token))
+        .values(expire=func.least(Token.expire, now + RENEWAL_GRACE))
+    )
+    DBSession.flush()
+
+
+def _lifetime(token, request):
+    """Return the lifetime of a valid token: remembered or not."""
+    # the token was checked (signature, database); `exp` is not checked again
+    # here, the row of the database says it is not expired
+    claims = pyjwt.decode(
+        token,
+        key=request.registry.settings['jwt.private_key'],
+        algorithms=['HS256'],
+        options={'verify_exp': False, 'verify_iat': False},
+    )
+    if 'iat' not in claims:
+        # issued before the lifetimes, all remembered
+        return REMEMBERED_LIFETIME
+    issued_for = datetime.timedelta(seconds=claims['exp'] - claims['iat'])
+    # one of the two lifetimes, never another one
+    return SESSION_LIFETIME if issued_for <= SESSION_LIFETIME else REMEMBERED_LIFETIME

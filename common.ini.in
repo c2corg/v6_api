@@ -1,18 +1,6 @@
 # common configuration between production.ini and development.ini
 
 [app:main]
-use = egg:c2corg_api
-
-# Disable the authorization checks if True
-noauthorization = {noauthorization}
-
-pyramid.default_locale_name = en
-
-# pyramid_tm >= 2.4 annotates each transaction with
-# `request.authenticated_userid`, which runs the auth policy callback
-# (`groupfinder`, one database query) on every authenticated request. The
-# annotation is only useful for transaction logs (ZODB), not for SQLAlchemy.
-tm.annotate_user = false
 
 # size of the connection pool for the database. note that this number is
 # per application instance.
@@ -25,6 +13,15 @@ sqlalchemy.pool_size=5
 # extra connections opened above `pool_size` during bursts, closed again
 # when they are given back to the pool (10 is SQLAlchemy's default)
 sqlalchemy.max_overflow=10
+
+# requests a uvicorn worker serves at once (c2corg_api.asgi), the others
+# wait for one of them to end: more overloads the database and
+# Elasticsearch. The size of the database pool if empty.
+server.threads = {server_threads}
+
+# serve the OpenAPI document of the routes with typed parameters at
+# /openapi.json (#2512)
+# api.openapi = false
 
 elasticsearch.host = {elasticsearch_host}
 elasticsearch.port = {elasticsearch_port}
@@ -42,6 +39,8 @@ elasticsearch.batch_size.syncer = {elasticsearch_batch_size_syncer}
 redis.url = {redis_url}
 redis.db_queue = {redis_db_queue}
 redis.db_cache = {redis_db_cache}
+# and for the progress and results of the Navitia jobs
+redis.db_jobs = {redis_db_jobs}
 
 # queue configuration
 redis.exchange = {redis_exchange}
@@ -83,7 +82,49 @@ discourse.public_url = {discourse_public_url}
 discourse.api_key = {discourse_api_key}
 discourse.sso_secret = {discourse_sso_secret}
 discourse.allowed_sso_hosts = {discourse_allowed_sso_hosts}
+discourse.enabled = {discourse_enabled}
 discourse.category = {discourse_category}
+
+# the scheduler removes the accounts of the validated removal requests
+users.removals.auto = {removals_auto}
+
+# the scheduler harvests the avalanche bulletins (c2corg_api.harvest)
+harvest.enabled = {harvest_enabled}
+# for one harvester, else (empty) as harvest.enabled
+harvest.avalanche.meteofrance.enabled = {harvest_meteofrance_enabled}
+harvest.avalanche.caaml.enabled = {harvest_caaml_enabled}
+
+# partner outings harvester (see jobs/harvest_partner_outings.py): the
+# harvesters `partners.<source>` of c2corg_api.harvest. On or off as switched
+# here (on in env.default), whatever harvest.enabled; for one source, else
+# (empty) as harvest.partners.enabled. The secrets (SKITOUR_API_KEY) are read
+# from the environment, never from here: without one, the source is disabled
+harvest.partners.enabled = {harvest_partners_enabled}
+harvest.partners.skitour.enabled = {harvest_partners_skitour_enabled}
+harvest.partners.gulliver.enabled = {harvest_partners_gulliver_enabled}
+harvest.partners.bivouak.enabled = {harvest_partners_bivouak_enabled}
+harvest.partners.gipfelbuch.enabled = {harvest_partners_gipfelbuch_enabled}
+harvest.partners.skitourenportal.enabled = {harvest_partners_skitourenportal_enabled}
+harvest.partners.onice.enabled = {harvest_partners_onice_enabled}
+# minutes between two runs of a source, and the base of its backoff
+partners.interval_minutes = {partners_interval}
+# days a partner outing is kept; empty or 0 (the default): forever
+partners.retention_days = {partners_retention}
+# days a partner_lookups row (a cache, not data) is kept
+partners.lookup_retention_days = {partners_lookup_retention}
+# http | fixtures
+partners.transport = {partners_transport}
+# empty: c2corg_api/tests/partners/fixtures
+partners.fixtures_dir = {partners_fixtures_dir}
+# fixture mode accepts synthetic fixtures (dev only)
+partners.allow_synthetic = {partners_allow_synthetic}
+# GPX tracks read after the outings of a run (0: none), and the seconds
+# between two of them (10 at least)
+partners.tracks_per_run = {partners_tracks_per_run}
+partners.tracks_interval_seconds = {partners_tracks_interval}
+
+# the scheduler checks the links to other sites (c2corg_api.linkcheck)
+link_checker.enabled = {link_checker_enabled}
 
 ui.url = {ui_url}
 
@@ -145,7 +186,7 @@ rate_limiting.alert_address = {rate_limiting_alert_address}
 # endpoints: /users/login and /users/request_password_change. These are
 # not tied to a user account (the requester may not even have one yet, or
 # may be trying to guess a password), so they are limited by client IP
-# instead, using Redis (see c2corg_api/tweens/rate_limiting.py).
+# instead, using Redis (see c2corg_api/security/rate_limiting.py).
 # Window timespan in seconds:
 rate_limiting.anonymous_window_span = {rate_limiting_anonymous_window_span}
 # Max number of attempts allowed per IP and per bucket during a window:

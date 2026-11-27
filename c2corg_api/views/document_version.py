@@ -1,97 +1,103 @@
-from pyramid.httpexceptions import HTTPNotFound
 from sqlalchemy import column
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.elements import literal_column
 from sqlalchemy.sql.expression import union
 
 from c2corg_api.caching import cache_document_version, get_or_create
+from c2corg_api.httpexceptions import HTTPNotFound
 from c2corg_api.models import DBSession
 from c2corg_api.models.cache_version import get_cache_key
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
 from c2corg_api.models.user import User
-from c2corg_api.security.acl import ACLDefault
 from c2corg_api.views import etag_cache, to_json_dict
+from c2corg_api.views.license import get_license
+
+# A specific version of a document.
 
 
-class DocumentVersionRest(ACLDefault):
-    """Base class for all views that return a specific version of a document."""
+def document_version(
+    request, clazz, document_type, locale_clazz, schema, adapt_schema=None
+):
+    document_id = request.validated['id']
+    lang = request.validated['lang']
+    version_id = request.validated['version_id']
 
-    def _get_version(
-        self, clazz, document_type, locale_clazz, schema, adapt_schema=None
-    ):
-        document_id = self.request.validated['id']
-        lang = self.request.validated['lang']
-        version_id = self.request.validated['version_id']
-
-        def create_response():
-            return self._load_version(
-                document_id, lang, version_id, clazz, locale_clazz, schema, adapt_schema
-            )
-
-        base_cache_key = get_cache_key(document_id, lang, document_type=document_type)
-
-        if not base_cache_key:
-            raise HTTPNotFound(f'no version for document {document_id}')
-        else:
-            # version caching is distinct for moderators
-            cache_key = '{}-{}{}'.format(
-                base_cache_key,
-                version_id,
-                '-mod' if self.request.has_permission('moderator') else '',
-            )
-            # set and check the etag: if the etag value provided in the
-            # request equals the current etag, return 'NotModified'
-            etag_cache(self.request, cache_key)
-
-            return get_or_create(cache_document_version, cache_key, create_response)
-
-    def _load_version(
-        self, document_id, lang, version_id, clazz, locale_clazz, schema, adapt_schema
-    ):
-        version = (
-            DBSession.query(DocumentVersion)
-            .options(
-                joinedload(DocumentVersion.history_metadata)
-                .joinedload(HistoryMetaData.user)
-                .load_only(User.id, User.name)
-            )
-            .options(joinedload(DocumentVersion.document_archive.of_type(clazz)))
-            .options(
-                joinedload(
-                    DocumentVersion.document_locales_archive.of_type(locale_clazz)
-                )
-            )
-            .options(joinedload(DocumentVersion.document_geometry_archive))
-            .filter(DocumentVersion.id == version_id)
-            .filter(DocumentVersion.document_id == document_id)
-            .filter(DocumentVersion.lang == lang)
-            .first()
-        )
-        if version is None:
-            raise HTTPNotFound('invalid version')
-
-        document = None
-        if not version.masked or self.request.has_permission('moderator'):
-            archive_document = version.document_archive
-            archive_document.geometry = version.document_geometry_archive
-            archive_document.locales = [version.document_locales_archive]
-
-            if adapt_schema:
-                schema = adapt_schema(schema, archive_document)
-
-            document = to_json_dict(archive_document, schema, cook_locale=True)
-        # TODO if masked, return limited info as in DocumentInfoRest?
-
-        previous_version_id, next_version_id = get_neighbour_version_ids(
-            version_id, document_id, lang
+    def create_response():
+        return load_version(
+            request,
+            document_id,
+            lang,
+            version_id,
+            clazz,
+            locale_clazz,
+            schema,
+            adapt_schema,
         )
 
-        return {
-            'document': document,
-            'version': serialize_version(version),
-            'previous_version_id': previous_version_id,
-            'next_version_id': next_version_id,
-        }
+    base_cache_key = get_cache_key(document_id, lang, document_type=document_type)
+
+    if not base_cache_key:
+        raise HTTPNotFound(f'no version for document {document_id}')
+    else:
+        # version caching is distinct for moderators
+        cache_key = '{}-{}{}'.format(
+            base_cache_key,
+            version_id,
+            '-mod' if request.has_permission('moderator') else '',
+        )
+        # set and check the etag: if the etag value provided in the
+        # request equals the current etag, return 'NotModified'
+        etag_cache(request, cache_key)
+
+        return get_or_create(cache_document_version, cache_key, create_response)
+
+
+def load_version(
+    request, document_id, lang, version_id, clazz, locale_clazz, schema, adapt_schema
+):
+    version = (
+        DBSession.query(DocumentVersion)
+        .options(
+            joinedload(DocumentVersion.history_metadata)
+            .joinedload(HistoryMetaData.user)
+            .load_only(User.id, User.name)
+        )
+        .options(joinedload(DocumentVersion.document_archive.of_type(clazz)))
+        .options(
+            joinedload(DocumentVersion.document_locales_archive.of_type(locale_clazz))
+        )
+        .options(joinedload(DocumentVersion.document_geometry_archive))
+        .filter(DocumentVersion.id == version_id)
+        .filter(DocumentVersion.document_id == document_id)
+        .filter(DocumentVersion.lang == lang)
+        .first()
+    )
+    if version is None:
+        raise HTTPNotFound('invalid version')
+
+    document = None
+    if not version.masked or request.has_permission('moderator'):
+        archive_document = version.document_archive
+        archive_document.geometry = version.document_geometry_archive
+        archive_document.locales = [version.document_locales_archive]
+
+        if adapt_schema:
+            schema = adapt_schema(schema, archive_document)
+
+        document = to_json_dict(archive_document, schema, cook_locale=True)
+        document['license'] = get_license(archive_document.type, document)
+    # TODO if masked, return limited info as in DocumentInfoRest?
+
+    previous_version_id, next_version_id = get_neighbour_version_ids(
+        version_id, document_id, lang
+    )
+
+    return {
+        'document': document,
+        'version': serialize_version(version),
+        'previous_version_id': previous_version_id,
+        'next_version_id': next_version_id,
+    }
 
 
 def serialize_version(version):
@@ -99,6 +105,8 @@ def serialize_version(version):
         'version_id': version.id,
         'user_id': version.history_metadata.user_id,
         'name': version.history_metadata.user.name,
+        # the UI marks the contributions of the moderators
+        'moderator': version.history_metadata.user.moderator,
         'comment': version.history_metadata.comment,
         'written_at': version.history_metadata.written_at.isoformat(),
         'masked': version.masked,

@@ -26,21 +26,10 @@ def fake_get_markdown_parser(*args, **kwargs):
     )
 
 
-class TestFormat:
-    """
-    parse_code() function should never raise an exception. All sensitive
-    functions (parsing and cleaning) are inside a try-catch block. This
-    test-case verifies that, if some extension raises an exception, the
-    appropriate default message (_PARSER_EXCEPTION_MESSAGE) is returned.
-    """
-
-    def setup_method(self):
-        self.real_get_markdown_parser = c2c_markdown._get_markdown_parser
-        c2c_markdown._get_markdown_parser = fake_get_markdown_parser
-
-    def test_exception(self):
-        result = c2c_markdown.parse_code('!! Hello')
-        assert result == c2c_markdown._PARSER_EXCEPTION_MESSAGE
-
-    def teardown_method(self):
-        c2c_markdown._get_markdown_parser = self.real_get_markdown_parser
+def test_exception(monkeypatch):
+    # parse_code() should never raise an exception: the parsing and the
+    # cleaning are in a try block. If an extension raises, the default
+    # message (_PARSER_EXCEPTION_MESSAGE) is returned.
+    monkeypatch.setattr(c2c_markdown, '_get_markdown_parser', fake_get_markdown_parser)
+    result = c2c_markdown.parse_code('!! Hello')
+    assert result == c2c_markdown._PARSER_EXCEPTION_MESSAGE

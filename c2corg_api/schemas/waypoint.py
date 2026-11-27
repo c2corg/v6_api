@@ -10,7 +10,7 @@ from c2corg_api.schemas.document import (
     document_children,
     geometry_schema,
 )
-from c2corg_api.schemas.types import Bool, Int, Map, OneOf, Seq, Str
+from c2corg_api.schemas.types import Bool, Map, OneOf, Seq, SmallInt, Str
 
 WaypointGeometrySchema = geometry_schema(['POINT'])
 
@@ -25,16 +25,16 @@ class WaypointSchema(DocumentSchema):
     locales: Seq(WaypointLocaleSchema) = []
     geometry: Map(WaypointGeometrySchema) = None
     waypoint_type: OneOf(a.waypoint_types)
-    elevation: Int = None
-    prominence: Int = None
-    length: Int = None
-    height_median: Int = None
-    elevation_min: Int = None
-    routes_quantity: Int = None
-    capacity: Int = None
-    slope: Int = None
-    height_max: Int = None
-    capacity_staffed: Int = None
+    elevation: SmallInt = None
+    prominence: SmallInt = None
+    length: SmallInt = None
+    height_median: SmallInt = None
+    elevation_min: SmallInt = None
+    routes_quantity: SmallInt = None
+    capacity: SmallInt = None
+    slope: SmallInt = None
+    height_max: SmallInt = None
+    capacity_staffed: SmallInt = None
     climbing_outdoor_types: Seq(OneOf(a.climbing_outdoor_types)) = None
     climbing_indoor_types: Seq(OneOf(a.climbing_indoor_types)) = None
     public_transportation_types: Seq(OneOf(a.public_transportation_types)) = None
@@ -66,11 +66,11 @@ class WaypointSchema(DocumentSchema):
     climbing_rating_max: OneOf(a.climbing_ratings) = None
     climbing_rating_min: OneOf(a.climbing_ratings) = None
     climbing_rating_median: OneOf(a.climbing_ratings) = None
-    height_min: Int = None
+    height_min: SmallInt = None
     equipment_ratings: Seq(OneOf(a.equipment_ratings)) = None
     slackline_types: Seq(OneOf(a.slackline_types)) = None
-    slackline_length_min: Int = None
-    slackline_length_max: Int = None
+    slackline_length_min: SmallInt = None
+    slackline_length_max: SmallInt = None
 
 
 WaypointCreateSchema = create_schema(WaypointSchema, AssociationsSchema)

@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from sqlalchemy.orm import joinedload
@@ -6,6 +7,7 @@ from sqlalchemy.sql.expression import and_, or_, union
 
 from c2corg_api.models import document_locale_types, document_types, es_sync
 from c2corg_api.models.area import Area
+from c2corg_api.models.article import ARTICLE_TYPE
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.association_views import (
     WaypointsForOutingsView,
@@ -13,19 +15,29 @@ from c2corg_api.models.association_views import (
 )
 from c2corg_api.models.document import Document, DocumentGeometry
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.document_tag import DocumentTagLog
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
+from c2corg_api.models.favourite import FavouriteLog
 from c2corg_api.models.outing import OUTING_TYPE, Outing
 from c2corg_api.models.route import ROUTE_TYPE, Route
 from c2corg_api.models.user import User
 from c2corg_api.models.user_profile import USERPROFILE_TYPE
-from c2corg_api.models.utils import windowed_query
+from c2corg_api.models.utils import chunked_query, windowed_query
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.scripts.es.es_batch import ElasticBatch
 from c2corg_api.search import elasticsearch_config, search_documents
 from c2corg_api.views.document_listings import add_load_for_profiles
 
 log = logging.getLogger(__name__)
+
+# The change timestamps (`written_at`, `deleted_at`...) are the PostgreSQL
+# `now()` of the writing transaction: its START time. A transaction that
+# started before a sync but commits after it gets a timestamp older than the
+# `last_update` saved by that sync, and no later sync would see it: the
+# document would never be (un)indexed. Re-reading a window before
+# `last_update` catches those late commits; (re)indexing and deleting are
+# idempotent, so reading a change twice is harmless. 10 minutes is well above
+# the request timeout (120 s) of the API.
+SYNC_OVERLAP = datetime.timedelta(minutes=10)
 
 
 def sync_es(session, batch_size=1000):
@@ -38,20 +50,22 @@ def sync_es(session, batch_size=1000):
             'initial import into ElasticSearch'
         )
 
+    since = last_update - SYNC_OVERLAP
+
     # get all documents that have changed since the last update
     changed_documents = (
-        get_changed_documents(session, last_update)
-        + get_changed_users(session, last_update)
-        + get_changed_documents_for_associations(session, last_update)
-        + get_deleted_locale_documents(session, last_update)
-        + get_tagged_documents(session, last_update)
+        get_changed_documents(session, since)
+        + get_changed_users(session, since)
+        + get_changed_documents_for_associations(session, since)
+        + get_deleted_locale_documents(session, since)
+        + get_favourite_routes(session, since)
     )
     log.info(f'Number of changed documents: {len(changed_documents)}')
     if changed_documents:
         sync_documents(session, changed_documents, batch_size)
 
     # get list of documents deleted since the last update
-    deleted_documents = get_deleted_documents(session, last_update)
+    deleted_documents = get_deleted_documents(session, since)
     log.info(f'Number of deleted documents: {len(deleted_documents)}')
     if deleted_documents:
         sync_deleted_documents(session, deleted_documents, batch_size)
@@ -125,6 +139,7 @@ def get_changed_routes_from_associations(session, last_update):
         get_changed_routes_and_outings_wr(session, last_update)
         + get_changed_routes_and_outings_ww(session, last_update)
         + get_changed_outings_ro_uo(session, last_update)
+        + get_changed_outings_oc(session, last_update)
     )
 
 
@@ -313,6 +328,30 @@ def get_changed_outings_ro_uo(session, last_update):
     )
 
 
+def get_changed_outings_oc(session, last_update):
+    """Return the outings whose article associations changed.
+
+    E.g. when an association between outing O1 and article C1 is created,
+    outing O1 has to be updated so that C1 is listed under
+    `associated_articles_ids`. The outing is the parent of the association.
+    """
+    return (
+        session.query(
+            AssociationLog.parent_document_id.label('outing_id'),
+            literal(OUTING_TYPE).label('type'),
+        )
+        .filter(
+            and_(
+                AssociationLog.parent_document_type == OUTING_TYPE,
+                AssociationLog.child_document_type == ARTICLE_TYPE,
+            )
+        )
+        .filter(AssociationLog.written_at >= last_update)
+        .group_by('outing_id', 'type')
+        .all()
+    )
+
+
 def get_deleted_locale_documents(session, last_update):
     """Return the ids of documents that had locales deleted since the last update."""
     return (
@@ -332,11 +371,13 @@ def get_deleted_documents(session, last_update):
     )
 
 
-def get_tagged_documents(session, last_update):
-    """Return the ids of documents tagged/untagged since the last update."""
+def get_favourite_routes(session, last_update):
+    """Return the routes added to or removed from favourites since the last update."""
+    # only the routes have the users having them in favourites in the index
     return (
-        session.query(DocumentTagLog.document_id, DocumentTagLog.document_type)
-        .filter(DocumentTagLog.written_at >= last_update)
+        session.query(FavouriteLog.document_id, FavouriteLog.document_type)
+        .filter(FavouriteLog.written_at >= last_update)
+        .filter(FavouriteLog.document_type == ROUTE_TYPE)
         .all()
     )
 
@@ -348,10 +389,6 @@ def sync_documents(session, changed_documents, batch_size):
         docs_per_type = get_documents_per_type(changed_documents)
         add_dependent_documents(session, docs_per_type)
         for doc_type, document_ids in docs_per_type.items():
-            if doc_type not in search_documents:
-                # some document types (e.g. coverages) are not indexed
-                logging.warning(f'Document type {doc_type} is not indexed')
-                continue
             if document_ids:
                 docs = get_documents(session, doc_type, batch_size, document_ids)
                 create_search_documents(doc_type, docs, batch)
@@ -415,8 +452,6 @@ def get_documents(
     base_query = session.query(clazz)
     if ignore_redirects:
         base_query = base_query.filter(clazz.redirects_to.is_(None))
-    if document_ids:
-        base_query = base_query.filter(clazz.document_id.in_(document_ids))
 
     locale_fields = [locales_clazz.title]
     if clazz == Route:
@@ -424,7 +459,11 @@ def get_documents(
 
     base_query = base_query.options(
         joinedload(clazz.locales.of_type(locales_clazz)).load_only(*locale_fields)
-    ).options(joinedload(clazz.geometry).load_only(DocumentGeometry.lon_lat))
+    ).options(
+        joinedload(clazz.geometry).load_only(
+            DocumentGeometry.lon_lat, DocumentGeometry.has_geom_detail
+        )
+    )
 
     if clazz != Area:
         base_query = base_query.options(
@@ -447,6 +486,10 @@ def get_documents(
 
     base_query = add_load_for_profiles(base_query, clazz)
 
+    if document_ids:
+        # the documents changed since the last sync: query only those
+        return chunked_query(base_query, Document.document_id, document_ids, batch_size)
+    # all the documents (fill_index)
     return windowed_query(base_query, Document.document_id, batch_size)
 
 
@@ -470,6 +513,8 @@ association_types_to_check = {
     (ROUTE_TYPE, OUTING_TYPE),
     # needed to update user ids for outings
     (USERPROFILE_TYPE, OUTING_TYPE),
+    # needed to update article ids for outings
+    (OUTING_TYPE, ARTICLE_TYPE),
 }
 
 

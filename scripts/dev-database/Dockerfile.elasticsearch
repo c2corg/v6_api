@@ -1,0 +1,12 @@
+# Elasticsearch 2.4 for the dev database: the stage `base` is the plain server (what publish.sh fills),
+# the last stage ships the index built from the database of the same publication.
+FROM docker.io/elasticsearch:2.4.6 AS base
+
+RUN /usr/share/elasticsearch/bin/plugin install --batch analysis-icu \
+ && mkdir /esdata && chown elasticsearch:elasticsearch /esdata
+
+# The data is not in the data directory of the image, which is a volume: what is copied there during a
+# build is lost. A named volume mounted on /esdata starts from this content.
+FROM base
+COPY --chown=elasticsearch:elasticsearch esdata /esdata
+CMD ["elasticsearch", "-Des.path.data=/esdata"]

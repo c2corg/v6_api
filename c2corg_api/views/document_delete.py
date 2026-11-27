@@ -1,5 +1,4 @@
-from cornice.resource import resource
-from sqlalchemy.sql.expression import and_, exists, or_, over
+from sqlalchemy.sql.expression import and_, exists, or_, over, select
 from sqlalchemy.sql.functions import func
 
 from c2corg_api.models import DBSession, article, image
@@ -8,7 +7,7 @@ from c2corg_api.models.article import ARTICLE_TYPE, ArchiveArticle, Article
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.book import BOOK_TYPE, ArchiveBook, Book
 from c2corg_api.models.cache_version import CacheVersion, update_cache_version_full
-from c2corg_api.models.coverage import COVERAGE_TYPE, Coverage
+from c2corg_api.models.common.attributes import image_types
 from c2corg_api.models.document import (
     ArchiveDocument,
     ArchiveDocumentGeometry,
@@ -21,12 +20,13 @@ from c2corg_api.models.document import (
 from c2corg_api.models.document_history import (
     DocumentVersion,
     HistoryMetaData,
+    get_creators,
     has_been_created_by,
-    is_less_than_24h_old,
+    is_in_deletion_period,
 )
-from c2corg_api.models.document_tag import DocumentTag, DocumentTagLog
 from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.es_sync import ESDeletedDocument, ESDeletedLocale
+from c2corg_api.models.favourite import Favourite, FavouriteLog
 from c2corg_api.models.feed import DocumentChange, update_langs_of_changes
 from c2corg_api.models.image import IMAGE_TYPE, ArchiveImage, Image
 from c2corg_api.models.outing import (
@@ -44,6 +44,7 @@ from c2corg_api.models.route import (
     RouteLocale,
 )
 from c2corg_api.models.topo_map_association import TopoMapAssociation
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import (
     WAYPOINT_TYPE,
     ArchiveWaypoint,
@@ -59,9 +60,14 @@ from c2corg_api.models.xreport import (
     XreportLocale,
 )
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.document_links import linking_documents
+from c2corg_api.views.document_trash import keep_deleted_document, keep_deleted_locale
 from c2corg_api.views.image import delete_all_files_for_image
+from c2corg_api.views.image_embeds import (
+    embedding_documents,
+    images_embedded_elsewhere,
+)
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import validate_id, validate_lang
 
 
@@ -90,7 +96,6 @@ def validate_document_type(request, **kwargs):
         ARTICLE_TYPE,
         BOOK_TYPE,
         XREPORT_TYPE,
-        COVERAGE_TYPE,
     ):
         request.errors.add(
             'querystring', 'document_id', 'Unsupported type when deleting document'
@@ -147,6 +152,17 @@ def validate_document(request, **kwargs):
                 'it is the only route associated to some outings.',
             )
             return
+
+
+def _has_other_users(outing_id, user_id):
+    """Tell whether other users than this one are linked to the outing."""
+    return DBSession.query(
+        exists().where(
+            Association.parent_document_type == USERPROFILE_TYPE,
+            Association.child_document_id == outing_id,
+            Association.parent_document_id != user_id,
+        )
+    ).scalar()
 
 
 def _is_main_waypoint_of_route(document_id):
@@ -224,11 +240,11 @@ def validate_requestor(request, **kwargs):
         )
         return
 
-    if not is_less_than_24h_old(document_id):
+    if not is_in_deletion_period(document_id):
         request.errors.add(
             'querystring',
             'document_id',
-            'Only document less than 24h old can be deleted',
+            'Only documents less than 30 days old can be deleted',
         )
         return
 
@@ -240,6 +256,13 @@ def validate_requestor(request, **kwargs):
                 'querystring',
                 'document_id',
                 'Only the initial author can delete this document',
+            )
+        elif document_type == OUTING_TYPE and _has_other_users(document_id, user_id):
+            # the outing is theirs too: its author unlinks them first
+            request.errors.add(
+                'querystring',
+                'document_id',
+                'This outing has other participants: unlink them first',
             )
         return
 
@@ -255,131 +278,269 @@ def validate_requestor(request, **kwargs):
     )
 
 
-class DeleteBase(ACLDefault):
-    def _delete(self, document_id, document_type):
-        if document_type == IMAGE_TYPE:
-            # Files are actually removed only if the transaction succeeds
-            delete_all_files_for_image(document_id, self.request)
+def _delete(request, document_id, document_type, keep=True):
+    # kept a while, to be restored by a moderator (see views.document_trash),
+    # unless the deletion must leave nothing (e.g. the erasure of an account)
+    image_ids = []
+    if keep:
+        # The erasure of an account deletes each document of the user itself
+        # (scripts/users/process_removals.py): no image deleted with them.
+        image_ids = personal_images_deleted_with(request, document_id, document_type)
+        keep_deleted_document(request, document_id, document_type, image_ids)
 
-        self._delete_document(document_id, document_type)
+    for image_id in image_ids:
+        delete_all_files_for_image(image_id, request)
+        _delete_document(request, image_id, IMAGE_TYPE)
+        update_deleted_documents_list(image_id, IMAGE_TYPE)
 
-        update_deleted_documents_list(document_id, document_type)
-        notify_es_syncer(self.request.registry.queue_config)
+    if document_type == IMAGE_TYPE:
+        # Files are actually removed only if the transaction succeeds
+        delete_all_files_for_image(document_id, request)
 
-        return {}
+    _delete_document(request, document_id, document_type)
 
-    def _delete_document(self, document_id, document_type, redirecting=False):
-        # Check if documents are redirecting (merged) to the document to delete
-        # If yes, delete them first.
-        self._remove_merged_documents(document_id, document_type)
+    update_deleted_documents_list(document_id, document_type)
+    notify_es_syncer(request.registry.queue_config)
 
-        remove_from_cache(document_id)
+    return {}
 
-        # Remove associations and update cache of formerly associated docs
-        update_cache_version_full(document_id, document_type)
-        _remove_associations(document_id)
-        _remove_tags(document_id)
 
-        clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
-            document_type
+def _images_linked_only_to(document_id):
+    """Return the images linked to this document and to no other: {id: type}."""
+    linked = (
+        select(Association.child_document_id)
+        .where(
+            Association.parent_document_id == document_id,
+            Association.child_document_type == IMAGE_TYPE,
         )
-
-        if not redirecting:
-            _remove_from_feed(document_id)
-
-        if not redirecting and document_type == IMAGE_TYPE:
-            # Remove the references of this image from the feed
-            _remove_image_from_feed(document_id)
-
-        if document_type == WAYPOINT_TYPE:
-            _remove_waypoint_from_routes_archives_main_waypoint_id(document_id)
-        remove_whole_document(
-            document_id, clazz, clazz_locale, archive_clazz, archive_clazz_locale
+        .union(
+            select(Association.parent_document_id).where(
+                Association.child_document_id == document_id,
+                Association.parent_document_type == IMAGE_TYPE,
+            )
         )
-
-    def _remove_merged_documents(self, document_id, document_type):
-        merged_document_ids = [
-            row[0]
-            for row in DBSession.query(ArchiveDocument.document_id)
-            .filter(ArchiveDocument.redirects_to == document_id)
-            .all()
-        ]
-        for merged_document_id in merged_document_ids:
-            self._delete_document(merged_document_id, document_type, True)
-
-
-@resource(path='/documents/delete/{id}', cors_policy=cors_policy)
-class DeleteDocumentRest(DeleteBase):
-    @restricted_json_view(
-        permission='authenticated',
-        validators=[
-            validate_id,
-            validate_document_type,
-            validate_requestor,
-            validate_document,
-        ],
     )
-    def delete(self):
-        """
-        Delete a document.
-
-        Request:
-            `DELETE` `/documents/delete/{id}`
-        """
-        document_id = self.request.validated['id']
-        document_type = self.request.validated['document_type']
-
-        # Note: if an error occurs while deleting, SqlAlchemy will
-        # automatically cancel all DB changes.
-
-        return self._delete(document_id, document_type)
-
-
-@resource(path='/documents/delete/{id}/{lang}', cors_policy=cors_policy)
-class DeleteDocumentLocaleRest(DeleteBase):
-    @restricted_json_view(
-        permission='moderator',
-        validators=[
-            validate_id,
-            validate_lang,
-            validate_document_type,
-            validate_document,
-        ],
-    )
-    def delete(self):
-        """
-        Delete a document locale.
-
-        Request:
-            `DELETE` `/documents/delete/{id}/{lang}`
-        """
-        document_id = self.request.validated['id']
-        document_type = self.request.validated['document_type']
-        lang = self.request.validated['lang']
-
-        # Note: if an error occurs while deleting, SqlAlchemy will
-        # automatically cancel all DB changes.
-
-        # If only one locale is available, deleting it implies to remove
-        # the whole document.
-        if self.request.validated['is_only_locale']:
-            return self._delete(document_id, document_type)
-
-        clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
-            document_type
+    other_link = exists().where(
+        or_(
+            and_(
+                Association.parent_document_id == Image.document_id,
+                Association.child_document_id != document_id,
+            ),
+            and_(
+                Association.child_document_id == Image.document_id,
+                Association.parent_document_id != document_id,
+            ),
         )
+    )
+    rows = DBSession.execute(
+        select(Image.document_id, Image.image_type).where(
+            Image.document_id.in_(linked), ~other_link
+        )
+    )
+    return dict(rows.all())
 
-        _remove_locale_versions(document_id, lang)
-        _remove_archive_locale(archive_clazz_locale, document_id, lang)
-        _remove_locale(clazz_locale, document_id, lang)
-        update_langs_of_changes(document_id)
 
-        update_cache_version_full(document_id, document_type)
+def personal_images_deleted_with(request, document_id, document_type, images=None):
+    """Return the ids of the personal images deleted with a document."""
+    # The personal images linked to this document only, uploaded by its
+    # author (e.g. the photos of an outing), are deleted with it, kept in the
+    # same entry of the deleted documents, and restored with it. The other
+    # images linked to it stay, without the link: the collaborative ones and
+    # those of other users are listed for the moderators (GET /images/orphans),
+    # as are the personal images shown in the text of another document.
+    # `images`: the result of _images_linked_only_to, when already read.
+    if document_type == IMAGE_TYPE:
+        return []
+    if images is None:
+        images = _images_linked_only_to(document_id)
+    image_ids = [i for i, image_type in images.items() if image_type == 'personal']
+    if not image_ids:
+        return []
+    creators = get_creators([document_id, *image_ids])
+    author_id = creators.get(document_id, {}).get('user_id')
+    image_ids = [
+        image_id
+        for image_id in image_ids
+        if author_id is not None
+        and creators.get(image_id, {}).get('user_id') == author_id
+    ]
+    if not request.has_permission('moderator'):
+        # only the images the user could delete (see validate_requestor)
+        image_ids = [i for i in image_ids if is_in_deletion_period(i)]
+    # an image shown in the text of another document ([img=ID]), or linked
+    # from it ([[images/ID|label]]), stays
+    kept = images_embedded_elsewhere(image_ids, document_id) | set(
+        linking_documents(image_ids, IMAGE_TYPE, excluded_document_id=document_id)
+    )
+    return sorted(i for i in image_ids if i not in kept)
 
-        update_deleted_locales_list(document_id, document_type, lang)
-        notify_es_syncer(self.request.registry.queue_config)
 
-        return {}
+def read_images_of_deletion(request):
+    """Tell what the deletion of a document does to the images linked to it.
+
+    Request:
+        `GET` `/documents/delete/{id}/images`
+
+    Response: how many images are deleted with it, and how many stay linked
+    to no document, by type; and the texts of other documents that show it
+    (an image, [img=ID]) or link to it ([[type/ID|label]], a URL): they break
+    (shown before deleting):
+
+        {'deleted': 3,
+         'orphaned': {'collaborative': 2, 'personal': 1, 'copyright': 0},
+         'embedded_in': [{'document_id': 12, 'document_type': 'r',
+                          'title': '...', 'langs': ['fr']}],
+         'linked_from': [...]}
+    """
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
+    images = _images_linked_only_to(document_id)
+    deleted = set(
+        personal_images_deleted_with(request, document_id, document_type, images)
+    )
+    orphaned = dict.fromkeys(image_types, 0)
+    for image_id, image_type in images.items():
+        if image_id not in deleted and image_type in orphaned:
+            orphaned[image_type] += 1
+    embedded_in = (
+        embedding_documents([document_id]).get(document_id, [])
+        if document_type == IMAGE_TYPE
+        else []
+    )
+    linked_from = linking_documents([document_id], document_type).get(document_id, [])
+    return {
+        'deleted': len(deleted),
+        'orphaned': orphaned,
+        'embedded_in': embedded_in,
+        'linked_from': linked_from,
+    }
+
+
+def _delete_document(request, document_id, document_type, redirecting=False):
+    # Check if documents are redirecting (merged) to the document to delete
+    # If yes, delete them first.
+    _remove_merged_documents(request, document_id, document_type)
+    # the old versions of the documents unmerged since still redirect to it
+    _remove_redirects_of_archives(document_id)
+
+    remove_from_cache(document_id)
+
+    # Remove associations and update cache of formerly associated docs
+    update_cache_version_full(document_id, document_type)
+    _remove_associations(document_id)
+    _remove_favourites(document_id)
+
+    clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
+        document_type
+    )
+
+    if not redirecting:
+        _remove_from_feed(document_id)
+
+    if document_type == IMAGE_TYPE:
+        # Remove the references of this image from the feed: also for an image
+        # merged into the deleted one (a copy shown in the feed of its upload)
+        _remove_image_from_feed(document_id)
+
+    if document_type == WAYPOINT_TYPE:
+        _remove_waypoint_from_routes_archives_main_waypoint_id(document_id)
+    remove_whole_document(
+        document_id, clazz, clazz_locale, archive_clazz, archive_clazz_locale
+    )
+
+
+def _remove_redirects_of_archives(document_id):
+    DBSession.query(ArchiveDocument).filter(
+        ArchiveDocument.redirects_to == document_id
+    ).update({ArchiveDocument.redirects_to: None}, synchronize_session=False)
+
+
+def _remove_merged_documents(request, document_id, document_type):
+    # the documents redirecting to this one now: not those whose merge was
+    # undone since (views.document_unmerge), whose old versions still redirect
+    # (the same as views.document_trash._capture_document)
+    merged_document_ids = [
+        row[0]
+        for row in DBSession.query(Document.document_id)
+        .filter(Document.redirects_to == document_id)
+        .all()
+    ]
+    for merged_document_id in merged_document_ids:
+        _delete_document(request, merged_document_id, document_type, True)
+
+
+@write(
+    validators=[
+        validate_id,
+        validate_document_type,
+        validate_requestor,
+        validate_document,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def delete_document(request):
+    """
+    Delete a document.
+
+    Request:
+        `DELETE` `/documents/delete/{id}`
+    """
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
+
+    # Note: if an error occurs while deleting, SqlAlchemy will
+    # automatically cancel all DB changes.
+
+    return _delete(request, document_id, document_type)
+
+
+@write(
+    validators=[
+        validate_id,
+        validate_lang,
+        validate_document_type,
+        validate_document,
+    ],
+    permission='moderator',
+    json=True,
+)
+def delete_document_locale(request):
+    """
+    Delete a document locale.
+
+    Request:
+        `DELETE` `/documents/delete/{id}/{lang}`
+    """
+    document_id = request.validated['id']
+    document_type = request.validated['document_type']
+    lang = request.validated['lang']
+
+    # Note: if an error occurs while deleting, SqlAlchemy will
+    # automatically cancel all DB changes.
+
+    # If only one locale is available, deleting it implies to remove
+    # the whole document.
+    if request.validated['is_only_locale']:
+        return _delete(request, document_id, document_type)
+
+    keep_deleted_locale(request, document_id, document_type, lang)
+
+    clazz, clazz_locale, archive_clazz, archive_clazz_locale = _get_models(
+        document_type
+    )
+
+    _remove_locale_versions(document_id, lang)
+    _remove_archive_locale(archive_clazz_locale, document_id, lang)
+    _remove_locale(clazz_locale, document_id, lang)
+    update_langs_of_changes(document_id)
+
+    update_cache_version_full(document_id, document_type)
+
+    update_deleted_locales_list(document_id, document_type, lang)
+    notify_es_syncer(request.registry.queue_config)
+
+    return {}
 
 
 def remove_whole_document(
@@ -412,8 +573,6 @@ def _get_models(document_type):
         return Article, None, ArchiveArticle, None
     if document_type == BOOK_TYPE:
         return Book, None, ArchiveBook, None
-    if document_type == COVERAGE_TYPE:
-        return Coverage, None, ArchiveDocument, None
     if document_type == XREPORT_TYPE:
         return Xreport, XreportLocale, ArchiveXreport, ArchiveXreportLocale
     raise AssertionError(f'unexpected document type {document_type}')
@@ -435,11 +594,23 @@ def _remove_versions(document_id):
     DBSession.query(DocumentVersion).filter(
         DocumentVersion.document_id == document_id
     ).delete()
-    DBSession.execute(
-        HistoryMetaData.__table__.delete().where(
-            HistoryMetaData.id.in_(history_metadata_ids)
+    _remove_unused_history_metadata(history_metadata_ids)
+
+
+def _remove_unused_history_metadata(history_metadata_ids):
+    """Remove the history metadata entries no version refers to any more."""
+    # an entry may be shared with the versions of other documents (documents
+    # changed in one changeset, as the migration from v5 did): those stay
+    if history_metadata_ids:
+        DBSession.execute(
+            HistoryMetaData.__table__.delete()
+            .where(HistoryMetaData.id.in_(history_metadata_ids))
+            .where(
+                ~exists().where(
+                    DocumentVersion.history_metadata_id == HistoryMetaData.id
+                )
+            )
         )
-    )
 
 
 def _remove_locale_versions(document_id, lang):
@@ -471,12 +642,7 @@ def _remove_locale_versions(document_id, lang):
         DocumentVersion.document_id == document_id
     ).filter(DocumentVersion.lang == lang).delete()
 
-    if len(history_metadata_ids):
-        DBSession.execute(
-            HistoryMetaData.__table__.delete().where(
-                HistoryMetaData.id.in_(history_metadata_ids)
-            )
-        )
+    _remove_unused_history_metadata(history_metadata_ids)
 
 
 def _remove_archive_locale(archive_clazz_locale, document_id, lang=None):
@@ -633,10 +799,10 @@ def _remove_associations(document_id):
     ).delete()
 
 
-def _remove_tags(document_id):
-    DBSession.query(DocumentTag).filter(DocumentTag.document_id == document_id).delete()
-    DBSession.query(DocumentTagLog).filter(
-        DocumentTagLog.document_id == document_id
+def _remove_favourites(document_id):
+    DBSession.query(Favourite).filter(Favourite.document_id == document_id).delete()
+    DBSession.query(FavouriteLog).filter(
+        FavouriteLog.document_id == document_id
     ).delete()
 
 

@@ -1,0 +1,168 @@
+{
+  "body": {
+    "bulletins": [
+      {
+        "avalancheActivity": {
+          "comment": "str",
+          "highlights": "str"
+        },
+        "avalancheProblems": [
+          {
+            "problemType": "str"
+          }
+        ],
+        "bulletinID": "str",
+        "customData": {
+          "ALBINA": {
+            "mainDate": "str"
+          },
+          "MeteoFrance": {
+            "avalancheProneLocation": {
+              "aspects": [
+                "str"
+              ]
+            },
+            "dangerComment": "str",
+            "elevationThreshold": "int",
+            "headline": "str",
+            "history": {
+              "maxDangerRatings": [
+                {
+                  "date": "str",
+                  "value": "str"
+                }
+              ],
+              "newSnow": {
+                "days": [
+                  {
+                    "date": "str",
+                    "max": "int",
+                    "min": "int"
+                  }
+                ],
+                "elevation": "int"
+              },
+              "snowCover": [
+                {
+                  "date": "str",
+                  "levels": [
+                    {
+                      "elevation": "int",
+                      "north": "int",
+                      "south": "int"
+                    }
+                  ],
+                  "limitNorth": "int",
+                  "limitSouth": "int"
+                }
+              ]
+            },
+            "maxDangerRating": "str",
+            "naturalAvalanches": "str",
+            "newSnow": {
+              "days": [
+                {
+                  "date": "str",
+                  "max": "int",
+                  "min": "int",
+                  "precipitation": "int"
+                }
+              ],
+              "elevation": "int"
+            },
+            "snowCover": {
+              "date": "str",
+              "levels": [
+                {
+                  "elevation": "int",
+                  "north": "int",
+                  "south": "int"
+                }
+              ],
+              "limitNorth": "int",
+              "limitSouth": "int"
+            },
+            "triggeredAvalanches": "str",
+            "weather": {
+              "forecasts": [
+                {
+                  "freezingLevel": "int",
+                  "rainSnowLimit": "int",
+                  "time": "str",
+                  "weatherCode": "int",
+                  "wind": [
+                    {
+                      "direction": "str",
+                      "speed": "int"
+                    }
+                  ]
+                }
+              ],
+              "windElevations": [
+                "int"
+              ]
+            }
+          }
+        },
+        "dangerRatings": [
+          {
+            "elevation": {
+              "lowerBound": "str",
+              "upperBound": "str"
+            },
+            "mainValue": "str",
+            "validTimePeriod": "str"
+          }
+        ],
+        "lang": "str",
+        "publicationTime": "str",
+        "regions": [
+          {
+            "name": "str",
+            "regionID": "str"
+          }
+        ],
+        "snowpackStructure": {
+          "comment": "str"
+        },
+        "source": {
+          "provider": {
+            "name": "str",
+            "website": "str"
+          }
+        },
+        "tendency": [
+          {
+            "comment": "str",
+            "customData": {
+              "MeteoFrance": {
+                "maxDangerRating": "str"
+              }
+            },
+            "highlights": "str",
+            "tendencyType": "str",
+            "validTime": {
+              "endTime": "str",
+              "startTime": "str"
+            }
+          }
+        ],
+        "unscheduled": "bool",
+        "validTime": {
+          "endTime": "str",
+          "startTime": "str"
+        },
+        "weatherForecast": {
+          "comment": "str"
+        }
+      }
+    ]
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "http://localhost:6553",
+    "Access-Control-Expose-Headers": "Content-Type",
+    "Cache-Control": "public, max-age=300",
+    "Content-Type": "application/json"
+  },
+  "status": 200
+}

@@ -1,0 +1,47 @@
+{
+  "source": "skitourenportal",
+  "recorded_at": "2026-11-25",
+  "synthetic": false,
+  "note": "Recorded once on 2026-11-25 with the c2c user agent (robots.txt allows everything): the first listing page of each of the 5 portal pages, plus page 2 of Salzburg. Trimmed to what the adapter reads (table rows, tour map markers, next link); trimmed by htmlparse.trim to REQUIRED_SELECTORS; author names and profile links replaced by 'user1', 'user2'... (PSEUDONYMISE_SELECTORS). A tour page (/<state>/beitrag/<id>) is the portal page again, /beitrag/<id> answers HTTP 500, /beitrag/<id>/detail holds only photos, text and comments: none is fetched.",
+  "entries": [
+    {
+      "url": "https://skitourenportal.eu/salzburg",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "salzburg.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/salzburg",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "salzburg_page2.html",
+      "params": {
+        "page": "2"
+      }
+    },
+    {
+      "url": "https://skitourenportal.eu/oberoesterreich",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "oberoesterreich.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/niederoesterreich",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "niederoesterreich.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/kaernten",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "kaernten.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/steiermark",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "steiermark.html"
+    }
+  ]
+}

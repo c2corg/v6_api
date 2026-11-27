@@ -1,0 +1,41 @@
+{
+ "350586": {
+  "ID": "350586",
+  "user_nicename": "user2",
+  "comment_date": "2026-11-23 00:00:00",
+  "comment_post_ID": "347",
+  "permalink": "https://www.gulliver.it/itinerari/pierre-punta-de-la-da-daillet/2026/11/23/350586/",
+  "content": "[text 586 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "route": {
+   "title": "Pierre (Pointe de la) da Daillet",
+   "region": {
+    "name": "Valle d'Aosta"
+   },
+   "district": "AO"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 13 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 16 chars]"
+   },
+   "snow_low": {
+    "value": "[text 7 chars]"
+   },
+   "snow_alt": {
+    "value": "1400"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ }
+}

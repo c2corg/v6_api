@@ -1,0 +1,17 @@
+{
+  "body": {
+    "errors": [
+      {
+        "description": "str",
+        "location": "str",
+        "name": "str"
+      }
+    ],
+    "status": "str"
+  },
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Content-Type-Options": "nosniff"
+  },
+  "status": 400
+}

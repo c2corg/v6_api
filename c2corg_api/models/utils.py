@@ -4,10 +4,12 @@ import sqlalchemy as sa
 from geoalchemy2 import WKBElement
 from geoalchemy2 import shape as ga_shape
 from geomet import wkb
-from shapely.geometry import LineString, MultiLineString, shape
+from shapely.geometry import GeometryCollection, LineString, MultiLineString, shape
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.expression import and_
 from sqlalchemy.sql.functions import func
+
+from c2corg_api.ext.wkb import is_empty_wkb
 
 
 def copy_attributes(obj_from, obj_to, attributes):
@@ -88,7 +90,11 @@ def wkb_to_shape(wkb_element):
     """
     if not isinstance(wkb_element, WKBElement):
         raise TypeError(f'expected a WKBElement, got {type(wkb_element).__name__}')
-    geometry = wkb.loads(bytes(wkb_element.data))
+    data = bytes(wkb_element.data)
+    if is_empty_wkb(data):
+        # geomet cannot read empty geometries
+        return GeometryCollection()
+    geometry = wkb.loads(data)
     return shape(_force_2d(geometry))
 
 
@@ -130,6 +136,16 @@ def windowed_query(q, column, windowsize):
     for whereclause in column_windows(q.session, column, windowsize):
         for row in q.filter(whereclause).order_by(column):
             yield row
+
+
+def chunked_query(q, column, values, chunksize):
+    """Run a Query on the given column values, one chunk of values at a time."""
+    # Unlike `windowed_query`, this reads only the rows of the given values:
+    # the windows of `column_windows` cover the whole table.
+    values = sorted(values)
+    for start in range(0, len(values), chunksize):
+        chunk = values[start : start + chunksize]
+        yield from q.filter(column.in_(chunk)).order_by(column)
 
 
 def column_windows(session, column, windowsize):

@@ -1,4 +1,7 @@
+from dataclasses import dataclass
 from unittest.mock import MagicMock, Mock
+
+import pytest
 
 from c2corg_api.models.user import User
 from c2corg_api.security.discourse_client import (
@@ -6,186 +9,193 @@ from c2corg_api.security.discourse_client import (
     get_discourse_client,
     set_discourse_client,
 )
-from c2corg_api.tests.views import BaseTestRest
+from c2corg_api.tests import assert_errors_contain, auth_headers, get_error, send_json
 
 
-class BaseBlockTest(BaseTestRest):
-    def setUp(self):
-        super().setUp()
-        # the Discourse client is global: restore it after the test, or the
-        # mock leaks into the tests that run after this one
-        self.original_discourse_client = get_discourse_client(self.settings)
-
-        self.contributor = self.session.get(User, self.global_userids['contributor'])
-        self.contributor2 = self.session.get(User, self.global_userids['contributor2'])
-        self.moderator = self.session.get(User, self.global_userids['moderator'])
-
-        self.contributor2.blocked = True
-        self.contributor2.ratelimit_times = 2
-
-        self.session.flush()
-        self.set_discourse_up()
-
-    def tearDown(self):
-        self.set_discourse_not_mocked()
-        super().tearDown()
-
-    def set_discourse_client_mock(self, client):
-        self.discourse_client = client
-        set_discourse_client(client)
-
-    def set_discourse_not_mocked(self):
-        self.set_discourse_client_mock(self.original_discourse_client)
-
-    def set_discourse_up(self):
-        mock = Mock()
-        mock.get_userid = MagicMock()
-        mock.suspend = MagicMock()
-        mock.unsuspend = MagicMock()
-        self.set_discourse_client_mock(mock)
-
-    def set_discourse_down(self):
-        mock = APIDiscourseClient(self.settings)
-        mock.get_userid = MagicMock(side_effect=Exception)
-        self.set_discourse_client_mock(mock)
-
-    def is_blocked(self, user_id):
-        user = self.session.get(User, user_id)
-        self.session.refresh(user)
-        return user.blocked
+@pytest.fixture(autouse=True)
+def discourse(settings):
+    """Mock the Discourse client; restore the real one after the test."""
+    # the Discourse client is global: without the restore, the mock leaks
+    # into the tests that run after this one
+    original = get_discourse_client(settings)
+    mock = Mock()
+    mock.get_userid = MagicMock()
+    mock.suspend = MagicMock()
+    mock.unsuspend = MagicMock()
+    set_discourse_client(mock)
+    yield mock
+    set_discourse_client(original)
 
 
-class TestUserBlockRest(BaseBlockTest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/users/block'
+def set_discourse_down(settings):
+    mock = APIDiscourseClient(settings)
+    mock.get_userid = MagicMock(side_effect=Exception)
+    set_discourse_client(mock)
 
-    def test_block_unauthorized(self):
-        self.app_post_json(self._prefix, {}, status=403)
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(self._prefix, {}, headers=headers, status=403)
+@dataclass
+class Docs:
+    """The documents of the tests, built by `docs`."""
 
-    def test_block(self):
-        request_body = {'user_id': self.contributor.id}
+    contributor: User
+    contributor2: User
+    moderator: User
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
 
-        assert self.is_blocked(self.contributor.id)
+@pytest.fixture(autouse=True)
+def docs(session, user_ids) -> Docs:
+    contributor = session.get(User, user_ids['contributor'])
+    contributor2 = session.get(User, user_ids['contributor2'])
+    moderator = session.get(User, user_ids['moderator'])
 
-    def test_block_already_blocked_user(self):
+    contributor2.blocked = True
+    contributor2.ratelimit_times = 2
+
+    session.flush()
+    return Docs(contributor=contributor, contributor2=contributor2, moderator=moderator)
+
+
+def is_blocked(session, user_id):
+    user = session.get(User, user_id)
+    session.refresh(user)
+    return user.blocked
+
+
+class TestUserBlockRest:
+    PREFIX = '/users/block'
+
+    def test_block_unauthorized(self, client):
+        send_json(client, 'post', self.PREFIX, {}, status=403)
+
+        headers = auth_headers(username='contributor')
+        send_json(client, 'post', self.PREFIX, {}, headers=headers, status=403)
+
+    def test_block(self, client, session, docs):
+        request_body = {'user_id': docs.contributor.id}
+
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=200, headers=headers
+        )
+
+        assert is_blocked(session, docs.contributor.id)
+
+    def test_block_already_blocked_user(self, client, session, docs):
         """Test that blocking an already blocked user does not raise an
         error.
         """
-        request_body = {'user_id': self.contributor.id}
+        request_body = {'user_id': docs.contributor.id}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
-
-        assert self.is_blocked(self.contributor.id)
-
-    def test_block_discourse_error(self):
-        self.set_discourse_down()
-
-        request_body = {'user_id': self.contributor.id}
-
-        headers = self.add_authorization_header(username='moderator')
-        body = self.app_post_json(
-            self._prefix, request_body, status=500, headers=headers
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=200, headers=headers
         )
-        self.assertErrorsContain(body.json, 'Internal Server Error')
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=200, headers=headers
+        )
 
-        assert not self.is_blocked(self.contributor.id)
+        assert is_blocked(session, docs.contributor.id)
 
-    def test_block_invalid_user_id(self):
+    def test_block_discourse_error(self, client, session, settings, docs):
+        set_discourse_down(settings)
+
+        request_body = {'user_id': docs.contributor.id}
+
+        headers = auth_headers(username='moderator')
+        body = send_json(
+            client, 'post', self.PREFIX, request_body, status=500, headers=headers
+        )
+        assert_errors_contain(body.json, 'Internal Server Error')
+
+        assert not is_blocked(session, docs.contributor.id)
+
+    def test_block_invalid_user_id(self, client):
         request_body = {'user_id': -1}
 
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers
+        headers = auth_headers(username='moderator')
+        response = send_json(
+            client, 'post', self.PREFIX, request_body, status=400, headers=headers
         )
 
         body = response.json
         assert body.get('status') == 'error'
         errors = body.get('errors')
-        assert self.get_error(errors, 'user_id') is not None
+        assert get_error(errors, 'user_id') is not None
 
 
-class TestUserUnblockRest(BaseBlockTest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/users/unblock'
+class TestUserUnblockRest:
+    PREFIX = '/users/unblock'
 
-    def test_block_unauthorized(self):
-        self.app_post_json(self._prefix, {}, status=403)
+    def test_block_unauthorized(self, client):
+        send_json(client, 'post', self.PREFIX, {}, status=403)
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app_post_json(self._prefix, {}, headers=headers, status=403)
+        headers = auth_headers(username='contributor')
+        send_json(client, 'post', self.PREFIX, {}, headers=headers, status=403)
 
-    def test_unblock(self):
-        request_body = {'user_id': self.contributor2.id}
-        assert self.is_blocked(self.contributor2.id)
-        assert self.contributor2.ratelimit_times != 0
+    def test_unblock(self, client, session, docs):
+        request_body = {'user_id': docs.contributor2.id}
+        assert is_blocked(session, docs.contributor2.id)
+        assert docs.contributor2.ratelimit_times != 0
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
-        assert not self.is_blocked(self.contributor2.id)
-        assert self.contributor2.ratelimit_times == 0
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=200, headers=headers
+        )
+        assert not is_blocked(session, docs.contributor2.id)
+        assert docs.contributor2.ratelimit_times == 0
 
-    def test_unblock_not_blocked_user(self):
+    def test_unblock_not_blocked_user(self, client, session, docs):
         """Test that unblocking a not blocked user does not raise an error."""
-        request_body = {'user_id': self.contributor.id}
+        request_body = {'user_id': docs.contributor.id}
 
-        headers = self.add_authorization_header(username='moderator')
-        self.app_post_json(self._prefix, request_body, status=200, headers=headers)
+        headers = auth_headers(username='moderator')
+        send_json(
+            client, 'post', self.PREFIX, request_body, status=200, headers=headers
+        )
 
-        assert not self.is_blocked(self.contributor.id)
+        assert not is_blocked(session, docs.contributor.id)
 
-    def test_unblock_invalid_user_id(self):
+    def test_unblock_invalid_user_id(self, client):
         request_body = {'user_id': -1}
 
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app_post_json(
-            self._prefix, request_body, status=400, headers=headers
+        headers = auth_headers(username='moderator')
+        response = send_json(
+            client, 'post', self.PREFIX, request_body, status=400, headers=headers
         )
 
         body = response.json
         assert body.get('status') == 'error'
         errors = body.get('errors')
-        assert self.get_error(errors, 'user_id') is not None
+        assert get_error(errors, 'user_id') is not None
 
-    def test_unblock_discourse_error(self):
-        self.set_discourse_down()
+    def test_unblock_discourse_error(self, client, session, settings, docs):
+        set_discourse_down(settings)
 
-        request_body = {'user_id': self.contributor2.id}
-        assert self.is_blocked(self.contributor2.id)
+        request_body = {'user_id': docs.contributor2.id}
+        assert is_blocked(session, docs.contributor2.id)
 
-        headers = self.add_authorization_header(username='moderator')
-        body = self.app_post_json(
-            self._prefix, request_body, status=500, headers=headers
+        headers = auth_headers(username='moderator')
+        body = send_json(
+            client, 'post', self.PREFIX, request_body, status=500, headers=headers
         )
-        self.assertErrorsContain(body.json, 'Internal Server Error')
+        assert_errors_contain(body.json, 'Internal Server Error')
 
-        assert self.is_blocked(self.contributor2.id)
+        assert is_blocked(session, docs.contributor2.id)
 
 
-class TestUserBlockedRest(BaseBlockTest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/users/blocked'
+class TestUserBlockedRest:
+    PREFIX = '/users/blocked'
 
-    def test_blocked_unauthorized(self):
-        self.app.get(self._prefix + '/123', status=403)
+    def test_blocked_unauthorized(self, client):
+        client.get(self.PREFIX + '/123', status=403)
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app.get(self._prefix, headers=headers, status=403)
+        headers = auth_headers(username='contributor')
+        client.get(self.PREFIX, headers=headers, status=403)
 
-    def test_blocked(self):
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app.get(
-            self._prefix + f'/{self.contributor2.id}',
+    def test_blocked(self, client, docs):
+        headers = auth_headers(username='moderator')
+        response = client.get(
+            self.PREFIX + f'/{docs.contributor2.id}',
             status=200,
             headers=headers,
         )
@@ -193,10 +203,10 @@ class TestUserBlockedRest(BaseBlockTest):
 
         assert body['blocked']
 
-    def test_blocked_not(self):
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app.get(
-            self._prefix + f'/{self.contributor.id}',
+    def test_blocked_not(self, client, docs):
+        headers = auth_headers(username='moderator')
+        response = client.get(
+            self.PREFIX + f'/{docs.contributor.id}',
             status=200,
             headers=headers,
         )
@@ -204,38 +214,36 @@ class TestUserBlockedRest(BaseBlockTest):
 
         assert not body['blocked']
 
-    def test_blocked_invalid_user_id(self):
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app.get(
-            self._prefix + '/invalid-user-id', status=400, headers=headers
+    def test_blocked_invalid_user_id(self, client):
+        headers = auth_headers(username='moderator')
+        response = client.get(
+            self.PREFIX + '/invalid-user-id', status=404, headers=headers
         )
 
+        # an id that is not a number: not found
         body = response.json
         assert body.get('status') == 'error'
-        errors = body.get('errors')
-        assert self.get_error(errors, 'id') is not None
+        assert body['errors'][0]['name'] == 'Not Found'
 
-    def test_blocked_wrong_user_id(self):
-        headers = self.add_authorization_header(username='moderator')
-        self.app.get(self._prefix + '/9999999999', status=400, headers=headers)
+    def test_blocked_wrong_user_id(self, client):
+        headers = auth_headers(username='moderator')
+        client.get(self.PREFIX + '/9999999999', status=400, headers=headers)
 
 
-class TestUserBlockedAllRest(BaseBlockTest):
-    def setUp(self):
-        super().setUp()
-        self._prefix = '/users/blocked'
+class TestUserBlockedAllRest:
+    PREFIX = '/users/blocked'
 
-    def test_blocked_unauthenticated(self):
-        self.app.get(self._prefix, status=403)
+    def test_blocked_unauthenticated(self, client):
+        client.get(self.PREFIX, status=403)
 
-        headers = self.add_authorization_header(username='contributor')
-        self.app.get(self._prefix, headers=headers, status=403)
+        headers = auth_headers(username='contributor')
+        client.get(self.PREFIX, headers=headers, status=403)
 
-    def test_blocked(self):
-        headers = self.add_authorization_header(username='moderator')
-        response = self.app.get(self._prefix, status=200, headers=headers)
+    def test_blocked(self, client, docs):
+        headers = auth_headers(username='moderator')
+        response = client.get(self.PREFIX, status=200, headers=headers)
         body = response.json
 
         blocked_users = body['blocked']
         assert 1 == len(blocked_users)
-        assert self.contributor2.id == blocked_users[0]['document_id']
+        assert docs.contributor2.id == blocked_users[0]['document_id']

@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+
+import pytest
 from dogpile.cache.api import NO_VALUE
 
 from c2corg_api.caching import cache_document_version
@@ -16,605 +19,702 @@ from c2corg_api.models.document_topic import DocumentTopic
 from c2corg_api.models.image import Image
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint
+from c2corg_api.tests import (
+    assert_error,
+    assert_required,
+    auth_headers,
+    errors_of,
+    send_json,
+)
 from c2corg_api.tests.search import reset_search_index
-from c2corg_api.tests.views import BaseDocumentTestRest
-from c2corg_api.views.document import DocumentRest
+from c2corg_api.tests.views import scenarios
+from c2corg_api.tests.views.scenarios import DocType
+from c2corg_api.views.document import create_new_version
+
+BOOKS = DocType('/books', BOOK_TYPE, Book, ArchiveBook, ArchiveDocumentLocale)
 
 
-class TestBookRest(BaseDocumentTestRest):
-    def setUp(self):
-        self.set_prefix_and_model(
-            '/books', BOOK_TYPE, Book, ArchiveBook, ArchiveDocumentLocale
-        )
-        BaseDocumentTestRest.setUp(self)
-        self._add_test_data()
+@dataclass
+class Docs:
+    """The documents of the tests, built by `docs`."""
 
-    def test_get_collection(self):
-        body = self.get_collection()
-        doc = body['documents'][0]
-        assert 'geometry' not in doc
+    book1: Book
+    locale_en: DocumentLocale
+    locale_fr: DocumentLocale
+    book1_version: DocumentVersion
+    book2: Book
+    book3: Book
+    book4: Book
+    waypoint1: Waypoint
+    waypoint2: Waypoint
+    article2: Article
+    image: Image
+    locale_en_img: DocumentLocale
+    locale_fr_img: DocumentLocale
+    image2: Image
+    route2: Route
+    route3: Route
 
-    def test_get_collection_paginated(self):
-        self.app.get('/books?offset=invalid', status=400)
 
-        self.assertResultsEqual(self.get_collection({'offset': 0, 'limit': 0}), [], 4)
+@pytest.fixture(autouse=True)
+def docs(session, user_ids) -> Docs:
+    book1 = Book(activities=['hiking'], book_types=['biography'])
+    locale_en = DocumentLocale(lang='en', title='Escalades au Thaurac')
+    locale_fr = DocumentLocale(lang='fr', title='Escalades au Thaurac')
 
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 1}), [self.book4.document_id], 4
-        )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 0, 'limit': 2}),
-            [self.book4.document_id, self.book3.document_id],
-            4,
-        )
-        self.assertResultsEqual(
-            self.get_collection({'offset': 1, 'limit': 2}),
-            [self.book3.document_id, self.book2.document_id],
-            4,
-        )
+    book1.locales.append(locale_en)
+    book1.locales.append(locale_fr)
 
-    def test_get_collection_lang(self):
-        self.get_collection_lang()
+    session.add(book1)
+    session.flush()
 
-    def test_get_collection_search(self):
-        reset_search_index(self.session)
+    user_id = user_ids['contributor']
+    create_new_version(book1, user_id)
+    book1_version = (
+        session.query(DocumentVersion)
+        .filter(DocumentVersion.document_id == book1.document_id)
+        .filter(DocumentVersion.lang == 'en')
+        .first()
+    )
 
-        self.assertResultsEqual(
-            self.get_collection_search({'l': 'en'}),
-            [self.book4.document_id, self.book1.document_id],
-            2,
-        )
+    book2 = Book(activities=['hiking'], book_types=['biography'])
+    session.add(book2)
+    book3 = Book(activities=['hiking'], book_types=['biography'])
+    session.add(book3)
+    book4 = Book(activities=['hiking'], book_types=['biography'])
+    book4.locales.append(DocumentLocale(lang='en', title='Escalades au Thaurac'))
+    book4.locales.append(DocumentLocale(lang='fr', title='Escalades au Thaurac'))
+    session.add(book4)
+    waypoint1 = Waypoint(waypoint_type='summit', elevation=2203)
+    session.add(waypoint1)
+    waypoint2 = Waypoint(
+        waypoint_type='climbing_outdoor',
+        elevation=2,
+        rock_types=[],
+        geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
+    )
+    session.add(waypoint2)
+    session.flush()
 
-        self.assertResultsEqual(
-            self.get_collection_search({'btyp': ['biography']}),
-            [
-                self.book4.document_id,
-                self.book3.document_id,
-                self.book2.document_id,
-                self.book1.document_id,
+    article2 = Article(
+        categories=['site_info'], activities=['hiking'], article_type='collab'
+    )
+    session.add(article2)
+    session.flush()
+
+    image = Image(
+        filename='image.jpg',
+        activities=['paragliding'],
+        height=1500,
+        image_type='collaborative',
+    )
+
+    locale_en_img = DocumentLocale(
+        lang='en',
+        title='Mont Blanc from the air',
+        description='...',
+        document_topic=DocumentTopic(topic_id=1),
+    )
+
+    locale_fr_img = DocumentLocale(
+        lang='fr', title='Mont Blanc du ciel', description='...'
+    )
+
+    image.locales.append(locale_en_img)
+    image.locales.append(locale_fr_img)
+
+    image.geometry = DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)')
+
+    session.add(image)
+    session.flush()
+
+    image2 = Image(filename='image2.jpg', activities=['paragliding'], height=1500)
+    session.add(image2)
+    session.flush()
+
+    route2 = Route(
+        activities=['skitouring'],
+        elevation_max=1500,
+        elevation_min=700,
+        height_diff_up=800,
+        height_diff_down=800,
+        durations='1',
+        locales=[
+            RouteLocale(
+                lang='en',
+                title='Mont Blanc from the air',
+                description='...',
+                gear='paraglider',
+            ),
+            RouteLocale(
+                lang='fr',
+                title='Mont Blanc du ciel',
+                description='...',
+                gear='paraglider',
+            ),
+        ],
+    )
+    session.add(route2)
+    session.flush()
+
+    route3 = Route(
+        activities=['skitouring'],
+        elevation_max=1500,
+        elevation_min=700,
+        height_diff_up=500,
+        height_diff_down=500,
+        durations='1',
+    )
+    session.add(route3)
+    session.flush()
+
+    # scenarios.add_association(self.session, Association.create(
+    #     parent_document=self.book1,
+    #     child_document=self.image2), user_id)
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=book1, child_document=route3),
+        user_id,
+    )
+    scenarios.add_association(
+        session,
+        Association.create(parent_document=book2, child_document=waypoint2),
+        user_id,
+    )
+    session.flush()
+    return Docs(
+        book1=book1,
+        locale_en=locale_en,
+        locale_fr=locale_fr,
+        book1_version=book1_version,
+        book2=book2,
+        book3=book3,
+        book4=book4,
+        waypoint1=waypoint1,
+        waypoint2=waypoint2,
+        article2=article2,
+        image=image,
+        locale_en_img=locale_en_img,
+        locale_fr_img=locale_fr_img,
+        image2=image2,
+        route2=route2,
+        route3=route3,
+    )
+
+
+def test_get_collection(client, session):
+    body = scenarios.get_collection(client, session, BOOKS)
+    doc = body['documents'][0]
+    assert 'geometry' not in doc
+
+
+def test_get_collection_paginated(client, session, docs):
+    client.get('/books?offset=invalid', status=422)
+
+    scenarios.assert_results_equal(
+        scenarios.get_collection(client, session, BOOKS, {'offset': 0, 'limit': 0}),
+        [],
+        4,
+    )
+
+    scenarios.assert_results_equal(
+        scenarios.get_collection(client, session, BOOKS, {'offset': 0, 'limit': 1}),
+        [docs.book4.document_id],
+        4,
+    )
+    scenarios.assert_results_equal(
+        scenarios.get_collection(client, session, BOOKS, {'offset': 0, 'limit': 2}),
+        [docs.book4.document_id, docs.book3.document_id],
+        4,
+    )
+    scenarios.assert_results_equal(
+        scenarios.get_collection(client, session, BOOKS, {'offset': 1, 'limit': 2}),
+        [docs.book3.document_id, docs.book2.document_id],
+        4,
+    )
+
+
+def test_get_collection_lang(client):
+    scenarios.get_collection_lang(client, BOOKS)
+
+
+def test_get_collection_search(client, session, docs):
+    reset_search_index(session)
+
+    scenarios.assert_results_equal(
+        scenarios.get_collection_search(client, BOOKS, {'l': 'en'}),
+        [docs.book4.document_id, docs.book1.document_id],
+        2,
+    )
+
+    scenarios.assert_results_equal(
+        scenarios.get_collection_search(client, BOOKS, {'btyp': ['biography']}),
+        [
+            docs.book4.document_id,
+            docs.book3.document_id,
+            docs.book2.document_id,
+            docs.book1.document_id,
+        ],
+        4,
+    )
+
+
+def test_get(client, docs):
+    body = scenarios.get(client, BOOKS, docs.book1, title=docs.locale_en.title)
+    assert 'book' not in body
+    assert 'geometry' not in body
+    assert body.get('geometry') is None
+    associations = body['associations']
+
+    assert 'articles' in associations
+    assert 'images' in associations
+    assert 'routes' in associations
+    assert 'waypoints' in associations
+
+    linked_routes = associations.get('routes')
+    assert len(linked_routes) == 1
+
+    linked_articles = associations.get('articles')
+    assert len(linked_articles) == 0
+
+    linked_images = associations.get('images')
+    assert len(linked_images) == 0
+
+
+def test_get_cooked(client, docs):
+    scenarios.get_cooked(client, BOOKS, docs.book1)
+
+
+def test_get_cooked_with_defaulting(client, docs):
+    scenarios.get_cooked_with_defaulting(client, BOOKS, docs.book1)
+
+
+def test_get_lang(client, docs):
+    scenarios.get_lang(client, BOOKS, docs.book1)
+
+
+def test_get_new_lang(client, docs):
+    scenarios.get_new_lang(client, BOOKS, docs.book1)
+
+
+def test_get_404(client):
+    scenarios.get_404(client, BOOKS)
+
+
+def test_get_version(client, docs):
+    scenarios.get_version(client, BOOKS, docs.book1, docs.book1_version)
+
+
+def test_get_version_etag(client, docs):
+    url = f'{BOOKS.prefix}/{docs.book1.document_id!s}/en/{docs.book1_version.id!s}'
+    response = client.get(url, status=200)
+
+    # check that the ETag header is set
+    headers = response.headers
+    etag = headers.get('ETag')
+    assert etag is not None
+
+    # then request the document again with the etag
+    headers = {'If-None-Match': etag}
+    client.get(url, status=304, headers=headers)
+
+
+def test_get_version_caching(client, docs):
+    url = f'{BOOKS.prefix}/{docs.book1.document_id!s}/en/{docs.book1_version.id!s}'
+    cache_key = '{}-{}'.format(
+        get_cache_key(docs.book1.document_id, 'en', BOOK_TYPE),
+        docs.book1_version.id,
+    )
+
+    cache_value = cache_document_version.get(cache_key)
+    assert cache_value == NO_VALUE
+
+    # check that the response is cached
+    client.get(url, status=200)
+
+    cache_value = cache_document_version.get(cache_key)
+    assert cache_value != NO_VALUE
+
+    # check that values are returned from the cache
+    fake_cache_value = {'document': 'fake doc'}
+    cache_document_version.set(cache_key, fake_cache_value)
+
+    response = client.get(url, status=200)
+    body = response.json
+    assert body == fake_cache_value
+
+
+def test_get_caching(client, docs):
+    scenarios.get_caching(client, BOOKS, docs.book1)
+
+
+def test_get_info(client, docs):
+    body, locale = scenarios.get_info(client, BOOKS, docs.book1, 'en')
+    assert locale.get('lang') == 'en'
+
+
+def test_get_info_best_lang(client, docs):
+    body, locale = scenarios.get_info(client, BOOKS, docs.book1, 'es')
+    assert locale.get('lang') == 'fr'
+
+
+def test_get_info_404(client):
+    scenarios.get_info_404(client, BOOKS)
+
+
+def test_post_error(client):
+    body = scenarios.post_error(client, BOOKS, {}, user='moderator')
+    errors = body.get('errors')
+    assert len(errors) == 2
+    assert_required(errors[0], 'locales')
+
+
+def test_post_invalid_enum_item(client):
+    # an unknown activity used to reach the database enum (500)
+    body = {
+        'activities': ['hiking', 'not-an-activity'],
+        'book_types': ['biography'],
+        'locales': [{'lang': 'en', 'title': 'Book'}],
+    }
+    headers = auth_headers(username='contributor')
+    response = send_json(
+        client, 'post', BOOKS.prefix, body, headers=headers, status=422
+    )
+    assert_error(
+        errors_of(response.json),
+        'activities.1',
+        f'"not-an-activity" is not one of {", ".join(activities)}',
+    )
+
+
+def test_post_missing_title(client):
+    body_post = {
+        'activities': ['hiking'],
+        'book_types': ['biography'],
+        'locales': [{'lang': 'en'}],
+    }
+    scenarios.post_missing_title(client, BOOKS, body_post, user='moderator')
+
+
+def test_post_non_whitelisted_attribute(client, session):
+    body = {
+        'book_types': ['biography'],
+        'protected': True,
+        'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
+    }
+    scenarios.post_non_whitelisted_attribute(
+        client, session, BOOKS, body, user='moderator'
+    )
+
+
+def test_post_missing_content_type(client):
+    scenarios.post_missing_content_type(client, BOOKS, {})
+
+
+def test_post_success(client, session, docs):
+    body = {
+        'document_id': 12345678,
+        'version': 98765432,
+        'activities': ['hiking'],
+        'book_types': ['biography'],
+        'author': 'NewAuthor',
+        'editor': 'NewEditor',
+        'isbn': '12345678',
+        'nb_pages': 150,
+        'publication_date': '1984',
+        'url': 'http://www.nowhere.to.find',
+        'associations': {
+            'waypoints': [{'document_id': docs.waypoint2.document_id}],
+            'articles': [{'document_id': docs.article2.document_id}],
+        },
+        'geometry': {
+            'version': 1,
+            'document_id': docs.waypoint2.document_id,
+            'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
+        },
+        'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
+    }
+    body, doc = scenarios.post_success(client, session, BOOKS, body, user='moderator')
+    version = doc.versions[0]
+
+    archive_book = version.document_archive
+    assert archive_book.activities == ['hiking']
+    assert archive_book.book_types == ['biography']
+
+    archive_locale = version.document_locales_archive
+    assert archive_locale.lang == 'en'
+    assert archive_locale.title == 'Escalades au Thaurac'
+
+    # check if geometry is not stored in database afterwards
+    assert doc.geometry is None
+
+    # check that a link to the associated waypoint is created
+    association_wp = session.get(
+        Association, (doc.document_id, docs.waypoint2.document_id)
+    )
+    assert association_wp is not None
+
+    association_wp_log = (
+        session.query(AssociationLog)
+        .filter(AssociationLog.parent_document_id == doc.document_id)
+        .filter(AssociationLog.child_document_id == docs.waypoint2.document_id)
+        .first()
+    )
+    assert association_wp_log is not None
+
+    # check that a link to the associated article is created
+    association_art = session.get(
+        Association, (doc.document_id, docs.article2.document_id)
+    )
+    assert association_art is not None
+
+    association_art_log = (
+        session.query(AssociationLog)
+        .filter(AssociationLog.parent_document_id == doc.document_id)
+        .filter(AssociationLog.child_document_id == docs.article2.document_id)
+        .first()
+    )
+    assert association_art_log is not None
+
+
+def test_put_wrong_document_id(client, docs):
+    body = {
+        'document': {
+            'document_id': '9999999',
+            'version': docs.book1.version,
+            'activities': ['hiking'],
+            'book_types': ['biography'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Escalades au Thaurac',
+                    'version': docs.locale_en.version,
+                }
             ],
-            4,
-        )
-
-    def test_get(self):
-        body = self.get(self.book1)
-        assert 'book' not in body
-        assert 'geometry' not in body
-        assert body.get('geometry') is None
-        associations = body['associations']
-
-        assert 'articles' in associations
-        assert 'images' in associations
-        assert 'routes' in associations
-        assert 'waypoints' in associations
-
-        linked_routes = associations.get('routes')
-        assert len(linked_routes) == 1
-
-        linked_articles = associations.get('articles')
-        assert len(linked_articles) == 0
-
-        linked_images = associations.get('images')
-        assert len(linked_images) == 0
-
-    def test_get_cooked(self):
-        self.get_cooked(self.book1)
-
-    def test_get_cooked_with_defaulting(self):
-        self.get_cooked_with_defaulting(self.book1)
-
-    def test_get_lang(self):
-        self.get_lang(self.book1)
-
-    def test_get_new_lang(self):
-        self.get_new_lang(self.book1)
-
-    def test_get_404(self):
-        self.get_404()
-
-    def test_get_version(self):
-        self.get_version(self.book1, self.book1_version)
-
-    def test_get_version_etag(self):
-        url = f'{self._prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
-        response = self.app.get(url, status=200)
-
-        # check that the ETag header is set
-        headers = response.headers
-        etag = headers.get('ETag')
-        assert etag is not None
-
-        # then request the document again with the etag
-        headers = {'If-None-Match': etag}
-        self.app.get(url, status=304, headers=headers)
-
-    def test_get_version_caching(self):
-        url = f'{self._prefix}/{self.book1.document_id!s}/en/{self.book1_version.id!s}'
-        cache_key = '{}-{}'.format(
-            get_cache_key(self.book1.document_id, 'en', BOOK_TYPE),
-            self.book1_version.id,
-        )
-
-        cache_value = cache_document_version.get(cache_key)
-        assert cache_value == NO_VALUE
-
-        # check that the response is cached
-        self.app.get(url, status=200)
-
-        cache_value = cache_document_version.get(cache_key)
-        assert cache_value != NO_VALUE
-
-        # check that values are returned from the cache
-        fake_cache_value = {'document': 'fake doc'}
-        cache_document_version.set(cache_key, fake_cache_value)
-
-        response = self.app.get(url, status=200)
-        body = response.json
-        assert body == fake_cache_value
-
-    def test_get_caching(self):
-        self.get_caching(self.book1)
-
-    def test_get_info(self):
-        body, locale = self.get_info(self.book1, 'en')
-        assert locale.get('lang') == 'en'
-
-    def test_get_info_best_lang(self):
-        body, locale = self.get_info(self.book1, 'es')
-        assert locale.get('lang') == 'fr'
-
-    def test_get_info_404(self):
-        self.get_info_404()
-
-    def test_post_error(self):
-        body = self.post_error({}, user='moderator')
-        errors = body.get('errors')
-        assert len(errors) == 2
-        self.assertCorniceRequired(errors[0], 'locales')
-
-    def test_post_invalid_enum_item(self):
-        # an unknown activity used to reach the database enum (500)
-        body = {
-            'activities': ['hiking', 'not-an-activity'],
-            'book_types': ['biography'],
-            'locales': [{'lang': 'en', 'title': 'Book'}],
         }
-        headers = self.add_authorization_header(username='contributor')
-        response = self.app_post_json(self._prefix, body, headers=headers, status=400)
-        self.assertError(
-            response.json['errors'],
-            'activities.1',
-            f'"not-an-activity" is not one of {", ".join(activities)}',
-        )
+    }
+    scenarios.put_wrong_document_id(client, BOOKS, body, user='moderator')
 
-    def test_post_missing_title(self):
-        body_post = {
+
+def test_put_wrong_document_version(client, docs):
+    body = {
+        'document': {
+            'document_id': docs.book1.document_id,
+            'version': -9999,
             'activities': ['hiking'],
             'book_types': ['biography'],
-            'locales': [{'lang': 'en'}],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Escalades au Thaurac',
+                    'version': docs.locale_en.version,
+                }
+            ],
         }
-        self.post_missing_title(body_post, user='moderator')
+    }
+    scenarios.put_wrong_version(
+        client, BOOKS, body, docs.book1.document_id, user='moderator'
+    )
 
-    def test_post_non_whitelisted_attribute(self):
-        body = {
-            'book_types': ['biography'],
-            'protected': True,
-            'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
-        }
-        self.post_non_whitelisted_attribute(body, user='moderator')
 
-    def test_post_missing_content_type(self):
-        self.post_missing_content_type({})
-
-    def test_post_success(self):
-        body = {
-            'document_id': 12345678,
-            'version': 98765432,
+def test_put_wrong_locale_version(client, docs):
+    body = {
+        'document': {
+            'document_id': docs.book1.document_id,
+            'version': docs.book1.version,
             'activities': ['hiking'],
             'book_types': ['biography'],
-            'author': 'NewAuthor',
-            'editor': 'NewEditor',
-            'isbn': '12345678',
-            'nb_pages': 150,
-            'publication_date': '1984',
-            'url': 'http://www.nowhere.to.find',
+            'locales': [
+                {'lang': 'en', 'title': 'Escalades au Thaurac', 'version': -9999}
+            ],
+        }
+    }
+    scenarios.put_wrong_version(
+        client, BOOKS, body, docs.book1.document_id, user='moderator'
+    )
+
+
+def test_put_wrong_ids(client, docs):
+    body = {
+        'document': {
+            'document_id': docs.book1.document_id,
+            'version': docs.book1.version,
+            'activities': ['hiking'],
+            'book_types': ['biography'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'Escalades au Thaurac',
+                    'version': docs.locale_en.version,
+                }
+            ],
+        }
+    }
+    scenarios.put_wrong_ids(
+        client, BOOKS, body, docs.book1.document_id, user='moderator'
+    )
+
+
+def test_put_no_document(client, docs):
+    scenarios.put_no_document(client, BOOKS, docs.book1.document_id, user='moderator')
+
+
+def test_put_success_all(client, session, docs):
+    body = {
+        'message': 'Update',
+        'document': {
+            'document_id': docs.book1.document_id,
+            'version': docs.book1.version,
+            'quality': quality_types[1],
+            'activities': ['hiking'],
+            'book_types': ['magazine'],
             'associations': {
-                'waypoints': [{'document_id': self.waypoint2.document_id}],
-                'articles': [{'document_id': self.article2.document_id}],
+                'articles': [{'document_id': docs.article2.document_id}],
+                'images': [{'document_id': docs.image2.document_id}],
+                'routes': [{'document_id': docs.route2.document_id}],
             },
             'geometry': {
                 'version': 1,
-                'document_id': self.waypoint2.document_id,
+                'document_id': docs.waypoint2.document_id,
                 'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
             },
-            'locales': [{'lang': 'en', 'title': 'Escalades au Thaurac'}],
-        }
-        body, doc = self.post_success(body, user='moderator')
-        version = doc.versions[0]
-
-        archive_book = version.document_archive
-        assert archive_book.activities == ['hiking']
-        assert archive_book.book_types == ['biography']
-
-        archive_locale = version.document_locales_archive
-        assert archive_locale.lang == 'en'
-        assert archive_locale.title == 'Escalades au Thaurac'
-
-        # check if geometry is not stored in database afterwards
-        assert doc.geometry is None
-
-        # check that a link to the associated waypoint is created
-        association_wp = self.session.get(
-            Association, (doc.document_id, self.waypoint2.document_id)
-        )
-        assert association_wp is not None
-
-        association_wp_log = (
-            self.session.query(AssociationLog)
-            .filter(AssociationLog.parent_document_id == doc.document_id)
-            .filter(AssociationLog.child_document_id == self.waypoint2.document_id)
-            .first()
-        )
-        assert association_wp_log is not None
-
-        # check that a link to the associated article is created
-        association_art = self.session.get(
-            Association, (doc.document_id, self.article2.document_id)
-        )
-        assert association_art is not None
-
-        association_art_log = (
-            self.session.query(AssociationLog)
-            .filter(AssociationLog.parent_document_id == doc.document_id)
-            .filter(AssociationLog.child_document_id == self.article2.document_id)
-            .first()
-        )
-        assert association_art_log is not None
-
-    def test_put_wrong_document_id(self):
-        body = {
-            'document': {
-                'document_id': '9999999',
-                'version': self.book1.version,
-                'activities': ['hiking'],
-                'book_types': ['biography'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Escalades au Thaurac',
-                        'version': self.locale_en.version,
-                    }
-                ],
-            }
-        }
-        self.put_wrong_document_id(body, user='moderator')
-
-    def test_put_wrong_document_version(self):
-        body = {
-            'document': {
-                'document_id': self.book1.document_id,
-                'version': -9999,
-                'activities': ['hiking'],
-                'book_types': ['biography'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Escalades au Thaurac',
-                        'version': self.locale_en.version,
-                    }
-                ],
-            }
-        }
-        self.put_wrong_version(body, self.book1.document_id, user='moderator')
-
-    def test_put_wrong_locale_version(self):
-        body = {
-            'document': {
-                'document_id': self.book1.document_id,
-                'version': self.book1.version,
-                'activities': ['hiking'],
-                'book_types': ['biography'],
-                'locales': [
-                    {'lang': 'en', 'title': 'Escalades au Thaurac', 'version': -9999}
-                ],
-            }
-        }
-        self.put_wrong_version(body, self.book1.document_id, user='moderator')
-
-    def test_put_wrong_ids(self):
-        body = {
-            'document': {
-                'document_id': self.book1.document_id,
-                'version': self.book1.version,
-                'activities': ['hiking'],
-                'book_types': ['biography'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'Escalades au Thaurac',
-                        'version': self.locale_en.version,
-                    }
-                ],
-            }
-        }
-        self.put_wrong_ids(body, self.book1.document_id, user='moderator')
-
-    def test_put_no_document(self):
-        self.put_put_no_document(self.book1.document_id, user='moderator')
-
-    def test_put_success_all(self):
-        body = {
-            'message': 'Update',
-            'document': {
-                'document_id': self.book1.document_id,
-                'version': self.book1.version,
-                'quality': quality_types[1],
-                'activities': ['hiking'],
-                'book_types': ['magazine'],
-                'associations': {
-                    'articles': [{'document_id': self.article2.document_id}],
-                    'images': [{'document_id': self.image2.document_id}],
-                    'routes': [{'document_id': self.route2.document_id}],
-                },
-                'geometry': {
-                    'version': 1,
-                    'document_id': self.waypoint2.document_id,
-                    'geom': '{"type": "Point", "coordinates": [635956, 5723604]}',
-                },
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'New title',
-                        'version': self.locale_en.version,
-                    }
-                ],
-            },
-        }
-
-        (body, book1) = self.put_success_all(
-            body, self.book1, user='moderator', cache_version=3
-        )
-
-        assert book1.activities == ['hiking']
-        locale_en = book1.get_locale('en')
-        assert locale_en.title == 'New title'
-
-        # version with lang 'en'
-        versions = book1.versions
-        version_en = self.get_latest_version('en', versions)
-        archive_locale = version_en.document_locales_archive
-        assert archive_locale.title == 'New title'
-
-        archive_document_en = version_en.document_archive
-        assert archive_document_en.activities == ['hiking']
-        assert archive_document_en.book_types == ['magazine']
-
-        # version with lang 'fr'
-        version_fr = self.get_latest_version('fr', versions)
-        archive_locale = version_fr.document_locales_archive
-        assert archive_locale.title == 'Escalades au Thaurac'
-
-        # check if geometry is not stored in database afterwards
-        assert book1.geometry is None
-
-        # check that a link to the associated image is created
-        association_img = self.session.get(
-            Association, (book1.document_id, self.image2.document_id)
-        )
-        assert association_img is not None
-
-        association_img_log = (
-            self.session.query(AssociationLog)
-            .filter(AssociationLog.parent_document_id == book1.document_id)
-            .filter(AssociationLog.child_document_id == self.image2.document_id)
-            .first()
-        )
-        assert association_img_log is not None
-
-        # check that a link to the associated route is created
-        association_rou = self.session.get(
-            Association, (book1.document_id, self.route2.document_id)
-        )
-        assert association_rou is not None
-
-        association_rou_log = (
-            self.session.query(AssociationLog)
-            .filter(AssociationLog.parent_document_id == book1.document_id)
-            .filter(AssociationLog.child_document_id == self.route2.document_id)
-            .first()
-        )
-        assert association_rou_log is not None
-
-    def test_put_success_figures_only(self):
-        body = {
-            'message': 'Changing figures',
-            'document': {
-                'document_id': self.book1.document_id,
-                'version': self.book1.version,
-                'quality': quality_types[1],
-                'activities': ['hiking'],
-                'book_types': ['biography'],
-                'author': 'New author',
-                'editor': 'New editor',
-            },
-        }
-        (body, book1) = self.put_success_figures_only(
-            body, self.book1, user='moderator'
-        )
-
-        assert book1.activities == ['hiking']
-        assert book1.book_types == ['biography']
-
-    def test_put_success_lang_only(self):
-        body = {
-            'message': 'Changing lang',
-            'document': {
-                'document_id': self.book1.document_id,
-                'version': self.book1.version,
-                'quality': quality_types[1],
-                'activities': ['hiking'],
-                'book_types': ['biography'],
-                'locales': [
-                    {
-                        'lang': 'en',
-                        'title': 'New title',
-                        'version': self.locale_en.version,
-                    }
-                ],
-            },
-        }
-        (body, book1) = self.put_success_lang_only(body, self.book1, user='moderator')
-
-        assert book1.get_locale('en').title == 'New title'
-
-    def test_put_success_new_lang(self):
-        """Test updating a document by adding a new locale."""
-        body = {
-            'message': 'Adding lang',
-            'document': {
-                'document_id': self.book1.document_id,
-                'version': self.book1.version,
-                'quality': quality_types[1],
-                'activities': ['hiking'],
-                'book_types': ['biography'],
-                'locales': [{'lang': 'es', 'title': 'Escalades au Thaurac'}],
-            },
-        }
-        (body, book1) = self.put_success_new_lang(body, self.book1, user='moderator')
-
-        assert book1.get_locale('es').title == 'Escalades au Thaurac'
-
-    def test_get_associations_history(self):
-        self._get_association_logs(self.book1)
-
-    def _add_test_data(self):
-        self.book1 = Book(activities=['hiking'], book_types=['biography'])
-        self.locale_en = DocumentLocale(lang='en', title='Escalades au Thaurac')
-        self.locale_fr = DocumentLocale(lang='fr', title='Escalades au Thaurac')
-
-        self.book1.locales.append(self.locale_en)
-        self.book1.locales.append(self.locale_fr)
-
-        self.session.add(self.book1)
-        self.session.flush()
-
-        user_id = self.global_userids['contributor']
-        DocumentRest.create_new_version(self.book1, user_id)
-        self.book1_version = (
-            self.session.query(DocumentVersion)
-            .filter(DocumentVersion.document_id == self.book1.document_id)
-            .filter(DocumentVersion.lang == 'en')
-            .first()
-        )
-
-        self.book2 = Book(activities=['hiking'], book_types=['biography'])
-        self.session.add(self.book2)
-        self.book3 = Book(activities=['hiking'], book_types=['biography'])
-        self.session.add(self.book3)
-        self.book4 = Book(activities=['hiking'], book_types=['biography'])
-        self.book4.locales.append(
-            DocumentLocale(lang='en', title='Escalades au Thaurac')
-        )
-        self.book4.locales.append(
-            DocumentLocale(lang='fr', title='Escalades au Thaurac')
-        )
-        self.session.add(self.book4)
-        self.waypoint1 = Waypoint(waypoint_type='summit', elevation=2203)
-        self.session.add(self.waypoint1)
-        self.waypoint2 = Waypoint(
-            waypoint_type='climbing_outdoor',
-            elevation=2,
-            rock_types=[],
-            geometry=DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)'),
-        )
-        self.session.add(self.waypoint2)
-        self.session.flush()
-
-        self.article2 = Article(
-            categories=['site_info'], activities=['hiking'], article_type='collab'
-        )
-        self.session.add(self.article2)
-        self.session.flush()
-
-        self.image = Image(
-            filename='image.jpg',
-            activities=['paragliding'],
-            height=1500,
-            image_type='collaborative',
-        )
-
-        self.locale_en_img = DocumentLocale(
-            lang='en',
-            title='Mont Blanc from the air',
-            description='...',
-            document_topic=DocumentTopic(topic_id=1),
-        )
-
-        self.locale_fr_img = DocumentLocale(
-            lang='fr', title='Mont Blanc du ciel', description='...'
-        )
-
-        self.image.locales.append(self.locale_en_img)
-        self.image.locales.append(self.locale_fr_img)
-
-        self.image.geometry = DocumentGeometry(geom='SRID=3857;POINT(635956 5723604)')
-
-        self.session.add(self.image)
-        self.session.flush()
-
-        self.image2 = Image(
-            filename='image2.jpg', activities=['paragliding'], height=1500
-        )
-        self.session.add(self.image2)
-        self.session.flush()
-
-        self.route2 = Route(
-            activities=['skitouring'],
-            elevation_max=1500,
-            elevation_min=700,
-            height_diff_up=800,
-            height_diff_down=800,
-            durations='1',
-            locales=[
-                RouteLocale(
-                    lang='en',
-                    title='Mont Blanc from the air',
-                    description='...',
-                    gear='paraglider',
-                ),
-                RouteLocale(
-                    lang='fr',
-                    title='Mont Blanc du ciel',
-                    description='...',
-                    gear='paraglider',
-                ),
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'New title',
+                    'version': docs.locale_en.version,
+                }
             ],
-        )
-        self.session.add(self.route2)
-        self.session.flush()
+        },
+    }
 
-        self.route3 = Route(
-            activities=['skitouring'],
-            elevation_max=1500,
-            elevation_min=700,
-            height_diff_up=500,
-            height_diff_down=500,
-            durations='1',
-        )
-        self.session.add(self.route3)
-        self.session.flush()
+    (body, book1) = scenarios.put_success_all(
+        client,
+        session,
+        BOOKS,
+        body,
+        docs.book1,
+        user='moderator',
+        cache_version=3,
+        locale_fr=docs.locale_fr,
+    )
 
-        # self._add_association(Association.create(
-        #     parent_document=self.book1,
-        #     child_document=self.image2), user_id)
-        self._add_association(
-            Association.create(parent_document=self.book1, child_document=self.route3),
-            user_id,
-        )
-        self._add_association(
-            Association.create(
-                parent_document=self.book2, child_document=self.waypoint2
-            ),
-            user_id,
-        )
-        self.session.flush()
+    assert book1.activities == ['hiking']
+    locale_en = book1.get_locale('en')
+    assert locale_en.title == 'New title'
+
+    # version with lang 'en'
+    versions = book1.versions
+    version_en = scenarios.get_latest_version('en', versions)
+    archive_locale = version_en.document_locales_archive
+    assert archive_locale.title == 'New title'
+
+    archive_document_en = version_en.document_archive
+    assert archive_document_en.activities == ['hiking']
+    assert archive_document_en.book_types == ['magazine']
+
+    # version with lang 'fr'
+    version_fr = scenarios.get_latest_version('fr', versions)
+    archive_locale = version_fr.document_locales_archive
+    assert archive_locale.title == 'Escalades au Thaurac'
+
+    # check if geometry is not stored in database afterwards
+    assert book1.geometry is None
+
+    # check that a link to the associated image is created
+    association_img = session.get(
+        Association, (book1.document_id, docs.image2.document_id)
+    )
+    assert association_img is not None
+
+    association_img_log = (
+        session.query(AssociationLog)
+        .filter(AssociationLog.parent_document_id == book1.document_id)
+        .filter(AssociationLog.child_document_id == docs.image2.document_id)
+        .first()
+    )
+    assert association_img_log is not None
+
+    # check that a link to the associated route is created
+    association_rou = session.get(
+        Association, (book1.document_id, docs.route2.document_id)
+    )
+    assert association_rou is not None
+
+    association_rou_log = (
+        session.query(AssociationLog)
+        .filter(AssociationLog.parent_document_id == book1.document_id)
+        .filter(AssociationLog.child_document_id == docs.route2.document_id)
+        .first()
+    )
+    assert association_rou_log is not None
+
+
+def test_put_success_figures_only(client, session, docs):
+    body = {
+        'message': 'Changing figures',
+        'document': {
+            'document_id': docs.book1.document_id,
+            'version': docs.book1.version,
+            'quality': quality_types[1],
+            'activities': ['hiking'],
+            'book_types': ['biography'],
+            'author': 'New author',
+            'editor': 'New editor',
+        },
+    }
+    (body, book1) = scenarios.put_success_figures_only(
+        client, session, BOOKS, body, docs.book1, user='moderator'
+    )
+
+    assert book1.activities == ['hiking']
+    assert book1.book_types == ['biography']
+
+
+def test_put_success_lang_only(client, session, docs):
+    body = {
+        'message': 'Changing lang',
+        'document': {
+            'document_id': docs.book1.document_id,
+            'version': docs.book1.version,
+            'quality': quality_types[1],
+            'activities': ['hiking'],
+            'book_types': ['biography'],
+            'locales': [
+                {
+                    'lang': 'en',
+                    'title': 'New title',
+                    'version': docs.locale_en.version,
+                }
+            ],
+        },
+    }
+    (body, book1) = scenarios.put_success_lang_only(
+        client, session, BOOKS, body, docs.book1, user='moderator'
+    )
+
+    assert book1.get_locale('en').title == 'New title'
+
+
+def test_put_success_new_lang(client, session, docs):
+    """Test updating a document by adding a new locale."""
+    body = {
+        'message': 'Adding lang',
+        'document': {
+            'document_id': docs.book1.document_id,
+            'version': docs.book1.version,
+            'quality': quality_types[1],
+            'activities': ['hiking'],
+            'book_types': ['biography'],
+            'locales': [{'lang': 'es', 'title': 'Escalades au Thaurac'}],
+        },
+    }
+    (body, book1) = scenarios.put_success_new_lang(
+        client, session, BOOKS, body, docs.book1, user='moderator'
+    )
+
+    assert book1.get_locale('es').title == 'Escalades au Thaurac'
+
+
+def test_get_associations_history(client, docs):
+    scenarios.get_association_logs(client, docs.book1)

@@ -1,7 +1,6 @@
-from cornice.resource import resource
-from pyramid.httpexceptions import HTTPBadRequest
 from sqlalchemy.sql.expression import exists
 
+from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models import DBSession
 from c2corg_api.models.association import (
     Association,
@@ -13,14 +12,15 @@ from c2corg_api.models.document import Document
 from c2corg_api.models.feed import update_feed_association_update
 from c2corg_api.models.outing import OUTING_TYPE
 from c2corg_api.models.route import ROUTE_TYPE, Route
+from c2corg_api.models.user_profile import USERPROFILE_TYPE
 from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.schemas.association import AssociationSchema, association_schema
 from c2corg_api.schemas.base import body_validator
 from c2corg_api.scripts.es import sync
 from c2corg_api.search.notify_sync import notify_es_syncer
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
+    check_image_keeps_a_document,
     check_permission_for_association_removal,
     validate_association_permission,
 )
@@ -82,101 +82,103 @@ def validate_association(request, **kwargs):
             )
 
 
-@resource(
-    collection_path='/associations', path='/associations/{id}', cors_policy=cors_policy
+@write(
+    validators=[body_validator(AssociationSchema), validate_association],
+    permission='authenticated',
+    json=True,
 )
-class AssociationRest(ACLDefault):
-    @restricted_json_view(
-        validators=[body_validator(AssociationSchema), validate_association],
+def add_association(request):
+    association = association_schema.objectify(request.validated)
+    association.parent_document_type = request.validated['parent_document_type']
+    association.child_document_type = request.validated['child_document_type']
+
+    if exists_already(association):
+        raise HTTPBadRequest('association (or its back-link) exists already')
+
+    DBSession.add(association)
+    DBSession.add(association.get_log(request.authenticated_userid))
+
+    update_cache_version_associations(
+        [
+            {
+                'parent_id': association.parent_document_id,
+                'parent_type': association.parent_document_type,
+                'child_id': association.child_document_id,
+                'child_type': association.child_document_type,
+            }
+        ],
+        [],
     )
-    def collection_post(self):
-        association = association_schema.objectify(self.request.validated)
-        association.parent_document_type = self.request.validated[
-            'parent_document_type'
-        ]
-        association.child_document_type = self.request.validated['child_document_type']
 
-        if exists_already(association):
-            raise HTTPBadRequest('association (or its back-link) exists already')
+    notify_es_syncer_if_needed(association, request)
+    update_feed_association_update(
+        association.parent_document_id,
+        association.parent_document_type,
+        association.child_document_id,
+        association.child_document_type,
+        request.authenticated_userid,
+    )
 
-        DBSession.add(association)
-        DBSession.add(association.get_log(self.request.authenticated_userid))
+    return {}
 
-        update_cache_version_associations(
-            [
-                {
-                    'parent_id': association.parent_document_id,
-                    'parent_type': association.parent_document_type,
-                    'child_id': association.child_document_id,
-                    'child_type': association.child_document_type,
-                }
-            ],
-            [],
+
+@write(
+    validators=[body_validator(AssociationSchema)],
+    permission='authenticated',
+    json=True,
+)
+def remove_association(request):
+    association_in = association_schema.objectify(request.validated)
+
+    association = _load(request, association_in)
+    if association is None:
+        # also accept {parent_document_id: y, child_document_id: x} when
+        # for an association {parent_document_id: x, child_document_id: x}
+        association_in = Association(
+            parent_document_id=association_in.child_document_id,
+            child_document_id=association_in.parent_document_id,
         )
-
-        notify_es_syncer_if_needed(association, self.request)
-        update_feed_association_update(
-            association.parent_document_id,
-            association.parent_document_type,
-            association.child_document_id,
-            association.child_document_type,
-            self.request.authenticated_userid,
-        )
-
-        return {}
-
-    @restricted_json_view(validators=[body_validator(AssociationSchema)])
-    def collection_delete(self):
-        association_in = association_schema.objectify(self.request.validated)
-
-        association = self._load(association_in)
+        association = _load(request, association_in)
         if association is None:
-            # also accept {parent_document_id: y, child_document_id: x} when
-            # for an association {parent_document_id: x, child_document_id: x}
-            association_in = Association(
-                parent_document_id=association_in.child_document_id,
-                child_document_id=association_in.parent_document_id,
-            )
-            association = self._load(association_in)
-            if association is None:
-                raise HTTPBadRequest('association does not exist')
+            raise HTTPBadRequest('association does not exist')
 
-        _check_required_associations(association)
-        check_permission_for_association_removal(self.request, association)
+    _check_required_associations(association)
+    check_permission_for_association_removal(request, association)
 
-        log = association.get_log(self.request.authenticated_userid, is_creation=False)
+    log = association.get_log(request.authenticated_userid, is_creation=False)
 
-        DBSession.delete(association)
-        DBSession.add(log)
+    DBSession.delete(association)
+    DBSession.add(log)
 
-        update_cache_version_associations(
-            [],
-            [
-                {
-                    'parent_id': association.parent_document_id,
-                    'parent_type': association.parent_document_type,
-                    'child_id': association.child_document_id,
-                    'child_type': association.child_document_type,
-                }
-            ],
-        )
+    update_cache_version_associations(
+        [],
+        [
+            {
+                'parent_id': association.parent_document_id,
+                'parent_type': association.parent_document_type,
+                'child_id': association.child_document_id,
+                'child_type': association.child_document_type,
+            }
+        ],
+    )
 
-        notify_es_syncer_if_needed(association, self.request)
-        update_feed_association_update(
-            association.parent_document_id,
-            association.parent_document_type,
-            association.child_document_id,
-            association.child_document_type,
-            self.request.authenticated_userid,
-        )
+    notify_es_syncer_if_needed(association, request)
+    update_feed_association_update(
+        association.parent_document_id,
+        association.parent_document_type,
+        association.child_document_id,
+        association.child_document_type,
+        request.authenticated_userid,
+    )
 
-        return {}
+    return {}
 
-    def _load(self, association_in):
-        return DBSession.get(
-            Association,
-            (association_in.parent_document_id, association_in.child_document_id),
-        )
+
+def _load(request, association_in):
+    return DBSession.get(
+        Association,
+        (association_in.parent_document_id, association_in.child_document_id),
+    )
 
 
 def _check_required_associations(association):
@@ -184,14 +186,19 @@ def _check_required_associations(association):
         raise HTTPBadRequest(
             'as the main waypoint of the route, this waypoint can not be disassociated'
         )
-    elif _is_last_waypoint_of_route(association):
+    elif _is_last_parent(association, WAYPOINT_TYPE, ROUTE_TYPE):
         raise HTTPBadRequest(
             'as the last waypoint of the route, this waypoint can not be disassociated'
         )
-    elif _is_last_route_of_outing(association):
+    elif _is_last_parent(association, ROUTE_TYPE, OUTING_TYPE):
         raise HTTPBadRequest(
             'as the last route of the outing, this route can not be disassociated'
         )
+    elif _is_last_parent(association, USERPROFILE_TYPE, OUTING_TYPE):
+        raise HTTPBadRequest(
+            'as the last user of the outing, this user can not be disassociated'
+        )
+    check_image_keeps_a_document(association)
 
 
 def _is_main_waypoint_association(association):
@@ -202,42 +209,24 @@ def _is_main_waypoint_association(association):
     ).scalar()
 
 
-def _is_last_waypoint_of_route(association):
+def _is_last_parent(association, parent_type, child_type):
+    """Tell whether the association links the child to its last parent of this type."""
     if not (
-        association.parent_document_type == WAYPOINT_TYPE
-        and association.child_document_type == ROUTE_TYPE
+        association.parent_document_type == parent_type
+        and association.child_document_type == child_type
     ):
         # other association type, nothing to check
         return False
 
-    route_has_other_waypoints = (
+    child_has_other_parents = (
         exists()
-        .where(Association.parent_document_type == WAYPOINT_TYPE)
-        .where(Association.child_document_type == ROUTE_TYPE)
+        .where(Association.parent_document_type == parent_type)
+        .where(Association.child_document_type == child_type)
         .where(Association.parent_document_id != association.parent_document_id)
         .where(Association.child_document_id == association.child_document_id)
     )
 
-    return not DBSession.query(route_has_other_waypoints).scalar()
-
-
-def _is_last_route_of_outing(association):
-    if not (
-        association.parent_document_type == ROUTE_TYPE
-        and association.child_document_type == OUTING_TYPE
-    ):
-        # other association type, nothing to check
-        return False
-
-    outing_has_other_routes = (
-        exists()
-        .where(Association.parent_document_type == ROUTE_TYPE)
-        .where(Association.child_document_type == OUTING_TYPE)
-        .where(Association.parent_document_id != association.parent_document_id)
-        .where(Association.child_document_id == association.child_document_id)
-    )
-
-    return not DBSession.query(outing_has_other_routes).scalar()
+    return not DBSession.query(child_has_other_parents).scalar()
 
 
 def notify_es_syncer_if_needed(association, request):

@@ -2,15 +2,14 @@ import functools
 import os
 
 import requests
-from cornice.resource import resource, view
-from pyramid.httpexceptions import (
+
+from c2corg_api.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
     HTTPFound,
     HTTPInternalServerError,
     HTTPNotFound,
 )
-
 from c2corg_api.models import DBSession
 from c2corg_api.models.common.fields_image import fields_image
 from c2corg_api.models.document import ArchiveDocumentLocale
@@ -30,28 +29,24 @@ from c2corg_api.schemas.image import (
     image_schema,
 )
 from c2corg_api.search.notify_sync import run_on_successful_transaction
-from c2corg_api.security.acl import ACLDefault
-from c2corg_api.views import cors_policy, restricted_json_view
 from c2corg_api.views import set_creator as set_creator_on_documents
 from c2corg_api.views.document import (
-    DocumentRest,
+    collection_get,
+    insert_document,
     make_validator_create,
     make_validator_update,
+    put_document,
+    read_document,
     validate_document,
 )
-from c2corg_api.views.document_info import DocumentInfoRest
+from c2corg_api.views.document_info import document_info
 from c2corg_api.views.document_schemas import image_documents_config
-from c2corg_api.views.document_version import DocumentVersionRest
+from c2corg_api.views.document_version import document_version
+from c2corg_api.views.resource import write
 from c2corg_api.views.validation import (
     validate_associations,
     validate_associations_in,
-    validate_cook_param,
     validate_id,
-    validate_lang,
-    validate_lang_param,
-    validate_pagination,
-    validate_preferred_lang_param,
-    validate_version_id,
 )
 
 # Let browsers cache the redirect to the media server: the image filename
@@ -131,9 +126,10 @@ def validate_list_associations_create(request, **kwargs):
         )
 
 
-def create_image(self, document_in):
-    document = self._create_document(document_in, image_schema)
-    publish_image_in_backend(self.request, document.filename)
+def insert_image(request, document_in):
+    """Insert an image document, and publish its file on the image backend."""
+    document = insert_document(request, document_in, image_schema)
+    publish_image_in_backend(request, document.filename)
 
     return document
 
@@ -141,7 +137,7 @@ def create_image(self, document_in):
 def before_image_update(request, document, document_in):
     """Check filename updates and publish them on the image backend.
 
-    Callback sent to DocumentRest.update_document()
+    Callback sent to update_document()
     check update of filename, and publish on image backend if needed.
     """
     old_filename = document.filename
@@ -210,97 +206,115 @@ def delete_all_files_for_image(document_id, request):
     run_on_successful_transaction(send_delete_request)
 
 
-@resource(collection_path='/images', path='/images/{id}', cors_policy=cors_policy)
-class ImageRest(DocumentRest):
-    @view(validators=[validate_pagination, validate_preferred_lang_param])
-    def collection_get(self):
-        return self._collection_get(IMAGE_TYPE, image_documents_config)
-
-    @view(validators=[validate_id, validate_lang_param, validate_cook_param])
-    def get(self):
-        return self._get(
-            image_documents_config, image_schema, set_custom_fields=set_creator
-        )
-
-    @restricted_json_view(
-        validators=[
-            body_validator(ImageCreateSchema),
-            validate_image_create,
-            validate_associations_create,
-        ],
+def restore_files_of_images(filenames, request):
+    """Restore deleted image files; return those that could not be."""
+    # The image service brings back the files and their thumbnails from the
+    # versions the bucket keeps (30 days). Called before the commit: a failure
+    # cancels the restoring of the document.
+    settings = request.registry.settings
+    response = requests.post(
+        image_backend_endpoint(settings, 'restore'),
+        data={'secret': settings['image_backend.secret_key'], 'filenames': filenames},
+        timeout=int(settings['url.timeout']),
     )
-    def collection_post(self):
-        document_in = self.request.validated
-        document = create_image(self, document_in)
-        return {'document_id': document.document_id}
-
-    @restricted_json_view(
-        validators=[
-            body_validator(ImageUpdateSchema),
-            validate_id,
-            validate_image_update,
-            validate_associations_update,
-        ],
-    )
-    def put(self):
-        if not self.request.has_permission('moderator'):
-            image_id = self.request.validated['id']
-            image = DBSession.get(Image, image_id)
-            if image is None:
-                raise HTTPNotFound(f'No image found for id {image_id}')
-            new_image_type = self.request.validated['document']['image_type']
-            if new_image_type == 'copyright':
-                if new_image_type != image.image_type:
-                    raise HTTPForbidden('No permission to change to copyright type')
-            elif image.image_type == 'collaborative':
-                if new_image_type != image.image_type:
-                    raise HTTPBadRequest(
-                        'Image type cannot be changed for collaborative images'
-                    )
-            # personal images should only be modifiable by
-            # their creator and moderators
-            elif not has_been_created_by(image_id, self.request.authenticated_userid):
-                raise HTTPForbidden('No permission to change this image')
-        return self._put(
-            Image,
-            image_schema,
-            before_update=functools.partial(before_image_update, self.request),
+    if response.status_code != 200:
+        raise HTTPInternalServerError(
+            f'Restoring image files failed: {response.status_code} {response.reason}'
         )
+    return response.json().get('missing', [])
 
 
-# `path` is required by cornice but related routes are not implemented
-# because we only need `collection_post` to post a list of images
-@resource(
-    collection_path='/images/list', path='/images/list/{id}', cors_policy=cors_policy
+@write(
+    validators=[
+        body_validator(ImageCreateSchema),
+        validate_image_create,
+        validate_associations_create,
+    ],
+    permission='authenticated',
+    json=True,
 )
-class ImageListRest(DocumentRest):
-    @restricted_json_view(
-        validators=[
-            body_validator(ImageListCreateSchema),
-            validate_list_image_create,
-            validate_list_associations_create,
-        ],
+def create_image(request):
+    document_in = request.validated
+    document = insert_image(request, document_in)
+    return {'document_id': document.document_id}
+
+
+@write(
+    validators=[
+        body_validator(ImageUpdateSchema),
+        validate_id,
+        validate_image_update,
+        validate_associations_update,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def update_image(request):
+    if not request.has_permission('moderator'):
+        image_id = request.validated['id']
+        image = DBSession.get(Image, image_id)
+        if image is None:
+            raise HTTPNotFound(f'No image found for id {image_id}')
+        new_image_type = request.validated['document']['image_type']
+        if new_image_type == 'copyright':
+            if new_image_type != image.image_type:
+                raise HTTPForbidden('No permission to change to copyright type')
+        elif image.image_type == 'collaborative':
+            if new_image_type != image.image_type:
+                raise HTTPBadRequest(
+                    'Image type cannot be changed for collaborative images'
+                )
+        # personal images should only be modifiable by
+        # their creator and moderators
+        elif not has_been_created_by(image_id, request.authenticated_userid):
+            raise HTTPForbidden('No permission to change this image')
+    return put_document(
+        request,
+        Image,
+        image_schema,
+        before_update=functools.partial(before_image_update, request),
     )
-    def collection_post(self):
-        images_in = self.request.validated['images']
-
-        image_ids = []
-        images = []
-        for document_in in images_in:
-            document = create_image(self, document_in)
-            images.append(document)
-            image_ids.append({'document_id': document.document_id})
-
-        update_feed_images_upload(images, images_in, self.request.authenticated_userid)
-
-        return {'images': image_ids}
 
 
-@resource(path='/images/{id}/{lang}/info', cors_policy=cors_policy)
-class ImageInfoRest(DocumentInfoRest):
-    @view(validators=[validate_id, validate_lang])
-    def get(self):
-        return self._get_document_info(image_documents_config)
+# only `collection_post`: it posts a list of images
+
+
+def list_images(request):
+    return collection_get(request, IMAGE_TYPE, image_documents_config)
+
+
+def get_image(request):
+    return read_document(
+        request, image_documents_config, image_schema, set_custom_fields=set_creator
+    )
+
+
+@write(
+    validators=[
+        body_validator(ImageListCreateSchema),
+        validate_list_image_create,
+        validate_list_associations_create,
+    ],
+    permission='authenticated',
+    json=True,
+)
+def create_images(request):
+    images_in = request.validated['images']
+
+    image_ids = []
+    images = []
+    for document_in in images_in:
+        document = insert_image(request, document_in)
+        images.append(document)
+        image_ids.append({'document_id': document.document_id})
+
+    update_feed_images_upload(images, images_in, request.authenticated_userid)
+
+    return {'images': image_ids}
+
+
+def get_image_info(request):
+    return document_info(request, image_documents_config)
 
 
 def validate_size(request, **kwargs):
@@ -322,28 +336,25 @@ def validate_extension(request, **kwargs):
         request.errors.add('querystring', 'extension', 'invalid extension')
 
 
-@resource(path='/images/proxy/{id}', cors_policy=cors_policy)
-class ImageProxyRest(ACLDefault):
-    @view(validators=[validate_id, validate_size, validate_extension])
-    def get(self):
-        document_id = self.request.validated['id']
-        size = self.request.validated['size']
-        extension = self.request.validated['extension']
-        # follows merged images to their target, whose files still exist
-        filename = get_image_filenames([document_id]).get(document_id)
-        if filename is None:
-            raise HTTPNotFound()
-        image_url = self.request.registry.settings['image_url']
-        if size is None:
-            location = f'{image_url}{filename}'
+def redirect_to_image(request):
+    document_id = request.validated['id']
+    size = request.validated['size']
+    extension = request.validated['extension']
+    # follows merged images to their target, whose files still exist
+    filename = get_image_filenames([document_id]).get(document_id)
+    if filename is None:
+        raise HTTPNotFound()
+    image_url = request.registry.settings['image_url']
+    if size is None:
+        location = f'{image_url}{filename}'
+    else:
+        base, ext = os.path.splitext(filename)
+        if extension is None:
+            ext = '.jpg' if ext == '.svg' else ext
         else:
-            base, ext = os.path.splitext(filename)
-            if extension is None:
-                ext = '.jpg' if ext == '.svg' else ext
-            else:
-                ext = '.' + extension
-            location = f'{image_url}{base}{size}{ext}'
-        return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
+            ext = '.' + extension
+        location = f'{image_url}{base}{size}{ext}'
+    return HTTPFound(location, headers={'Cache-Control': PROXY_CACHE_CONTROL})
 
 
 def set_creator(image):
@@ -351,10 +362,7 @@ def set_creator(image):
     set_creator_on_documents([image], 'creator')
 
 
-@resource(path='/images/{id}/{lang}/{version_id}', cors_policy=cors_policy)
-class ImageVersionRest(DocumentVersionRest):
-    @view(validators=[validate_id, validate_lang, validate_version_id])
-    def get(self):
-        return self._get_version(
-            ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema
-        )
+def get_image_version(request):
+    return document_version(
+        request, ArchiveImage, IMAGE_TYPE, ArchiveDocumentLocale, image_schema
+    )

@@ -25,5 +25,7 @@ set -e
 
 ./scripts/env_replace config/env.default --keep-env .env < production.ini.in > production.ini
 ./scripts/env_replace config/env.default --keep-env .env < common.ini.in > common.ini
+# for the migrations run by hand: docker-compose run --rm --no-deps api alembic upgrade head
+./scripts/env_replace config/env.default --keep-env .env < alembic.ini.in > alembic.ini
 
 exec "$@"

@@ -6,7 +6,7 @@ from typing import Annotated
 
 import geojson
 from geoalchemy2 import WKBElement
-from pydantic import BeforeValidator
+from pydantic import BeforeValidator, WithJsonSchema
 from pydantic_core import PydanticCustomError
 
 from c2corg_api.ext.wkb import wkbelement_from_geojson
@@ -140,4 +140,12 @@ def Geometry(geometry_types, srid=3857):  # noqa: N802 (used like a type)
         WKBElement | None,
         Empty(lambda value: value is None or value == ''),
         BeforeValidator(partial(_to_wkb, geometry_types=types, srid=srid)),
+        # for the OpenAPI document: a GeoJSON geometry, as a string
+        WithJsonSchema(
+            {
+                'type': ['string', 'null'],
+                'description': f'A GeoJSON geometry ({", ".join(geometry_types)}), '
+                f'as a string, in EPSG:{srid}.',
+            }
+        ),
     ]

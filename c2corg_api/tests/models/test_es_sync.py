@@ -1,16 +1,15 @@
 from c2corg_api.models.es_sync import get_status, mark_as_updated
-from c2corg_api.tests import BaseTestCase
 
 
-class TestESSyncStatus(BaseTestCase):
-    def test_get_status(self):
-        last_update, date_now = get_status(self.session)
-        assert last_update is not None
-        assert date_now is not None
+def test_get_status(session):
+    last_update, date_now = get_status(session)
+    assert last_update is not None
+    assert date_now is not None
 
-    def test_mark_as_updated(self):
-        _, date_now = get_status(self.session)
-        mark_as_updated(self.session, date_now)
 
-        last_update, _ = get_status(self.session)
-        assert last_update == date_now
+def test_mark_as_updated(session):
+    _, date_now = get_status(session)
+    mark_as_updated(session, date_now)
+
+    last_update, _ = get_status(session)
+    assert last_update == date_now

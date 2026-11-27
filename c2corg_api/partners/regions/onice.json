@@ -1,0 +1,322 @@
+{
+  "source": "onice",
+  "countries": {
+    "IT": 14270
+  },
+  "regions": {
+    "Valle d'Aosta": {
+      "country": "IT",
+      "area_ids": [
+        280072
+      ],
+      "range_ids": [
+        14437,
+        14427,
+        14436,
+        14424
+      ]
+    },
+    "Piemonte": {
+      "country": "IT",
+      "area_ids": [
+        280066,
+        280000,
+        280075,
+        280076,
+        279983,
+        280031,
+        279972,
+        279976
+      ],
+      "range_ids": [
+        14436
+      ]
+    },
+    "Lombardia": {
+      "country": "IT",
+      "area_ids": [
+        280062,
+        279982,
+        279986,
+        279996,
+        280017,
+        280073,
+        280027,
+        280029,
+        280039,
+        279998,
+        280019,
+        280022
+      ],
+      "range_ids": [
+        14423,
+        14420,
+        14428
+      ]
+    },
+    "Trentino-Alto Adige": {
+      "country": "IT",
+      "area_ids": [
+        279985,
+        280068
+      ],
+      "range_ids": [
+        14456,
+        14420
+      ]
+    },
+    "Veneto": {
+      "country": "IT",
+      "area_ids": [
+        279980,
+        280079,
+        280077,
+        280069,
+        280036,
+        280074,
+        280056
+      ],
+      "range_ids": [
+        14455,
+        14444,
+        14420
+      ]
+    },
+    "Friuli-Venezia Giulia": {
+      "country": "IT",
+      "area_ids": [
+        280071,
+        280046,
+        280009,
+        280070
+      ],
+      "range_ids": [
+        14455,
+        14452,
+        14454
+      ]
+    },
+    "Liguria": {
+      "country": "IT",
+      "area_ids": [
+        280008,
+        280011,
+        280059,
+        280014
+      ],
+      "range_ids": [
+        14467,
+        14461
+      ]
+    },
+    "Emilia-Romagna": {
+      "country": "IT",
+      "area_ids": [
+        280028,
+        280052,
+        280038,
+        280043,
+        279984,
+        280006,
+        280050,
+        280054,
+        280003
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "Toscana": {
+      "country": "IT",
+      "area_ids": [
+        280020,
+        280023,
+        280045,
+        280004,
+        279974,
+        280048,
+        280060,
+        280010,
+        280044,
+        280018
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "Umbria": {
+      "country": "IT",
+      "area_ids": [
+        280040,
+        280065
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "Marche": {
+      "country": "IT",
+      "area_ids": [
+        280021,
+        279975,
+        280002,
+        280041,
+        279973
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "Lazio": {
+      "country": "IT",
+      "area_ids": [
+        280053,
+        280007,
+        280055,
+        280015,
+        280080
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "Abruzzo": {
+      "country": "IT",
+      "area_ids": [
+        280013,
+        280064,
+        280042,
+        279995
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "Molise": {
+      "country": "IT",
+      "area_ids": [
+        280012,
+        279990
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Campania": {
+      "country": "IT",
+      "area_ids": [
+        280057,
+        279977,
+        279981,
+        279992,
+        280030
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Puglia": {
+      "country": "IT",
+      "area_ids": [
+        280005,
+        279978,
+        279979,
+        280063,
+        279987,
+        280016
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Basilicata": {
+      "country": "IT",
+      "area_ids": [
+        280047,
+        280024
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Calabria": {
+      "country": "IT",
+      "area_ids": [
+        279997,
+        280051,
+        279994,
+        280078,
+        279999
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Sicilia": {
+      "country": "IT",
+      "area_ids": [
+        279993,
+        280037,
+        280026,
+        280001,
+        279971,
+        279989,
+        280049,
+        280061,
+        280067
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "Sardegna": {
+      "country": "IT",
+      "area_ids": [
+        280032,
+        280033,
+        280058,
+        280034,
+        280035,
+        279988,
+        279991,
+        280025
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "Svizzera": {
+      "country": "CH",
+      "area_ids": []
+    },
+    "Francia": {
+      "country": "FR",
+      "area_ids": []
+    },
+    "Austria": {
+      "country": "AT",
+      "area_ids": []
+    },
+    "Germania": {
+      "country": "DE",
+      "area_ids": []
+    },
+    "Slovenia": {
+      "country": "SI",
+      "area_ids": []
+    },
+    "Spagna": {
+      "country": "ES",
+      "area_ids": []
+    }
+  },
+  "coverage": {
+    "checked": "2026-11-27, against the dev database (c2c areas of production: 110 Italian admin_limits, 97 ranges)",
+    "area_ids": "c2c has no area for the Italian regions: its Italian admin_limits are the provinces (as of 2011, 109 'Provincia di ...' plus 'Valle d'Aosta'), read as the admin_limits areas lying for more than half in the country area IT (14270). A region is the list of its provinces; the first stands for it (its centroid is the position, geom_quality area_centroid), hand-picked as the province of the main mountains of the region: Piemonte TO, Lombardia SO, Trentino-Alto Adige BZ, Veneto BL, Friuli-Venezia Giulia UD, Liguria GE, Emilia-Romagna MO, Toscana LU, Umbria PG, Marche MC, Lazio RI, Abruzzo AQ, Molise IS, Campania SA, Puglia FG, Basilicata PZ, Calabria CS, Sicilia CT, Sardegna NU. The test checks that every province is in exactly one region.",
+    "range_ids": "the mountain ranges (area_type range) covering at least 15% of the region (or province), largest share first. Information only: an outing is not given these ranges.",
+    "site": "on-ice.it publishes, in the 'Regione' column of its report list, an Italian region or a country in Italian (Svizzera, Francia...), or 'Altro'. All 20 Italian regions are in this table (every one has mountains, the Apennines at least), with the spellings of the site (Trentino Alto Adige, Emilia Romagna: the lookup ignores hyphens). The countries of sources/onice.py COUNTRIES are country-only entries (no area_ids: the outing gets the country area). 'Altro' is not in the table: no area."
+  }
+}

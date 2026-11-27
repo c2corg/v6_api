@@ -1,0 +1,33 @@
+{
+ "12335": {
+  "title": "Lesache o des Sasses (Aiguille) da Saint Rhemy",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "1299"
+    },
+    "alt_top": {
+     "value": "3014"
+    },
+    "exposure": {
+     "value": "Est"
+    },
+    "grade_skimo": {
+     "value": "BS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.8407558517237,
+      "lng": 7.18042953372954
+     }
+    }
+   }
+  }
+ }
+}

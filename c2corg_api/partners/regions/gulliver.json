@@ -1,0 +1,1320 @@
+{
+  "source": "gulliver",
+  "countries": {
+    "IT": 14270
+  },
+  "regions": {
+    "Valle d'Aosta": {
+      "country": "IT",
+      "area_ids": [
+        280072
+      ],
+      "range_ids": [
+        14437,
+        14427,
+        14436,
+        14424
+      ]
+    },
+    "Piemonte": {
+      "country": "IT",
+      "area_ids": [
+        280066,
+        280000,
+        280075,
+        280076,
+        279983,
+        280031,
+        279972,
+        279976
+      ],
+      "range_ids": [
+        14436
+      ]
+    },
+    "Lombardia": {
+      "country": "IT",
+      "area_ids": [
+        280062,
+        279982,
+        279986,
+        279996,
+        280017,
+        280073,
+        280027,
+        280029,
+        280039,
+        279998,
+        280019,
+        280022
+      ],
+      "range_ids": [
+        14423,
+        14420,
+        14428
+      ]
+    },
+    "Trentino-Alto Adige": {
+      "country": "IT",
+      "area_ids": [
+        279985,
+        280068
+      ],
+      "range_ids": [
+        14456,
+        14420
+      ]
+    },
+    "Veneto": {
+      "country": "IT",
+      "area_ids": [
+        279980,
+        280079,
+        280077,
+        280069,
+        280036,
+        280074,
+        280056
+      ],
+      "range_ids": [
+        14455,
+        14444,
+        14420
+      ]
+    },
+    "Friuli-Venezia Giulia": {
+      "country": "IT",
+      "area_ids": [
+        280071,
+        280046,
+        280009,
+        280070
+      ],
+      "range_ids": [
+        14455,
+        14452,
+        14454
+      ]
+    },
+    "Liguria": {
+      "country": "IT",
+      "area_ids": [
+        280008,
+        280011,
+        280059,
+        280014
+      ],
+      "range_ids": [
+        14467,
+        14461
+      ]
+    },
+    "Emilia-Romagna": {
+      "country": "IT",
+      "area_ids": [
+        280028,
+        280052,
+        280038,
+        280043,
+        279984,
+        280006,
+        280050,
+        280054,
+        280003
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "Toscana": {
+      "country": "IT",
+      "area_ids": [
+        280020,
+        280023,
+        280045,
+        280004,
+        279974,
+        280048,
+        280060,
+        280010,
+        280044,
+        280018
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "Umbria": {
+      "country": "IT",
+      "area_ids": [
+        280040,
+        280065
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "Marche": {
+      "country": "IT",
+      "area_ids": [
+        280021,
+        279975,
+        280002,
+        280041,
+        279973
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "Lazio": {
+      "country": "IT",
+      "area_ids": [
+        280053,
+        280007,
+        280055,
+        280015,
+        280080
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "Abruzzo": {
+      "country": "IT",
+      "area_ids": [
+        280013,
+        280064,
+        280042,
+        279995
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "Molise": {
+      "country": "IT",
+      "area_ids": [
+        280012,
+        279990
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Campania": {
+      "country": "IT",
+      "area_ids": [
+        280057,
+        279977,
+        279981,
+        279992,
+        280030
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Puglia": {
+      "country": "IT",
+      "area_ids": [
+        280005,
+        279978,
+        279979,
+        280063,
+        279987,
+        280016
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Basilicata": {
+      "country": "IT",
+      "area_ids": [
+        280047,
+        280024
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Calabria": {
+      "country": "IT",
+      "area_ids": [
+        279997,
+        280051,
+        279994,
+        280078,
+        279999
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "Sicilia": {
+      "country": "IT",
+      "area_ids": [
+        279993,
+        280037,
+        280026,
+        280001,
+        279971,
+        279989,
+        280049,
+        280061,
+        280067
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "Sardegna": {
+      "country": "IT",
+      "area_ids": [
+        280032,
+        280033,
+        280058,
+        280034,
+        280035,
+        279988,
+        279991,
+        280025
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "AO": {
+      "country": "IT",
+      "area_ids": [
+        280072
+      ],
+      "range_ids": [
+        14437,
+        14427,
+        14436,
+        14424
+      ]
+    },
+    "TO": {
+      "country": "IT",
+      "area_ids": [
+        280066
+      ],
+      "range_ids": [
+        14432,
+        14424,
+        14427
+      ]
+    },
+    "CN": {
+      "country": "IT",
+      "area_ids": [
+        280000
+      ],
+      "range_ids": [
+        14461,
+        14433
+      ]
+    },
+    "VB": {
+      "country": "IT",
+      "area_ids": [
+        280075
+      ],
+      "range_ids": [
+        14422,
+        14436
+      ]
+    },
+    "VC": {
+      "country": "IT",
+      "area_ids": [
+        280076
+      ],
+      "range_ids": [
+        14436
+      ]
+    },
+    "BI": {
+      "country": "IT",
+      "area_ids": [
+        279983
+      ],
+      "range_ids": [
+        14436
+      ]
+    },
+    "NO": {
+      "country": "IT",
+      "area_ids": [
+        280031
+      ],
+      "range_ids": [
+        14436
+      ]
+    },
+    "AL": {
+      "country": "IT",
+      "area_ids": [
+        279972
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "AT": {
+      "country": "IT",
+      "area_ids": [
+        279976
+      ],
+      "range_ids": [
+        14461
+      ]
+    },
+    "SO": {
+      "country": "IT",
+      "area_ids": [
+        280062
+      ],
+      "range_ids": [
+        14425,
+        14428
+      ]
+    },
+    "BG": {
+      "country": "IT",
+      "area_ids": [
+        279982
+      ],
+      "range_ids": [
+        14428
+      ]
+    },
+    "BS": {
+      "country": "IT",
+      "area_ids": [
+        279986
+      ],
+      "range_ids": [
+        14420
+      ]
+    },
+    "CO": {
+      "country": "IT",
+      "area_ids": [
+        279996
+      ],
+      "range_ids": [
+        14423
+      ]
+    },
+    "LC": {
+      "country": "IT",
+      "area_ids": [
+        280017
+      ],
+      "range_ids": [
+        14428,
+        14423
+      ]
+    },
+    "VA": {
+      "country": "IT",
+      "area_ids": [
+        280073
+      ],
+      "range_ids": [
+        14423
+      ]
+    },
+    "MI": {
+      "country": "IT",
+      "area_ids": [
+        280027
+      ],
+      "range_ids": [
+        14423
+      ]
+    },
+    "MB": {
+      "country": "IT",
+      "area_ids": [
+        280029
+      ],
+      "range_ids": [
+        14423
+      ]
+    },
+    "PV": {
+      "country": "IT",
+      "area_ids": [
+        280039
+      ],
+      "range_ids": [
+        14436,
+        14467,
+        14423
+      ]
+    },
+    "CR": {
+      "country": "IT",
+      "area_ids": [
+        279998
+      ],
+      "range_ids": [
+        14428
+      ]
+    },
+    "LO": {
+      "country": "IT",
+      "area_ids": [
+        280019
+      ],
+      "range_ids": [
+        14423
+      ]
+    },
+    "MN": {
+      "country": "IT",
+      "area_ids": [
+        280022
+      ],
+      "range_ids": [
+        14420
+      ]
+    },
+    "BZ": {
+      "country": "IT",
+      "area_ids": [
+        279985
+      ],
+      "range_ids": [
+        14456,
+        14434,
+        14429
+      ]
+    },
+    "TN": {
+      "country": "IT",
+      "area_ids": [
+        280068
+      ],
+      "range_ids": [
+        14420,
+        14456
+      ]
+    },
+    "BL": {
+      "country": "IT",
+      "area_ids": [
+        279980
+      ],
+      "range_ids": [
+        14456,
+        14455
+      ]
+    },
+    "VI": {
+      "country": "IT",
+      "area_ids": [
+        280079
+      ],
+      "range_ids": [
+        14444
+      ]
+    },
+    "VR": {
+      "country": "IT",
+      "area_ids": [
+        280077
+      ],
+      "range_ids": [
+        14420,
+        14444
+      ]
+    },
+    "TV": {
+      "country": "IT",
+      "area_ids": [
+        280069
+      ],
+      "range_ids": [
+        14455
+      ]
+    },
+    "PD": {
+      "country": "IT",
+      "area_ids": [
+        280036
+      ],
+      "range_ids": [
+        14444,
+        14455
+      ]
+    },
+    "VE": {
+      "country": "IT",
+      "area_ids": [
+        280074
+      ],
+      "range_ids": [
+        14455
+      ]
+    },
+    "RO": {
+      "country": "IT",
+      "area_ids": [
+        280056
+      ],
+      "range_ids": [
+        14420
+      ]
+    },
+    "UD": {
+      "country": "IT",
+      "area_ids": [
+        280071
+      ],
+      "range_ids": [
+        14452,
+        14454
+      ]
+    },
+    "PN": {
+      "country": "IT",
+      "area_ids": [
+        280046
+      ],
+      "range_ids": [
+        14455
+      ]
+    },
+    "GO": {
+      "country": "IT",
+      "area_ids": [
+        280009
+      ],
+      "range_ids": []
+    },
+    "TS": {
+      "country": "IT",
+      "area_ids": [
+        280070
+      ],
+      "range_ids": []
+    },
+    "GE": {
+      "country": "IT",
+      "area_ids": [
+        280008
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "IM": {
+      "country": "IT",
+      "area_ids": [
+        280011
+      ],
+      "range_ids": [
+        14461
+      ]
+    },
+    "SV": {
+      "country": "IT",
+      "area_ids": [
+        280059
+      ],
+      "range_ids": [
+        14461,
+        14467
+      ]
+    },
+    "SP": {
+      "country": "IT",
+      "area_ids": [
+        280014
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "MO": {
+      "country": "IT",
+      "area_ids": [
+        280028
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "RE": {
+      "country": "IT",
+      "area_ids": [
+        280052
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "PR": {
+      "country": "IT",
+      "area_ids": [
+        280038
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "PC": {
+      "country": "IT",
+      "area_ids": [
+        280043
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "BO": {
+      "country": "IT",
+      "area_ids": [
+        279984
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "FC": {
+      "country": "IT",
+      "area_ids": [
+        280006
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "RA": {
+      "country": "IT",
+      "area_ids": [
+        280050
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "RN": {
+      "country": "IT",
+      "area_ids": [
+        280054
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "FE": {
+      "country": "IT",
+      "area_ids": [
+        280003
+      ],
+      "range_ids": []
+    },
+    "LU": {
+      "country": "IT",
+      "area_ids": [
+        280020
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "MS": {
+      "country": "IT",
+      "area_ids": [
+        280023
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "PT": {
+      "country": "IT",
+      "area_ids": [
+        280045
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "FI": {
+      "country": "IT",
+      "area_ids": [
+        280004
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "AR": {
+      "country": "IT",
+      "area_ids": [
+        279974
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "PO": {
+      "country": "IT",
+      "area_ids": [
+        280048
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "SI": {
+      "country": "IT",
+      "area_ids": [
+        280060
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "GR": {
+      "country": "IT",
+      "area_ids": [
+        280010
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "PI": {
+      "country": "IT",
+      "area_ids": [
+        280044
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "LI": {
+      "country": "IT",
+      "area_ids": [
+        280018
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "PG": {
+      "country": "IT",
+      "area_ids": [
+        280040
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "TR": {
+      "country": "IT",
+      "area_ids": [
+        280065
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "MC": {
+      "country": "IT",
+      "area_ids": [
+        280021
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "AP": {
+      "country": "IT",
+      "area_ids": [
+        279975
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "FM": {
+      "country": "IT",
+      "area_ids": [
+        280002
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "PU": {
+      "country": "IT",
+      "area_ids": [
+        280041
+      ],
+      "range_ids": [
+        14467,
+        14462
+      ]
+    },
+    "AN": {
+      "country": "IT",
+      "area_ids": [
+        279973
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "RI": {
+      "country": "IT",
+      "area_ids": [
+        280053
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "FR": {
+      "country": "IT",
+      "area_ids": [
+        280007
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "RM": {
+      "country": "IT",
+      "area_ids": [
+        280055
+      ],
+      "range_ids": [
+        14462,
+        14467
+      ]
+    },
+    "LT": {
+      "country": "IT",
+      "area_ids": [
+        280015
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "VT": {
+      "country": "IT",
+      "area_ids": [
+        280080
+      ],
+      "range_ids": [
+        14467
+      ]
+    },
+    "AQ": {
+      "country": "IT",
+      "area_ids": [
+        280013
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "TE": {
+      "country": "IT",
+      "area_ids": [
+        280064
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "PE": {
+      "country": "IT",
+      "area_ids": [
+        280042
+      ],
+      "range_ids": [
+        14462
+      ]
+    },
+    "CH": {
+      "country": "IT",
+      "area_ids": [
+        279995
+      ],
+      "range_ids": [
+        14462,
+        14458
+      ]
+    },
+    "IS": {
+      "country": "IT",
+      "area_ids": [
+        280012
+      ],
+      "range_ids": [
+        14458,
+        14462
+      ]
+    },
+    "CB": {
+      "country": "IT",
+      "area_ids": [
+        279990
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "SA": {
+      "country": "IT",
+      "area_ids": [
+        280057
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "AV": {
+      "country": "IT",
+      "area_ids": [
+        279977
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "BN": {
+      "country": "IT",
+      "area_ids": [
+        279981
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "CE": {
+      "country": "IT",
+      "area_ids": [
+        279992
+      ],
+      "range_ids": [
+        14462,
+        14458
+      ]
+    },
+    "NA": {
+      "country": "IT",
+      "area_ids": [
+        280030
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "FG": {
+      "country": "IT",
+      "area_ids": [
+        280005
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "BA": {
+      "country": "IT",
+      "area_ids": [
+        279978
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "BT": {
+      "country": "IT",
+      "area_ids": [
+        279979
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "TA": {
+      "country": "IT",
+      "area_ids": [
+        280063
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "BR": {
+      "country": "IT",
+      "area_ids": [
+        279987
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "LE": {
+      "country": "IT",
+      "area_ids": [
+        280016
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "PZ": {
+      "country": "IT",
+      "area_ids": [
+        280047
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "MT": {
+      "country": "IT",
+      "area_ids": [
+        280024
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "CS": {
+      "country": "IT",
+      "area_ids": [
+        279997
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "RC": {
+      "country": "IT",
+      "area_ids": [
+        280051
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "CZ": {
+      "country": "IT",
+      "area_ids": [
+        279994
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "VV": {
+      "country": "IT",
+      "area_ids": [
+        280078
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "KR": {
+      "country": "IT",
+      "area_ids": [
+        279999
+      ],
+      "range_ids": [
+        14458
+      ]
+    },
+    "CT": {
+      "country": "IT",
+      "area_ids": [
+        279993
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "PA": {
+      "country": "IT",
+      "area_ids": [
+        280037
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "ME": {
+      "country": "IT",
+      "area_ids": [
+        280026
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "EN": {
+      "country": "IT",
+      "area_ids": [
+        280001
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "AG": {
+      "country": "IT",
+      "area_ids": [
+        279971
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "CL": {
+      "country": "IT",
+      "area_ids": [
+        279989
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "RG": {
+      "country": "IT",
+      "area_ids": [
+        280049
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "SR": {
+      "country": "IT",
+      "area_ids": [
+        280061
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "TP": {
+      "country": "IT",
+      "area_ids": [
+        280067
+      ],
+      "range_ids": [
+        14476
+      ]
+    },
+    "NU": {
+      "country": "IT",
+      "area_ids": [
+        280032
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "OG": {
+      "country": "IT",
+      "area_ids": [
+        280033
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "SS": {
+      "country": "IT",
+      "area_ids": [
+        280058
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "OT": {
+      "country": "IT",
+      "area_ids": [
+        280034
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "OR": {
+      "country": "IT",
+      "area_ids": [
+        280035
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "CA": {
+      "country": "IT",
+      "area_ids": [
+        279988
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "CI": {
+      "country": "IT",
+      "area_ids": [
+        279991
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "VS": {
+      "country": "IT",
+      "area_ids": [
+        280025
+      ],
+      "range_ids": [
+        14477
+      ]
+    },
+    "SU": {
+      "country": "IT",
+      "area_ids": [
+        280025,
+        279991,
+        279988
+      ],
+      "range_ids": [
+        14477
+      ]
+    }
+  },
+  "coverage": {
+    "checked": "2026-11-27, against the dev database (c2c areas of production: 110 Italian admin_limits, 97 ranges)",
+    "area_ids": "c2c has no area for the Italian regions: its Italian admin_limits are the provinces (as of 2011, 109 'Provincia di ...' plus 'Valle d'Aosta'), read as the admin_limits areas lying for more than half in the country area IT (14270). A region is the list of its provinces; the first stands for it (its centroid is the position, geom_quality area_centroid), hand-picked as the province of the main mountains of the region: Piemonte TO, Lombardia SO, Trentino-Alto Adige BZ, Veneto BL, Friuli-Venezia Giulia UD, Liguria GE, Emilia-Romagna MO, Toscana LU, Umbria PG, Marche MC, Lazio RI, Abruzzo AQ, Molise IS, Campania SA, Puglia FG, Basilicata PZ, Calabria CS, Sicilia CT, Sardegna NU. The test checks that every province is in exactly one region.",
+    "range_ids": "the mountain ranges (area_type range) covering at least 15% of the region (or province), largest share first. Information only: an outing is not given these ranges.",
+    "site": "gulliver.it gives a route its region ('Piemonte', 'Valle d'Aosta', or a foreign one: 'Valais (CH)') and its district (for Italy the province code: 'TO', 'AO'; abroad a place: 'Brig'). The adapter stores 'Piemonte - TO': region_map.lookup tries the whole text, then the district, then the region. This table holds the 20 Italian regions and the codes of the 110 provinces of the c2c areas, plus SU (Sud Sardegna, 2016) as the old provinces it covers (VS, CI, CA). Foreign regions are not in it: their outing has the country of its '(XX)' code.",
+    "not_covered": "the provinces created or merged after 2011 other than SU (none used by gulliver in the recorded fixtures), and the reports whose route is not looked up yet (no region at all)."
+  }
+}

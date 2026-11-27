@@ -1,7 +1,9 @@
+import html
 import logging
 import re
 import secrets
 from threading import RLock
+from urllib.parse import urlsplit
 
 import markdown
 import nh3
@@ -16,9 +18,20 @@ from .nbsp import C2CNbspExtension
 from .ptag import C2CPTagExtension
 from .toc import C2CTocExtension
 from .video import C2CVideoExtension
-from .wikilinks import C2CWikiLinkExtension
+from .wikilinks import SITE_URL_RE, C2CWikiLinkExtension
 
 logger = logging.getLogger('MARKDOWN')
+
+# an opening <a> tag of the cleaned HTML (attribute values are quoted)
+_LINK_TAG_PATTERN = re.compile(r'<a\s((?:[^>"]|"[^"]*")*)>')
+_HREF_PATTERN = re.compile(r'\bhref="(https?://[^"/?#]*)[^"]*"', re.IGNORECASE)
+# the user part and the port of a link host
+_HOST_PATTERN = re.compile(r'^https?://(?:[^@]*@)?([^:]*)', re.IGNORECASE)
+_EXTERNAL_LINK_REL = 'nofollow ugc'
+# the whole URL of a link of the cleaned HTML
+_URL_HREF_PATTERN = re.compile(r'\bhref="(https?://[^"]*)"', re.IGNORECASE)
+# longer URLs (in bytes) are not tracked: an index entry has a size limit
+MAX_TRACKED_URL_LENGTH = 2000
 
 _PARSER_EXCEPTION_MESSAGE = """
 <div c2c:role="danger" style="font-weight:bold">
@@ -38,6 +51,8 @@ _markdown_parser = None
 _cleaner = None
 _iframe_secret_tag = 'iframe_' + secrets.token_hex(32)
 _img_url_secret_attribute = 'c2c:url-' + secrets.token_hex(32)
+_img_width_secret_attribute = 'c2c:width-' + secrets.token_hex(32)
+_img_height_secret_attribute = 'c2c:height-' + secrets.token_hex(32)
 
 """
 _***_secret_tag is used as a private key to replace critical HTML node and
@@ -50,7 +65,8 @@ value of _iframe_secret_tag present into server memory.
 
 Same for the c2c:url attribute of embedded images, which clients may use as
 <img src>: only the [img=ID] parser can produce it, a c2c:url attribute written
-in raw HTML is removed by nh3.
+in raw HTML is removed by nh3. The same for c2c:width and c2c:height, the size
+of the original image, which clients use to keep the space of the image.
 """
 
 
@@ -219,6 +235,8 @@ def _get_cleaner():
                 'c2c:size',
                 'c2c:url-proxy',
                 _img_url_secret_attribute,
+                _img_width_secret_attribute,
+                _img_height_secret_attribute,
                 'c2c:svg-name',
                 'c2c:emoji-db',
             ],
@@ -242,7 +260,8 @@ def _get_cleaner():
             filter_style_properties=set(_CSS_PROPERTIES),
             url_schemes=set(_URL_SCHEMES),
             strip_comments=True,
-            # keep links as written (nh3 adds rel="noopener noreferrer")
+            # no rel from nh3 ("noopener noreferrer" on every link):
+            # _mark_external_links adds one to the links to other sites
             link_rel=None,
         )
 
@@ -254,7 +273,11 @@ def _get_markdown_parser():
     if not _markdown_parser:
         extensions = [
             C2CWikiLinkExtension(),
-            C2CImageExtension(url_secret_attribute=_img_url_secret_attribute),
+            C2CImageExtension(
+                url_secret_attribute=_img_url_secret_attribute,
+                width_secret_attribute=_img_width_secret_attribute,
+                height_secret_attribute=_img_height_secret_attribute,
+            ),
             Nl2BrExtension(),
             C2CTocExtension(marker='[toc]', baselevel=2, toc_depth='1-4'),
             C2CVideoExtension(iframe_secret_tag=_iframe_secret_tag),
@@ -272,14 +295,21 @@ def _get_markdown_parser():
     return _markdown_parser
 
 
-def parse_code(text, image_url_resolver=None):
+def parse_code(
+    text, image_url_resolver=None, image_size_resolver=None, link_type_resolver=None
+):
     """Get markdown, and returns HTML.
 
     This function is thread-safe.
 
     `image_url_resolver` is an optional function
     `(document_id, size) -> url or None` giving the direct media URL of
-    embedded images (see `img.make_image_url_resolver`).
+    embedded images (see `img.make_image_url_resolver`), and
+    `image_size_resolver` an optional `document_id -> (width, height) or None`
+    giving the size of their original (see `img.make_image_size_resolver`).
+    `link_type_resolver` is an optional `document_id -> type or None` giving
+    the type of the documents of the [[type/id|label]] links ("routes"...):
+    a link with another type is built with it.
     """
     # we need parsing to be thread safe because
     # L numbering, and Markdown() has internal global variables
@@ -295,6 +325,8 @@ def parse_code(text, image_url_resolver=None):
         # indefinitely, and performance decreases over time
         parser.reset()
         parser.c2c_image_url_resolver = image_url_resolver
+        parser.c2c_image_size_resolver = image_size_resolver
+        parser.c2c_link_type_resolver = link_type_resolver
 
         try:
             text = parser.convert(text)
@@ -307,8 +339,106 @@ def parse_code(text, image_url_resolver=None):
             text = _PARSER_EXCEPTION_MESSAGE
         finally:
             parser.c2c_image_url_resolver = None
+            parser.c2c_image_size_resolver = None
+            parser.c2c_link_type_resolver = None
 
+    text = _mark_external_links(text)
     text = text.replace(_iframe_secret_tag, 'iframe')
     text = text.replace(_img_url_secret_attribute, 'c2c:url')
+    text = text.replace(_img_width_secret_attribute, 'c2c:width')
+    text = text.replace(_img_height_secret_attribute, 'c2c:height')
 
     return text
+
+
+def _is_external_host(host):
+    host = host.lower().rstrip('.')
+    return host != 'camptocamp.org' and not host.endswith('.camptocamp.org')
+
+
+def _mark_external_links(html):
+    """Add rel="nofollow ugc" to the links of the cleaned HTML to other sites."""
+    # Links written by users: search engines must not credit the sites they
+    # lead to (an expired domain bought by a spammer, for instance). Links to
+    # camptocamp.org and its subdomains, and wikilinks, are left as they are.
+    # The cleaner drops any rel attribute written in the text.
+
+    def mark(match):
+        href = _HREF_PATTERN.search(match.group(1))
+        if not href:
+            return match.group(0)
+        host = _HOST_PATTERN.match(href.group(1)).group(1)
+        if not _is_external_host(host):
+            return match.group(0)
+        return f'<a {match.group(1)} rel="{_EXTERNAL_LINK_REL}">'
+
+    return _LINK_TAG_PATTERN.sub(mark, html)
+
+
+def get_embedded_image_ids(text):
+    """Return the ids of the images that `parse_code` shows in a text, in order."""
+    return get_text_references(text)[0]
+
+
+def get_text_references(text):
+    """Return the images shown and the links of a text: (ids, links, urls)."""
+    # The same parser as parse_code(), whose [img=ID] processor collects the
+    # ids of the images it builds (see img.C2CImageBlock): a tag it does not
+    # turn into an image (inside raw HTML, in the middle of a line, with
+    # uppercase letters...) is not shown, so it is not counted either. The
+    # links are the [[type/id|label]] and the full URLs of the site that it
+    # turns into links (see wikilinks.C2CLinkCollector): (type as written,
+    # id, written as a URL), in order. The urls are the other http(s) links
+    # of the cooked text (see _get_external_urls).
+    with _parser_lock:
+        parser = _get_markdown_parser()
+        parser.reset()
+        ids = []
+        links = []
+        parser.c2c_embedded_image_ids = ids
+        parser.c2c_linked_documents = links
+        try:
+            converted = parser.convert(text)
+            cleaned = _get_cleaner().clean(_escape_disallowed_tags(converted))
+        except Exception as e:
+            # parse_code() shows an error message instead of the text
+            logger.exception('While parsing markdown', exc_info=e)
+            return [], [], []
+        finally:
+            parser.c2c_embedded_image_ids = None
+            parser.c2c_linked_documents = None
+
+    return ids, links, _get_external_urls(cleaned)
+
+
+def get_url_host(url):
+    """Return the host of an http(s) URL, lowercase, or None."""
+    try:
+        host = urlsplit(url).hostname
+    except ValueError:
+        return None
+    host = (host or '').rstrip('.')
+    return host or None
+
+
+def _get_external_urls(cleaned_html):
+    """Return the URLs of the links of the cooked HTML, but the documents."""
+    # As the reader gets them: markdown and raw HTML links, after the cleaner
+    # (no javascript: link...). The full URLs of the documents of the site
+    # are document links (see wikilinks.C2CLinkCollector); the other URLs of
+    # the site (forum, media...) are kept. Each URL once, in order.
+    urls = []
+    for tag in _LINK_TAG_PATTERN.finditer(cleaned_html):
+        href = _URL_HREF_PATTERN.search(tag.group(1))
+        if not href:
+            continue
+        url = html.unescape(href.group(1))
+        if (
+            len(url.encode()) > MAX_TRACKED_URL_LENGTH
+            or SITE_URL_RE.match(url)
+            or not get_url_host(url)
+            or url in urls
+        ):
+            continue
+        urls.append(url)
+    return urls

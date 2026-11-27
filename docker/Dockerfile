@@ -12,12 +12,6 @@ RUN set -x \
     && dpkg-reconfigure locales \
     && /usr/sbin/update-locale LANG=en_US.UTF-8
 
-# git: uv fetches the git-sourced dependencies. Compiled wheels (Shapely,
-# pyproj, psycopg2-binary, numpy) bundle their own native libraries.
-RUN set -x \
-    && apt-get -y --no-install-recommends install \
-    git
-
 RUN set -x \
  && apt-get -y purge \
  && apt-get -y --purge autoremove \
@@ -42,4 +36,6 @@ RUN chown -R root:root /var/www \
 EXPOSE 8080
 ENTRYPOINT ["./docker/scripts/entrypoint.sh"]
 
-CMD ["gunicorn", "--paste", "production.ini", "-u", "www-data", "-g", "www-data", "-b", ":8080", "--timeout", "120"]
+# uvicorn workers, as in production; the composition adds the addresses of
+# the load balancers it trusts for X-Forwarded-For (--forwarded-allow-ips)
+CMD ["gunicorn", "-k", "uvicorn_worker.UvicornWorker", "-w", "3", "c2corg_api.asgi:app", "-u", "www-data", "-g", "www-data", "-b", ":8080", "--timeout", "120", "--keep-alive", "5"]

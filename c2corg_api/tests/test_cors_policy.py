@@ -1,0 +1,48 @@
+import json
+import subprocess  # nosec B404 (the Python of the tests, a constant script)
+import sys
+
+# The allowed CORS origins are a setting, read at start-up into a module
+# dict: the check runs in a new process, with an origin that is not the
+# default one (the origin of the tests), else a setting that is not applied
+# goes unnoticed.
+SCRIPT = """
+import json
+from c2corg_api import create_app
+from c2corg_api.tests import settings
+from c2corg_api.tests.client import Client
+
+settings = dict(settings)
+settings['cors.allowed_origins'] = 'https://www.example.org'
+app = Client(create_app(settings))
+print(json.dumps([
+    app.get('/health', headers={'Origin': origin}, status='*').headers.get(
+        'Access-Control-Allow-Origin'
+    )
+    for origin in ('https://www.example.org', 'http://localhost:6553')
+]))
+"""
+
+
+def test_the_configured_origins_are_allowed():
+    result = subprocess.run(  # nosec B603 (sys.executable, a constant script)
+        [sys.executable, '-c', SCRIPT],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=True,
+    )
+    allowed = json.loads(result.stdout.strip().splitlines()[-1])
+    # the configured origin, and no longer the default one
+    assert allowed == ['https://www.example.org', None]
+
+
+def test_a_pattern_allows_the_ports_of_a_host(monkeypatch):
+    from c2corg_api.views import cors_policy
+    from c2corg_api.web.cors import origin_allowed
+
+    # as config/env.dev: any port of the dev machine, no other host
+    monkeypatch.setitem(cors_policy, 'origins', ('http://localhost:[0-9]*',))
+    assert origin_allowed('http://localhost:8095')
+    assert not origin_allowed('http://localhost.evil.example')
+    assert not origin_allowed('https://evil.example')

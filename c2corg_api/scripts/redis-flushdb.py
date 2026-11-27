@@ -9,10 +9,10 @@ import logging
 import os
 import sys
 
-from pyramid.paster import get_appsettings, setup_logging
-from pyramid.scripts.common import parse_vars
 from redis.client import Redis
 from redis.connection import ConnectionPool
+
+from c2corg_api.config import get_appsettings, parse_vars, setup_logging
 
 log = logging.getLogger('c2corg_api.redis_flushdb')
 

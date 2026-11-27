@@ -1,0 +1,548 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "c2c_tracking: activity tracker connections",
+    "output": "tracker.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/c2corg/c2c_tracking",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "b329b95d9aeff3e46f9193057fe5c3999894031e"
+    }
+  },
+  "components": [
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "c2c_ui (browser)",
+      "sublabel": "Trackers page · outing editor",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "tag": "TrackingInvite"
+    },
+    {
+      "id": "haproxy",
+      "type": "cloud",
+      "label": "HAProxy",
+      "sublabel": "tracking.camptocamp.org",
+      "pos": [
+        350,
+        40
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "tag": "→ ui1:8082"
+    },
+    {
+      "id": "c2capi",
+      "type": "external",
+      "label": "v6_api (prod)",
+      "sublabel": "issues JWT · GET /users/token",
+      "pos": [
+        640,
+        40
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/auth/c2c-token-check.ts",
+          "line": 13,
+          "end_line": 67,
+          "label": "revocation check, 1 min cache"
+        }
+      ]
+    },
+    {
+      "id": "relay",
+      "type": "frontend",
+      "label": "OAuth relay",
+      "sublabel": "www.camptocamp.org return page",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "tag": "→ preprod / PR previews"
+    },
+    {
+      "id": "app",
+      "type": "backend",
+      "label": "Express 5 app",
+      "sublabel": "routers · validation · CORS",
+      "pos": [
+        350,
+        200
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "tag": "Node 26 · v3.2.0",
+      "sources": [
+        {
+          "path": "src/app.ts",
+          "line": 75,
+          "end_line": 127
+        },
+        {
+          "path": "src/index.ts",
+          "line": 54,
+          "end_line": 67,
+          "label": "migrations, then listen"
+        },
+        {
+          "path": "src/server/activities/activity.service.ts",
+          "line": 15,
+          "end_line": 36,
+          "label": "list with c2c activity"
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "JWT auth",
+      "sublabel": "passport-jwt · per-user rate limit",
+      "pos": [
+        640,
+        200
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/auth/index.ts",
+          "line": 14,
+          "end_line": 60
+        },
+        {
+          "path": "src/auth/c2c-jwt-verify.ts",
+          "line": 18,
+          "end_line": 41
+        }
+      ]
+    },
+    {
+      "id": "preprodapi",
+      "type": "external",
+      "label": "v6_api (preprod)",
+      "sublabel": "own secret · ids +1,000,000,000",
+      "pos": [
+        900,
+        200
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/auth/index.ts",
+          "line": 62,
+          "end_line": 77,
+          "label": "JWT_SECRET_KEY_EXTRA strategy"
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "Provider APIs",
+      "sublabel": "Strava · Garmin · Polar · …",
+      "pos": [
+        40,
+        360
+      ],
+      "size": [
+        170,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/server/strava/strava.service.ts",
+          "line": 225,
+          "end_line": 262,
+          "label": "webhook subscription"
+        }
+      ]
+    },
+    {
+      "id": "vendors",
+      "type": "backend",
+      "label": "Vendor modules",
+      "sublabel": "6 routers: OAuth · webhook · resync",
+      "pos": [
+        350,
+        360
+      ],
+      "size": [
+        170,
+        80
+      ],
+      "tag": "enabled per env flag",
+      "sources": [
+        {
+          "path": "src/app.ts",
+          "line": 109,
+          "end_line": 114
+        },
+        {
+          "path": "src/webhooks.ts",
+          "line": 5,
+          "end_line": 13
+        },
+        {
+          "path": "src/server/strava/strava.service.ts",
+          "line": 45,
+          "end_line": 102,
+          "label": "link, then pull last 30"
+        }
+      ]
+    },
+    {
+      "id": "usersvc",
+      "type": "backend",
+      "label": "User service",
+      "sublabel": "merge · drop excluded · keep 30",
+      "pos": [
+        640,
+        360
+      ],
+      "size": [
+        170,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/user.service.ts",
+          "line": 376,
+          "end_line": 434
+        },
+        {
+          "path": "src/excluded-activity-types.ts",
+          "line": 325,
+          "end_line": 326
+        }
+      ]
+    },
+    {
+      "id": "miniature",
+      "type": "backend",
+      "label": "Miniature service",
+      "sublabel": "simplified track → PNG",
+      "pos": [
+        900,
+        360
+      ],
+      "size": [
+        150,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/miniature.service.ts",
+          "line": 13,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "mapbox",
+      "type": "external",
+      "label": "Mapbox",
+      "sublabel": "Static Images API",
+      "pos": [
+        1100,
+        360
+      ],
+      "size": [
+        130,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/miniature.service.ts",
+          "line": 25,
+          "end_line": 29
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis",
+      "sublabel": "Garmin request secret, 1 h",
+      "pos": [
+        180,
+        540
+      ],
+      "size": [
+        150,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/server/garmin/garmin.controller.ts",
+          "line": 15,
+          "end_line": 36
+        }
+      ]
+    },
+    {
+      "id": "backfill",
+      "type": "backend",
+      "label": "Backfill scripts",
+      "sublabel": "npm run backfill:<vendor>",
+      "pos": [
+        440,
+        540
+      ],
+      "size": [
+        160,
+        70
+      ],
+      "sources": [
+        {
+          "path": "scripts/backfill-common.ts",
+          "line": 1,
+          "end_line": 48
+        },
+        {
+          "path": "src/server/garmin/garmin.service.ts",
+          "line": 44,
+          "end_line": 54,
+          "label": "Garmin: replay request"
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "c2corg DB · schema tracking",
+      "pos": [
+        650,
+        540
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "tag": "tokens AES-256-GCM",
+      "sources": [
+        {
+          "path": "src/repository/user.repository.ts",
+          "line": 37,
+          "end_line": 37
+        },
+        {
+          "path": "src/repository/activity.repository.ts",
+          "line": 28,
+          "end_line": 28
+        },
+        {
+          "path": "src/helpers/utils.ts",
+          "line": 59,
+          "end_line": 74
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "cloud",
+      "label": "SOS c2corg-tracking",
+      "sublabel": "public-read miniature PNGs",
+      "pos": [
+        890,
+        540
+      ],
+      "size": [
+        170,
+        70
+      ],
+      "sources": [
+        {
+          "path": "src/storage/storage.ts",
+          "line": 101,
+          "end_line": 143
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ui-haproxy",
+      "from": "ui",
+      "to": "haproxy",
+      "label": "① ⑥ HTTPS + JWT",
+      "variant": "emphasis"
+    },
+    {
+      "id": "haproxy-app",
+      "from": "haproxy",
+      "to": "app",
+      "label": ":8082",
+      "variant": "emphasis"
+    },
+    {
+      "id": "app-auth",
+      "from": "app",
+      "to": "auth",
+      "label": "verify JWT",
+      "variant": "security"
+    },
+    {
+      "id": "auth-api",
+      "from": "auth",
+      "to": "c2capi",
+      "label": "token still valid?",
+      "variant": "security"
+    },
+    {
+      "id": "auth-preprod",
+      "from": "auth",
+      "to": "preprodapi",
+      "label": "2nd secret",
+      "variant": "security"
+    },
+    {
+      "id": "app-vendors",
+      "from": "app",
+      "to": "vendors",
+      "label": "/<vendor>",
+      "variant": "emphasis"
+    },
+    {
+      "id": "vendors-providers",
+      "from": "vendors",
+      "to": "providers",
+      "label": "② OAuth · pull",
+      "variant": "emphasis"
+    },
+    {
+      "id": "providers-vendors",
+      "from": "providers",
+      "to": "vendors",
+      "label": "③ webhooks",
+      "variant": "dashed"
+    },
+    {
+      "id": "providers-relay",
+      "from": "providers",
+      "to": "relay",
+      "label": "OAuth redirect"
+    },
+    {
+      "id": "relay-ui",
+      "from": "relay",
+      "to": "ui",
+      "label": "state / cookie"
+    },
+    {
+      "id": "vendors-usersvc",
+      "from": "vendors",
+      "to": "usersvc",
+      "label": "④ add activity",
+      "variant": "emphasis"
+    },
+    {
+      "id": "usersvc-miniature",
+      "from": "usersvc",
+      "to": "miniature",
+      "label": "⑤ PNG"
+    },
+    {
+      "id": "miniature-mapbox",
+      "from": "miniature",
+      "to": "mapbox"
+    },
+    {
+      "id": "miniature-s3",
+      "from": "miniature",
+      "to": "s3",
+      "label": "put"
+    },
+    {
+      "id": "usersvc-pg",
+      "from": "usersvc",
+      "to": "pg",
+      "label": "upsert"
+    },
+    {
+      "id": "vendors-redis",
+      "from": "vendors",
+      "to": "redis",
+      "label": "Garmin"
+    },
+    {
+      "id": "backfill-vendors",
+      "from": "backfill",
+      "to": "vendors",
+      "label": "resync",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Main flow",
+      "items": [
+        "① Trackers page: link an account (OAuth), then exchange-token with the c2c JWT",
+        "② Tokens exchanged; on link, the last ~30 activities are pulled (Garmin: replay request)",
+        "③ Each new activity arrives as a webhook through HAProxy",
+        "④ Excluded types and trackless activities are dropped; the 30 newest are kept per user",
+        "⑤ A simplified track becomes a Mapbox PNG in SOS",
+        "⑥ The outing editor lists activities, each with its matching c2c activity, and their geometry to prefill an outing"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Per vendor",
+      "items": [
+        "Strava, Suunto, Decathlon, Coros: OAuth 2, pull on link, webhook per activity",
+        "Garmin: OAuth 1.0a (request secret in Redis, 1 h); no pull, Garmin replays N days through the webhook",
+        "Polar: webhook only, signed raw body; no backfill (AccessLink only serves 90 days after linking)",
+        "Strava and Polar subscribe their webhook at startup; the subscription is shared in PostgreSQL"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Preprod uses this tracking",
+      "items": [
+        "No tracking runs on preprod-app; its UI calls tracking.camptocamp.org",
+        "Preprod tokens: JWT_SECRET_KEY_EXTRA, user ids shifted by 1,000,000,000",
+        "Revocation asked to the preprod API (C2C_API_BASE_URL_EXTRA); no answer means 401",
+        "FRONTEND_EXTRA_ORIGINS for CORS; OAuth return goes through the production relay"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Operations",
+      "items": [
+        "v7 fleet: one container on ui1, behind both HAProxies",
+        "/health and /health/ready (database); Prometheus metrics on :8081",
+        "Same JWT secret as v6_api, or every call is 401 (looks like CORS)",
+        "A missed sync is recovered with the per-vendor backfill scripts"
+      ]
+    }
+  ]
+}

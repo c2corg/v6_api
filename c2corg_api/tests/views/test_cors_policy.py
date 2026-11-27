@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from c2corg_api.views import (
     DEFAULT_CORS_ORIGINS,
     configure_cors_policy,
@@ -17,11 +19,10 @@ class TestConfigureCorsPolicy:
     tests don't leak state into each other or into the rest of the suite.
     """
 
-    def setup_method(self):
-        self._original_origins = cors_policy['origins']
-
-    def teardown_method(self):
-        cors_policy['origins'] = self._original_origins
+    @pytest.fixture(autouse=True)
+    def _restore_origins(self, monkeypatch):
+        # the tests configure the global policy: restore it after them
+        monkeypatch.setitem(cors_policy, 'origins', cors_policy['origins'])
 
     def test_never_configures_a_wildcard(self):
         # No matter the settings, a bare "*" must never come out of this,
@@ -41,10 +42,12 @@ class TestConfigureCorsPolicy:
         )
 
     def test_falls_back_to_default_when_setting_missing(self):
+        configure_cors_policy({'cors.allowed_origins': 'https://example.org'})
         configure_cors_policy({})
         assert cors_policy['origins'] == DEFAULT_CORS_ORIGINS
 
     def test_falls_back_to_default_when_setting_blank(self):
+        configure_cors_policy({'cors.allowed_origins': 'https://example.org'})
         configure_cors_policy({'cors.allowed_origins': '   '})
         assert cors_policy['origins'] == DEFAULT_CORS_ORIGINS
 
