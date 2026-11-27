@@ -135,10 +135,18 @@ def due_checks(session, now, limit):
         .order_by(LinkCheck.host, *order, LinkCheck.url)
         .subquery()
     )
+    # among as due, the hosts requested the longest ago (never first): the
+    # runs go round all the hosts, not the first ones of the alphabet
     return (
         session.query(LinkCheck)
+        .join(LinkHost, LinkHost.host == LinkCheck.host)
         .filter(LinkCheck.url.in_(select(per_host.c.url)))
-        .order_by(*order, LinkCheck.url)
+        .order_by(
+            *order,
+            LinkHost.next_request_at.is_(None).desc(),
+            LinkHost.next_request_at,
+            LinkCheck.url,
+        )
         .limit(limit)
         .all()
     )

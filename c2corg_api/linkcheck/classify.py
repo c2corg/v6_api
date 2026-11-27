@@ -19,7 +19,10 @@ FAILURE = 'failure'
 # page linked is not there for readers any more)
 HOME = 'home'
 LOGIN = 'login'
-FAILURES = (FAILURE, HOME, LOGIN)
+# a failure too: sent to the page of a hosting platform saying the site is
+# no more (a WordPress site deleted...)
+CLOSED = 'closed'
+FAILURES = (FAILURE, HOME, LOGIN, CLOSED)
 INCONCLUSIVE = 'inconclusive'
 BLOCKED = 'blocked'
 
@@ -97,6 +100,15 @@ _LANG_SEGMENT_RE = re.compile(r'^[a-z]{2}(?:[-_][a-z]{2})?$', re.IGNORECASE)
 _LOGIN_RE = re.compile(
     r'log-?in|sign-?in|connexion|identification|anmeld|accedi|wp-login|/auth\b'
     r'|/account\b',
+    re.IGNORECASE,
+)
+
+
+# the pages of the hosting platforms saying that a site does not exist (any more)
+_CLOSED_SITE_RE = re.compile(
+    r'^https?://(?:[\w-]+\.)*wordpress\.com/typo/'
+    r'|^https?://(?:[\w-]+\.)*wix\.com/[\w/-]*(?:site-not-found|sitenotfound)'
+    r'|^https?://(?:[\w-]+\.)*over-blog\.com/[\w/-]*(?:blog-ferme|closed)',
     re.IGNORECASE,
 )
 
@@ -193,6 +205,12 @@ def classify(url, answer, reference_title=None):
     if host in SHORTENERS:
         # it leads elsewhere by design: what matters is that it leads somewhere
         return OK
+    if answer.final_url != url:
+        if _CLOSED_SITE_RE.search(answer.final_url):
+            return CLOSED
+        # a login page, on the site or elsewhere (a site moved behind one)
+        if _LOGIN_RE.search(answer.final_url) and not _LOGIN_RE.search(url):
+            return LOGIN
     if not same_site(host, final_host):
         return OFFSITE
     if _SPAM_TITLE_RE.search(title) or title_changed(reference_title, title):
