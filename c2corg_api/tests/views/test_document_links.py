@@ -142,6 +142,8 @@ def test_broken_links(client, session, docs):  # noqa: F811
         f'[[routes/{route2_id}|merged: redirects]] [[routes/{route1_id}|itself]]',
     )
     docs.route2.redirects_to = docs.route3.document_id
+    # a route: the title of its main waypoint before its title
+    docs.route1.locales[0].title_prefix = 'Mont Blanc'
     # not a collaborative document: not listed
     _write(session, docs.outing1, '[[routes/9999998|missing]]')
     _write(session, docs.article1, '[[routes/9999998|missing]]')
@@ -164,10 +166,12 @@ def test_broken_links(client, session, docs):  # noqa: F811
     wrong = next(link for link in body['links'] if link['reason'] == 'wrong_type')
     assert wrong['document_type'] == 'r'
     assert wrong['title'] == docs.route1.locales[0].title
+    assert wrong['title_prefix'] == 'Mont Blanc'
     assert wrong['langs'] == [docs.route1.locales[0].lang]
     assert wrong['is_url'] is False
     assert wrong['target_document_type'] == 'w'
     assert wrong['target_document_title'] == docs.waypoint1.locales[0].title
+    assert wrong['target_document_title_prefix'] is None
     assert wrong['deleted'] is None
     assert route2_id_merged not in {link['target_id'] for link in body['links']}
 
