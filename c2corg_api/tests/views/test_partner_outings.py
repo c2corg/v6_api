@@ -682,7 +682,7 @@ class TestSources:
                 last_run_at=datetime(2026, 11, 24, 9, 0, tzinfo=UTC),
                 last_fetched=0,
                 last_skipped={'parse_error': 1},
-                cursor={'secret': 'cursor-value'},
+                cursor={'secret': 'cursor-value'},  # nosec B105 (a fake cursor)
             )
         )
         session.flush()

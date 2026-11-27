@@ -3,7 +3,7 @@
 The `/metaskirando` view of the UI shows, next to the outings of Camptocamp, the outings reported on partner
 sites ([skitour.fr](https://skitour.fr), [gulliver.it](https://www.gulliver.it), [bivouak.net](https://www.bivouak.net)
 [gipfelbuch.ch](https://www.gipfelbuch.ch), [skitourenportal.eu](https://skitourenportal.eu) and
-[on-ice.it](http://www.on-ice.it/onice/), the last four off by default). The API does not proxy the partner sites
+[on-ice.it](http://www.on-ice.it/onice/), all on by default). The API does not proxy the partner sites
 at request time: the harvester of [docs/harvest.md](harvest.md) runs each source every 15 minutes into its own tables,
 and `GET /partner-outings` merges those rows with the c2c outings of the same period.
 
@@ -22,9 +22,11 @@ harvest_tick (c2corg_api/harvest) -> PartnerHarvester partners.<name> (jobs/harv
 - The job locates the outings published without coordinates from their hints (summit name, region, country: see
   [Outings without coordinates](#outings-without-coordinates)), stores the rows (one per source and external id),
   assigns the c2c areas that contain the point of each outing, records the health of each source, and a second job purges
-  the lookups older than their retention (and the outings older than theirs when `partners_retention` is set: by default
-  the outings are kept forever; the API lists 31 days at most anyway). That purge job is scheduled even when the harvest
-  is off (`harvest_partners_enabled="false"`).
+  the lookups older than their retention (`partner_lookups` is a cache of the partner sites, not data).
+- **Kept forever.** By default (`partners_retention=""`) no outing and no GPX track is ever purged: there is no 31-day
+  (or any) retention. The 31 days are only the widest window of one `GET /partner-outings` query (and of the UI), not
+  how long the rows live. Setting `partners_retention` is the only way to have the purge job delete outings (and, by
+  cascade, their tracks); that purge job is scheduled even when the harvest is off.
 - **Stored, never served.** A partner outing row also keeps `texts`: the free texts of the report (plain text, keyed by
   kind: `narrative`, `conditions`, `access`, `snow`, `equipment`; `TEXT_KINDS` in `partners/model.py`), for later uses
   (search, statistics) under the partners' agreement. They are never in an answer of the API (`GET /partner-outings`
@@ -60,11 +62,11 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 
 | env key | ini key | default | meaning |
 | --- | --- | --- | --- |
-| `harvest_partners_enabled` | `harvest.partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests the partner sources, whatever `harvest.enabled`; `make harvest-partners` refuses to run unless a source is on or `--force` is given |
-| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak`, `gipfelbuch`, `skitourenportal` and `onice`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
+| `harvest_partners_enabled` | `harvest.partners.enabled` | `true` (`false` in `env.test`) | the scheduler harvests the partner sources, whatever `harvest.enabled`; `make harvest-partners` refuses to run unless a source is on or `--force` is given |
+| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (all the sources on) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). skitour without `SKITOUR_API_KEY` is `disabled` (not an error) |
 | `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
-| `partners_retention` | `partners.retention_days` | empty | empty or `0`: the outings are kept forever (the API lists 31 days at most). Set: outings older than that many days are not stored, and purged |
-| `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route, detail and summit lookups, and the job's resolutions of location hints) older than that are purged |
+| `partners_retention` | `partners.retention_days` | empty | empty or `0` (the default): the outings and their tracks are kept forever, nothing is purged (a query of the API lists 31 days at most: a display window, not a retention). Set: outings older than that many days are not stored, and purged with their tracks |
+| `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route, detail and summit lookups, and the job's resolutions of location hints: a cache, not data) older than that are purged |
 | `partners_tracks_per_run` | `partners.tracks_per_run` | `3` | GPX tracks read after the outings of a run (`0`: none); see [GPX tracks](#gpx-tracks) |
 | `partners_tracks_interval` | `partners.tracks_interval_seconds` | `10` | seconds between two GPX files (10 at least) |
 | `partners_transport` | `partners.transport` | `http` (`fixtures` in `env.dev`) | `http`: the real sites; `fixtures`: recorded answers, no network |
@@ -76,7 +78,7 @@ is not set, from the file named by `$NAME_FILE` (the Docker secrets convention, 
 `SKITOUR_API_KEY_FILE=/run/secrets/skitour_api_key`; the content is stripped of surrounding whitespace). `$NAME` wins
 when both are set.
 
-- `SKITOUR_API_KEY` or `SKITOUR_API_KEY_FILE`: the key of the skitour.fr API. Without it the source is `disabled`. Ask skitour.fr for a key; do
+- `SKITOUR_API_KEY` or `SKITOUR_API_KEY_FILE`: the key of the skitour.fr API. Without it the source is `disabled` (`status_detail`: `SKITOUR_API_KEY not set`): not a failure, no backoff, the other sources run, `/health` stays ok. Ask skitour.fr for a key; do
   not reuse any key found in old code.
 - Gulliver needs none today.
 - In fixture mode no secret is needed.
@@ -100,7 +102,7 @@ A failed run (`failing`, `blocked`, `down`) is an error of its harvest source (`
 again. `blocked` is not `down`: a blocked source needs an agreement or an allowlisting from the
 partner, retrying more often only makes it worse. `status_detail` never contains a secret.
 
-A source that fails never stops the other sources, and its previous outings stay listed until the retention purge.
+A source that fails never stops the other sources, and its previous outings stay stored (forever, unless `partners_retention` is set).
 
 **Lookups fail one item, not the run.** A listing page that answers 5xx or times out makes the run `down`, but a
 secondary request for one outing (a gulliver route, a bivouak detail page, a gipfelbuch summit page) does not: through
@@ -156,7 +158,7 @@ are shifted so that the newest fixture outings are dated today. A second run of 
 routes than the recording holds: it ends `degraded` (`3 lookups failed`), as expected offline.
 
 With the dev stack of the README (`scripts/sandbox-up.sh`, or the dev container, with the anonymized dev
-database): `config/env.dev` already has `harvest_partners_enabled="true"`, `partners_transport="fixtures"` and
+database): the sources are on by default and `config/env.dev` already has `partners_transport="fixtures"` and
 `partners_allow_synthetic="true"` (the demo fixtures are real recordings now; the flag only matters for a synthetic
 set).
 
@@ -406,7 +408,7 @@ they only report why they could not run.
 
 - **Contact the partners first.** Both sites are reused for the benefit of their communities: tell skitour.fr and
   gulliver.it what we do, with the credit and link shown on every row, and get their agreement (and the API key
-  for skitour.fr) before enabling the source in production. The credit of each row is `credit` in the answer.
+  for skitour.fr); switch a source off in production while its agreement is missing. The credit of each row is `credit` in the answer.
 - **User agent.** The job identifies itself: `camptocamp.org partner-index (+https://www.camptocamp.org)`. Keep it,
   so that the partners can recognize, throttle or contact us.
 - **Gulliver allowlisting.** `gulliver.it` is behind a Cloudflare JavaScript challenge: from datacenter addresses the
@@ -416,9 +418,10 @@ they only report why they could not run.
 - **Rate limits.** Each adapter declares its politeness (`rate` in `partners/sources/*.py`): a minimum delay between
   requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 45 requests; bivouak: 10 s, 15 requests; gipfelbuch: 2 s, 18 requests; on-ice.it: 2 s, 17 requests). A spent budget
   makes the run `down`.
-- **Enabling.** Keep `harvest_partners_enabled="false"` and `partners_transport="http"` (the defaults) until the
-  agreements are there; then set `harvest_partners_enabled="true"` (or one source with
-  `harvest_partners_<name>_enabled="true"`) and the secret in the environment of the background-jobs container.
+- **Enabling.** All the sources are on by default (`harvest_partners_enabled="true"`, `partners_transport="http"`).
+  Switch one off with `harvest_partners_<name>_enabled="false"` (or all with `harvest_partners_enabled="false"`) while
+  an agreement is missing, and put `SKITOUR_API_KEY` in the environment of the background-jobs container: without it
+  skitour stays `disabled`.
 - **Monitoring.** `/health` lists each source under `harvest` (`partners.skitour: {sources, failing, last_success}`)
   without ever failing the check; look at
   `/partner-outings/sources` (`status_detail`, `last_success_at`, `last_skipped`) when a source is not `ok`.

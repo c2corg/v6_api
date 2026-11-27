@@ -108,7 +108,7 @@ def upgrade():
         'ON guidebook.partner_outings USING gin (area_ids)'
     )
     # No GIN index on `activities`: PostgreSQL 9.6 (production) has no default GIN
-    # operator class for enum arrays. The 31-day retention keeps date scans small.
+    # operator class for enum arrays. The date index keeps the date scans small.
 
     op.create_table(
         'partner_sources',

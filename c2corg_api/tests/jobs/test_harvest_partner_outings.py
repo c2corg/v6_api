@@ -49,6 +49,7 @@ def only(*names):
 SETTINGS = {
     'harvest.partners.enabled': 'false',
     'partners.interval_minutes': '15',
+    # not the default (empty: kept forever): a retention, to test the purge
     'partners.retention_days': '31',
     'partners.transport': 'http',
     'partners.fixtures_dir': '',

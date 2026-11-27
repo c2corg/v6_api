@@ -252,7 +252,7 @@ def assign_areas(session, ids=None):
             JOIN {schema}.documents d
               ON d.document_id = a.document_id AND d.redirects_to IS NULL
             WHERE ST_Intersects(g.geom_detail, p.geom)), '{{}}')
-        WHERE p.geom IS NOT NULL AND p.geom_quality <> 'area_centroid'"""
+        WHERE p.geom IS NOT NULL AND p.geom_quality <> 'area_centroid'"""  # nosec B608 (constant SQL)
     if ids is None:
         session.execute(text(sql))
     elif ids:
@@ -649,7 +649,7 @@ def _start_secrets(name):
 def _mark_unconfigured(session, configured):
     """Mark the sources not switched on (`harvest.partners...`) as `disabled`.
 
-    Their outings stay listed until the retention purge. Never raises.
+    Their outings stay stored (forever, unless a retention is set). Never raises.
     """
     try:
         names = set(REGISTRY) | set(session.scalars(select(PartnerSource.source)))
