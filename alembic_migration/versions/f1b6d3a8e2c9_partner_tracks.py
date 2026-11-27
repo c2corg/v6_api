@@ -48,7 +48,10 @@ def upgrade():
         ),
         sa.ForeignKeyConstraint(
             ['source', 'external_id'],
-            ['guidebook.partner_outings.source', 'guidebook.partner_outings.external_id'],
+            [
+                'guidebook.partner_outings.source',
+                'guidebook.partner_outings.external_id',
+            ],
             name='fk_partner_tracks_outing',
             ondelete='CASCADE',
         ),
