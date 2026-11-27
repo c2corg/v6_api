@@ -45,7 +45,7 @@ dependencies = [
     # Discourse API client
     "pydiscourse==1.7.0",
     "pydantic==2.14.4",
-    "fastapi==0.162.7",
+    "fastapi==0.165.0",
     # parses the XML of the Météo-France avalanche bulletins
     "defusedxml==0.7.1",
     "tldextract==5.4.0",
