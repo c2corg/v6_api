@@ -450,3 +450,29 @@ def test_redirected_home_counts_as_a_failure():
     answer = _answer(check.url + 'topo', final_url='https://a.example/')
     checker.apply(check, c.HOME, answer, NOW)
     assert (check.status, check.error, check.failures) == (FAILING, c.HOME, 1)
+
+
+def test_recheck_before_the_never_checked(session):
+    for url, next_check_at in (
+        ('http://a.example/', None),
+        ('http://b.example/', NOW - timedelta(days=1)),
+        ('http://c.example/', checker.RECHECK_AT),
+    ):
+        host = url.split('/')[2]
+        session.add(LinkHost(host=host))
+        session.add(
+            LinkCheck(
+                url=url,
+                host=host,
+                status=UNCHECKED,
+                failures=0,
+                last_seen_at=NOW,
+                next_check_at=next_check_at,
+            )
+        )
+    session.flush()
+    assert [c.url for c in checker.due_checks(session, NOW, 10)] == [
+        'http://c.example/',
+        'http://a.example/',
+        'http://b.example/',
+    ]

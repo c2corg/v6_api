@@ -40,6 +40,11 @@ REQUESTS_PER_RUN = 10
 # a key of pg_try_advisory_lock: one run at a time, whatever the processes
 _LOCK_KEY = 0x6C696E6B  # "link"
 
+# next_check_at of a URL a moderator asked to check again: before all the
+# others, even the never checked ones (in the order of the due checks)
+RECHECK_AT = datetime(2000, 1, 1, tzinfo=UTC)
+NEVER_CHECKED = datetime(2000, 1, 2, tzinfo=UTC)
+
 OK_INTERVAL = timedelta(days=30)
 FAILING_INTERVAL = timedelta(days=7)
 DEAD_INTERVAL = timedelta(days=90)
@@ -117,8 +122,8 @@ def sync_link_checks(session, now):
 
 def due_checks(session, now, limit):
     """Return the URLs to check now: one per host, the most overdue first."""
-    # never checked first, then by date
-    order = (LinkCheck.next_check_at.is_(None).desc(), LinkCheck.next_check_at)
+    # asked by a moderator first (RECHECK_AT), then never checked, then by date
+    order = (func.coalesce(LinkCheck.next_check_at, NEVER_CHECKED),)
     per_host = (
         select(LinkCheck.url)
         .join(LinkHost, LinkHost.host == LinkCheck.host)

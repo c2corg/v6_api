@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import aggregate_order_by, array_agg
 
+from c2corg_api.linkcheck.checker import RECHECK_AT
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.external_link import ExternalLink
@@ -279,6 +280,7 @@ def recheck_external_link(request):
     """Check a link again at the next run of the checker."""
     # `POST` `/documents/external-links/recheck` {'url': ...}
     check = DBSession.get(LinkCheck, request.validated['url'])
-    check.next_check_at = datetime.now(UTC)
+    # before the others, even the never checked ones (see linkcheck.checker)
+    check.next_check_at = RECHECK_AT
     DBSession.flush()
     return {'url': check.url, 'next_check_at': _iso(check.next_check_at)}

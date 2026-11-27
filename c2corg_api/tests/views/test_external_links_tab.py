@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from c2corg_api.linkcheck.checker import RECHECK_AT
 from c2corg_api.models import DBSession
 from c2corg_api.models.link_check import LinkCheck, LinkHost
 from c2corg_api.tests import auth_headers
@@ -163,10 +164,9 @@ def test_review_host_and_recheck(client, session, links):
     assert body['links'][0]['host_review'] == 'trusted'
     assert 'http://dead.example/a' in _urls(_list(client, '?reviewed=true').json)
 
-    before = datetime.now(UTC)
     _post(client, 'recheck', {'url': 'http://dead.example/a'})
     session.expire_all()
-    assert session.get(LinkCheck, 'http://dead.example/a').next_check_at >= before
+    assert session.get(LinkCheck, 'http://dead.example/a').next_check_at == RECHECK_AT
 
 
 def test_review_refused(client, links):
