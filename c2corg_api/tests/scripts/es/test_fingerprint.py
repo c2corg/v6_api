@@ -12,6 +12,7 @@ def package(tmp_path, monkeypatch):
     for name in (
         'search/mapping.py',
         'search/mappings/waypoint_mapping.py',
+        'models/association_views.py',
         'models/common/sortable_search_attributes.py',
         'scripts/es/fill_index.py',
     ):
@@ -40,6 +41,7 @@ def test_fingerprint_ignores_line_endings(package):
     'name',
     [
         'search/mappings/waypoint_mapping.py',
+        'models/association_views.py',
         'models/common/sortable_search_attributes.py',
         'scripts/es/fill_index.py',
     ],

@@ -30,13 +30,15 @@ from c2corg_api.search import configure_es_from_config, elasticsearch_config
 
 # Files (relative to the c2corg_api package) which decide what the index contains: its
 # mappings and analyzers, the serialization of the documents (the mappings use the
-# enums of models/common, stored in the index as numbers), and the way the index is
-# filled and kept in sync.
+# enums of models/common, stored in the index as numbers), the ids of the associated
+# documents (the views of models/association_views), and the way the index is filled
+# and kept in sync.
 SOURCES = (
     'search/__init__.py',
     'search/mapping.py',
     'search/mapping_types.py',
     'search/mappings/*.py',
+    'models/association_views.py',
     'models/common/*.py',
     'scripts/initializees.py',
     'scripts/es/es_batch.py',
