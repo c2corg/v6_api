@@ -8,9 +8,8 @@ from c2corg_api.models.book import Book
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
-from c2corg_api.scripts.es.fill_index import fill_index
 from c2corg_api.tests import auth_headers
-from c2corg_api.tests.search import force_search_index
+from c2corg_api.tests.search import reset_search_index
 
 PREFIX = '/search'
 
@@ -211,9 +210,9 @@ def docs(session) -> Docs:
     )
     session.add(book1)
     session.flush()
-    fill_index(session)
-    # make sure the search index is built
-    force_search_index()
+    # a fresh index: the documents of the earlier tests of this worker
+    # (rolled back in the database) would else fill the first results
+    reset_search_index(session)
     return Docs(article1=article1, waypoint1=waypoint1, book1=book1)
 
 
