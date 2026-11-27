@@ -35,6 +35,7 @@ _TOKEN = re.compile(r'\[\]|[^.\[\]]+')
 # a path token for any key of an object keyed by ids (`*.ID`: gulliver
 # answers `{"350636": {...}, ...}`); its shape is `{"*": <merged values>}`
 WILDCARD = '*'
+LIST_ITEMS = '[]'  # the path token of the items of a list
 # lists longer than this are cut in the recorded fixtures
 MAX_ITEMS = 30
 
@@ -110,13 +111,13 @@ def _map_path(data, tokens, fn):
     """Return `data` with `fn` applied to the values at a path (copied, not mutated)."""
     if not tokens:
         return fn(data)
-    token, rest = tokens[0], tokens[1:]
-    if isinstance(data, list) and token == '[]':
+    step, rest = tokens[0], tokens[1:]
+    if isinstance(data, list) and step == LIST_ITEMS:
         return [_map_path(v, rest, fn) for v in data]
-    if isinstance(data, dict) and token == WILDCARD:
+    if isinstance(data, dict) and step == WILDCARD:
         return {k: _map_path(v, rest, fn) for k, v in data.items()}
-    if isinstance(data, dict) and token in data:
-        return {**data, token: _map_path(data[token], rest, fn)}
+    if isinstance(data, dict) and step in data:
+        return {**data, step: _map_path(data[step], rest, fn)}
     return data
 
 
@@ -491,14 +492,14 @@ def lookup(shape, path: str):
 def _at(shape, path: str):
     """Return the node of a shape at a path (first list item), or None."""
     node = shape
-    for token in _TOKEN.findall(path):
+    for step in _TOKEN.findall(path):
         if isinstance(node, list):
             node = node[0] if node else None
-            if token == '[]':
+            if step == LIST_ITEMS:
                 continue
-        if not isinstance(node, dict) or token not in node:
+        if not isinstance(node, dict) or step not in node:
             return None
-        node = node[token]
+        node = node[step]
     return node
 
 
