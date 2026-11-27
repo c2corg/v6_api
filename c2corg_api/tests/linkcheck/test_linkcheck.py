@@ -176,6 +176,37 @@ def _answer(url, status=200, title=None, text='', final_url=None, error=None):
             None,
             c.MOVED,
         ),
+        # sent to the home page or a login page: the page is gone
+        (
+            _answer('http://a.fr/valanghe/', final_url='https://meteo.a.fr/it/home'),
+            None,
+            c.HOME,
+        ),
+        (_answer('http://a.fr/fiche-123', final_url='https://www.a.fr/'), None, c.HOME),
+        (_answer('http://a.fr/?id=3', final_url='https://a.fr/fr/'), None, c.HOME),
+        (_answer('http://a.fr/', final_url='https://a.fr/fr/'), None, c.MOVED),
+        (_answer('http://a.fr', final_url='https://a.fr/accueil'), None, c.MOVED),
+        (
+            _answer(
+                'http://a.fr/picture.php?/912',
+                final_url='https://a.fr/identification.php?r=1',
+            ),
+            None,
+            c.LOGIN,
+        ),
+        (
+            _answer('http://a.fr/login', final_url='https://a.fr/account/login'),
+            None,
+            c.MOVED,
+        ),
+        (
+            _answer(
+                'http://a.fr/articles/page.php?id=756',
+                final_url='https://a.fr/articles/patagonia-756',
+            ),
+            None,
+            c.MOVED,
+        ),
         (_answer('https://bit.ly/x', final_url='https://topo.example/'), None, c.OK),
         (_answer('http://a.example/', text='This domain is for sale!'), None, c.PARKED),
         (
@@ -412,3 +443,10 @@ def test_an_error_does_not_stop_the_run(network, session, docs, monkeypatch):  #
     assert odd.status == UNCHECKED
     assert odd.next_check_at.astimezone(UTC) == NOW + checker.FAILING_INTERVAL
     assert session.get(LinkCheck, 'http://other.example/o').status == OK
+
+
+def test_redirected_home_counts_as_a_failure():
+    check = _check()
+    answer = _answer(check.url + 'topo', final_url='https://a.example/')
+    checker.apply(check, c.HOME, answer, NOW)
+    assert (check.status, check.error, check.failures) == (FAILING, c.HOME, 1)

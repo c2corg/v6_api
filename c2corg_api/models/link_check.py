@@ -66,7 +66,8 @@ class LinkCheck(Base):
     status = Column(String(20), nullable=False, default=UNCHECKED)
 
     # the HTTP status of the last answer, or the kind of error (dns, tls,
-    # refused, timeout, private, too_many_redirects...)
+    # refused, timeout, private, too_many_redirects..., or home / login: a
+    # page redirected to the home page or to a login page)
     http_status = Column(SmallInteger)
     error = Column(String(30))
 

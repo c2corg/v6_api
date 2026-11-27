@@ -15,6 +15,11 @@ OFFSITE = 'offsite'
 PARKED = 'parked'
 SUSPECT = 'suspect'
 FAILURE = 'failure'
+# failures too: a page redirected to the home page or to a login page (the
+# page linked is not there for readers any more)
+HOME = 'home'
+LOGIN = 'login'
+FAILURES = (FAILURE, HOME, LOGIN)
 INCONCLUSIVE = 'inconclusive'
 BLOCKED = 'blocked'
 
@@ -70,6 +75,54 @@ _SPAM_TITLE_RE = re.compile(
     r'|pharmacy|jackpot|bonus sans dépôt)\b',
     re.IGNORECASE,
 )
+
+
+# the last segments of the path of a home page: /, /fr/, /it/home, /accueil...
+_HOME_SEGMENTS = {
+    'home',
+    'accueil',
+    'start',
+    'startseite',
+    'inicio',
+    'index',
+    'index.html',
+    'index.htm',
+    'index.php',
+    'default.asp',
+    'default.aspx',
+}
+_LANG_SEGMENT_RE = re.compile(r'^[a-z]{2}(?:[-_][a-z]{2})?$', re.IGNORECASE)
+
+# a login page
+_LOGIN_RE = re.compile(
+    r'log-?in|sign-?in|connexion|identification|anmeld|accedi|wp-login|/auth\b'
+    r'|/account\b',
+    re.IGNORECASE,
+)
+
+
+def _segments(url):
+    return [s for s in urlsplit(url).path.split('/') if s]
+
+
+def is_home(url):
+    """Tell whether a URL is a home page: no query, a path such as /fr/home."""
+    if urlsplit(url).query:
+        return False
+    segments = [s.lower() for s in _segments(url)]
+    if segments and _LANG_SEGMENT_RE.match(segments[0]):
+        segments = segments[1:]
+    return not segments or segments == [segments[0]] and segments[0] in _HOME_SEGMENTS
+
+
+def _redirected_away(url, final_url):
+    """Return HOME or LOGIN when a link was sent there instead of its page."""
+    # a link to a home page or a login page may lead to one
+    if _LOGIN_RE.search(final_url) and not _LOGIN_RE.search(url):
+        return LOGIN
+    if is_home(final_url) and not is_home(url):
+        return HOME
+    return None
 
 
 def site(host):
@@ -145,5 +198,5 @@ def classify(url, answer, reference_title=None):
     if _SPAM_TITLE_RE.search(title) or title_changed(reference_title, title):
         return SUSPECT
     if _comparable(answer.final_url) != _comparable(url):
-        return MOVED
+        return _redirected_away(url, answer.final_url) or MOVED
     return OK

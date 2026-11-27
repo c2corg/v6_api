@@ -154,7 +154,7 @@ def robots_allow(host_row, url, now):
         answer = fetch(_robots_url(url))
         requested = True
         status = answer.http_status
-        if c.classify(url, answer) == c.FAILURE and answer.error:
+        if c.classify(url, answer) in c.FAILURES and answer.error:
             # no such domain, a private address...: the check of the page
             # will tell (a failure)
             return True, requested
@@ -180,7 +180,10 @@ def apply(check, outcome, answer, now):
         check.error = answer.error
         check.final_url = answer.final_url if answer.final_url != check.url else None
         check.last_title = answer.title
-    if outcome == c.FAILURE:
+    if outcome in c.FAILURES:
+        if outcome != c.FAILURE:
+            # why, the answer being fine: redirected to the home page...
+            check.error = outcome
         check.failures = (check.failures or 0) + 1
         check.first_failure_at = check.first_failure_at or now
         dead = (
