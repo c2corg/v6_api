@@ -19,6 +19,7 @@ from sqlalchemy.dialects.postgresql import distinct_on, insert
 from sqlalchemy.orm import Session
 
 from c2corg_api.linkcheck import classify as c
+from c2corg_api.linkcheck import rel
 from c2corg_api.linkcheck.fetch import USER_AGENT, fetch
 from c2corg_api.models.document import Document
 from c2corg_api.models.external_link import ExternalLink
@@ -39,6 +40,11 @@ REQUESTS_PER_RUN = 10
 
 # a key of pg_try_advisory_lock: one run at a time, whatever the processes
 _LOCK_KEY = 0x6C696E6B  # "link"
+
+# next_check_at of a URL a moderator asked to check again: before all the
+# others, even the never checked ones (in the order of the due checks)
+RECHECK_AT = datetime(2000, 1, 1, tzinfo=UTC)
+NEVER_CHECKED = datetime(2000, 1, 2, tzinfo=UTC)
 
 OK_INTERVAL = timedelta(days=30)
 FAILING_INTERVAL = timedelta(days=7)
@@ -117,8 +123,8 @@ def sync_link_checks(session, now):
 
 def due_checks(session, now, limit):
     """Return the URLs to check now: one per host, the most overdue first."""
-    # never checked first, then by date
-    order = (LinkCheck.next_check_at.is_(None).desc(), LinkCheck.next_check_at)
+    # asked by a moderator first (RECHECK_AT), then never checked, then by date
+    order = (func.coalesce(LinkCheck.next_check_at, NEVER_CHECKED),)
     per_host = (
         select(LinkCheck.url)
         .join(LinkHost, LinkHost.host == LinkCheck.host)
@@ -130,10 +136,18 @@ def due_checks(session, now, limit):
         .order_by(LinkCheck.host, *order, LinkCheck.url)
         .subquery()
     )
+    # among as due, the hosts requested the longest ago (never first): the
+    # runs go round all the hosts, not the first ones of the alphabet
     return (
         session.query(LinkCheck)
+        .join(LinkHost, LinkHost.host == LinkCheck.host)
         .filter(LinkCheck.url.in_(select(per_host.c.url)))
-        .order_by(*order, LinkCheck.url)
+        .order_by(
+            *order,
+            LinkHost.next_request_at.is_(None).desc(),
+            LinkHost.next_request_at,
+            LinkCheck.url,
+        )
         .limit(limit)
         .all()
     )
@@ -217,6 +231,17 @@ def apply(check, outcome, answer, now):
 
 def check_link(session, check, host_row, now):
     """Check one URL (robots.txt first); return the number of requests made."""
+    # credited as rendered so far (at the time of its last check): a change
+    # renders the documents showing it again (see linkcheck.rel)
+    credited = rel.is_credited(check, host_row.review, check.last_checked_at or now)
+    requests = _check_link(session, check, host_row, now)
+    if rel.is_credited(check, host_row.review, now) != credited:
+        session.flush()
+        rel.invalidate(session, [check.url])
+    return requests
+
+
+def _check_link(session, check, host_row, now):
     allowed, requests = robots_allow(host_row, check.url, now)
     if allowed is None:
         host_row.next_request_at = now + HOST_RETRY

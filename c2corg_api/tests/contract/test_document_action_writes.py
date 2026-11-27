@@ -92,6 +92,10 @@ DELETED_DOCUMENT_ROUTES = [
     ('GET', '/documents/broken-links'),
     ('GET', '/images/duplicates'),
     ('POST', '/images/duplicates/dismiss'),
+    ('GET', '/documents/external-links'),
+    ('POST', '/documents/external-links/review'),
+    ('POST', '/documents/external-links/review-host'),
+    ('POST', '/documents/external-links/recheck'),
 ]
 
 
@@ -136,6 +140,38 @@ def test_broken_embeds(browser):
 def test_broken_links(browser):
     response = browser.get('/documents/broken-links', user='moderator')
     check_snapshot('documents_broken_links', response)
+
+
+@contract(('GET', '/documents/external-links'))
+def test_external_links(browser):
+    response = browser.get('/documents/external-links', user='moderator')
+    check_snapshot('documents_external_links', response)
+
+
+@contract(
+    ('POST', '/documents/external-links/review'),
+    ('POST', '/documents/external-links/recheck'),
+)
+def test_external_link_unknown(browser):
+    for path in ('review', 'recheck'):
+        response = browser.post(
+            '/documents/external-links/' + path,
+            {'url': 'http://unknown.example/'},
+            user='moderator',
+            status=400,
+        )
+        check_snapshot('documents_external_links_unknown_url', response)
+
+
+@contract(('POST', '/documents/external-links/review-host'))
+def test_external_host_unknown(browser):
+    response = browser.post(
+        '/documents/external-links/review-host',
+        {'host': 'unknown.example', 'review': 'trusted'},
+        user='moderator',
+        status=400,
+    )
+    check_snapshot('documents_external_links_unknown_host', response)
 
 
 @contract(('GET', '/images/duplicates'))

@@ -1,7 +1,9 @@
 import re
+from datetime import UTC, datetime
 
 from sqlalchemy import inspect, select
 
+from c2corg_api.linkcheck.rel import credited_urls, text_urls
 from c2corg_api.markdown import get_text_references, get_url_host, parse_code
 from c2corg_api.markdown.img import (
     IMG_ID_RE,
@@ -49,17 +51,33 @@ def configure_image_url(settings):
 def cook(data):
     image_url_resolver, image_size_resolver = _get_image_resolvers(data)
     link_type_resolver = _get_link_type_resolver(data)
+    credited = _get_credited_urls(data)
 
     result = {}
     for key in data:
         if key not in NOT_MARKDOWN_PROPERTY and data[key]:
             result[key] = parse_code(
-                data[key], image_url_resolver, image_size_resolver, link_type_resolver
+                data[key],
+                image_url_resolver,
+                image_size_resolver,
+                link_type_resolver,
+                credited,
             )
         else:
             result[key] = data[key]
 
     return result
+
+
+def _get_credited_urls(data):
+    """Return the URLs of other sites of `data` the search engines may credit."""
+    # in one query: their links get no rel="nofollow ugc" (see linkcheck.rel)
+    texts = [
+        value
+        for key, value in data.items()
+        if key not in NOT_MARKDOWN_PROPERTY and isinstance(value, str)
+    ]
+    return credited_urls(DBSession, text_urls(texts), datetime.now(UTC))
 
 
 def _get_link_type_resolver(data):
