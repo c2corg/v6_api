@@ -14,7 +14,8 @@ from c2corg_api.models import DBSession
 from c2corg_api.models.association import Association, AssociationLog
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_history import DocumentVersion, HistoryMetaData
-from c2corg_api.models.image import Image
+from c2corg_api.models.image import IMAGE_TYPE, Image
+from c2corg_api.views.document_links import linking_documents
 from c2corg_api.views.document_trash import _user, _users
 from c2corg_api.views.image_embeds import document_titles, embedding_documents
 
@@ -56,8 +57,10 @@ def list_orphan_images(offset, limit, image_type=None):
         + [unlink['user_id'] for unlink in unlinked.values()]
     )
     titles = document_titles(ids)
-    # an orphan shown in a text is used: link it again rather than delete it
+    # an orphan shown in a text, or linked from one, is used: associate it
+    # again rather than delete it
     embedded_in = embedding_documents(ids)
+    linked_from = linking_documents(ids, IMAGE_TYPE)
     return {
         'total': total,
         'images': [
@@ -70,6 +73,7 @@ def list_orphan_images(offset, limit, image_type=None):
                 'author': _user(users, created.get(row.document_id, (None, None))[1]),
                 'last_unlink': _unlink(unlinked.get(row.document_id), users),
                 'embedded_in': embedded_in.get(row.document_id, []),
+                'linked_from': linked_from.get(row.document_id, []),
             }
             for row in rows
         ],

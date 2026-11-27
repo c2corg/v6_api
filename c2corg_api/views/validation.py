@@ -1,9 +1,8 @@
-import functools
 import math
 import urllib
 
 from dateutil import parser as datetime_parser
-from sqlalchemy.sql.expression import and_, exists
+from sqlalchemy.sql.expression import and_, exists, or_
 
 from c2corg_api.httpexceptions import HTTPBadRequest
 from c2corg_api.models import DBSession, article, image
@@ -550,7 +549,44 @@ def association_permission_checker(request, skip_outing_check=False):
 
 
 def association_permission_removal_checker(request):
-    return functools.partial(check_permission_for_association_removal, request)
+    def check(association):
+        check_permission_for_association_removal(request, association)
+        check_image_keeps_a_document(association)
+
+    return check
+
+
+def check_image_keeps_a_document(association):
+    """Refuse to unlink an image from its last document."""
+    # an orphan image is lost for the readers (see views.image_orphans): it is
+    # deleted instead (by its author during the deletion period, else by a
+    # moderator). For everyone, whatever the document: an outing, a route...
+    for side in ('parent', 'child'):
+        if getattr(association, f'{side}_document_type') != IMAGE_TYPE:
+            continue
+        image_id = getattr(association, f'{side}_document_id')
+        other_id = (
+            association.child_document_id
+            if side == 'parent'
+            else association.parent_document_id
+        )
+        other_links = exists().where(
+            or_(
+                and_(
+                    Association.child_document_id == image_id,
+                    Association.parent_document_id != other_id,
+                ),
+                and_(
+                    Association.parent_document_id == image_id,
+                    Association.child_document_id != other_id,
+                ),
+            )
+        )
+        if not DBSession.query(other_links).scalar():
+            raise HTTPBadRequest(
+                'as the last document of the image, this document can not be '
+                'disassociated: delete the image instead'
+            )
 
 
 def check_permission_for_association_removal(request, association):

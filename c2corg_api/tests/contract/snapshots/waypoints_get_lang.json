@@ -224,6 +224,7 @@
               }
             ],
             "author": {
+              "created_at": "str",
               "name": "str",
               "user_id": "int"
             },

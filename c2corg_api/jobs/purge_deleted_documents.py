@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from c2corg_api.models import DBSession
 from c2corg_api.models.deleted_document import DeletedDocument
 from c2corg_api.views.document_trash import expired_before
+from c2corg_api.views.document_unmerge import purge_expired
 
 log = logging.getLogger(__name__)
 
@@ -19,4 +20,6 @@ def purge_deleted_documents():
             delete(DeletedDocument).where(DeletedDocument.deleted_at < expired_before())
         ).rowcount
         log.info('Purging %d deleted documents', count)
+        # the merges kept to be undone, kept as long
+        log.info('Purging %d merges', purge_expired(session))
         session.commit()

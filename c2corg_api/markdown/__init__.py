@@ -20,6 +20,13 @@ from .wikilinks import C2CWikiLinkExtension
 
 logger = logging.getLogger('MARKDOWN')
 
+# an opening <a> tag of the cleaned HTML (attribute values are quoted)
+_LINK_TAG_PATTERN = re.compile(r'<a\s((?:[^>"]|"[^"]*")*)>')
+_HREF_PATTERN = re.compile(r'\bhref="(https?://[^"/?#]*)[^"]*"', re.IGNORECASE)
+# the user part and the port of a link host
+_HOST_PATTERN = re.compile(r'^https?://(?:[^@]*@)?([^:]*)', re.IGNORECASE)
+_EXTERNAL_LINK_REL = 'nofollow ugc'
+
 _PARSER_EXCEPTION_MESSAGE = """
 <div c2c:role="danger" style="font-weight:bold">
 Parser error, please send a mail to
@@ -247,7 +254,8 @@ def _get_cleaner():
             filter_style_properties=set(_CSS_PROPERTIES),
             url_schemes=set(_URL_SCHEMES),
             strip_comments=True,
-            # keep links as written (nh3 adds rel="noopener noreferrer")
+            # no rel from nh3 ("noopener noreferrer" on every link):
+            # _mark_external_links adds one to the links to other sites
             link_rel=None,
         )
 
@@ -281,7 +289,9 @@ def _get_markdown_parser():
     return _markdown_parser
 
 
-def parse_code(text, image_url_resolver=None, image_size_resolver=None):
+def parse_code(
+    text, image_url_resolver=None, image_size_resolver=None, link_type_resolver=None
+):
     """Get markdown, and returns HTML.
 
     This function is thread-safe.
@@ -291,6 +301,9 @@ def parse_code(text, image_url_resolver=None, image_size_resolver=None):
     embedded images (see `img.make_image_url_resolver`), and
     `image_size_resolver` an optional `document_id -> (width, height) or None`
     giving the size of their original (see `img.make_image_size_resolver`).
+    `link_type_resolver` is an optional `document_id -> type or None` giving
+    the type of the documents of the [[type/id|label]] links ("routes"...):
+    a link with another type is built with it.
     """
     # we need parsing to be thread safe because
     # L numbering, and Markdown() has internal global variables
@@ -307,6 +320,7 @@ def parse_code(text, image_url_resolver=None, image_size_resolver=None):
         parser.reset()
         parser.c2c_image_url_resolver = image_url_resolver
         parser.c2c_image_size_resolver = image_size_resolver
+        parser.c2c_link_type_resolver = link_type_resolver
 
         try:
             text = parser.convert(text)
@@ -320,7 +334,9 @@ def parse_code(text, image_url_resolver=None, image_size_resolver=None):
         finally:
             parser.c2c_image_url_resolver = None
             parser.c2c_image_size_resolver = None
+            parser.c2c_link_type_resolver = None
 
+    text = _mark_external_links(text)
     text = text.replace(_iframe_secret_tag, 'iframe')
     text = text.replace(_img_url_secret_attribute, 'c2c:url')
     text = text.replace(_img_width_secret_attribute, 'c2c:width')
@@ -329,24 +345,59 @@ def parse_code(text, image_url_resolver=None, image_size_resolver=None):
     return text
 
 
+def _is_external_host(host):
+    host = host.lower().rstrip('.')
+    return host != 'camptocamp.org' and not host.endswith('.camptocamp.org')
+
+
+def _mark_external_links(html):
+    """Add rel="nofollow ugc" to the links of the cleaned HTML to other sites."""
+    # Links written by users: search engines must not credit the sites they
+    # lead to (an expired domain bought by a spammer, for instance). Links to
+    # camptocamp.org and its subdomains, and wikilinks, are left as they are.
+    # The cleaner drops any rel attribute written in the text.
+
+    def mark(match):
+        href = _HREF_PATTERN.search(match.group(1))
+        if not href:
+            return match.group(0)
+        host = _HOST_PATTERN.match(href.group(1)).group(1)
+        if not _is_external_host(host):
+            return match.group(0)
+        return f'<a {match.group(1)} rel="{_EXTERNAL_LINK_REL}">'
+
+    return _LINK_TAG_PATTERN.sub(mark, html)
+
+
 def get_embedded_image_ids(text):
     """Return the ids of the images that `parse_code` shows in a text, in order."""
+    return get_text_references(text)[0]
+
+
+def get_text_references(text):
+    """Return the images shown and the documents linked by a text: (ids, links)."""
     # The same parser as parse_code(), whose [img=ID] processor collects the
     # ids of the images it builds (see img.C2CImageBlock): a tag it does not
     # turn into an image (inside raw HTML, in the middle of a line, with
-    # uppercase letters...) is not shown, so it is not counted either.
+    # uppercase letters...) is not shown, so it is not counted either. The
+    # links are the [[type/id|label]] and the full URLs of the site that it
+    # turns into links (see wikilinks.C2CLinkCollector): (type as written,
+    # id, written as a URL), in order.
     with _parser_lock:
         parser = _get_markdown_parser()
         parser.reset()
         ids = []
+        links = []
         parser.c2c_embedded_image_ids = ids
+        parser.c2c_linked_documents = links
         try:
             parser.convert(text)
         except Exception as e:
             # parse_code() shows an error message instead of the text
             logger.exception('While parsing markdown', exc_info=e)
-            return []
+            return [], []
         finally:
             parser.c2c_embedded_image_ids = None
+            parser.c2c_linked_documents = None
 
-    return ids
+    return ids, links

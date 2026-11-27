@@ -18,6 +18,7 @@ from c2corg_api.schemas.outing import (
     outing_schema,
 )
 from c2corg_api.views import (
+    set_creator,
     set_default_geom_from_associations,
 )
 from c2corg_api.views.document import (
@@ -181,7 +182,13 @@ def get_outing(request):
         outing_documents_config,
         outing_schema,
         adapt_schema=outing_schema_adaptor,
+        # who created it and when: only them may delete it, for 30 days
+        set_custom_fields=_set_author,
     )
+
+
+def _set_author(outing):
+    set_creator([outing], 'author')
 
 
 def get_outing_info(request):

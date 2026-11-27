@@ -58,7 +58,7 @@ from c2corg_api.views.document_listings import (
 )
 from c2corg_api.views.forum import rename_topics, topic_texts
 from c2corg_api.views.license import get_license
-from c2corg_api.views.markdown import update_image_embeds
+from c2corg_api.views.markdown import update_text_references
 from c2corg_api.views.validation import (
     association_permission_checker,
     association_permission_removal_checker,
@@ -216,7 +216,7 @@ def create_new_version(document, user_id, written_at=None):
     DBSession.add(meta_data)
     DBSession.add_all(versions)
     DBSession.flush()
-    update_image_embeds(document.locales)
+    update_text_references(document.locales)
 
 
 def update_version(document, user_id, comment, update_types, changed_langs):
@@ -256,7 +256,7 @@ def update_version(document, user_id, comment, update_types, changed_langs):
     DBSession.add_all(locale_versions)
     DBSession.flush()
     # the locales whose text changed (none for a merge, a protection...)
-    update_image_embeds(
+    update_text_references(
         locale for locale in document.locales if locale.lang in changed_langs
     )
 
@@ -283,7 +283,9 @@ def add_unchanged_version(document, user_id, comment, langs):
     DBSession.add_all(versions)
     DBSession.flush()
     # a restored locale lost its embeds with its row
-    update_image_embeds(locale for locale in document.locales if locale.lang in langs)
+    update_text_references(
+        locale for locale in document.locales if locale.lang in langs
+    )
 
 
 def _get_document_archive(document, update_types):
