@@ -127,7 +127,9 @@ storing, the job (`c2corg_api/jobs/partner_locations.py`) resolves them, in orde
    `geom_quality = 'summit_match'`, and the areas of that point.
 2. **Region.** The region text through the table of the source (`partners/regions/<source>.json`, `region_map.lookup`):
    the centroid of its first area, `geom_quality = 'area_centroid'`, and `area_ids` from the table plus the country
-   (not the areas around the centroid, which the purge does not recompute either).
+   (not the areas around the centroid, which the purge does not recompute either). A `<region> - <district>` text
+   (gulliver's `Piemonte - CN`) is looked up whole, then by its district, then by its region. Tables: skitourenportal
+   (Bundesländer), onice and gulliver (Italian regions and provinces).
 3. **Country.** No point; `area_ids` is the country area alone, so the outing is listed under its country.
 
 Otherwise the outing has no position and no area. `geom_quality` tells the UI how far to trust the point: `summit`,
@@ -325,8 +327,14 @@ The reports of [on-ice.it](http://www.on-ice.it/onice/), an old Italian PHP comm
 - **Location.** No coordinates and no GPX anywhere on the site. An outing has the hints of
   [Outings without coordinates](#outings-without-coordinates): `summit_name` (the head of the title, before a comma
   or a dash, without its elevation), `elevation_max`, `region` (an Italian region, or `Svizzera`, `Francia`...)
-  and `country` (`IT` for the Italian regions, `CH`, `FR`...; none for `Altro`). There is no region table: the
-  Italian regions are not c2c areas (Lombardia is several provinces), an unmatched summit falls back to the country.
+  and `country` (`IT` for the Italian regions, `CH`, `FR`...; none for `Altro`). An unmatched summit falls back to
+  the region table (below), then to the country.
+- **Regions to areas.** c2c has no area for the Italian regions: its Italian `admin_limits` are the 110 provinces
+  (2011 borders: 109 `Provincia di ...` and `Valle d'Aosta`). `partners/regions/onice.json` maps each of the 20
+  Italian regions to the list of its provinces, the first (hand-picked: the province of its main mountains, Lombardia
+  -> Sondrio, Piemonte -> Torino...) giving the `area_centroid` position; `Svizzera`, `Francia`... are country-only
+  entries (no `area_ids`); `Altro` is in no table. The ids were read in the dev database on 2026-11-27, the file's
+  `coverage` block says how.
 - **Texts.** `Commento` (narrative), `Condizioni`, `Valutazione itinerario`, `Rischio valanghe` (conditions),
   `Neve prevalente`, `Altra neve` (snow), `Partenza`, `Rifugio di appoggio` (access), `Attrezzatura consigliata`
   (equipment) go to `texts`, redacted in a recording (`REDACT_SELECTORS`). The author row of a detail page is never
@@ -467,7 +475,11 @@ The trip reports ("gite") of the WordPress API of the site (`/wp-json/gulliver/`
   (`Nord-Est`...; `Varie`, `Tutte`: none). The snow line (`snow_alt`) is `snow.line_m`; the snow qualities
   (`Polverosa`...) are texts (`texts.snow`).
 - **Region and country.** `<region> - <district>` (`Valle d'Aosta - AO`); the country is `FR` for a region ending
-  with `(FR)` (and so on), else `IT`.
+  with `(FR)` (and so on), else `IT`. For Italy the district is the province code: `partners/regions/gulliver.json`
+  holds the 20 regions (as on-ice.it's table) and the 110 province codes (plus `SU`, Sud Sardegna, as the old
+  provinces it covers), so a report without route coordinates gets the centroid of its province (`area_centroid`),
+  or of its region when the code is unknown. Foreign regions are not in it (the country only). A report whose route
+  was not looked up yet has no region at all.
 - **GPX.** The first track of a report (`tracks[0].guid`) is `gpx_url` when it is an `https` link to a `.gpx` file on
   gulliver.it. The files are public, but hold personal data (times, heart rate) and fall under the terms of the site.
 
