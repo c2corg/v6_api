@@ -272,6 +272,10 @@ def _partner_side(params, binds):
                p.height_diff_up::integer AS height_diff_up,
                p.orientations::text[] AS orientations, p.snow AS snow,
                p.gpx_url AS gpx_url,
+               EXISTS (SELECT 1 FROM guidebook.partner_tracks t
+                       WHERE t.source = p.source
+                         AND t.external_id = p.external_id
+                         AND t.geom IS NOT NULL) AS has_track,
                p.region AS region, p.geom AS geom,
                p.geom_quality AS geom_quality, p.area_ids AS area_ids
         FROM guidebook.partner_outings p
@@ -326,7 +330,7 @@ def _c2c_side(params, binds):
                {steep} AS steep, o.elevation_max::integer AS elevation_max,
                o.height_diff_up::integer AS height_diff_up,
                NULL::text[] AS orientations, NULL::jsonb AS snow,
-               NULL::text AS gpx_url,
+               NULL::text AS gpx_url, false AS has_track,
                NULL::text AS region, g.geom AS geom,
                CASE WHEN g.geom IS NOT NULL THEN 'start' ELSE 'none' END
                    AS geom_quality, NULL::integer[] AS area_ids
@@ -527,6 +531,7 @@ def _item(row, locales, authors, areas, titles):
         'orientations': row['orientations'] or [],
         'snow': row['snow'],
         'gpx_url': row['gpx_url'],
+        'has_track': bool(row['has_track']),
         'region': row['region'],
         'geometry': geometry,
         'areas': [titles[i] for i in sorted(area_ids) if i in titles],
@@ -608,3 +613,61 @@ def list_partner_outings(session, params):
 def list_sources(session):
     """Return {sources}: the health rows, never the cursor nor a secret."""
     return {'sources': read_sources(session)}
+
+
+# the track of a partner outing
+
+TRACK_CACHE_SECONDS = 3600
+
+
+def _attribution(source, author, licence):
+    site = SITES.get(source, (source, ''))[0]
+    owner = f'{author} / {site}' if author else site
+    return f'© {owner} — {licence}' if licence else f'© {owner}'
+
+
+def read_track(session, item_id):
+    """Return the GeoJSON Feature (EPSG:4326) of the track of an outing, or None.
+
+    `item_id` is the id of a listing item, `<source>:<external id>`; c2c
+    outings and partner outings without a track have none.
+    """
+    source, sep, external_id = str(item_id).partition(':')
+    if not sep or source == C2C or source not in REGISTRY or not external_id:
+        return None
+    row = (
+        session.execute(
+            text(
+                """
+                SELECT p.source, p.external_id, p.url, p.gpx_url, p.author,
+                       t.point_count, t.simplified,
+                       ST_AsGeoJSON(ST_Transform(t.geom, 4326), 6) AS geojson
+                FROM guidebook.partner_tracks t
+                JOIN guidebook.partner_outings p
+                    ON p.source = t.source AND p.external_id = t.external_id
+                WHERE t.source = :source AND t.external_id = :external_id
+                  AND t.geom IS NOT NULL"""
+            ),
+            {'source': source, 'external_id': external_id},
+        )
+        .mappings()
+        .first()
+    )
+    if row is None:
+        return None
+    licence = getattr(REGISTRY[source], 'TRACK_LICENCE', None)
+    return {
+        'type': 'Feature',
+        'id': f'{source}:{external_id}',
+        'geometry': json.loads(row['geojson']),
+        'properties': {
+            'source': source,
+            'url': row['url'],
+            'gpx_url': row['gpx_url'],
+            'author': row['author'],
+            'attribution': _attribution(source, row['author'], licence),
+            'licence': licence,
+            'point_count': row['point_count'],
+            'simplified': row['simplified'],
+        },
+    }

@@ -347,6 +347,10 @@ class GulliverAdapter:
     site_name = 'gulliver.it'
     site_url = SITE
     required_secrets = ()
+    # the licence of the GPX tracks of the reports (with their author and
+    # the site as credit): the job reads them (partner_tracks), the API serves
+    # them with it
+    TRACK_LICENCE = 'CC BY-NC-ND'
     # 5 pages + 1 front page + 15 reports + 24 routes = 45 at most
     rate = RateLimit(2.0, 45, 20)
     # two endpoints end with `/comments`

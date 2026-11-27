@@ -475,6 +475,7 @@ class TestItems:
             'orientations': [],
             'snow': None,
             'gpx_url': None,
+            'has_track': False,
             'region': None,
             'geometry': {
                 'geom': '{"type":"Point","coordinates":[100,100]}',
@@ -552,6 +553,7 @@ class TestItems:
             'orientations': ['N', 'NE'],
             'snow': {'top_cm': 40},
             'gpx_url': 'https://skitour.example/ext1.gpx',
+            'has_track': False,
             'region': 'Grandes Rousses',
             'geometry': {
                 'geom': '{"type":"Point","coordinates":[110,110]}',

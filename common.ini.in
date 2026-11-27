@@ -116,6 +116,10 @@ partners.transport = {partners_transport}
 partners.fixtures_dir = {partners_fixtures_dir}
 # fixture mode accepts synthetic fixtures (dev only)
 partners.allow_synthetic = {partners_allow_synthetic}
+# GPX tracks read after the outings of a run (0: none), and the seconds
+# between two of them (10 at least)
+partners.tracks_per_run = {partners_tracks_per_run}
+partners.tracks_interval_seconds = {partners_tracks_interval}
 
 # the scheduler checks the links to other sites (c2corg_api.linkcheck)
 link_checker.enabled = {link_checker_enabled}

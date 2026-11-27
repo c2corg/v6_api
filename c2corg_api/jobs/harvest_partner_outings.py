@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 from c2corg_api.harvest.harvester import Harvester, Payload, Stored
 from c2corg_api.harvest.policy import Policy
 from c2corg_api.jobs.partner_locations import resolve_locations
+from c2corg_api.jobs.partner_tracks import harvest_tracks, track_transport
 from c2corg_api.models import DBSession, schema
 from c2corg_api.models.partner_outing import (
     PartnerLookup,
@@ -583,9 +584,30 @@ class PartnerHarvester(Harvester):
                 'upserted': row.last_upserted if row else None,
                 'skipped': (row.last_skipped or {}) if row else {},
             }
+            if status in ('ok', 'degraded'):
+                tracks = self._tracks(session, now)
+                if tracks is not None:
+                    summary['tracks'] = tracks
         if status in FAILURE_STATUSES:
             raise PartnerRunFailed(f'{status}: {summary["status_detail"]}')
         return Payload(json.dumps(summary, sort_keys=True).encode(), 'application/json')
+
+    def _tracks(self, session, now):
+        """Run the second phase: a few GPX tracks (partner_tracks). Never raises."""
+        try:
+            directory = self.settings.get('partners.fixtures_dir') or (
+                DEFAULT_FIXTURES_DIR
+            )
+            transport = track_transport(self.adapter_cls, self.settings, directory)
+            if transport is None:
+                return None
+            return harvest_tracks(
+                session, self.adapter_cls, transport, now, self.settings
+            )
+        except Exception:
+            log.exception('Partner tracks %s failed', self.adapter_cls.name)
+            session.rollback()
+            return None
 
     def store(self, session, source, payload):
         # stored by fetch; a run that wrote outings is a publication
