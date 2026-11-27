@@ -31,6 +31,7 @@ from c2corg_api.views.image_duplicates import (
 )
 from c2corg_api.views.image_embeds import read_broken_embeds
 from c2corg_api.views.image_orphans import read_orphan_images
+from c2corg_api.views.image_rotate import rotate_image
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.checks import permission_check
 from c2corg_api.web.documents import handler_arguments, include_handler_write
@@ -61,6 +62,7 @@ WRITES = [
     ('/documents/deleted/{id:int}/restore', 'POST', restore_deleted_document),
     ('/documents/merged/{id:int}/unmerge', 'POST', unmerge_document),
     ('/images/duplicates/dismiss', 'POST', dismiss_duplicate_images),
+    ('/images/rotate', 'POST', rotate_image),
 ]
 
 
