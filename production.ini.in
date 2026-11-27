@@ -12,7 +12,7 @@ sqlalchemy.url = postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_por
 ###
 
 [loggers]
-keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, c2corg_api_sync, c2corg_api_background_jobs, kombu, gunicorn.error, gunicorn.access, c2corg_api_access, uvicorn.error
+keys = root, c2corg_api, sqlalchemy, c2corg_api_syncer, c2corg_api_sync, c2corg_api_background_jobs, c2corg_api_linkcheck, kombu, gunicorn.error, gunicorn.access, c2corg_api_access, uvicorn.error
 
 [handlers]
 keys = console
@@ -48,6 +48,12 @@ qualname = kombu
 level = INFO
 handlers =
 qualname = c2corg_api_background_jobs
+
+# the runs of the link checker of the scheduler (URLs synced, requests made)
+[logger_c2corg_api_linkcheck]
+level = INFO
+handlers =
+qualname = c2corg_api.linkcheck
 
 [logger_sqlalchemy]
 level = WARN
