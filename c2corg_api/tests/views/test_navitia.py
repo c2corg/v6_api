@@ -2,7 +2,7 @@ import json
 import os
 import threading
 import time as clock
-from datetime import datetime, time
+from datetime import date, datetime, time
 from unittest import mock
 from unittest.mock import call
 
@@ -18,6 +18,7 @@ from c2corg_api.httpexceptions import (
     HTTPBadRequest,
     HTTPInternalServerError,
     HTTPNotFound,
+    HTTPServiceUnavailable,
     HTTPTooManyRequests,
     HTTPUnauthorized,
 )
@@ -27,7 +28,7 @@ from c2corg_api.models.document import DocumentGeometry
 from c2corg_api.models.route import Route, RouteLocale
 from c2corg_api.models.waypoint import Waypoint, WaypointLocale
 from c2corg_api.schemas.route import route_schema
-from c2corg_api.views import to_json_dict
+from c2corg_api.views import navitia, to_json_dict
 from c2corg_api.views.navitia import (
     BASE_URL,
     JOB_RETRY_AFTER,
@@ -72,6 +73,27 @@ load_dotenv()
 NAVITIA_GET_PATH = 'c2corg_api.views.navitia.navitia_get'
 NAVITIA_REDIS_CLIENT_PATH = 'c2corg_api.views.navitia.redis_client'
 NAVITIA_KEY = os.getenv('NAVITIA_API_KEY', 'test-key')
+
+
+@pytest.fixture(autouse=True)
+def _open_transport_dates():
+    """The searches of the tests have fixed dates: any of them is in range."""
+    with mock.patch(
+        'c2corg_api.views.navitia.transport_date_range',
+        return_value=(date(2000, 1, 1), date(2100, 1, 1)),
+    ):
+        yield
+
+
+# the budget, as the tests of the budget call it (the other tests do not count
+# their calls)
+consume_navitia_budget = navitia.consume_navitia_budget
+
+
+@pytest.fixture(autouse=True)
+def _no_navitia_budget():
+    with mock.patch('c2corg_api.views.navitia.consume_navitia_budget'):
+        yield
 
 
 def _no_wait():
@@ -2491,11 +2513,16 @@ def test_navitia_transportisochrones_invalid_params(client):
     for query in [
         'from=5.1%3B45.1&date=2026-01-16&return_date=2026-01-15&min_departure=08:00&max_return=18:00',
         'from=5.1%3B45.1&date=2026-01-16&return_date=abc&min_departure=08:00&max_return=18:00',
-        'date=2026-01-16&min_departure=08:00&max_return=18:00',
+        'from=5.1%3B45.1&date=2026-01-16&min_departure=08:10&max_return=18:00',
+        'from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:20',
         'from=5.1%3B45.1&date=2026-01-16&min_departure=18:00&max_return=08:00',
         'from=abc&date=2026-01-16&min_departure=08:00&max_return=18:00',
     ]:
         client.get('/navitia/transportisochrones?' + query, status=400)
+    client.get(
+        '/navitia/transportisochrones?date=2026-01-16&min_departure=08:00&max_return=18:00',
+        status=422,
+    )
 
 
 def test_navitia_transportisochrones(client):
@@ -3618,3 +3645,156 @@ class TestReachableIdsByGeometry:
 
     def test_get_waypoint_ids_within_geometry_no_geom(self):
         assert self.get_waypoint_ids_within_geometry(None) == set()
+
+
+class FakeCounter:
+    """In-memory replacement of the redis client counting the Navitia calls."""
+
+    def __init__(self):
+        self.data = {}
+        self.expires = {}
+
+    def incr(self, key):
+        self.data[key] = self.data.get(key, 0) + 1
+        return self.data[key]
+
+    def expire(self, key, seconds):
+        self.expires[key] = seconds
+
+
+def test_transport_date_range():
+    assert navitia.transport_date_range(date(2026, 11, 27)) == (
+        date(2026, 11, 26),
+        date(2027, 5, 27),
+    )
+    # the last day of a shorter month
+    assert navitia.transport_date_range(date(2026, 8, 31))[1] == date(2027, 2, 28)
+    assert navitia.transport_date_range(date(2026, 12, 31))[1] == date(2027, 6, 30)
+
+
+def test_check_transport_window():
+    with mock.patch(
+        'c2corg_api.views.navitia.transport_date_range',
+        return_value=(date(2026, 11, 26), date(2027, 5, 27)),
+    ):
+        navitia.check_transport_window('2026-11-27', '07:30', '19:00')
+        navitia.check_transport_window('2026-11-26', '07:45', '08:00', '2027-05-27')
+
+        for args, message in [
+            (('2026-11-25', '07:30', '19:00'), "'date' must be between"),
+            (('2027-05-28', '07:30', '19:00'), "'date' must be between"),
+            (
+                ('2026-11-27', '07:30', '19:00', '2027-05-28'),
+                "'return_date' must be between",
+            ),
+            (('2026-11-27', '07:31', '19:00'), 'quarter hour'),
+            (('2026-11-27', '07:30', '19:05'), 'quarter hour'),
+            (('2026-11-27', '7h30', '19:00'), "'HH:MM'"),
+            (('2026-11-27', '19:00', '07:30'), "'max_return' must be after"),
+        ]:
+            with pytest.raises(ValueError, match=message):
+                navitia.check_transport_window(*args)
+
+
+def test_round_trip_reachable_checks_the_window(client):
+    # the round trip checks call Navitia too: the same checks
+    client.get(
+        '/navitia/roundtripreachable?document_id=1&document_type=route'
+        '&from=5.1%3B45.1&date=2026-01-16&min_departure=08:10&max_return=18:00',
+        status=400,
+    )
+    client.get(
+        '/navitia/journeyroundtriproutes/start?ids=1'
+        '&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:05',
+        status=400,
+    )
+
+
+def test_navitia_budget_counts_the_calls():
+    counter = FakeCounter()
+    with (
+        mock.patch('c2corg_api.views.navitia._cache_client', return_value=counter),
+        mock.patch.dict(os.environ, {'NAVITIA_DAILY_BUDGET': '3'}),
+    ):
+        for _ in range(3):
+            consume_navitia_budget()
+        with pytest.raises(HTTPServiceUnavailable) as error:
+            consume_navitia_budget()
+
+    assert str(error.value) == 'navitia_budget_exceeded'
+    (key,) = counter.data
+    assert key.startswith('navitia:calls:')
+    assert counter.data[key] == 4
+    # the counter of the day expires
+    assert counter.expires == {key: 2 * 86400}
+
+
+def test_navitia_budget_logs_each_threshold_once(caplog):
+    counter = FakeCounter()
+    with (
+        mock.patch('c2corg_api.views.navitia._cache_client', return_value=counter),
+        mock.patch.dict(os.environ, {'NAVITIA_DAILY_BUDGET': '5'}),
+    ):
+        for _ in range(8):
+            try:
+                consume_navitia_budget()
+            except HTTPServiceUnavailable:
+                pass
+
+    budget_lines = [r for r in caplog.records if 'NAVITIA_BUDGET' in r.getMessage()]
+    assert [r.levelname for r in budget_lines] == ['WARNING', 'ERROR']
+
+
+def test_navitia_budget_kill_switch():
+    counter = FakeCounter()
+    with (
+        mock.patch('c2corg_api.views.navitia._cache_client', return_value=counter),
+        mock.patch.dict(os.environ, {'NAVITIA_ENABLED': 'false'}),
+        pytest.raises(HTTPServiceUnavailable, match='navitia_disabled'),
+    ):
+        consume_navitia_budget()
+    # nothing counted
+    assert counter.data == {}
+
+
+def test_navitia_budget_without_redis():
+    # the calls that cannot be counted are refused: the cost comes first
+    broken = mock.Mock()
+    broken.incr.side_effect = redis.ConnectionError('down')
+    with (
+        mock.patch('c2corg_api.views.navitia._cache_client', return_value=broken),
+        pytest.raises(HTTPServiceUnavailable, match='navitia_budget_unavailable'),
+    ):
+        consume_navitia_budget()
+
+
+def test_navitia_get_consumes_the_budget():
+    # every call to Navitia goes through the budget, before the request
+    with (
+        mock.patch(
+            'c2corg_api.views.navitia.consume_navitia_budget',
+            side_effect=HTTPServiceUnavailable('navitia_budget_exceeded'),
+        ),
+        mock.patch('c2corg_api.views.navitia.requests.get') as mock_get,
+        pytest.raises(HTTPServiceUnavailable),
+    ):
+        navitia_get(BASE_URL)
+    mock_get.assert_not_called()
+
+
+def test_navitia_budget_answers_503(client):
+    with (
+        mock.patch(
+            'c2corg_api.views.navitia.consume_navitia_budget',
+            side_effect=HTTPServiceUnavailable('navitia_budget_exceeded'),
+        ),
+        mock.patch('c2corg_api.views.navitia._cache_client', return_value=FakeCache()),
+        mock.patch('c2corg_api.views.navitia.get_coverage', return_value='fr-se'),
+        mock.patch.dict(os.environ, {'NAVITIA_API_KEY': NAVITIA_KEY}),
+    ):
+        response = client.get(
+            '/navitia/transportisochrones?from=5.1%3B45.1&date=2026-01-16'
+            '&min_departure=08:00&max_return=18:00',
+            status=503,
+        )
+    assert response.json['errors'][0]['description'] == 'navitia_budget_exceeded'

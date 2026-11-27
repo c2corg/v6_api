@@ -1,6 +1,7 @@
 import datetime
 import json
 from dataclasses import dataclass
+from datetime import date
 from unittest import mock
 
 import pytest
@@ -451,6 +452,16 @@ def test_get_collection_search(client, session):
     assert body.get('total') == 2
 
 
+@pytest.fixture(autouse=True)
+def _open_transport_dates():
+    """The searches of the tests have fixed dates: any of them is in range."""
+    with mock.patch(
+        'c2corg_api.views.navitia.transport_date_range',
+        return_value=(date(2000, 1, 1), date(2100, 1, 1)),
+    ):
+        yield
+
+
 TRANSPORT_IDS_PATH = 'c2corg_api.views.navitia.get_cached_transport_document_ids'
 
 
@@ -579,6 +590,12 @@ def test_get_collection_transport_invalid(client):
     client.get(
         '/routes?transport_from=5.1%3B45.1&transport_date=bad'
         '&transport_min_departure=08:00&transport_max_return=18:00',
+        status=400,
+    )
+    # the times are on the quarter hour
+    client.get(
+        '/routes?transport_from=5.1%3B45.1&transport_date=2026-01-16'
+        '&transport_min_departure=08:10&transport_max_return=18:00',
         status=400,
     )
 

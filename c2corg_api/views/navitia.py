@@ -8,7 +8,9 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import date as date_type
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import anyio
 import redis
@@ -25,6 +27,7 @@ from c2corg_api.httpexceptions import (
     HTTPException,
     HTTPInternalServerError,
     HTTPNotFound,
+    HTTPServiceUnavailable,
     HTTPTooManyRequests,
     HTTPUnauthorized,
 )
@@ -221,7 +224,7 @@ def validate_round_trip_batch_params(request, **kwargs):
         if param not in request.params:
             request.errors.add('querystring', param, f'Parameter {param} required')
 
-    _validate_return_date_param(request)
+    _validate_transport_window_param(request)
 
 
 def start_round_trip_routes(request):
@@ -699,6 +702,62 @@ TRANSPORT_DOCUMENT_IDS_CACHE_TTL = 3600
 
 _TIME_PATTERN = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
 
+# The search space of a transport search is kept small: it bounds what one
+# can make the API compute (each new search costs 2 Navitia isochrones) and
+# makes the searches of different users share the cache. The UI rounds the
+# times and bounds the dates the same way.
+# the times of a search are on the quarter hour
+TRANSPORT_TIME_STEP_MINUTES = 15
+# the dates of a search are from today (the day before, for the time zones
+# behind) to 6 months ahead, in the time zone of the timetables
+TRANSPORT_MAX_MONTHS_AHEAD = 6
+TRANSPORT_TIME_ZONE = ZoneInfo('Europe/Paris')
+
+
+def transport_date_range(today=None):
+    """Return the first and last dates a transport search may use."""
+    if today is None:
+        today = datetime.now(TRANSPORT_TIME_ZONE).date()
+    month_index = today.month - 1 + TRANSPORT_MAX_MONTHS_AHEAD
+    year, month = today.year + month_index // 12, month_index % 12 + 1
+    # the same day 6 months later, or the last day of that month
+    next_month = date_type(year + month // 12, month % 12 + 1, 1)
+    last = min(
+        date_type(year, month, 1) + timedelta(days=today.day - 1),
+        next_month - timedelta(days=1),
+    )
+    return today - timedelta(days=1), last
+
+
+def check_transport_window(date, min_departure, max_return, return_date=None):
+    """Check the dates and times of a transport search.
+
+    The dates are 'YYYY-MM-DD', within transport_date_range, the return
+    not before the departure; the times are 'HH:MM', on the quarter hour, the
+    return after the departure. Raises a ValueError describing the problem.
+    """
+    return_date = return_date or date
+    _check_return_date(date, return_date)
+
+    first, last = transport_date_range()
+    for name, value in (('date', date), ('return_date', return_date)):
+        day = datetime.strptime(value, '%Y-%m-%d').date()  # noqa: DTZ007
+        if not first <= day <= last:
+            raise ValueError(
+                f"'{name}' must be between {first.isoformat()} and {last.isoformat()}"
+            )
+
+    for name, value in (('min_departure', min_departure), ('max_return', max_return)):
+        if not value or not _TIME_PATTERN.match(value):
+            raise ValueError(f"'{name}' must be formatted as 'HH:MM'")
+        if int(value[3:5]) % TRANSPORT_TIME_STEP_MINUTES:
+            raise ValueError(
+                f"'{name}' must be on the quarter hour (:00, :15, :30, :45)"
+            )
+
+    if _window_minutes(date, min_departure, return_date, max_return) <= 0:
+        raise ValueError("'max_return' must be after 'min_departure'")
+
 
 def normalize_transport_from(from_coords):
     """Return the 'lon;lat' starting point, rounded.
@@ -754,26 +813,13 @@ def parse_transport_params(params, prefix=''):
         raise ValueError('Parameter {} required'.format(', '.join(missing)))
 
     date = params.get(prefix + 'date')
-    try:
-        datetime.strptime(date, '%Y-%m-%d')  # noqa: DTZ007 (format check only)
-    except ValueError as e:
-        raise ValueError("'date' must be formatted as 'YYYY-MM-DD'") from e
-
-    times = {}
-    for name in ('min_departure', 'max_return'):
-        value = params.get(prefix + name)
-        if not _TIME_PATTERN.match(value):
-            raise ValueError(f"'{name}' must be formatted as 'HH:MM'")
-        times[name] = value
-
+    times = {
+        name: params.get(prefix + name) for name in ('min_departure', 'max_return')
+    }
     return_date = params.get(prefix + 'return_date') or date
-    _check_return_date(date, return_date)
-
-    window = _window_minutes(
-        date, times['min_departure'], return_date, times['max_return']
+    check_transport_window(
+        date, times['min_departure'], times['max_return'], return_date
     )
-    if window <= 0:
-        raise ValueError("'max_return' must be after 'min_departure'")
 
     return {
         'from': normalize_transport_from(params.get(prefix + 'from')),
@@ -1508,7 +1554,7 @@ def validate_round_trip_reachable_params(request, **kwargs):
             "document_type must be 'route' or 'waypoint'",
         )
 
-    _validate_return_date_param(request)
+    _validate_transport_window_param(request)
 
 
 def read_round_trip_reachable(request):
@@ -1702,28 +1748,26 @@ def _check_return_date(date, return_date):
         raise ValueError("'return_date' must not be before 'date'")
 
 
-def _validate_return_date_param(request):
-    """Validate the optional `return_date` of the round trip check requests."""
+def _validate_transport_window_param(request):
+    """Validate the dates and times of the round trip check requests.
+
+    The same checks as a transport search (see check_transport_window): the
+    round trip checks call Navitia too.
+    """
     params = request.params
-    return_date = params.get('return_date')
-    if not return_date:
+    if not params.get('date'):
+        # reported as missing
         return
 
     try:
-        _check_return_date(params.get('date', ''), return_date)
-        window = _window_minutes(
+        check_transport_window(
             params['date'],
-            params.get('min_departure', '00:00'),
-            return_date,
-            params.get('max_return', '23:59'),
+            params.get('min_departure'),
+            params.get('max_return'),
+            params.get('return_date'),
         )
     except ValueError as exc:
-        request.errors.add('querystring', 'return_date', str(exc))
-        return
-    if window <= 0:
-        request.errors.add(
-            'querystring', 'max_return', "'max_return' must be after 'min_departure'"
-        )
+        request.errors.add('querystring', 'transport', str(exc))
 
 
 def _extract_isochrone_shape(isochrone_response):
@@ -1906,7 +1950,77 @@ def handle_navitia_response(response):
     return response.json()
 
 
+# The Navitia key is paid per request: the calls the API makes are counted
+# per day (UTC) in Redis, and refused over a daily budget. Only the calls
+# made count, not the answers of the cache. The budget and the kill switch
+# are environment variables, as the key.
+NAVITIA_DAILY_BUDGET_DEFAULT = 5000
+# a warning is logged when this share of the budget is used
+NAVITIA_BUDGET_WARNING_SHARE = 0.8
+# the stable text of the log lines the Grafana alert counts
+NAVITIA_BUDGET_LOG_MARKER = 'NAVITIA_BUDGET'
+
+
+def _navitia_daily_budget():
+    try:
+        return int(os.getenv('NAVITIA_DAILY_BUDGET', NAVITIA_DAILY_BUDGET_DEFAULT))
+    except ValueError:
+        return NAVITIA_DAILY_BUDGET_DEFAULT
+
+
+def _navitia_enabled():
+    value = os.getenv('NAVITIA_ENABLED', 'true').strip().lower()
+    return value not in ('0', 'false', 'no', 'off')
+
+
+def consume_navitia_budget():
+    """Count a call to Navitia, or raise a 503 when it must not be made.
+
+    Refused when NAVITIA_ENABLED is false (the kill switch), when the calls
+    of the day reached NAVITIA_DAILY_BUDGET, or when they cannot be counted
+    (Redis unavailable): the cost comes first.
+    """
+    if not _navitia_enabled():
+        raise HTTPServiceUnavailable('navitia_disabled')
+
+    budget = _navitia_daily_budget()
+    day = datetime.now(ZoneInfo('UTC')).date()
+    key = f'navitia:calls:{day.isoformat()}'
+    try:
+        r = _cache_client()
+        count = r.incr(key)
+        if count == 1:
+            # kept a little longer than the day, to be read afterwards
+            r.expire(key, 2 * 86400)
+    except redis.RedisError as e:
+        log.error(
+            '%s: the Navitia calls cannot be counted, refused',
+            NAVITIA_BUDGET_LOG_MARKER,
+        )
+        raise HTTPServiceUnavailable('navitia_budget_unavailable') from e
+
+    # each threshold is logged once a day, by the call that crosses it
+    if count == int(budget * NAVITIA_BUDGET_WARNING_SHARE):
+        log.warning(
+            '%s: %d Navitia calls today, %d%% of the daily budget (%d)',
+            NAVITIA_BUDGET_LOG_MARKER,
+            count,
+            NAVITIA_BUDGET_WARNING_SHARE * 100,
+            budget,
+        )
+    if count > budget:
+        if count == budget + 1:
+            log.error(
+                '%s: daily budget of %d Navitia calls reached, the calls are refused '
+                'until the end of the day (UTC)',
+                NAVITIA_BUDGET_LOG_MARKER,
+                budget,
+            )
+        raise HTTPServiceUnavailable('navitia_budget_exceeded')
+
+
 def navitia_get(url, *, params=None, headers=None, timeout=30):
+    consume_navitia_budget()
     try:
         response = requests.get(
             url,
