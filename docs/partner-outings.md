@@ -2,8 +2,8 @@
 
 The `/metaskirando` view of the UI shows, next to the outings of Camptocamp, the outings reported on partner
 sites ([skitour.fr](https://skitour.fr), [gulliver.it](https://www.gulliver.it), [bivouak.net](https://www.bivouak.net)
-[gipfelbuch.ch](https://www.gipfelbuch.ch) and [skitourenportal.eu](https://skitourenportal.eu), the last three off
-by default). The API does not proxy the partner sites
+[gipfelbuch.ch](https://www.gipfelbuch.ch), [skitourenportal.eu](https://skitourenportal.eu) and
+[on-ice.it](http://www.on-ice.it/onice/), the last four off by default). The API does not proxy the partner sites
 at request time: the harvester of [docs/harvest.md](harvest.md) runs each source every 15 minutes into its own tables,
 and `GET /partner-outings` merges those rows with the c2c outings of the same period.
 
@@ -44,7 +44,7 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 | env key | ini key | default | meaning |
 | --- | --- | --- | --- |
 | `harvest_partners_enabled` | `harvest.partners.enabled` | `false` (`true` in `env.dev`) | the scheduler harvests the partner sources, whatever `harvest.enabled`; `make harvest-partners` refuses to run unless a source is on or `--force` is given |
-| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak`, `gipfelbuch` and `skitourenportal`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
+| `harvest_partners_<name>_enabled` | `harvest.partners.<name>.enabled` | empty (`false` for `bivouak`, `gipfelbuch`, `skitourenportal` and `onice`, `true` in `env.dev`) | one source: `true`/`false`, empty as `harvest.partners.enabled` (absent is empty). A new source is `false` in `env.default` until the site agrees |
 | `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
 | `partners_retention` | `partners.retention_days` | empty | empty or `0`: the outings are kept forever (the API lists 31 days at most). Set: outings older than that many days are not stored, and purged |
 | `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route, detail and summit lookups, and the job's resolutions of location hints) older than that are purged |
@@ -96,7 +96,7 @@ failed lookup too.
 
 ## Outings without coordinates
 
-Some sites give no position for some or all of their outings (gipfelbuch, skitourenportal, bivouak beyond its lookup
+Some sites give no position for some or all of their outings (gipfelbuch, skitourenportal, on-ice.it, bivouak beyond its lookup
 cap), only hints in `HarvestedOuting`: `summit_name` (+ `elevation_max`), `region` and `country` (ISO alpha-2). Before
 storing, the job (`c2corg_api/jobs/partner_locations.py`) resolves them, in order:
 
@@ -210,7 +210,7 @@ them refresh the fixtures. Run them from a machine that reaches the sites.
 python -m c2corg_api.partners record <source> [--out DIR] [--since YYYY-MM-DD]
 ```
 
-`<source>` is `skitour`, `gulliver`, `bivouak`, `gipfelbuch` or `skitourenportal`. The command runs the real adapter with
+`<source>` is `skitour`, `gulliver`, `bivouak`, `gipfelbuch`, `skitourenportal` or `onice`. The command runs the real adapter with
 the real transport, through a `RecordingTransport`, and writes into
 `<out>/<source>/` (default: the tests fixtures directory):
 
@@ -288,7 +288,42 @@ elevation: only title, date, author, region and link.
   with the source). We reuse no photo or text: title, date, author, region, position and the link, with the credit.
   Ask the Tourenforum before enabling it (see Production notes).
 
-### Checking for changes: `shapes`
+### on-ice.it (HTML)
+
+The reports of [on-ice.it](http://www.on-ice.it/onice/), an old Italian PHP community site (`sources/onice.py`).
+
+- **Pages.** One list of the latest reports of every type, newest submitted first (`onice_reports.php?type=0`, 60
+  rows a page: date, title, region, height difference, author), the second page (`&u=0&start=60`) only while the
+  list is new to us (a full first page whose oldest report of the period was never looked up). Then the detail page
+  of each new report (`onice_view_report.php?type=<type>&id=<id>`): elevation of the arrival (`Quota arrivo`, MTB
+  `Quota massima`), grade (`Difficoltà`), exposure (`Esposizione...`) and the free texts. At most 15 detail pages per
+  run, the newest first, each kept in the lookup cache (`report:<type>-<id>`); the others keep what the list gives
+  (`detail_deferred` in `last_skipped`) until a next run. 2 s between requests, 17 at most (about 35 s a run). The
+  ids are per type: the external id is `<type>-<id>`.
+- **Activities.** From the type of the report: 1 Scialpinismo `skitouring` (the Blachère grade, MS/BS/OS and their
+  `A` variants, gives the ski ratings, OS is steep), 2 Escursionismo `hiking`, 3 Roccia `rock_climbing`, 4 Ghiaccio
+  e misto `mountain_climbing` (`ice_climbing` when the title names an ice fall: `cascata`, `ice fall`,
+  `candela`), 6 MTB `mountain_biking`. Types 5 and 7 list nothing (`unmapped_activity:<type>` if they ever do).
+  The other grades (`E`, `TD- / 6b`, `III / S2`) are kept in `rating_raw`.
+- **Location.** No coordinates and no GPX anywhere on the site. An outing has the hints of
+  [Outings without coordinates](#outings-without-coordinates): `summit_name` (the head of the title, before a comma
+  or a dash, without its elevation), `elevation_max`, `region` (an Italian region, or `Svizzera`, `Francia`...)
+  and `country` (`IT` for the Italian regions, `CH`, `FR`...; none for `Altro`). There is no region table: the
+  Italian regions are not c2c areas (Lombardia is several provinces), an unmatched summit falls back to the country.
+- **Texts.** `Commento` (narrative), `Condizioni`, `Valutazione itinerario`, `Rischio valanghe` (conditions),
+  `Neve prevalente`, `Altra neve` (snow), `Partenza`, `Rifugio di appoggio` (access), `Attrezzatura consigliata`
+  (equipment) go to `texts`, redacted in a recording (`REDACT_SELECTORS`). The author row of a detail page is never
+  read: the site keeps the author's e-mail in an HTML comment there (a test checks that no fixture holds an e-mail).
+- **Quirks.** Plain `http` only (https fails). The pages are ISO-8859-1 with some UTF-8 bytes in fields (`30Â°`):
+  the adapter decodes them itself (UTF-8, else Windows-1252, then the mojibake of a field) and a recording is written
+  in UTF-8. The markup is loose (text after `</html>`): `html.parser` copes. An unknown id answers HTTP 200 with a PHP
+  `Fatal error`: no `td.report-title`, the report is taken for gone (`detail_gone`, cached). The rows of a detail
+  page depend on its type, so `REQUIRED_SELECTORS` reads them through one selector (any of the labels read), plus
+  the rows every type has (grade, comment).
+- **Terms.** No `robots.txt` (404), no licence statement, no RSS. We show title, date, author, region and the link,
+  with the credit; ask the site before enabling it.
+
+
 
 ```
 python -m c2corg_api.partners shapes <source> [--offline] [--fixtures DIR]
@@ -337,6 +372,7 @@ contract change. Use `-rs` to see the reasons.
 | bivouak.net | reachable | `record` makes up to 15 requests, 10 s apart |
 | gipfelbuch.ch | reachable (robots.txt allows all) | `record` makes up to 17 requests, 2 s apart |
 | skitourenportal.eu | reachable, without `www` (recorded 2026-11-25) | no key |
+| on-ice.it | reachable over plain `http` (recorded 2026-11-27) | `record` makes up to 17 requests, 2 s apart |
 
 Run them from a workstation or from production infrastructure; in the sandbox
 they only report why they could not run.
@@ -353,7 +389,7 @@ they only report why they could not run.
   ("Contributi e proprietà") allow reuse only with prior permission: ask before enabling it. Ask Gulliver to allowlist our egress address or user agent (or to
   give a token: it would be `GULLIVER_API_TOKEN`, read like `SKITOUR_API_KEY`). Never try to bypass the challenge.
 - **Rate limits.** Each adapter declares its politeness (`rate` in `partners/sources/*.py`): a minimum delay between
-  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 45 requests; bivouak: 10 s, 15 requests; gipfelbuch: 2 s, 18 requests). A spent budget
+  requests and a budget of requests per run (skitour: 1.1 s, 10 requests; gulliver: 2 s, 45 requests; bivouak: 10 s, 15 requests; gipfelbuch: 2 s, 18 requests; on-ice.it: 2 s, 17 requests). A spent budget
   makes the run `down`.
 - **Enabling.** Keep `harvest_partners_enabled="false"` and `partners_transport="http"` (the defaults) until the
   agreements are there; then set `harvest_partners_enabled="true"` (or one source with

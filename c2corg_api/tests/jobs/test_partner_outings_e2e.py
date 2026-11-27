@@ -317,7 +317,7 @@ def test_sources_are_degraded_on_purpose(client, world):
     answer = client.get('/partner-outings/sources', status=200).json
     sources = {s['source']: s for s in answer['sources']}
     # the sources switched off (harvest.partners.<name>.enabled): off by default
-    off = ('bivouak', 'gipfelbuch', 'skitourenportal')
+    off = ('bivouak', 'gipfelbuch', 'skitourenportal', 'onice')
     assert set(sources) == {'skitour', 'gulliver', *off}
     for name in off:
         assert sources[name]['status'] == 'disabled'
@@ -337,7 +337,9 @@ def test_sources_are_degraded_on_purpose(client, world):
     for name in ('skitour', 'gulliver'):
         assert sources[name]['last_success_at'] == NOW.isoformat()
     for source in sources.values():
-        assert source['site_url'].startswith('https://')
+        # on-ice.it answers on plain http only
+        scheme = 'http://' if source['source'] == 'onice' else 'https://'
+        assert source['site_url'].startswith(scheme)
     # the listing carries the same statuses
     listed = {s['source']: s['status'] for s in listing(client)['sources']}
     assert listed == {
@@ -346,6 +348,7 @@ def test_sources_are_degraded_on_purpose(client, world):
         'bivouak': 'disabled',
         'gipfelbuch': 'disabled',
         'skitourenportal': 'disabled',
+        'onice': 'disabled',
     }
 
 
