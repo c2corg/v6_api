@@ -29,8 +29,8 @@ harvest_tick (c2corg_api/harvest) -> PartnerHarvester partners.<name> (jobs/harv
   kind: `narrative`, `conditions`, `access`, `snow`, `equipment`; `TEXT_KINDS` in `partners/model.py`), for later uses
   (search, statistics) under the partners' agreement. They are never in an answer of the API (`GET /partner-outings`
   selects its columns, a test checks no text leaks), and never real in a fixture (see the recording). `gpx_url` is the
-  link to the public GPX file of the report (gulliver.it: its first track), served as a link: the file itself is not
-  fetched by the harvest of the outings.
+  link to the public GPX file of the report (gulliver.it: its first track); the points of the file are read by a slower
+  second phase ([GPX tracks](#gpx-tracks)).
 - **Backfill.** The harvest only reads the latest reports. Importing the history of a site is not done
   ([c2corg/v6_api#2763](https://github.com/c2corg/v6_api/issues/2763)); the design allows it: rows are upserted by
   `(source, external_id)`, kept forever by default, and an adapter can page further back with a wider `since`.
@@ -48,6 +48,8 @@ Non-secret settings: `config/env.default`, overridden for the dev stack in `conf
 | `partners_interval` | `partners.interval_minutes` | `15` | minutes between two runs of a source (its harvest policy); base of the backoff |
 | `partners_retention` | `partners.retention_days` | empty | empty or `0`: the outings are kept forever (the API lists 31 days at most). Set: outings older than that many days are not stored, and purged |
 | `partners_lookup_retention` | `partners.lookup_retention_days` | `30` | `partner_lookups` rows (cached route, detail and summit lookups, and the job's resolutions of location hints) older than that are purged |
+| `partners_tracks_per_run` | `partners.tracks_per_run` | `3` | GPX tracks read after the outings of a run (`0`: none); see [GPX tracks](#gpx-tracks) |
+| `partners_tracks_interval` | `partners.tracks_interval_seconds` | `10` | seconds between two GPX files (10 at least) |
 | `partners_transport` | `partners.transport` | `http` (`fixtures` in `env.dev`) | `http`: the real sites; `fixtures`: recorded answers, no network |
 | `partners_fixtures_dir` | `partners.fixtures_dir` | empty | empty: `c2corg_api/tests/partners/fixtures` |
 | `partners_allow_synthetic` | `partners.allow_synthetic` | `false` (`true` in `env.dev` only) | fixture mode may run on a manifest with `synthetic: true`. Otherwise the source is `failing` (ERROR log, detail says why) and nothing is stored: hand-made data can never be published by accident |
@@ -415,3 +417,48 @@ The trip reports ("gite") of the WordPress API of the site (`/wp-json/gulliver/`
   with `(FR)` (and so on), else `IT`.
 - **GPX.** The first track of a report (`tracks[0].guid`) is `gpx_url` when it is an `https` link to a `.gpx` file on
   gulliver.it. The files are public, but hold personal data (times, heart rate) and fall under the terms of the site.
+
+## GPX tracks
+
+The points of the GPX file of a partner outing (`gpx_url`), stored in `guidebook.partner_tracks` and served as a
+GeoJSON Feature. Only the sources whose adapter declares a licence for their tracks (`TRACK_LICENCE`) have them:
+gulliver.it, `CC BY-NC-ND` (shown as-is, with the author and the site as credit).
+
+- **A second phase of a run** (`jobs/partner_tracks.py`): after the outings of a source are stored, at most
+  `partners.tracks_per_run` files (3) are read, **newest outings first** (date, then id, descending), one every
+  `partners.tracks_interval_seconds` (10 s at least), with a transport and a request budget of their own: the JSON
+  harvest never waits for them, and a failing file never changes the status of the source. Its counts are in the
+  harvest summary of the run (`tracks: {ok, failed, invalid}`).
+- **Failures.** A file the site fails to serve (5xx, timeout) is `failed`, and tried again after 1, 2, 4 hours, 4 times
+  at most. A file that is not a usable GPX (404, not XML, too big, no line, a DTD or entities) is `invalid`, and read
+  again only when the outing links to another file. A block (403, challenge) stops the phase for the run.
+- **Personal data.** The GPX files of the users hold times, heart rates, device and author names. The reader
+  (`partners/gpx.py`, defusedxml: no DTD, no entity, no external reference; at most 5 MB, read in a stream and cut
+  beyond; at most 200 000 points) keeps the longitude and latitude of the points of the tracks and routes only; the
+  waypoints, the times, the extensions and the metadata are never stored. Elevations are not stored (2D, as the c2c
+  geometries).
+- **Size.** A track of more than 2000 points is simplified (Douglas-Peucker, the tolerance doubled from 2 m until it
+  fits; `simplified: true`). This reduces the display size only: the licence allows no derivative work, so the
+  original file stays linked (`gpx_url`) and credited.
+- **Storage.** `partner_tracks` (one row per outing, `source` + `external_id`, deleted with its outing): `geom`
+  (MULTILINESTRING, EPSG:3857), `point_count` (the points of the file), `simplified`, `gpx_url` (the file read),
+  `status` (`ok`, `failed`, `invalid`), `detail`, `attempts`, `last_attempt_at`, `fetched_at`.
+- **API.** The items of `GET /partner-outings` have `has_track` (a stored track); `GET /partner-outings/{id}/track`
+  (`id` as in the listing, `gulliver:350592`) answers the Feature, `Cache-Control: public, max-age=3600`, or 404:
+
+  ```json
+  {"type": "Feature", "id": "gulliver:350592",
+   "geometry": {"type": "MultiLineString", "coordinates": [[[8.325, 46.155], ...]]},
+   "properties": {"source": "gulliver", "url": "https://www.gulliver.it/itinerari/.../350592/",
+                  "gpx_url": "https://www.gulliver.it/wp-content/uploads/2026/11/AnelloBorgateMontecrestese.gpx",
+                  "author": "user12", "attribution": "© user12 / gulliver.it — CC BY-NC-ND",
+                  "licence": "CC BY-NC-ND", "point_count": 60, "simplified": false}}
+  ```
+
+- **Fixtures.** `fixtures/gulliver_tracks/` (`synthetic: true`) holds made-up GPX files at the links of the three newest
+  reports with a GPX of the gulliver recording, so the demo shows tracks (with `partners_allow_synthetic="true"`, as
+  in `env.dev`); real files of the users are never committed. Without that directory, or with synthetic fixtures not
+  allowed, fixture mode has no track phase.
+- **Backfill.** Nothing more is needed to read the tracks of older outings: each run takes the newest outings
+  without a track, so the older ones come as the budget allows (or with a bigger `partners.tracks_per_run` for a
+  while). The backfill of the outings themselves is [c2corg/v6_api#2763](https://github.com/c2corg/v6_api/issues/2763).

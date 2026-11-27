@@ -108,8 +108,12 @@ class HttpTransport:
         session: requests.Session | None = None,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
+        max_bytes: int | None = None,
     ):
         self.rate = rate
+        # read at most that many bytes (+1) of a body: a bigger file (a GPX
+        # track) comes back cut, and its reader refuses it
+        self.max_bytes = max_bytes
         self.session = session if session is not None else requests.Session()
         self._sleep = sleep
         self._clock = clock
@@ -119,6 +123,9 @@ class HttpTransport:
     @property
     def request_count(self) -> int:
         return self._count
+
+    def _capped(self, raw) -> bytes:
+        return _capped_body(raw, self.max_bytes)
 
     def get(self, url, *, params=None, headers=None) -> HttpResponse:
         if self._count >= self.rate.max_requests_per_run:
@@ -138,7 +145,9 @@ class HttpTransport:
                 params=params,
                 headers=request_headers,
                 timeout=(5, self.rate.timeout_s),
+                stream=self.max_bytes is not None,
             )
+            body = raw.content if self.max_bytes is None else self._capped(raw)
         except requests.Timeout as e:
             raise SourceDown(f'timeout on {url}') from e
         except requests.ConnectionError as e:
@@ -152,10 +161,24 @@ class HttpTransport:
             HttpResponse(
                 status=raw.status_code,
                 headers=dict(raw.headers),
-                body=raw.content,
+                body=body,
                 url=str(raw.url or url),
             )
         )
+
+
+def _capped_body(raw, max_bytes: int) -> bytes:
+    """Read a streamed body, at most `max_bytes + 1` bytes, then close it."""
+    chunks, size = [], 0
+    try:
+        for chunk in raw.iter_content(64 * 1024):
+            chunks.append(chunk)
+            size += len(chunk)
+            if size > max_bytes:
+                break
+    finally:
+        raw.close()
+    return b''.join(chunks)[: max_bytes + 1]
 
 
 def _split_url(url: str, params: Mapping[str, Any] | None):

@@ -38,6 +38,7 @@
             "\"str\""
           ]
         },
+        "has_track": "bool",
         "height_diff_up": "null",
         "id": "str",
         "lang": "str",

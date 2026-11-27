@@ -432,3 +432,41 @@ def test_recording_transport_writes_files_and_manifest(tmp_path):
     assert (
         replay.get('https://www.example.org/Verhaeltnisse/').body == b'<html>hi</html>'
     )
+
+
+class StreamedRaw(FakeRaw):
+    def __init__(self, body):
+        super().__init__(body=None)
+        self.chunks = [body[i : i + 10] for i in range(0, len(body), 10)]
+        self.closed = False
+        self.read = 0
+
+    def iter_content(self, size):
+        for chunk in self.chunks:
+            self.read += 1
+            yield chunk
+
+    def close(self):
+        self.closed = True
+
+
+def test_max_bytes_streams_and_cuts_the_body():
+    raw = StreamedRaw(b'x' * 100)
+    session = FakeSession(raw)
+    clock = FakeClock()
+    transport = HttpTransport(
+        RATE, session=session, sleep=clock.sleep, clock=clock, max_bytes=25
+    )
+    response = transport.get(URL)
+    assert response.body == b'x' * 26  # one byte more: the reader refuses it
+    assert raw.closed and raw.read == 3  # not read to the end
+    assert session.calls[0][1]['stream'] is True
+
+
+def test_max_bytes_keeps_a_small_body():
+    raw = StreamedRaw(b'<gpx/>')
+    clock = FakeClock()
+    transport = HttpTransport(
+        RATE, session=FakeSession(raw), sleep=clock.sleep, clock=clock, max_bytes=25
+    )
+    assert transport.get(URL).body == b'<gpx/>'

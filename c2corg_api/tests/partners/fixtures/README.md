@@ -111,3 +111,10 @@ by hand for the block tests (also used by the bivouak tests).
 `gulliver_synthetic/` (`synthetic: true`, note starts with `SYNTHETIC EDGE CASES`) is hand-written in the same format
 for what the recording does not hold: a steep grade, an empty route skeleton, unsafe GPX links, broken items, a failing
 route, an empty report detail. It is only used by `tests/partners/test_gulliver.py`; never re-record it.
+
+## gulliver_tracks: synthetic GPX files
+
+`gulliver_tracks/` (`synthetic: true`) is read by the track phase in fixture mode (`<source>_tracks/`): made-up GPX
+loops at the GPX links of the three newest reports with a GPX of the `gulliver/` recording, one of them with a fake
+time, heart rate and author (the reader must drop them). Real GPX files of the users are never committed: they hold
+personal data (times, heart rates).

@@ -204,6 +204,10 @@ _PARTNER_OUTING = {
             'description': 'The public GPX file of the report on the partner site '
             '(a link, under the terms of the site), `null` for c2c.',
         },
+        'has_track': {
+            'type': 'boolean',
+            'description': 'The outing has a track: `GET /partner-outings/{id}/track`.',
+        },
         'region': {'type': ['string', 'null']},
         'geometry': {
             'type': ['object', 'null'],
@@ -287,7 +291,39 @@ _PARTNER_SOURCES = {
         }
     },
 }
+_PARTNER_TRACK = {
+    'title': 'PartnerTrack',
+    'type': 'object',
+    'description': 'A GeoJSON Feature, its geometry in EPSG:4326.',
+    'required': ['type', 'id', 'geometry', 'properties'],
+    'properties': {
+        'type': {'type': 'string', 'enum': ['Feature']},
+        'id': {'type': 'string'},
+        'geometry': {
+            'type': 'object',
+            'description': 'A MultiLineString: lon, lat (WGS 84).',
+        },
+        'properties': {
+            'type': 'object',
+            'properties': {
+                'source': {'type': 'string'},
+                'url': {'type': 'string', 'description': 'The report.'},
+                'gpx_url': {'type': 'string', 'description': 'The GPX file.'},
+                'author': {'type': ['string', 'null']},
+                'attribution': {
+                    'type': 'string',
+                    'description': 'To show with the track: '
+                    '`© <author> / <site> — <licence>`.',
+                },
+                'licence': {'type': ['string', 'null']},
+                'point_count': {'type': ['integer', 'null']},
+                'simplified': {'type': 'boolean'},
+            },
+        },
+    },
+}
 RESPONSES = {
+    'PartnerTrack': _PARTNER_TRACK,
     'PartnerOuting': _PARTNER_OUTING,
     'PartnerSource': _PARTNER_SOURCE,
     'PartnerOutings': _PARTNER_OUTINGS,

@@ -6,6 +6,7 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
+    ForeignKeyConstraint,
     Index,
     Integer,
     SmallInteger,
@@ -121,6 +122,59 @@ class PartnerOuting(Base):
     )
     fetched_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+# the state of a partner track: read (`ok`), to try again (`failed`: the site
+# failed), or not usable (`invalid`: not a GPX, too big, no line; tried again
+# only when the outing links to another file)
+TRACK_STATUSES = ('ok', 'failed', 'invalid')
+
+
+class PartnerTrack(Base):
+    """The GPX track of a partner outing (its `gpx_url`), points only.
+
+    Fetched after the outings, a few a run (jobs/partner_tracks.py). Only the
+    longitude, latitude and elevation of the points are kept: no time, heart
+    rate, name or author. Served by `GET /partner-outings/{id}/track`, with
+    the credit and licence of the source. Deleted with its outing.
+    """
+
+    __tablename__ = 'partner_tracks'
+    __table_args__ = (
+        UniqueConstraint(
+            'source', 'external_id', name='uq_partner_tracks_source_external_id'
+        ),
+        ForeignKeyConstraint(
+            ['source', 'external_id'],
+            [
+                f'{schema}.partner_outings.source',
+                f'{schema}.partner_outings.external_id',
+            ],
+            name='fk_partner_tracks_outing',
+            ondelete='CASCADE',
+        ),
+        CheckConstraint(
+            _in_list('status', TRACK_STATUSES), name='partner_tracks_status_check'
+        ),
+        {'schema': schema},
+    )
+
+    id = Column(Integer, primary_key=True)
+    source = Column(String(32), nullable=False)
+    external_id = Column(String(64), nullable=False)
+    # the file that was read
+    gpx_url = Column(String(500), nullable=False)
+    status = Column(String(16), nullable=False)
+    detail = Column(String(200))
+    attempts = Column(Integer, nullable=False, default=0, server_default=text('0'))
+    last_attempt_at = Column(DateTime(timezone=True), nullable=False)
+    fetched_at = Column(DateTime(timezone=True))
+    # a MULTILINESTRING, EPSG:3857 (2D, as the c2c geometries)
+    geom = Column(Geometry(geometry_type='GEOMETRY', srid=3857, spatial_index=False))
+    point_count = Column(Integer)
+    simplified = Column(
+        Boolean, nullable=False, default=False, server_default=text('false')
     )
 
 
