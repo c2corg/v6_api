@@ -94,6 +94,9 @@ harvest.enabled = {harvest_enabled}
 harvest.avalanche.meteofrance.enabled = {harvest_meteofrance_enabled}
 harvest.avalanche.caaml.enabled = {harvest_caaml_enabled}
 
+# the scheduler checks the links to other sites (c2corg_api.linkcheck)
+link_checker.enabled = {link_checker_enabled}
+
 ui.url = {ui_url}
 
 # Space separated list of origins allowed to make cross-origin (CORS)

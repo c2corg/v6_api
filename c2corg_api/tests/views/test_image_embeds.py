@@ -160,9 +160,9 @@ def test_rebuild(session, article_id):
     )
     DBSession.flush()
 
-    locales, embeds, links = rebuild_image_embeds(DBSession, batch_size=1)
+    locales, embeds, links, external = rebuild_image_embeds(DBSession, batch_size=1)
 
-    assert (locales, embeds, links) == (2, 3, 0)
+    assert (locales, embeds, links, external) == (2, 3, 0, 0)
     assert _embeds(session, article_id) == {'fr': [1, 2, 3]}
 
 

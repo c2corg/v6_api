@@ -1,7 +1,9 @@
+import html
 import logging
 import re
 import secrets
 from threading import RLock
+from urllib.parse import urlsplit
 
 import markdown
 import nh3
@@ -16,7 +18,7 @@ from .nbsp import C2CNbspExtension
 from .ptag import C2CPTagExtension
 from .toc import C2CTocExtension
 from .video import C2CVideoExtension
-from .wikilinks import C2CWikiLinkExtension
+from .wikilinks import SITE_URL_RE, C2CWikiLinkExtension
 
 logger = logging.getLogger('MARKDOWN')
 
@@ -26,6 +28,10 @@ _HREF_PATTERN = re.compile(r'\bhref="(https?://[^"/?#]*)[^"]*"', re.IGNORECASE)
 # the user part and the port of a link host
 _HOST_PATTERN = re.compile(r'^https?://(?:[^@]*@)?([^:]*)', re.IGNORECASE)
 _EXTERNAL_LINK_REL = 'nofollow ugc'
+# the whole URL of a link of the cleaned HTML
+_URL_HREF_PATTERN = re.compile(r'\bhref="(https?://[^"]*)"', re.IGNORECASE)
+# longer URLs (in bytes) are not tracked: an index entry has a size limit
+MAX_TRACKED_URL_LENGTH = 2000
 
 _PARSER_EXCEPTION_MESSAGE = """
 <div c2c:role="danger" style="font-weight:bold">
@@ -375,14 +381,15 @@ def get_embedded_image_ids(text):
 
 
 def get_text_references(text):
-    """Return the images shown and the documents linked by a text: (ids, links)."""
+    """Return the images shown and the links of a text: (ids, links, urls)."""
     # The same parser as parse_code(), whose [img=ID] processor collects the
     # ids of the images it builds (see img.C2CImageBlock): a tag it does not
     # turn into an image (inside raw HTML, in the middle of a line, with
     # uppercase letters...) is not shown, so it is not counted either. The
     # links are the [[type/id|label]] and the full URLs of the site that it
     # turns into links (see wikilinks.C2CLinkCollector): (type as written,
-    # id, written as a URL), in order.
+    # id, written as a URL), in order. The urls are the other http(s) links
+    # of the cooked text (see _get_external_urls).
     with _parser_lock:
         parser = _get_markdown_parser()
         parser.reset()
@@ -391,13 +398,47 @@ def get_text_references(text):
         parser.c2c_embedded_image_ids = ids
         parser.c2c_linked_documents = links
         try:
-            parser.convert(text)
+            converted = parser.convert(text)
+            cleaned = _get_cleaner().clean(_escape_disallowed_tags(converted))
         except Exception as e:
             # parse_code() shows an error message instead of the text
             logger.exception('While parsing markdown', exc_info=e)
-            return [], []
+            return [], [], []
         finally:
             parser.c2c_embedded_image_ids = None
             parser.c2c_linked_documents = None
 
-    return ids, links
+    return ids, links, _get_external_urls(cleaned)
+
+
+def get_url_host(url):
+    """Return the host of an http(s) URL, lowercase, or None."""
+    try:
+        host = urlsplit(url).hostname
+    except ValueError:
+        return None
+    host = (host or '').rstrip('.')
+    return host or None
+
+
+def _get_external_urls(cleaned_html):
+    """Return the URLs of the links of the cooked HTML, but the documents."""
+    # As the reader gets them: markdown and raw HTML links, after the cleaner
+    # (no javascript: link...). The full URLs of the documents of the site
+    # are document links (see wikilinks.C2CLinkCollector); the other URLs of
+    # the site (forum, media...) are kept. Each URL once, in order.
+    urls = []
+    for tag in _LINK_TAG_PATTERN.finditer(cleaned_html):
+        href = _URL_HREF_PATTERN.search(tag.group(1))
+        if not href:
+            continue
+        url = html.unescape(href.group(1))
+        if (
+            len(url.encode()) > MAX_TRACKED_URL_LENGTH
+            or SITE_URL_RE.match(url)
+            or not get_url_host(url)
+            or url in urls
+        ):
+            continue
+        urls.append(url)
+    return urls

@@ -2,7 +2,7 @@ import re
 
 from sqlalchemy import inspect, select
 
-from c2corg_api.markdown import get_text_references, parse_code
+from c2corg_api.markdown import get_text_references, get_url_host, parse_code
 from c2corg_api.markdown.img import (
     IMG_ID_RE,
     make_image_size_resolver,
@@ -11,6 +11,7 @@ from c2corg_api.markdown.img import (
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import Document
 from c2corg_api.models.document_link import LINK_TYPE_NAMES, DocumentLink
+from c2corg_api.models.external_link import ExternalLink
 from c2corg_api.models.image import get_shown_images
 from c2corg_api.models.image_embed import ImageEmbed
 
@@ -25,11 +26,9 @@ NOT_MARKDOWN_PROPERTY = {
     'participants',
 }
 
-# a text that may show images or link documents: parsed to know (a loose
-# pattern; the parser finds the links of the site, see wikilinks.SITE_URL_RE)
-_REFERENCES_HINT_RE = re.compile(
-    r'\[img=|\[\[|https?://(?:www\.|m\.)?camptocamp\.org/', re.IGNORECASE
-)
+# a text that may show images or have links: parsed to know (a loose
+# pattern; the parser finds the links, see markdown.get_text_references)
+_REFERENCES_HINT_RE = re.compile(r'\[img=|\[\[|https?://', re.IGNORECASE)
 
 # loose pattern of the ids of the [[type/id|label]] links, before parsing
 WIKILINK_ID_RE = re.compile(r'\[\[[a-z]+/(\d+)')
@@ -115,12 +114,14 @@ def get_locale_image_ids(locale):
 
 
 def get_locale_references(locale):
-    """Return the images shown and the documents linked by a locale (model)."""
+    """Return the images shown and the links of a locale: (ids, links, urls)."""
     # the texts cook() cooks: the string columns of the locale, but the ones
     # that are not markdown and the polymorphic type. The links are
-    # (type as written, id, written as a URL), see get_text_references.
+    # (type as written, id, written as a URL), see get_text_references, the
+    # urls the links to other sites.
     image_ids = set()
     links = {}
+    urls = set()
     for attribute in inspect(locale).mapper.column_attrs:
         key = attribute.key
         value = getattr(locale, key)
@@ -128,8 +129,9 @@ def get_locale_references(locale):
             continue
         # no image tag nor link: skip the parser, the costly part
         if isinstance(value, str) and _REFERENCES_HINT_RE.search(value):
-            ids, text_links = get_text_references(value)
+            ids, text_links, text_urls = get_text_references(value)
             image_ids.update(ids)
+            urls.update(text_urls)
             for target_type, target_id, is_url in text_links:
                 # a link written both ways counts as [[type/id|label]]
                 link = (target_id, target_type)
@@ -138,23 +140,26 @@ def get_locale_references(locale):
     return (
         {i for i in image_ids if i <= _MAX_DOCUMENT_ID},
         {link: is_url for link, is_url in links.items() if link[0] <= _MAX_DOCUMENT_ID},
+        urls,
     )
 
 
 def update_text_references(locales):
-    """Store the images shown and the documents linked by these locales."""
+    """Store the images shown and the links of these locales."""
     locales = list(locales)
     if not locales:
         return
     ids = [locale.id for locale in locales]
     embeds = ImageEmbed.__table__
     links = DocumentLink.__table__
-    DBSession.execute(embeds.delete().where(embeds.c.document_locale_id.in_(ids)))
-    DBSession.execute(links.delete().where(links.c.document_locale_id.in_(ids)))
+    external_links = ExternalLink.__table__
+    for table in (embeds, links, external_links):
+        DBSession.execute(table.delete().where(table.c.document_locale_id.in_(ids)))
     embed_rows = []
     link_rows = []
+    external_rows = []
     for locale in locales:
-        image_ids, locale_links = get_locale_references(locale)
+        image_ids, locale_links, urls = get_locale_references(locale)
         common = {
             'document_locale_id': locale.id,
             'document_id': locale.document_id,
@@ -170,7 +175,13 @@ def update_text_references(locales):
             }
             for (target_id, target_type), is_url in sorted(locale_links.items())
         ]
-    if embed_rows:
-        DBSession.execute(embeds.insert(), embed_rows)
-    if link_rows:
-        DBSession.execute(links.insert(), link_rows)
+        external_rows += [
+            {**common, 'url': url, 'host': get_url_host(url)} for url in sorted(urls)
+        ]
+    for table, rows in (
+        (embeds, embed_rows),
+        (links, link_rows),
+        (external_links, external_rows),
+    ):
+        if rows:
+            DBSession.execute(table.insert(), rows)

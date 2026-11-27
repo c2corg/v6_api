@@ -105,7 +105,7 @@ def linking_documents(target_ids, target_type, excluded_document_id=None):
     return result
 
 
-def _collaborative(document):
+def collaborative(document):
     """Return the condition (SQL) that the document is collaborative."""
     articles = Article.__table__
     images = Image.__table__
@@ -152,7 +152,7 @@ def list_broken_links(offset, limit):
         .outerjoin(target, target.document_id == DocumentLink.target_id)
         .where(
             Document.redirects_to.is_(None),
-            _collaborative(Document),
+            collaborative(Document),
             or_(
                 target.document_id.is_(None),
                 expected.is_(None),
