@@ -1,0 +1,33 @@
+{
+ "776118": {
+  "title": "Verde (Colletto) da Montgenèvre per il percorso Skialp",
+  "region": {
+   "name": "Provence-Alpes-Côte d'Azur (FR)"
+  },
+  "district": "Hautes-Alpes",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "740"
+    },
+    "alt_top": {
+     "value": "2591"
+    },
+    "exposure": {
+     "value": "Tutte"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 44.933969077611536,
+      "lng": 6.7324757229018894
+     }
+    }
+   }
+  }
+ }
+}

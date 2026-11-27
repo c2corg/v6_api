@@ -3,7 +3,8 @@
 The adapters (`c2corg_api.partners`) are pure: this job gives them a transport
 and a lookup cache, stores what they return in `guidebook.partner_outings`,
 keeps the health of each source in `guidebook.partner_sources`, and purges the
-outings and the lookups older than the retention.
+lookups older than their retention (and the outings older than theirs, when one
+is set: by default the outings are kept forever).
 
 Each adapter is a harvester of `c2corg_api.harvest` (`PartnerHarvester`,
 named `partners.<adapter>`): the harvest tick schedules it, switches it on
@@ -93,7 +94,14 @@ def partners_enabled(settings):
 
 
 def _retention_days(settings):
-    return int(settings.get('partners.retention_days') or 31)
+    """Days an outing is kept; None (empty or 0, the default): forever.
+
+    The API only ever lists a window of 31 days at most: the older rows are
+    kept for later uses (statistics, a backfill...), not served.
+    """
+    value = str(settings.get('partners.retention_days') or '').strip()
+    days = int(value) if value else 0
+    return days if days > 0 else None
 
 
 def _lookup_retention_days(settings):
@@ -183,6 +191,8 @@ def _outing_values(outing, now, area_ids=None):
         'height_diff_up': outing.height_diff_up,
         'orientations': list(outing.orientations) or None,
         'snow': dict(outing.snow) if outing.snow else None,
+        'gpx_url': outing.gpx_url,
+        'texts': dict(outing.texts) if outing.texts else None,
         'geom': geom,
         'geom_quality': outing.geom_quality,
         # recomputed by assign_areas from the point, unless given (the outings
@@ -251,9 +261,11 @@ def assign_areas(session, ids=None):
 def purge_partner_outings(session, now, retention_days):
     """Delete the outings older than the retention, and return their number.
 
-    The areas get edited: the areas of the remaining outings are recomputed.
-    Does not commit.
+    `retention_days` None: no retention, nothing deleted. The areas get
+    edited: the areas of the remaining outings are recomputed. Does not commit.
     """
+    if retention_days is None:
+        return 0
     limit = now.date() - timedelta(days=retention_days)
     deleted = session.execute(
         delete(PartnerOuting).where(PartnerOuting.date < limit)
@@ -305,10 +317,11 @@ def _get_source_row(session, name):
 def _since(row, now, settings):
     last_success = row.last_success_at or now - timedelta(days=INITIAL_DAYS)
     last_success = last_success.astimezone(UTC)
-    return max(
-        now.date() - timedelta(days=_retention_days(settings)),
-        last_success.date() - timedelta(days=OVERLAP_DAYS),
-    )
+    since = last_success.date() - timedelta(days=OVERLAP_DAYS)
+    retention = _retention_days(settings)
+    if retention is None:
+        return since
+    return max(now.date() - timedelta(days=retention), since)
 
 
 def _secret(name):
@@ -480,8 +493,12 @@ def _store(session, result, shift, now, settings, skipped, lookups):
     outings = result.outings
     if shift:
         outings = [dataclasses.replace(o, date=o.date + shift) for o in outings]
-    limit = now.date() - timedelta(days=_retention_days(settings))
-    kept = [o for o in outings if o.date >= limit]
+    retention = _retention_days(settings)
+    if retention is None:
+        kept = list(outings)
+    else:
+        limit = now.date() - timedelta(days=retention)
+        kept = [o for o in outings if o.date >= limit]
     if len(kept) < len(outings):
         skipped['too_old'] += len(outings) - len(kept)
     kept, area_ids, located = resolve_locations(session, lookups, kept)
@@ -657,7 +674,8 @@ def purge_partner_outings_job(settings):
     """Scheduler entry point: purge the old outings and lookups.
 
     Scheduled even when the harvest is off: the rows must not outlive the
-    retention (licence).
+    retention, when one is set (`partners.retention_days`; empty: the outings
+    are kept forever, only the lookups are purged).
     """
     now = datetime.now(UTC)
     with Session(

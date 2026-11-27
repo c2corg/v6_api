@@ -1,0 +1,26 @@
+{
+ "350622": {
+  "ID": "350622",
+  "user_nicename": "user95",
+  "comment_date": "2026-10-01 00:00:00",
+  "comment_post_ID": "937535",
+  "permalink": "https://www.gulliver.it/itinerari/poris-de-candelaria-e-plaja-jurado-da-tijarafe-anello/2026/10/01/350622/",
+  "content": "[text 500 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "route": {
+   "title": "Poris de Candelaria e Plaja Jurado da Tijarafe, anello",
+   "region": {
+    "name": "Isole Canarie (ES)"
+   },
+   "district": "La Palma"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ }
+}

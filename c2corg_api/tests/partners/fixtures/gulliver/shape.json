@@ -1,213 +1,1379 @@
 {
- "commentglobal_page1.json": [
-  {
-   "ID": "int",
+ "commentglobal_page1.json": {
+  "*": {
+   "ID": "str",
    "comment_date": "str",
    "comment_post_ID": "str",
+   "content": "str",
    "meta": {
+    "access": {
+     "value": "str"
+    },
+    "obs": {
+     "value": "str"
+    },
+    "skimo_equip": {
+     "value": "str"
+    },
     "snow_alt": {
-     "any_of": [
-      "\"int\"",
-      "\"str\""
-     ]
+     "value": "str"
     },
     "snow_low": {
-     "any_of": [
-      "\"int\"",
-      "\"str\""
-     ]
+     "value": "str"
     },
     "snow_top": {
-     "any_of": [
-      "\"int\"",
-      "\"str\""
-     ]
+     "value": "str"
     }
    },
    "permalink": "str",
    "term": {
-    "code": "str",
-    "name": "str"
+    "code": "str"
    },
+   "tracks": "null",
    "user_nicename": "str"
   }
- ],
- "commentglobal_page2.json": [
-  {
-   "ID": "int",
+ },
+ "commentglobal_page2.json": {
+  "*": {
+   "ID": "str",
    "comment_date": "str",
    "comment_post_ID": "str",
+   "content": "str",
    "meta": {
+    "access": {
+     "value": "str"
+    },
+    "obs": {
+     "value": "str"
+    },
+    "skimo_equip": {
+     "value": "str"
+    },
     "snow_alt": {
-     "any_of": [
-      "\"int\"",
-      "\"null\""
-     ]
+     "value": "str"
     },
     "snow_low": {
-     "any_of": [
-      "\"int\"",
-      "\"null\""
-     ]
+     "value": "str"
     },
     "snow_top": {
-     "any_of": [
-      "\"int\"",
-      "\"null\""
-     ]
+     "value": "str"
     }
    },
    "permalink": "str",
    "term": {
-    "code": "str",
-    "name": "str"
+    "code": "str"
+   },
+   "tracks": {
+    "any_of": [
+     "\"null\"",
+     "[{\"guid\": \"str\"}]"
+    ]
    },
    "user_nicename": "str"
   }
- ],
- "commentglobal_page3.json": [],
- "routes_id44871.json": {
-  "district": "str",
-  "meta": {
-   "data": {
-    "alt_top": "str",
-    "drop": "str",
-    "exposure": "str"
-   },
-   "geo": {
-    "coords": {
-     "lat": "float",
-     "lng": "float"
-    }
-   }
-  },
-  "region": {
-   "name": "str"
-  },
-  "title": "str"
  },
- "routes_id52980.json": {
-  "district": "str",
-  "meta": {
-   "data": {
-    "alt_top": "str",
-    "drop": "str",
-    "exposure": "str",
-    "grade_skimo": "str"
-   },
-   "geo": {
-    "coords": {
-     "lat": "float",
-     "lng": "float"
+ "commentglobal_page3.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    },
+    "obs": {
+     "value": "str"
+    },
+    "skimo_equip": {
+     "value": "str"
+    },
+    "snow_alt": {
+     "value": "str"
+    },
+    "snow_low": {
+     "value": "str"
+    },
+    "snow_top": {
+     "value": "str"
     }
-   }
-  },
-  "region": {
-   "name": "str"
-  },
-  "title": "str"
+   },
+   "permalink": "str",
+   "term": {
+    "code": "str"
+   },
+   "tracks": {
+    "any_of": [
+     "\"null\"",
+     "[{\"guid\": \"str\"}]"
+    ]
+   },
+   "user_nicename": "str"
+  }
  },
- "routes_id55310.json": {
-  "district": "str",
-  "meta": {
-   "data": {
-    "alt_top": "str",
-    "drop": "str",
-    "exposure": "str",
-    "grade_skimo": "str"
-   },
-   "geo": {
-    "coords": {
-     "lat": "float",
-     "lng": "float"
+ "commentglobal_page4.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    },
+    "obs": {
+     "value": "str"
+    },
+    "skimo_equip": {
+     "value": "str"
+    },
+    "snow_alt": {
+     "value": "str"
+    },
+    "snow_low": {
+     "value": "str"
+    },
+    "snow_top": {
+     "value": "str"
     }
-   }
-  },
-  "region": {
-   "name": "str"
-  },
-  "title": "str"
+   },
+   "permalink": "str",
+   "term": {
+    "code": "str"
+   },
+   "tracks": {
+    "any_of": [
+     "\"null\"",
+     "[{\"guid\": \"str\"}]"
+    ]
+   },
+   "user_nicename": "str"
+  }
+ },
+ "commentglobal_page5.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    },
+    "obs": {
+     "value": "str"
+    },
+    "skimo_equip": {
+     "value": "str"
+    },
+    "snow_alt": {
+     "value": "str"
+    },
+    "snow_low": {
+     "value": "str"
+    },
+    "snow_top": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "term": {
+    "code": "str"
+   },
+   "tracks": {
+    "any_of": [
+     "\"null\"",
+     "[{\"guid\": \"str\"}]"
+    ]
+   },
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350579.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": [
+    {
+     "guid": "str"
+    }
+   ],
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350584.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350586.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    },
+    "obs": {
+     "value": "str"
+    },
+    "skimo_equip": {
+     "value": "str"
+    },
+    "snow_alt": {
+     "value": "str"
+    },
+    "snow_low": {
+     "value": "str"
+    },
+    "snow_top": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350592.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": [
+    {
+     "guid": "str"
+    }
+   ],
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350593.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350606.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350612.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350614.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350616.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350620.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350621.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350622.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350623.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    },
+    "snow_alt": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_id350624.json": {
+  "*": {
+   "ID": "str",
+   "comment_date": "str",
+   "comment_post_ID": "str",
+   "content": "str",
+   "meta": {
+    "access": {
+     "value": "str"
+    }
+   },
+   "permalink": "str",
+   "route": {
+    "district": "str",
+    "region": {
+     "name": "str"
+    },
+    "title": "str"
+   },
+   "term": {
+    "code": "str"
+   },
+   "tracks": "null",
+   "user_nicename": "str"
+  }
+ },
+ "comments_sortingid.json": {
+  "content": {
+   "a.btn-ghost[href*=\"/itinerari/\"]": "str"
+  }
+ },
+ "routes_id10191.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id103218.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id11753.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id12105.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id12335.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id126719.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id128640.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id193229.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id222984.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id248823.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id2520.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id281711.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id334838.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id39455.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id397870.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id453566.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id489579.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skisteep": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id526469.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id53652.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
  },
  "routes_id57949.json": {
-  "district": "str",
-  "meta": {
-   "data": {
-    "alt_top": "str",
-    "drop": "str",
-    "exposure": "str",
-    "grade_skimo": "str"
-   },
-   "geo": {
-    "coords": {
-     "lat": "str",
-     "lng": "str"
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
     }
-   }
-  },
-  "region": {
-   "name": "str"
-  },
-  "title": "str"
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
  },
- "routes_id59407.json": {
-  "district": "str",
-  "meta": {
-   "data": {
-    "alt_top": "str",
-    "drop": "str",
-    "exposure": "str"
-   },
-   "geo": {
-    "coords": {
-     "lat": "float",
-     "lng": "float"
+ "routes_id58707.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
     }
-   }
-  },
-  "region": {
-   "name": "str"
-  },
-  "title": "str"
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
  },
- "routes_id60118.json": {
-  "district": "str",
-  "meta": {
-   "data": {
-    "alt_top": "str",
-    "drop": "str",
-    "exposure": "str"
-   },
-   "geo": {
-    "coords": {
-     "lat": "float",
-     "lng": "float"
+ "routes_id711926.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
     }
-   }
-  },
-  "region": {
-   "name": "str"
-  },
-  "title": "str"
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
  },
- "routes_id62001.json": {
-  "district": "str",
-  "meta": {
-   "data": {
-    "alt_top": "str",
-    "drop": "str",
-    "exposure": "str",
-    "grade_skimo": "str"
-   },
-   "geo": {
-    "coords": {
-     "lat": "null",
-     "lng": "null"
+ "routes_id776118.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
     }
-   }
-  },
-  "region": {
-   "name": "str"
-  },
-  "title": "str"
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
+ },
+ "routes_id88735.json": {
+  "*": {
+   "district": "str",
+   "meta": {
+    "data": {
+     "alt_top": {
+      "value": "str"
+     },
+     "drop": {
+      "value": "str"
+     },
+     "exposure": {
+      "value": "str"
+     },
+     "grade_skimo": {
+      "value": "str"
+     }
+    },
+    "geo": {
+     "coords": {
+      "value": {
+       "lat": "float",
+       "lng": "float"
+      }
+     }
+    }
+   },
+   "region": {
+    "name": "str"
+   },
+   "title": "str"
+  }
  }
 }

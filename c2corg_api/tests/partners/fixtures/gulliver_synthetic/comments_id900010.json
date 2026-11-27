@@ -1,0 +1,30 @@
+{
+ "900010": {
+  "ID": "900010",
+  "user_nicename": "synthetic-author",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "700001",
+  "permalink": "https://www.gulliver.it/itinerari/cima-di-prova-da-test/2026/11/26/900010/",
+  "content": "[text 120 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": [
+   {
+    "guid": "https://www.gulliver.it/wp-content/uploads/2026/11/solo-qui.gpx"
+   }
+  ],
+  "meta": {
+   "snow_alt": {
+    "value": "2000"
+   }
+  },
+  "route": {
+   "title": "Punta solo qui",
+   "region": {
+    "name": "Piemonte"
+   },
+   "district": "TO"
+  }
+ }
+}

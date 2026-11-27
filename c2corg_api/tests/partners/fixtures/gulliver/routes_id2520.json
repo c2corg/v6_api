@@ -1,0 +1,33 @@
+{
+ "2520": {
+  "title": "Leissè o Leysser (Punta) da Vetan",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "1000"
+    },
+    "alt_top": {
+     "value": "2771"
+    },
+    "exposure": {
+     "value": "Sud"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.73521210239997,
+      "lng": 7.184801100738287
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,33 @@
+{
+ "39455": {
+  "title": "Bosco (Cima del) da Thures",
+  "region": {
+   "name": "Piemonte"
+  },
+  "district": "TO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "736"
+    },
+    "alt_top": {
+     "value": "2376"
+    },
+    "exposure": {
+     "value": "Ovest"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 44.92129755,
+      "lng": 6.82424276
+     }
+    }
+   }
+  }
+ }
+}

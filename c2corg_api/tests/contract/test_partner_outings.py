@@ -66,6 +66,8 @@ def rows(session, user_ids, monkeypatch):
             rating_system='c2c_ski',
             orientations=['N'],
             snow={'top_cm': 40},
+            gpx_url='https://skitour.fr/sorties/123456.gpx',
+            texts={'narrative': 'A partner narrative, never served'},
             elevation_max=3464,
             geom='SRID=3857;POINT(110 110)',
             geom_quality='summit',
@@ -91,6 +93,9 @@ class TestPartnerOutings:
         response = browser.get('/partner-outings')
         check_snapshot('partner_outings_listing', response)
         assert response.json['total'] == 2
+        # the stored texts of a partner outing are never served
+        assert 'never served' not in response.text
+        assert all('texts' not in item for item in response.json['items'])
 
     @contract(LISTING)
     def test_listing_filtered(self, browser):

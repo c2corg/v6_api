@@ -1,0 +1,30 @@
+{
+ "350592": {
+  "ID": "350592",
+  "user_nicename": "user102",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "519663",
+  "permalink": "https://www.gulliver.it/itinerari/montecrestese-giro-delle-frazioni-di/2026/11/21/350592/",
+  "content": "[text 894 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "route": {
+   "title": "Montecrestese, anello delle borgate",
+   "region": {
+    "name": "Piemonte"
+   },
+   "district": "VB"
+  },
+  "tracks": [
+   {
+    "guid": "https://www.gulliver.it/wp-content/uploads/2026/11/AnelloBorgateMontecrestese.gpx"
+   }
+  ],
+  "meta": {
+   "access": {
+    "value": "[text 18 chars]"
+   }
+  }
+ }
+}

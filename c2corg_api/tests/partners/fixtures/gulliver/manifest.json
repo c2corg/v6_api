@@ -1,107 +1,403 @@
 {
   "source": "gulliver",
-  "recorded_at": "2026-11-24",
-  "synthetic": true,
-  "note": "Cloudflare JS challenge (403) from the sandbox; production may need Gulliver to allowlist us. Built by hand from DATA_SOURCES.md 1.3; route media omitted.",
+  "recorded_at": "2026-11-27",
+  "synthetic": false,
   "entries": [
     {
       "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "commentglobal_page1.json",
       "params": {
         "page": "1"
-      },
-      "status": 200,
-      "content_type": "application/json; charset=UTF-8",
-      "file": "commentglobal_page1.json"
+      }
     },
     {
       "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "commentglobal_page2.json",
       "params": {
         "page": "2"
-      },
-      "status": 200,
-      "content_type": "application/json; charset=UTF-8",
-      "file": "commentglobal_page2.json"
+      }
     },
     {
       "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "commentglobal_page3.json",
       "params": {
         "page": "3"
-      },
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
       "status": 200,
       "content_type": "application/json; charset=UTF-8",
-      "file": "commentglobal_page3.json"
+      "file": "commentglobal_page4.json",
+      "params": {
+        "page": "4"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "commentglobal_page5.json",
+      "params": {
+        "page": "5"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/front_page/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_sortingid.json",
+      "params": {
+        "sorting": "id"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350624.json",
+      "params": {
+        "id": "350624"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350623.json",
+      "params": {
+        "id": "350623"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350622.json",
+      "params": {
+        "id": "350622"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350621.json",
+      "params": {
+        "id": "350621"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350620.json",
+      "params": {
+        "id": "350620"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350616.json",
+      "params": {
+        "id": "350616"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350614.json",
+      "params": {
+        "id": "350614"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350612.json",
+      "params": {
+        "id": "350612"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350606.json",
+      "params": {
+        "id": "350606"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350593.json",
+      "params": {
+        "id": "350593"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350592.json",
+      "params": {
+        "id": "350592"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350586.json",
+      "params": {
+        "id": "350586"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350584.json",
+      "params": {
+        "id": "350584"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/comments",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "comments_id350579.json",
+      "params": {
+        "id": "350579"
+      }
     },
     {
       "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id10191.json",
+      "params": {
+        "id": "10191"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id2520.json",
+      "params": {
+        "id": "2520"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id453566.json",
+      "params": {
+        "id": "453566"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id193229.json",
+      "params": {
+        "id": "193229"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id39455.json",
+      "params": {
+        "id": "39455"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id776118.json",
+      "params": {
+        "id": "776118"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id248823.json",
+      "params": {
+        "id": "248823"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id88735.json",
+      "params": {
+        "id": "88735"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id11753.json",
+      "params": {
+        "id": "11753"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id103218.json",
+      "params": {
+        "id": "103218"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id281711.json",
+      "params": {
+        "id": "281711"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id12105.json",
+      "params": {
+        "id": "12105"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id397870.json",
+      "params": {
+        "id": "397870"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id526469.json",
+      "params": {
+        "id": "526469"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id126719.json",
+      "params": {
+        "id": "126719"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id334838.json",
+      "params": {
+        "id": "334838"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id53652.json",
+      "params": {
+        "id": "53652"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id128640.json",
+      "params": {
+        "id": "128640"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id58707.json",
+      "params": {
+        "id": "58707"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id12335.json",
+      "params": {
+        "id": "12335"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id489579.json",
+      "params": {
+        "id": "489579"
+      }
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "file": "routes_id57949.json",
       "params": {
         "id": "57949"
-      },
-      "status": 200,
-      "content_type": "application/json; charset=UTF-8",
-      "file": "routes_id57949.json"
+      }
     },
     {
       "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
-      "params": {
-        "id": "55310"
-      },
       "status": 200,
       "content_type": "application/json; charset=UTF-8",
-      "file": "routes_id55310.json"
+      "file": "routes_id711926.json",
+      "params": {
+        "id": "711926"
+      }
     },
     {
       "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
-      "params": {
-        "id": "60118"
-      },
       "status": 200,
       "content_type": "application/json; charset=UTF-8",
-      "file": "routes_id60118.json"
-    },
-    {
-      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "file": "routes_id222984.json",
       "params": {
-        "id": "62001"
-      },
-      "status": 200,
-      "content_type": "application/json; charset=UTF-8",
-      "file": "routes_id62001.json"
-    },
-    {
-      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
-      "params": {
-        "id": "59407"
-      },
-      "status": 200,
-      "content_type": "application/json; charset=UTF-8",
-      "file": "routes_id59407.json"
-    },
-    {
-      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
-      "params": {
-        "id": "44871"
-      },
-      "status": 200,
-      "content_type": "application/json; charset=UTF-8",
-      "file": "routes_id44871.json"
-    },
-    {
-      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
-      "params": {
-        "id": "52980"
-      },
-      "status": 200,
-      "content_type": "application/json; charset=UTF-8",
-      "file": "routes_id52980.json"
-    },
-    {
-      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
-      "params": {
-        "id": "61022"
-      },
-      "status": 404,
-      "content_type": "application/json; charset=UTF-8",
-      "file": "routes_id61022.json"
+        "id": "222984"
+      }
     }
   ]
 }

@@ -405,6 +405,32 @@ def test_purge_job(db, db_connection):
     assert outings_of(db) == []
 
 
+def test_upsert_stores_the_gpx_link_and_the_texts(db):
+    texts = {'narrative': 'Bella gita', 'access': 'Strada ok'}
+    gpx = 'https://www.gulliver.it/wp-content/uploads/2026/11/a.gpx'
+    job.upsert_outings(db, [outing('t', gpx_url=gpx, texts=texts)], NOW)
+    (row,) = outings_of(db)
+    assert (row.gpx_url, row.texts) == (gpx, texts)
+    # updated, and cleared, like the other fields
+    job.upsert_outings(db, [outing('t')], NOW)
+    (row,) = outings_of(db)
+    assert (row.gpx_url, row.texts) == (None, None)
+
+
+@pytest.mark.parametrize('days', ['', '0', None])
+def test_no_retention_keeps_the_outings_forever(db, db_connection, days):
+    """The default (`partners_retention=""`): no outing is ever purged."""
+    settings = {**SETTINGS, 'partners.retention_days': days}
+    assert job._retention_days(settings) is None
+    job.upsert_outings(
+        db, [outing('old', date=TODAY - datetime.timedelta(days=400))], NOW
+    )
+    db.commit()
+    assert job.purge_partner_outings(db, NOW, None) == 0
+    job.purge_partner_outings_job(settings)
+    assert len(outings_of(db)) == 1
+
+
 def put_lookup(db, key, days_old):
     db.add(
         PartnerLookup(
@@ -822,6 +848,19 @@ def test_since_first_run_and_clamp(db):
     much_later = NOW + datetime.timedelta(days=60)
     run(db, adapter, now=much_later)
     assert adapter.calls[2].since == much_later.date() - datetime.timedelta(days=31)
+
+
+def test_since_without_retention_and_old_outings_stored(db):
+    """No retention: a long outage is caught up from the last success."""
+    settings = {**SETTINGS, 'partners.retention_days': ''}
+    old = outing('old', date=TODAY - datetime.timedelta(days=90))
+    adapter = make_adapter(fetch=lambda ctx: FetchResult(outings=[old]))
+    run(db, adapter, settings=settings)
+    much_later = NOW + datetime.timedelta(days=60)
+    run(db, adapter, now=much_later, settings=settings)
+    assert adapter.calls[1].since == TODAY - datetime.timedelta(days=2)
+    # never dropped as too old
+    assert [o.external_id for o in outings_of(db)] == ['old']
 
 
 def test_since_uses_the_last_success_not_the_last_run(db):

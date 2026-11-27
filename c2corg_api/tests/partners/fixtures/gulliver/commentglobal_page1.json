@@ -1,98 +1,764 @@
-[
- {
-  "ID": 48213,
-  "user_nicename": "giovanni-bianchi",
-  "comment_date": "2026-11-23 18:42:10",
-  "comment_post_ID": "57949",
-  "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/#comment-48213",
+{
+ "350645": {
+  "ID": "350645",
+  "user_nicename": "user1",
+  "comment_date": "2026-11-27 00:00:00",
+  "comment_post_ID": "10191",
+  "permalink": "https://www.gulliver.it/itinerari/cialma-la-o-punta-cia-da-carello/2026/11/27/350645/",
+  "content": "[text 491 chars]",
   "term": {
-   "code": "skimo",
-   "name": "skimo"
+   "code": "skimo"
   },
+  "tracks": null,
   "meta": {
-   "snow_top": "40",
-   "snow_low": "5",
-   "snow_alt": "2100"
+   "access": {
+    "value": "[text 42 chars]"
+   },
+   "obs": {
+    "value": "[text 20 chars]"
+   },
+   "snow_top": {
+    "value": "[text 17 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": ""
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
   }
  },
- {
-  "ID": 48210,
-  "user_nicename": "marta_r",
-  "comment_date": "2026-11-23 15:03:44",
-  "comment_post_ID": "61022",
-  "permalink": "https://www.gulliver.it/itinerari/colle-del-teodulo-invernale/#comment-48210",
+ "350625": {
+  "ID": "350625",
+  "user_nicename": "user2",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "2520",
+  "permalink": "https://www.gulliver.it/itinerari/leisse-o-leysser-punta-da-vetan/2026/11/26/350625/",
+  "content": "[text 288 chars]",
   "term": {
-   "code": "skimo",
-   "name": "skimo"
+   "code": "skimo"
   },
+  "tracks": null,
   "meta": {
-   "snow_top": 30,
-   "snow_low": 10,
-   "snow_alt": 1900
+   "access": {
+    "value": "[text 2 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 16 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1500"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
   }
  },
- {
-  "ID": 48207,
-  "user_nicename": "ale.guida",
-  "comment_date": "2026-11-23 09:12:01",
-  "comment_post_ID": "55310",
-  "permalink": "https://www.gulliver.it/itinerari/canalone-nord-est-del-monte-emilius/#comment-48207",
+ "350634": {
+  "ID": "350634",
+  "user_nicename": "user3",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "453566",
+  "permalink": "https://www.gulliver.it/itinerari/sises-monte-da-sestriere-per-il-versante-ne/2026/11/26/350634/",
+  "content": "[text 765 chars]",
   "term": {
-   "code": "skisteep",
-   "name": "skisteep"
+   "code": "skimo"
   },
+  "tracks": null,
   "meta": {
-   "snow_top": "25",
-   "snow_low": "0",
-   "snow_alt": "1800"
+   "access": {
+    "value": "[text 2 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 9 chars]"
+   },
+   "snow_alt": {
+    "value": "1500"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
   }
  },
- {
-  "ID": 48204,
-  "user_nicename": "famiglia-ciaspole",
-  "comment_date": "2026-11-22 16:20:00",
-  "comment_post_ID": "60118",
-  "permalink": "https://www.gulliver.it/itinerari/ciaspolata-al-lago-d-arpy/#comment-48204",
+ "350635": {
+  "ID": "350635",
+  "user_nicename": "user4",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "193229",
+  "permalink": "https://www.gulliver.it/itinerari/arno-bivacco-da-pila/2026/11/26/350635/",
+  "content": "[text 189 chars]",
   "term": {
-   "code": "snowshoe",
-   "name": "snowshoe"
+   "code": "skimo"
   },
+  "tracks": null,
   "meta": {
-   "snow_top": "15",
-   "snow_low": "",
-   "snow_alt": ""
+   "access": {
+    "value": "[text 6 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 9 chars]"
+   },
+   "snow_alt": {
+    "value": ""
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
   }
  },
- {
-  "ID": 48199,
-  "user_nicename": "luca-sciatore",
-  "comment_date": "2026-11-22 11:45:30",
-  "comment_post_ID": "57949",
-  "permalink": "https://www.gulliver.it/itinerari/cima-bianca-da-cheneil/#comment-48199",
+ "350644": {
+  "ID": "350644",
+  "user_nicename": "user5",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "501992",
+  "permalink": "https://www.gulliver.it/itinerari/tamone-monteda-bernezzo-anello/2026/11/26/350644/",
+  "content": "[text 162 chars]",
   "term": {
-   "code": "skimo",
-   "name": "skimo"
+   "code": "hike"
   },
+  "tracks": null,
   "meta": {
-   "snow_top": "n.d.",
-   "snow_low": "",
-   "snow_alt": ""
+   "access": {
+    "value": "[text 2 chars]"
+   }
   }
  },
- {
-  "ID": 48196,
-  "user_nicename": "sara-t",
-  "comment_date": "2026-11-21 19:00:12",
-  "comment_post_ID": "62001",
-  "permalink": "https://www.gulliver.it/itinerari/punta-della-valletta/#comment-48196",
+ "350639": {
+  "ID": "350639",
+  "user_nicename": "user6",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "39455",
+  "permalink": "https://www.gulliver.it/itinerari/bosco-cima-del-da-thures/2026/11/26/350639/",
+  "content": "[text 241 chars]",
   "term": {
-   "code": "skimo",
-   "name": "skimo"
+   "code": "skimo"
   },
+  "tracks": null,
   "meta": {
-   "snow_top": 20,
-   "snow_low": 5,
-   "snow_alt": 2000
+   "access": {
+    "value": "[text 14 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 17 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": ""
+   },
+   "skimo_equip": {
+    "value": ""
+   }
+  }
+ },
+ "350638": {
+  "ID": "350638",
+  "user_nicename": "user7",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "776118",
+  "permalink": "https://www.gulliver.it/itinerari/verde-colletto-da-montgenevre-3/2026/11/26/350638/",
+  "content": "[text 423 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 74 chars]"
+   },
+   "obs": {
+    "value": "[text 28 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 9 chars]"
+   },
+   "snow_alt": {
+    "value": "1600"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350642": {
+  "ID": "350642",
+  "user_nicename": "user8",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "248823",
+  "permalink": "https://www.gulliver.it/itinerari/soma-clot-della-da-pragelato/2026/11/26/350642/",
+  "content": "[text 334 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 17 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1500"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350636": {
+  "ID": "350636",
+  "user_nicename": "user9",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "88735",
+  "permalink": "https://www.gulliver.it/itinerari/anges-sommet-des-fort-du-gondran-da-montgenevre/2026/11/26/350636/",
+  "content": "[text 330 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 23 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": ""
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350628": {
+  "ID": "350628",
+  "user_nicename": "user10",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "11753",
+  "permalink": "https://www.gulliver.it/itinerari/uja-costiera-dell-da-chiapili-di-sopra/2026/11/26/350628/",
+  "content": "[text 586 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 41 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 16 chars]"
+   },
+   "snow_low": {
+    "value": "[text 16 chars]"
+   },
+   "snow_alt": {
+    "value": "1500"
+   },
+   "skimo_equip": {
+    "value": ""
+   }
+  }
+ },
+ "350640": {
+  "ID": "350640",
+  "user_nicename": "user11",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "336717",
+  "permalink": "https://www.gulliver.it/itinerari/perti-rocca-di-spigolo-nord/2026/11/26/350640/",
+  "content": "[text 106 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350643": {
+  "ID": "350643",
+  "user_nicename": "user12",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "103218",
+  "permalink": "https://www.gulliver.it/itinerari/pierre-pointe-de-la-da-pila/2026/11/26/350643/",
+  "content": "[text 418 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 5 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1600"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350641": {
+  "ID": "350641",
+  "user_nicename": "user13",
+  "comment_date": "2026-11-26 00:00:00",
+  "comment_post_ID": "281711",
+  "permalink": "https://www.gulliver.it/itinerari/vaccare-trucco-delle-e-pilone-madonna-della-neve-da-frais/2026/11/26/350641/",
+  "content": "[text 295 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 24 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1200"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350600": {
+  "ID": "350600",
+  "user_nicename": "user14",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "12105",
+  "permalink": "https://www.gulliver.it/itinerari/crevacol-testa-da-sud/2026/11/24/350600/",
+  "content": "[text 232 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 16 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 25 chars]"
+   },
+   "snow_alt": {
+    "value": "2000"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350615": {
+  "ID": "350615",
+  "user_nicename": "user15",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "939234",
+  "permalink": "https://www.gulliver.it/itinerari/nasta-uja-di-parete-ovest-goulotte-alpinasta/2026/11/24/350615/",
+  "content": "[text 40 chars]",
+  "term": {
+   "code": "mountain"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 22 chars]"
+   }
+  }
+ },
+ "350597": {
+  "ID": "350597",
+  "user_nicename": "user16",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "402567",
+  "permalink": "https://www.gulliver.it/itinerari/pigna-monte-da-lurisia-2/2026/11/24/350597/",
+  "content": "[text 186 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 50 chars]"
+   }
+  }
+ },
+ "350601": {
+  "ID": "350601",
+  "user_nicename": "user17",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "527218",
+  "permalink": "https://www.gulliver.it/itinerari/borgone-artisti-falesia-degli/2026/11/24/350601/",
+  "content": "[text 58 chars]",
+  "term": {
+   "code": "crag"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350613": {
+  "ID": "350613",
+  "user_nicename": "user18",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "220028",
+  "permalink": "https://www.gulliver.it/itinerari/quinzeina-o-quinseina-punte-sud-e-nord-da-chiapinetto/2026/11/24/350613/",
+  "content": "[text 274 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 7 chars]"
+   }
+  }
+ },
+ "350631": {
+  "ID": "350631",
+  "user_nicename": "user19",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "248365",
+  "permalink": "https://www.gulliver.it/itinerari/talucco-torrione-del-i-fiori-di-yangon/2026/11/24/350631/",
+  "content": "",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350599": {
+  "ID": "350599",
+  "user_nicename": "user2",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "12105",
+  "permalink": "https://www.gulliver.it/itinerari/crevacol-testa-da-sud/2026/11/24/350599/",
+  "content": "[text 357 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 29 chars]"
+   },
+   "snow_alt": {
+    "value": "1400"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350610": {
+  "ID": "350610",
+  "user_nicename": "user20",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "397870",
+  "permalink": "https://www.gulliver.it/itinerari/fenetre-tete-de-da-saint-rhemy/2026/11/24/350610/",
+  "content": "[text 748 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 48 chars]"
+   },
+   "obs": {
+    "value": "[text 34 chars]"
+   },
+   "snow_top": {
+    "value": "[text 9 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1600"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350605": {
+  "ID": "350605",
+  "user_nicename": "user21",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "401786",
+  "permalink": "https://www.gulliver.it/itinerari/cimo-monte-pala-del-boral-spigolo-del-iv-sole/2026/11/24/350605/",
+  "content": "[text 574 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 176 chars]"
+   }
+  }
+ },
+ "350604": {
+  "ID": "350604",
+  "user_nicename": "user22",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "892957",
+  "permalink": "https://www.gulliver.it/itinerari/candoglia-pilastro-di-a-u-f-ad-usum-fabricae/2026/11/24/350604/",
+  "content": "[text 355 chars]",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 28 chars]"
+   }
+  }
+ },
+ "350608": {
+  "ID": "350608",
+  "user_nicename": "user23",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "336472",
+  "permalink": "https://www.gulliver.it/itinerari/nomaglio-comune-da-montestrutto-anelli/2026/11/24/350608/",
+  "content": "[text 173 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350609": {
+  "ID": "350609",
+  "user_nicename": "user12",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "526469",
+  "permalink": "https://www.gulliver.it/itinerari/serena-testa-dida-mottes-per-il-canale-delle-sirene/2026/11/24/350609/",
+  "content": "[text 226 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 62 chars]"
+   },
+   "obs": {
+    "value": "[text 28 chars]"
+   },
+   "snow_top": {
+    "value": "[text 16 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "1300"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350602": {
+  "ID": "350602",
+  "user_nicename": "user24",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "71256",
+  "permalink": "https://www.gulliver.it/itinerari/bianca-rocca-da-indiritti/2026/11/24/350602/",
+  "content": "[text 726 chars]",
+  "term": {
+   "code": "snowshoe"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 47 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 24 chars]"
+   },
+   "snow_low": {
+    "value": "[text 7 chars]"
+   },
+   "snow_alt": {
+    "value": "1600"
+   }
+  }
+ },
+ "350630": {
+  "ID": "350630",
+  "user_nicename": "user19",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "249733",
+  "permalink": "https://www.gulliver.it/itinerari/talucco-torrione-del-un-sorriso-per-susi/2026/11/24/350630/",
+  "content": "",
+  "term": {
+   "code": "climb"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350607": {
+  "ID": "350607",
+  "user_nicename": "user25",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "144233",
+  "permalink": "https://www.gulliver.it/itinerari/terrazze-di-avalon-falesia/2026/11/24/350607/",
+  "content": "[text 250 chars]",
+  "term": {
+   "code": "crag"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ },
+ "350598": {
+  "ID": "350598",
+  "user_nicename": "user26",
+  "comment_date": "2026-11-24 00:00:00",
+  "comment_post_ID": "126719",
+  "permalink": "https://www.gulliver.it/itinerari/sises-monte-da-sestriere/2026/11/24/350598/",
+  "content": "[text 513 chars]",
+  "term": {
+   "code": "skimo"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 51 chars]"
+   },
+   "obs": {
+    "value": "[text 7 chars]"
+   },
+   "snow_top": {
+    "value": "[text 25 chars]"
+   },
+   "snow_low": {
+    "value": "[text 17 chars]"
+   },
+   "snow_alt": {
+    "value": "2000"
+   },
+   "skimo_equip": {
+    "value": "[text 14 chars]"
+   }
+  }
+ },
+ "350633": {
+  "ID": "350633",
+  "user_nicename": "user27",
+  "comment_date": "2026-11-23 00:00:00",
+  "comment_post_ID": "484515",
+  "permalink": "https://www.gulliver.it/itinerari/mongioie-monte-cima-pian-comune-cima-delle-colme-da-viozene-anello-per-passo-del-cavallo-e-bocchino-dellaseo/2026/11/23/350633/",
+  "content": "[text 947 chars]",
+  "term": {
+   "code": "hike"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
   }
  }
-]
+}

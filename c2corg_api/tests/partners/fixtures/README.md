@@ -48,7 +48,7 @@ c2corg_api.partners shapes` to see what changed.
 | Source | From the dev sandbox | Fixtures in M1 |
 |---|---|---|
 | skitour.fr | reachable with an API key (`cle` header, `SKITOUR_API_KEY` or `SKITOUR_API_KEY_FILE`) | recorded 2026-11-25 (`skitour/`, `synthetic: false`) |
-| gulliver.it | 403 Cloudflare "Just a moment..." JS challenge | synthetic |
+| gulliver.it | 403 Cloudflare "Just a moment..." JS challenge from cloud addresses; reachable from a home connection (camptocamp User-Agent) | recorded 2026-11-27 (`gulliver/`, texts redacted, authors pseudonymised) + `gulliver_synthetic/` |
 | gipfelbuch.ch | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
 | bivouak.net | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
 | skitourenportal.eu | reachable without `www` | recorded 2026-11-25 (HTML, trimmed to the selectors, authors pseudonymised) |
@@ -58,8 +58,10 @@ c2corg_api.partners shapes` to see what changed.
 Never commit an API key or a cookie in a fixture.
 
 No partner free text either (comments, narratives, conditions, access notes, photos,
-tracks): a fixture only holds the paths the adapter reads (`REQUIRED_PATHS`). The
-recorder enforces it, and `test_fixtures_have_no_free_text` checks the committed files.
+tracks): a fixture only holds the paths the adapter reads (`REQUIRED_PATHS`), and the
+texts it reads (to store them, never to serve them) are replaced by placeholders,
+`[text 491 chars]` (`REDACT_PATHS`, `REDACT_SELECTORS`). The recorder enforces it, and
+`test_fixtures_have_no_free_text` checks the committed files.
 Fixture mode refuses a `synthetic: true` manifest unless `partners.allow_synthetic` is true (dev only).
 
 ## Real recordings of error answers
@@ -95,3 +97,17 @@ photo, no script. The authors (`PSEUDONYMISE_SELECTORS`: name and profile link) 
 untitled outing: the adapter was fixed to give it a title and its detail page was then added by hand, trimmed the same
 way). `record bivouak --since 2026-02-15` is how to refresh them; a recording from a later day has other outings, so the
 assertions of `test_bivouak.py` on counts and ids change with it.
+
+## gulliver: real recording and synthetic edge cases
+
+`gulliver/` is a real recording (2026-11-27, `python -m c2corg_api.partners record gulliver --since 2026-09-20`,
+44 requests): the 5 pages of `commentglobal`, the front page fragment (`comments_sortingid.json`: the JSON with its
+HTML trimmed to the report links), 14 reports read with `comments?id=` and the 24 routes of the ski reports. The texts
+are `[text N chars]`, the authors `user1`, `user2`...; of the tracks only the GPX links are kept. The early `--since`
+makes the recording hold every report the front page links to, so that the job of the demo (which asks 16 days back)
+finds them all; `shapes --offline` replays it with the default 7 days. `challenge_403.html` is a Cloudflare page kept
+by hand for the block tests (also used by the bivouak tests).
+
+`gulliver_synthetic/` (`synthetic: true`, note starts with `SYNTHETIC EDGE CASES`) is hand-written in the same format
+for what the recording does not hold: a steep grade, an empty route skeleton, unsafe GPX links, broken items, a failing
+route, an empty report detail. It is only used by `tests/partners/test_gulliver.py`; never re-record it.

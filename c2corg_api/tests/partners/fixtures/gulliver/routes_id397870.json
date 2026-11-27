@@ -1,0 +1,33 @@
+{
+ "397870": {
+  "title": "Fenetre (Tete de) da Saint Rhemy",
+  "region": {
+   "name": "Valle d'Aosta"
+  },
+  "district": "AO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "1128"
+    },
+    "alt_top": {
+     "value": "2827"
+    },
+    "exposure": {
+     "value": "Sud-Ovest"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.84076384769114,
+      "lng": 7.180438256747048
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,26 @@
+{
+ "350584": {
+  "ID": "350584",
+  "user_nicename": "user103",
+  "comment_date": "2026-11-21 00:00:00",
+  "comment_post_ID": "899138",
+  "permalink": "https://www.gulliver.it/itinerari/garessio-rocce-du-mia-falesia/2026/11/21/350584/",
+  "content": "[text 351 chars]",
+  "term": {
+   "code": "crag"
+  },
+  "route": {
+   "title": "Garessio &#8211; Rocce du Mia (Falesia)",
+   "region": {
+    "name": "Piemonte"
+   },
+   "district": "CN"
+  },
+  "tracks": null,
+  "meta": {
+   "access": {
+    "value": "[text 2 chars]"
+   }
+  }
+ }
+}
