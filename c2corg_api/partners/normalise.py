@@ -49,6 +49,16 @@ ACTIVITY_MAP: dict[str, dict[str, tuple[tuple[str, ...], bool]]] = {
         'hochtour': (('mountain_climbing',), False),
         'bike': (('mountain_biking',), False),
     },
+    # on-ice.it: the report types (`type=` of the links, named by the menu of
+    # the site). "Ghiaccio e misto" is alpinism; its ice falls are told by
+    # their title in the adapter
+    'onice': {
+        'scialpinismo': (('skitouring',), False),  # 1; steep from the grade
+        'escursionismo': (('hiking',), False),  # 2
+        'roccia': (('rock_climbing',), False),  # 3
+        'ghiaccio_misto': (('mountain_climbing',), False),  # 4
+        'mtb': (('mountain_biking',), False),  # 6
+    },
 }
 
 # Blachere grade -> (min, max) c2c ski ratings

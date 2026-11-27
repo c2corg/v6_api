@@ -271,6 +271,17 @@ def pseudonymise_selectors(source: str, endpoint: str) -> list[str]:
     return list(selectors.get(endpoint, ()))
 
 
+def _decode_html(body: bytes) -> str:
+    """Decode a page: UTF-8, else Windows-1252 (old sites in ISO-8859-1, on-ice.it).
+
+    A recording is written in UTF-8 whatever the charset of the page.
+    """
+    try:
+        return body.decode('utf-8')
+    except UnicodeDecodeError:
+        return body.decode('cp1252', errors='replace')
+
+
 def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> bytes:
     """Trim a JSON body (`trim_data`, `pseudonymise_data`, `redact_data`) or HTML.
 
@@ -286,7 +297,7 @@ def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> 
         selectors = read_selectors(source, endpoint)
         if selectors:
             return htmlparse.trim(
-                body.decode('utf-8', errors='replace'),
+                _decode_html(body),
                 selectors,
                 pseudonymise_selectors(source, endpoint),
                 names,

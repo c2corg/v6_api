@@ -1,0 +1,120 @@
+{
+ "onice_reports_start60_type0_u0.html": {
+  "tr.header > td": "str",
+  "tr:not(:has(tr)):has(a[href*=\"onice_view_report.php\"]) > td": "str",
+  "tr:not(:has(tr)):has(a[href*=\"onice_view_report.php\"]) > td > a.reportlink": "str"
+ },
+ "onice_reports_type0.html": {
+  "tr.header > td": "str",
+  "tr:not(:has(tr)):has(a[href*=\"onice_view_report.php\"]) > td": "str",
+  "tr:not(:has(tr)):has(a[href*=\"onice_view_report.php\"]) > td > a.reportlink": "str"
+ },
+ "onice_view_report_id13777_type2.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id13778_type2.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id13779_type2.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id13780_type2.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id26069_type1.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id26070_type1.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id26071_type1.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id528_type6.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id529_type6.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id530_type6.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id7321_type3.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ },
+ "onice_view_report_id7322_type3.html": {
+  "td.report-title": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Commento\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Difficolt\") + td": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\")": "str",
+  "td.reportrowlabel:-soup-contains(\"Quota arrivo\", \"Quota massima\", \"Difficolt\", \"Esposizione\", \"Commento\", \"Condizioni\", \"Valutazione itinerario\", \"Rischio valanghe\", \"Neve prevalente\", \"Altra neve\", \"Partenza\", \"Rifugio di appoggio\", \"Attrezzatura consigliata\") + td": "str"
+ }
+}

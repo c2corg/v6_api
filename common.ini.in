@@ -105,6 +105,7 @@ harvest.partners.gulliver.enabled = {harvest_partners_gulliver_enabled}
 harvest.partners.bivouak.enabled = {harvest_partners_bivouak_enabled}
 harvest.partners.gipfelbuch.enabled = {harvest_partners_gipfelbuch_enabled}
 harvest.partners.skitourenportal.enabled = {harvest_partners_skitourenportal_enabled}
+harvest.partners.onice.enabled = {harvest_partners_onice_enabled}
 # minutes between two runs of a source, and the base of its backoff
 partners.interval_minutes = {partners_interval}
 partners.retention_days = {partners_retention}
