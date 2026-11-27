@@ -1,4 +1,4 @@
-"""merge partner outings and master
+"""Merge partner outings and master.
 
 The partner migrations (meta) and master's merged documents both follow
 5e3c1a7b9d42: this joins the two heads, nothing else.
