@@ -8,9 +8,11 @@ rows that have a `region` but no position: `area_ids` from the table and
     {"source": "...", "countries": {"AT": <id>}, "regions": {
         "Salzburg": {"country": "AT", "area_ids": [<id>, ...], "range_ids": [...]}}}
 
+A region of several areas (an Italian region: its provinces) lists them all.
 `area_ids` are the areas the region IS (first: the one whose centroid stands for
 the region), `range_ids` the mountain ranges it overlaps, for information (an
-outing of Salzburg is not in every range of Salzburg).
+outing of Salzburg is not in every range of Salzburg). An entry without
+`area_ids` gives the country only (on-ice.it's 'Svizzera').
 """
 
 import json
@@ -63,10 +65,20 @@ def load(source: str) -> dict[str, RegionAreas]:
 
 
 def lookup(source: str, region: str | None) -> RegionAreas | None:
-    """Return the areas of a region text of a source, None if it is not in the table."""
+    """Return the areas of a region text of a source, None if it is not in the table.
+
+    A text of two parts, 'Region - District' (gulliver's 'Piemonte - TO'), is
+    looked up whole, then by its district, then by its region.
+    """
     if not region:
         return None
-    return load(source).get(fold(region))
+    table = load(source)
+    parts = [region, *reversed(region.split(' - '))] if ' - ' in region else [region]
+    for part in parts:
+        found = table.get(fold(part))
+        if found is not None:
+            return found
+    return None
 
 
 @cache
