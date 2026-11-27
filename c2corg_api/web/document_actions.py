@@ -25,6 +25,12 @@ from c2corg_api.views.document_trash import (
 )
 from c2corg_api.views.document_unmerge import unmerge_document
 from c2corg_api.views.document_version_mask import mask_version, unmask_version
+from c2corg_api.views.external_links import (
+    read_external_links,
+    recheck_external_link,
+    review_external_host,
+    review_external_link,
+)
 from c2corg_api.views.image_duplicates import (
     dismiss_duplicate_images,
     read_duplicate_images,
@@ -63,6 +69,9 @@ WRITES = [
     ('/documents/merged/{id:int}/unmerge', 'POST', unmerge_document),
     ('/images/duplicates/dismiss', 'POST', dismiss_duplicate_images),
     ('/images/rotate', 'POST', rotate_image),
+    ('/documents/external-links/review', 'POST', review_external_link),
+    ('/documents/external-links/review-host', 'POST', review_external_host),
+    ('/documents/external-links/recheck', 'POST', recheck_external_link),
 ]
 
 
@@ -74,6 +83,7 @@ def include(app):
         ('/images/orphans', orphan_images),
         ('/images/broken-embeds', broken_embeds),
         ('/documents/broken-links', broken_links),
+        ('/documents/external-links', external_links),
         ('/images/duplicates', duplicate_images),
         ('/documents/delete/{id:int}/images', images_of_deletion),
     ):
@@ -195,6 +205,47 @@ def broken_links(
     return serve_read(request, user, [typed_values(validated)], read_broken_links)
 
 
+def external_links(
+    request: Request,
+    user: User,
+    _: Moderator,
+    status: Annotated[
+        str | None,
+        Query(
+            max_length=200,
+            description='Comma separated: dead, failing, parked, suspect, offsite, '
+            'moved, blocked, ok, unchecked. By default the ones that need a look '
+            '(dead, failing, parked, suspect, offsite).',
+        ),
+    ] = None,
+    host: Annotated[
+        str | None, Query(max_length=255, description='The links of one host.')
+    ] = None,
+    reviewed: Annotated[
+        bool | None,
+        Query(
+            description='The links reviewed genuine, or of a trusted host, '
+            'instead of the others.'
+        ),
+    ] = None,
+    offset: Annotated[
+        Offset | None, Query(description='The first link, from 0.')
+    ] = None,
+    limit: Annotated[
+        Limit | None, Query(description='How many: 30 by default, 100 at most.')
+    ] = None,
+):
+    """Return the checked links to other sites of collaborative documents, by host."""
+    validated = {
+        'status': status,
+        'host': host,
+        'reviewed': reviewed,
+        'offset': offset,
+        'limit': limit,
+    }
+    return serve_read(request, user, [typed_values(validated)], read_external_links)
+
+
 def duplicate_images(
     request: Request,
     user: User,
@@ -244,6 +295,7 @@ for _endpoint in (
     orphan_images,
     broken_embeds,
     broken_links,
+    external_links,
     duplicate_images,
 ):
     _endpoint.permission = 'moderator'
