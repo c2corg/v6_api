@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import text
 
+from c2corg_api.jobs import link_checker
 from c2corg_api.linkcheck import checker
 from c2corg_api.linkcheck import classify as c
 from c2corg_api.linkcheck import fetch as f
@@ -206,6 +207,28 @@ def _answer(url, status=200, title=None, text='', final_url=None, error=None):
             ),
             None,
             c.MOVED,
+        ),
+        # a site deleted from its hosting platform, a login page on another site
+        (
+            _answer(
+                'http://abert.fr/topo',
+                final_url='https://wordpress.com/typo/?subdomain=abert',
+            ),
+            None,
+            c.CLOSED,
+        ),
+        (
+            _answer(
+                'http://27crags.com/x',
+                final_url='https://thetopo.com/beta/login?return_to=x',
+            ),
+            None,
+            c.LOGIN,
+        ),
+        (
+            _answer('http://27crags.com/x', final_url='https://thetopo.com/crags/x'),
+            None,
+            c.OFFSITE,
         ),
         (_answer('https://bit.ly/x', final_url='https://topo.example/'), None, c.OK),
         (_answer('http://a.example/', text='This domain is for sale!'), None, c.PARKED),
@@ -476,3 +499,44 @@ def test_recheck_before_the_never_checked(session):
         'http://a.example/',
         'http://b.example/',
     ]
+
+
+def test_due_checks_go_round_the_hosts(session):
+    # 2 hosts already requested (a 1 earlier), b never: b, then a, then c
+    for host, requested in (
+        ('a.example', NOW - timedelta(hours=2)),
+        ('b.example', None),
+        ('c.example', NOW - timedelta(hours=1)),
+    ):
+        session.add(LinkHost(host=host, next_request_at=requested))
+        for path in ('1', '2'):
+            session.add(
+                LinkCheck(
+                    url=f'http://{host}/{path}',
+                    host=host,
+                    status=UNCHECKED,
+                    failures=0,
+                    last_seen_at=NOW,
+                )
+            )
+    session.flush()
+    assert [c.url for c in checker.due_checks(session, NOW, 10)] == [
+        'http://b.example/1',
+        'http://a.example/1',
+        'http://c.example/1',
+    ]
+
+
+@pytest.mark.parametrize(
+    ('settings', 'budget'),
+    [
+        ({}, checker.REQUESTS_PER_RUN),
+        ({'link_checker.requests_per_run': ''}, checker.REQUESTS_PER_RUN),
+        ({'link_checker.requests_per_run': '40'}, 40),
+    ],
+)
+def test_requests_per_run_setting(monkeypatch, settings, budget):
+    calls = []
+    monkeypatch.setattr(link_checker, 'run', lambda bind, n: calls.append(n))
+    link_checker.check_links(settings)
+    assert calls == [budget]

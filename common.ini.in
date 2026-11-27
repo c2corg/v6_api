@@ -125,6 +125,8 @@ partners.tracks_interval_seconds = {partners_tracks_interval}
 
 # the scheduler checks the links to other sites (c2corg_api.linkcheck)
 link_checker.enabled = {link_checker_enabled}
+# requests per run (every 10 min, robots.txt included)
+link_checker.requests_per_run = {link_checker_requests_per_run}
 
 ui.url = {ui_url}
 
