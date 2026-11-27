@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import text
 
+from c2corg_api.jobs import link_checker
 from c2corg_api.linkcheck import checker
 from c2corg_api.linkcheck import classify as c
 from c2corg_api.linkcheck import fetch as f
@@ -524,3 +525,18 @@ def test_due_checks_go_round_the_hosts(session):
         'http://a.example/1',
         'http://c.example/1',
     ]
+
+
+@pytest.mark.parametrize(
+    ('settings', 'budget'),
+    [
+        ({}, checker.REQUESTS_PER_RUN),
+        ({'link_checker.requests_per_run': ''}, checker.REQUESTS_PER_RUN),
+        ({'link_checker.requests_per_run': '40'}, 40),
+    ],
+)
+def test_requests_per_run_setting(monkeypatch, settings, budget):
+    calls = []
+    monkeypatch.setattr(link_checker, 'run', lambda bind, n: calls.append(n))
+    link_checker.check_links(settings)
+    assert calls == [budget]
