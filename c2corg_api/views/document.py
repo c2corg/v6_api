@@ -44,8 +44,10 @@ from c2corg_api.models.feed import (
     update_feed_document_update,
 )
 from c2corg_api.models.outing import OUTING_TYPE
+from c2corg_api.models.route import ROUTE_TYPE
 from c2corg_api.models.topo_map import MAP_TYPE
 from c2corg_api.models.topo_map_association import get_maps, update_maps_for_document
+from c2corg_api.models.waypoint import WAYPOINT_TYPE
 from c2corg_api.schemas.area import area_listing_schema
 from c2corg_api.schemas.topo_map import topo_map_listing_schema
 from c2corg_api.search import advanced_search
@@ -78,6 +80,9 @@ LIMIT_DEFAULT = 30
 
 # the number of recent outings that are included for waypoint and routes
 NUM_RECENT_OUTINGS = 10
+
+# prefix of the query string parameters of the public transport filter
+TRANSPORT_QUERY_PREFIX = 'transport_'
 
 # page offset limit by ElasticSearch
 ES_MAX_RESULT_WINDOW = 10000
@@ -642,7 +647,20 @@ def collection_get(request, doc_type, documents_config):
         # https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-from-size.html
         raise HTTPBadRequest('offset + limit greater than 10000')
 
-    if advanced_search.contains_search_params(request.GET):
+    transport_ids = transport_reachable_ids(request, doc_type)
+    unverifiable_ids = set()
+    if transport_ids is not None:
+        # the documents reachable by public transport, filtered by the other
+        # parameters of the query string in ElasticSearch
+        unverifiable_ids = set(transport_ids['unverifiable_ids'])
+        search_documents = partial(
+            search_transport_documents,
+            request.GET,
+            meta_params,
+            transport_ids,
+            doc_type,
+        )
+    elif advanced_search.contains_search_params(request.GET):
         # search with ElasticSearch
         search_documents = advanced_search.get_search_documents(
             request.GET, meta_params, doc_type
@@ -651,7 +669,82 @@ def collection_get(request, doc_type, documents_config):
         # if no search parameters, directly load documents from the db
         search_documents = partial(search_documents_paginated, meta_params, doc_type)
 
-    return get_documents(documents_config, meta_params, search_documents)
+    result = get_documents(documents_config, meta_params, search_documents)
+
+    if unverifiable_ids:
+        # copies: the documents of the listing can be shared with the cache
+        result['documents'] = [
+            {**document, 'duration_unknown': True}
+            if document.get('document_id') in unverifiable_ids
+            else document
+            for document in result['documents']
+        ]
+
+    return result
+
+
+def transport_reachable_ids(request, doc_type):
+    """Return the ids of the documents reachable by public transport.
+
+    The routes or waypoints reachable by public transport, according to the
+    `transport_*` parameters of the query string (see parse_transport_params),
+    as `{'ids': [...], 'unverifiable_ids': [...]}` (see
+    get_cached_transport_document_ids), or None if there are none.
+    """
+    if doc_type not in (ROUTE_TYPE, WAYPOINT_TYPE):
+        return None
+    if request.GET.get(TRANSPORT_QUERY_PREFIX + 'from') is None:
+        return None
+
+    # imported here: the navitia views import the route and waypoint
+    # views, which import this module
+    from c2corg_api.views.navitia import (
+        get_cached_transport_document_ids,
+        parse_transport_params,
+    )
+
+    try:
+        transport = parse_transport_params(request.GET, prefix=TRANSPORT_QUERY_PREFIX)
+    except ValueError as exc:
+        raise HTTPBadRequest(str(exc)) from exc
+
+    document_type = 'route' if doc_type == ROUTE_TYPE else 'waypoint'
+    return get_cached_transport_document_ids(transport, document_type)
+
+
+def search_transport_documents(
+    params, meta_params, transport_ids, doc_type, base_query, base_total_query
+):
+    """Return a page of the documents reachable by public transport.
+
+    The routes of an unknown duration (which cannot be checked) come after
+    the others, on all the pages: the page is taken from the documents of a
+    known duration first, then from the others. ElasticSearch filters, sorts
+    and pages each of them.
+    """
+    offset = meta_params['offset']
+    limit = meta_params['limit']
+
+    def page(ids, page_offset, page_limit):
+        if not ids:
+            return [], 0
+        return advanced_search.get_filtered_docs_page(
+            params,
+            {**meta_params, 'offset': page_offset, 'limit': page_limit},
+            ids,
+            doc_type,
+        )
+
+    sure_ids, sure_total = page(transport_ids['ids'], offset, limit)
+    # the documents of an unknown duration, after all the others: only their
+    # total when the page is full
+    other_ids, other_total = page(
+        transport_ids['unverifiable_ids'],
+        max(0, offset - sure_total),
+        limit - len(sure_ids),
+    )
+
+    return [*sure_ids, *other_ids], sure_total + other_total
 
 
 def search_documents_paginated(meta_params, doc_type, base_query, base_total_query):

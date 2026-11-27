@@ -1,6 +1,8 @@
 import datetime
 import json
 from dataclasses import dataclass
+from datetime import date
+from unittest import mock
 
 import pytest
 from shapely.geometry import LineString, shape
@@ -448,6 +450,154 @@ def test_get_collection_search(client, session):
 
     body = scenarios.get_collection_search(client, ROUTES, {'hdif': '700,900'})
     assert body.get('total') == 2
+
+
+@pytest.fixture(autouse=True)
+def _open_transport_dates():
+    """The searches of the tests have fixed dates: any of them is in range."""
+    with mock.patch(
+        'c2corg_api.views.navitia.transport_date_range',
+        return_value=(date(2000, 1, 1), date(2100, 1, 1)),
+    ):
+        yield
+
+
+TRANSPORT_IDS_PATH = 'c2corg_api.views.navitia.get_cached_transport_document_ids'
+
+
+def _transport_search(**params):
+    search = {
+        'transport_from': '5.1;45.1',
+        'transport_date': '2026-01-16',
+        'transport_min_departure': '08:00',
+        'transport_max_return': '18:00',
+    }
+    search.update(params)
+    return search
+
+
+def test_get_collection_transport(client, session, docs):
+    # the `transport_*` params select the routes reachable by public transport,
+    # filtered by ElasticSearch with the other parameters
+    reset_search_index(session)
+
+    with mock.patch(TRANSPORT_IDS_PATH) as mock_ids:
+        mock_ids.return_value = {
+            'ids': [docs.route3.document_id],
+            'unverifiable_ids': [],
+        }
+        body = scenarios.get_collection_search(client, ROUTES, _transport_search())
+
+    assert body.get('total') == 1
+    assert body['documents'][0]['document_id'] == docs.route3.document_id
+    # parsed (and normalized) search, for routes
+    transport, document_type = mock_ids.call_args.args
+    assert transport['from'] == '5.100;45.100'
+    assert document_type == 'route'
+
+
+def test_get_collection_transport_anded_with_filters(client, session, docs):
+    # the id-set is ANDed with the other ES filters, as any search parameter
+    reset_search_index(session)
+
+    with mock.patch(TRANSPORT_IDS_PATH) as mock_ids:
+        mock_ids.return_value = {
+            'ids': [docs.route3.document_id, docs.route4.document_id],
+            'unverifiable_ids': [],
+        }
+        body = scenarios.get_collection_search(
+            client, ROUTES, _transport_search(act='rock_climbing')
+        )
+
+    assert body.get('total') == 1
+    assert body['documents'][0]['document_id'] == docs.route4.document_id
+
+
+def test_get_collection_transport_nothing_reachable(client, session):
+    # no route reachable: the search is empty, not unfiltered
+    reset_search_index(session)
+
+    with mock.patch(TRANSPORT_IDS_PATH) as mock_ids:
+        mock_ids.return_value = {'ids': [], 'unverifiable_ids': []}
+        body = scenarios.get_collection_search(client, ROUTES, _transport_search())
+
+    assert body.get('total') == 0
+    assert body.get('documents') == []
+
+
+def test_get_collection_transport_return_date(client, session):
+    reset_search_index(session)
+
+    with mock.patch(TRANSPORT_IDS_PATH) as mock_ids:
+        mock_ids.return_value = {'ids': [], 'unverifiable_ids': []}
+        scenarios.get_collection_search(
+            client,
+            ROUTES,
+            _transport_search(
+                transport_date='2026-01-16', transport_return_date='2026-01-18'
+            ),
+        )
+
+    transport, _ = mock_ids.call_args.args
+    assert transport['date'] == '2026-01-16'
+    assert transport['return_date'] == '2026-01-18'
+
+
+def test_get_collection_transport_unverifiable_last(client, session, docs):
+    # the routes of an unknown duration come after the others, whatever the
+    # order of the search, and are flagged
+    reset_search_index(session)
+    route3_id = docs.route3.document_id
+    route4_id = docs.route4.document_id
+
+    for sure_id, unverifiable_id in ((route3_id, route4_id), (route4_id, route3_id)):
+        with mock.patch(TRANSPORT_IDS_PATH) as mock_ids:
+            mock_ids.return_value = {
+                'ids': [sure_id],
+                'unverifiable_ids': [unverifiable_id],
+            }
+            body = scenarios.get_collection_search(client, ROUTES, _transport_search())
+
+        assert body.get('total') == 2
+        documents = body['documents']
+        assert [d['document_id'] for d in documents] == [sure_id, unverifiable_id]
+        assert 'duration_unknown' not in documents[0]
+        assert documents[1]['duration_unknown'] is True
+
+
+def test_get_collection_transport_unverifiable_last_on_all_pages(client, session, docs):
+    # the pages are taken from the routes of a known duration first: the routes
+    # of an unknown duration are on the last pages
+    reset_search_index(session)
+    sure = [docs.route3.document_id, docs.route4.document_id]
+    unverifiable = [docs.route2.document_id]
+
+    pages = []
+    for offset in (0, 1, 2):
+        with mock.patch(TRANSPORT_IDS_PATH) as mock_ids:
+            mock_ids.return_value = {'ids': sure, 'unverifiable_ids': unverifiable}
+            body = scenarios.get_collection_search(
+                client, ROUTES, _transport_search(offset=offset, limit=1)
+            )
+        assert body.get('total') == 3
+        pages.append([d['document_id'] for d in body['documents']])
+
+    assert sorted(pages[0] + pages[1]) == sorted(sure)
+    assert pages[2] == unverifiable
+
+
+def test_get_collection_transport_invalid(client):
+    client.get(
+        '/routes?transport_from=5.1%3B45.1&transport_date=bad'
+        '&transport_min_departure=08:00&transport_max_return=18:00',
+        status=400,
+    )
+    # the times are on the quarter hour
+    client.get(
+        '/routes?transport_from=5.1%3B45.1&transport_date=2026-01-16'
+        '&transport_min_departure=08:10&transport_max_return=18:00',
+        status=400,
+    )
 
 
 def test_get(client, docs):

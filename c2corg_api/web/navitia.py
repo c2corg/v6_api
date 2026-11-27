@@ -17,8 +17,19 @@ from c2corg_api.views.navitia import (
     read_journey_reachable_waypoints_progress,
     read_journey_reachable_waypoints_result,
     read_journeys,
+    read_round_trip_reachable,
+    read_round_trip_routes_progress,
+    read_round_trip_routes_result,
+    read_round_trip_waypoints_progress,
+    read_round_trip_waypoints_result,
+    read_transport_isochrones,
     start_journey_reachable_routes,
     start_journey_reachable_waypoints,
+    start_round_trip_routes,
+    start_round_trip_waypoints,
+    validate_round_trip_batch_params,
+    validate_round_trip_reachable_params,
+    validate_transport_isochrones_params,
 )
 from c2corg_api.web.auth import CurrentUser, current_user
 from c2corg_api.web.handlers import serve_read
@@ -49,6 +60,19 @@ JOURNEY_OPTIONAL = [
     'data_freshness',
 ]
 ISOCHRONE = ['from', 'datetime', 'datetime_represents', 'boundary_duration']
+# a public transport search (see parse_transport_params)
+TRANSPORT = ['from', 'date', 'min_departure', 'max_return']
+TRANSPORT_OPTIONAL = ['return_date', 'max_duration', 'hiking_duration']
+ROUND_TRIP = [
+    'document_id',
+    'document_type',
+    'from',
+    'date',
+    'min_departure',
+    'max_return',
+]
+ROUND_TRIP_OPTIONAL = ['return_date', 'hiking_duration']
+ROUND_TRIP_BATCH = ['ids', 'from', 'date', 'min_departure', 'max_return']
 JOURNEY_REACHABLE = [
     'from',
     'datetime',
@@ -57,7 +81,7 @@ JOURNEY_REACHABLE = [
     'max_walking_duration_to_pt',
 ]
 
-# (path, function, required parameters, optional parameters)
+# (path, function, required parameters, optional parameters[, validators])
 ROUTES = [
     ('/navitia/journeys', read_journeys, JOURNEY, JOURNEY_OPTIONAL),
     (
@@ -109,24 +133,84 @@ ROUTES = [
         [],
         [],
     ),
+    # the public transport search of the topoguide: its isochrones, and the
+    # round-trip checks on the real timetables, of one document or of a page
+    (
+        '/navitia/transportisochrones',
+        read_transport_isochrones,
+        TRANSPORT,
+        TRANSPORT_OPTIONAL,
+        [validate_transport_isochrones_params],
+    ),
+    (
+        '/navitia/roundtripreachable',
+        read_round_trip_reachable,
+        ROUND_TRIP,
+        ROUND_TRIP_OPTIONAL,
+        [validate_round_trip_reachable_params],
+    ),
+    (
+        '/navitia/journeyroundtriproutes/start',
+        start_round_trip_routes,
+        ROUND_TRIP_BATCH,
+        ROUND_TRIP_OPTIONAL,
+        [validate_round_trip_batch_params],
+    ),
+    (
+        '/navitia/journeyroundtripwaypoints/start',
+        start_round_trip_waypoints,
+        ROUND_TRIP_BATCH,
+        ROUND_TRIP_OPTIONAL,
+        [validate_round_trip_batch_params],
+    ),
+    (
+        '/navitia/journeyroundtriproutes/result/{job_id}',
+        read_round_trip_routes_result,
+        [],
+        [],
+    ),
+    (
+        '/navitia/journeyroundtripwaypoints/result/{job_id}',
+        read_round_trip_waypoints_result,
+        [],
+        [],
+    ),
+    (
+        '/navitia/journeyroundtriproutes/progress/{job_id}',
+        read_round_trip_routes_progress,
+        [],
+        [],
+    ),
+    (
+        '/navitia/journeyroundtripwaypoints/progress/{job_id}',
+        read_round_trip_waypoints_progress,
+        [],
+        [],
+    ),
 ]
 
 
 def include(app):
     """Add the routes of this module to the FastAPI application."""
-    for path, function, required, optional in ROUTES:
+    for path, function, required, optional, *validators in ROUTES:
         app.add_api_route(
             path,
-            _endpoint(function, required, optional, '{job_id}' in path),
+            _endpoint(
+                function,
+                required,
+                optional,
+                '{job_id}' in path,
+                validators[0] if validators else [],
+            ),
             methods=['GET', 'HEAD'],
             operation_id=function.__name__,
             tags=['navitia'],
         )
 
 
-def _endpoint(function, required, optional, job):
+def _endpoint(function, required, optional, job, validators):
     def endpoint(request: Request, user: User, **parameters):
-        return serve_read(request, user, [], function)
+        return serve_read(request, user, validators, function)
 
     endpoint.__name__ = function.__name__
     endpoint.__signature__ = Signature(

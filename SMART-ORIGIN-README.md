@@ -238,3 +238,23 @@ There are only five coverages for France :
 - fr-sw
 - fr-nw
 - fr-idf
+
+## Navitia budget of the API
+
+The Navitia key is paid per request. Every call the API makes to Navitia (`navitia_get` in
+`c2corg_api/views/navitia.py`: journeys, isochrones, round-trip checks) is counted per day (UTC) in
+Redis; the answers of the cache are not counted. Two environment variables of the API container, as
+`NAVITIA_API_KEY`:
+
+- `NAVITIA_DAILY_BUDGET` (default 5000): over it, the calls are refused with a 503
+  (`navitia_budget_exceeded`) until the end of the day. The UI tells the user to try again tomorrow.
+- `NAVITIA_ENABLED`: `false` switches Navitia off (503 `navitia_disabled`).
+
+When the calls cannot be counted (Redis unavailable), they are refused (503
+`navitia_budget_unavailable`): the cost comes first. The API logs a line containing
+`NAVITIA_BUDGET` at 80 % of the budget (warning), when the budget is reached and when Redis is
+unavailable (error): the Grafana alert counts these lines.
+
+The transport search of the topoguide also bounds its parameters, to limit what a client can make
+the API compute and to share the cache between users: the times are on the quarter hour, the dates
+from today to 6 months ahead (`check_transport_window`).
