@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import aggregate_order_by, array_agg
 
+from c2corg_api.linkcheck import rel
 from c2corg_api.linkcheck.checker import RECHECK_AT
 from c2corg_api.models import DBSession
 from c2corg_api.models.document import Document
@@ -249,11 +250,17 @@ def review_external_link(request):
     # `POST` `/documents/external-links/review` {'url': ..., 'review': 'genuine'}
     check = DBSession.get(LinkCheck, request.validated['url'])
     review = request.validated.get('review')
+    host = DBSession.get(LinkHost, check.host)
+    host_review = host.review if host else None
+    now = datetime.now(UTC)
+    credited = rel.is_credited(check, host_review, now)
     _set_review(check, review, request.authenticated_userid)
     if review == GENUINE and check.last_title:
         # genuine until its title changes completely: from the one seen now
         check.first_title = check.last_title
     DBSession.flush()
+    if rel.is_credited(check, host_review, now) != credited:
+        rel.invalidate(DBSession, [check.url])
     return {'url': check.url, 'review': check.review}
 
 
@@ -266,8 +273,17 @@ def review_external_host(request):
     """Trust a host: its links are genuine, even those not checked (or no review)."""
     # `POST` `/documents/external-links/review-host` {'host': ..., 'review': 'trusted'}
     host = DBSession.get(LinkHost, request.validated['host'].lower())
+    urls = (
+        DBSession.execute(select(LinkCheck.url).where(LinkCheck.host == host.host))
+        .scalars()
+        .all()
+    )
+    now = datetime.now(UTC)
+    credited = rel.credited_urls(DBSession, urls, now)
     _set_review(host, request.validated.get('review'), request.authenticated_userid)
     DBSession.flush()
+    # the links whose credit changed: their documents are rendered again
+    rel.invalidate(DBSession, credited ^ rel.credited_urls(DBSession, urls, now))
     return {'host': host.host, 'review': host.review}
 
 

@@ -22,6 +22,9 @@ from .wikilinks import SITE_URL_RE, C2CWikiLinkExtension
 
 logger = logging.getLogger('MARKDOWN')
 
+# (the parameter `html` of some functions hides the module)
+_unescape = html.unescape
+
 # an opening <a> tag of the cleaned HTML (attribute values are quoted)
 _LINK_TAG_PATTERN = re.compile(r'<a\s((?:[^>"]|"[^"]*")*)>')
 _HREF_PATTERN = re.compile(r'\bhref="(https?://[^"/?#]*)[^"]*"', re.IGNORECASE)
@@ -296,7 +299,11 @@ def _get_markdown_parser():
 
 
 def parse_code(
-    text, image_url_resolver=None, image_size_resolver=None, link_type_resolver=None
+    text,
+    image_url_resolver=None,
+    image_size_resolver=None,
+    link_type_resolver=None,
+    credited_urls=None,
 ):
     """Get markdown, and returns HTML.
 
@@ -310,6 +317,9 @@ def parse_code(
     `link_type_resolver` is an optional `document_id -> type or None` giving
     the type of the documents of the [[type/id|label]] links ("routes"...):
     a link with another type is built with it.
+    `credited_urls` is an optional set of the URLs of other sites that the
+    search engines may credit: their links get no rel="nofollow ugc" (see
+    linkcheck.rel).
     """
     # we need parsing to be thread safe because
     # L numbering, and Markdown() has internal global variables
@@ -342,7 +352,7 @@ def parse_code(
             parser.c2c_image_size_resolver = None
             parser.c2c_link_type_resolver = None
 
-    text = _mark_external_links(text)
+    text = _mark_external_links(text, credited_urls or ())
     text = text.replace(_iframe_secret_tag, 'iframe')
     text = text.replace(_img_url_secret_attribute, 'c2c:url')
     text = text.replace(_img_width_secret_attribute, 'c2c:width')
@@ -356,7 +366,7 @@ def _is_external_host(host):
     return host != 'camptocamp.org' and not host.endswith('.camptocamp.org')
 
 
-def _mark_external_links(html):
+def _mark_external_links(html, credited_urls=()):
     """Add rel="nofollow ugc" to the links of the cleaned HTML to other sites."""
     # Links written by users: search engines must not credit the sites they
     # lead to (an expired domain bought by a spammer, for instance). Links to
@@ -369,6 +379,10 @@ def _mark_external_links(html):
             return match.group(0)
         host = _HOST_PATTERN.match(href.group(1)).group(1)
         if not _is_external_host(host):
+            return match.group(0)
+        # a link known to be genuine (see linkcheck.rel)
+        url = _URL_HREF_PATTERN.search(match.group(1))
+        if url and _unescape(url.group(1)) in credited_urls:
             return match.group(0)
         return f'<a {match.group(1)} rel="{_EXTERNAL_LINK_REL}">'
 

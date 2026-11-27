@@ -19,6 +19,7 @@ from sqlalchemy.dialects.postgresql import distinct_on, insert
 from sqlalchemy.orm import Session
 
 from c2corg_api.linkcheck import classify as c
+from c2corg_api.linkcheck import rel
 from c2corg_api.linkcheck.fetch import USER_AGENT, fetch
 from c2corg_api.models.document import Document
 from c2corg_api.models.external_link import ExternalLink
@@ -222,6 +223,17 @@ def apply(check, outcome, answer, now):
 
 def check_link(session, check, host_row, now):
     """Check one URL (robots.txt first); return the number of requests made."""
+    # credited as rendered so far (at the time of its last check): a change
+    # renders the documents showing it again (see linkcheck.rel)
+    credited = rel.is_credited(check, host_row.review, check.last_checked_at or now)
+    requests = _check_link(session, check, host_row, now)
+    if rel.is_credited(check, host_row.review, now) != credited:
+        session.flush()
+        rel.invalidate(session, [check.url])
+    return requests
+
+
+def _check_link(session, check, host_row, now):
     allowed, requests = robots_allow(host_row, check.url, now)
     if allowed is None:
         host_row.next_request_at = now + HOST_RETRY
