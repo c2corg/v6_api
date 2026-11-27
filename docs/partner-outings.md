@@ -35,6 +35,23 @@ harvest_tick (c2corg_api/harvest) -> PartnerHarvester partners.<name> (jobs/harv
   ([c2corg/v6_api#2763](https://github.com/c2corg/v6_api/issues/2763)); the design allows it: rows are upserted by
   `(source, external_id)`, kept forever by default, and an adapter can page further back with a wider `since`.
 - The design is in `doc/meta/A2_HARVESTER.md` of c2corg/metaskirando-archive.
+- Diagram: [partner outings](https://c2corg.github.io/v6_api/architecture/metaskirando.html) (the job, the tables,
+  the API, and each partner site), linked from the [background jobs](https://c2corg.github.io/v6_api/architecture/batch.html).
+
+## Integration points
+
+How the job reaches each site (`partners/sources/<name>.py`; delay and budget are the `rate` of the adapter, a spent
+budget makes the run `down`). Every request carries our User-Agent.
+
+| Source | Interface | Requests of a run | Delay, budget | Position |
+| --- | --- | --- | --- | --- |
+| skitour.fr | JSON API `https://skitour.fr/api/sorties` (`c=1&l=200&j=<days>&p=<page>`), header `cle: $SKITOUR_API_KEY` | pages of 200 outings | 1.1 s, 10 | coordinates in the answer |
+| gulliver.it | WordPress REST JSON `wp-json/gulliver/`: `mobile/commentglobal?page=1..5`, `mobile/comments?id=` (≤ 15), `mobile/routes?id=` (≤ 24 new, cached); the HTML fragment `front_page/comments?sorting=id` for the reports the paging misses | 5 + 1 + 15 + 24 at most | 2 s, 45 | start point of the route; Cloudflare challenge from datacenter addresses (`blocked`) |
+| gulliver.it GPX | public `https://` `.gpx` files on gulliver.it (`gpx_url`), second phase `jobs/partner_tracks.py` | `partners.tracks_per_run` (3) | `partners.tracks_interval_seconds` (10 s at least) | the track, in `partner_tracks` |
+| bivouak.net | HTML scraping: `topos/liste_des_sorties.php?id_sport=1\|2\|8\|4\|16`, then `sortie-<id>-*.html` detail pages (≤ 10 new, cached) | 5 + 10 | 10 s (`robots.txt`), 15 | `data-lat`/`data-lng` of the detail page, else hints |
+| gipfelbuch.ch | HTML scraping: `/verhaeltnisse/uebersicht`, then the page of a report for its map, once per summit (≤ 15 new, cached) | 1 + 15 (+ 2 spare) | 2 s, 18 | `data-lat`/`data-lon` of the map, else hints |
+| skitourenportal.eu | HTML scraping: the portal pages of 5 Austrian states (`/salzburg`...), 2 pages each (`?page=2`); no detail page | 10 at most | 3 s, 12 | map markers of the pages, else region (`regions/skitourenportal.json`) and hints |
+| on-ice.it | HTML scraping over plain `http`, ISO-8859-1: `onice_reports.php?type=0` (+ the second page while new), `onice_view_report.php?type=&id=` detail pages (≤ 15 new, cached) | 2 + 15 | 2 s, 17 | none on the site: hints only |
 
 ## Configuration
 
