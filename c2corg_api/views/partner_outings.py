@@ -279,7 +279,7 @@ def _partner_side(params, binds):
                p.region AS region, p.geom AS geom,
                p.geom_quality AS geom_quality, p.area_ids AS area_ids
         FROM guidebook.partner_outings p
-        WHERE {' AND '.join(where)}"""
+        WHERE {' AND '.join(where)}"""  # nosec B608 (constant SQL, values bound)
 
 
 def _c2c_side(params, binds):
@@ -338,7 +338,7 @@ def _c2c_side(params, binds):
         JOIN guidebook.documents d ON d.document_id = o.document_id
         LEFT JOIN guidebook.documents_geometries g
             ON g.document_id = o.document_id
-        WHERE {' AND '.join(where)}"""
+        WHERE {' AND '.join(where)}"""  # nosec B608 (constant SQL, values bound)
 
 
 def _union(params, binds):
@@ -364,7 +364,8 @@ def _query_page(session, params):
     binds = {}
     union = _union(params, binds)
     total = session.execute(
-        text(f'SELECT count(*) FROM ({union}) u'), binds
+        text(f'SELECT count(*) FROM ({union}) u'),  # nosec B608 (constant SQL)
+        binds,
     ).scalar_one()
     binds.update(limit=params['limit'], offset=params['offset'])
     rows = session.execute(
@@ -373,7 +374,7 @@ def _query_page(session, params):
             SELECT page.*, ST_AsGeoJSON(page.geom, 1, 0) AS geojson
             FROM (SELECT * FROM ({union}) u ORDER BY {_ORDER}
                   LIMIT :limit OFFSET :offset) page
-            ORDER BY {_ORDER}"""
+            ORDER BY {_ORDER}"""  # nosec B608 (constant SQL, values bound)
         ),
         binds,
     ).mappings()

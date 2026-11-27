@@ -60,6 +60,8 @@ from c2corg_api.models import mailinglist  # noqa
 from c2corg_api.models import sso  # noqa
 from c2corg_api.models import account_removal  # noqa
 from c2corg_api.models import deleted_document  # noqa
+from c2corg_api.models import document_link  # noqa
+from c2corg_api.models import merged_document  # noqa
 from c2corg_api.models import image_embed  # noqa
 from c2corg_api.models import image_duplicate  # noqa
 from c2corg_api.models import harvest  # noqa

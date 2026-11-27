@@ -1,4 +1,4 @@
-"""The shipped defaults keep the partner harvest off and the fixtures safe."""
+"""The shipped defaults: every partner source on, nothing purged, fixtures safe."""
 
 import re
 from pathlib import Path
@@ -17,12 +17,25 @@ def read_env(name):
 
 def test_env_default_is_safe_for_production():
     env = read_env('env.default')
-    assert env['harvest_partners_enabled'] == 'false'
+    assert env['harvest_partners_enabled'] == 'true'
     assert env['partners_transport'] == 'http'
     assert env['partners_allow_synthetic'] == 'false'
+    # a cache of the partner sites, not data
     assert env['partners_lookup_retention'] == '30'
-    # empty: the outings are kept forever (the API lists 31 days at most)
-    assert env['partners_retention'] == ''
+
+
+def test_env_default_never_purges_the_outings():
+    """No 31-day (or any) retention: the outings and their tracks stay forever.
+
+    The API lists 31 days at most per query: a display window, not a retention.
+    """
+    from c2corg_api.jobs.harvest_partner_outings import _retention_days
+
+    for name in ('env.dev', 'env.test', 'env.demo', 'env.devcontainer'):
+        assert 'partners_retention' not in read_env(name), name
+    value = read_env('env.default')['partners_retention']
+    assert value == ''
+    assert _retention_days({'partners.retention_days': value}) is None
 
 
 def test_only_the_dev_stack_allows_synthetic_fixtures():
@@ -42,14 +55,29 @@ def test_each_source_has_its_switch():
         assert f'harvest.partners.{name}.enabled = {{{key}}}' in template, name
 
 
-def test_new_sources_are_off_by_default():
-    # off even when harvest_partners_enabled is switched on, until the site
-    # agrees; the dev stack runs them on the fixtures
-    env = read_env('env.default')
-    dev = read_env('env.dev')
-    for name in ('bivouak', 'gipfelbuch', 'skitourenportal', 'onice'):
-        assert env[f'harvest_partners_{name}_enabled'] == 'false', name
-        assert dev[f'harvest_partners_{name}_enabled'] == 'true', name
+def test_every_source_is_on_by_default():
+    # each source follows harvest_partners_enabled ("true"), in production and
+    # in the dev stack (on the fixtures there)
+    from c2corg_api.harvest.runner import harvest_enabled
+    from c2corg_api.jobs.harvest_partner_outings import enabled_sources
+    from c2corg_api.partners.sources import REGISTRY
+
+    for rendered in (
+        read_env('env.default'),
+        {**read_env('env.default'), **read_env('env.dev')},
+    ):
+        settings = {
+            'harvest.enabled': rendered['harvest_enabled'],
+            'harvest.partners.enabled': rendered['harvest_partners_enabled'],
+            **{
+                f'harvest.partners.{name}.enabled': rendered.get(
+                    f'harvest_partners_{name}_enabled', ''
+                )
+                for name in REGISTRY
+            },
+        }
+        assert harvest_enabled(settings, 'partners.skitour')
+        assert enabled_sources(settings) == list(REGISTRY)
 
 
 def test_the_test_config_switches_every_partner_source_off():

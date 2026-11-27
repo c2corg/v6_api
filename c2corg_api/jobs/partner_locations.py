@@ -53,7 +53,7 @@ class _Hint:
         tail = f'|{self.altitude or ""}|{self.country}'
         room = KEY_LENGTH - len('resolve:summit:') - len(tail)
         if len(name) > room:
-            digest = hashlib.sha1(name.encode()).hexdigest()[:10]
+            digest = hashlib.sha1(name.encode(), usedforsecurity=False).hexdigest()[:10]
             name = f'{name[: room - 11]}~{digest}'
         return f'resolve:summit:{name}{tail}'
 
@@ -243,7 +243,7 @@ NAMES_SQL = f"""
     JOIN {schema}.documents d
       ON d.document_id = w.document_id AND d.redirects_to IS NULL
     JOIN {schema}.documents_locales l ON l.document_id = w.document_id
-    WHERE w.waypoint_type IN ({', '.join(f"'{t}'" for t in SUMMIT_TYPES)})"""
+    WHERE w.waypoint_type IN ({', '.join(f"'{t}'" for t in SUMMIT_TYPES)})"""  # nosec B608
 
 # the point and the country areas of a few waypoints
 POINTS_SQL = f"""
@@ -260,7 +260,7 @@ POINTS_SQL = f"""
                  AND ST_Intersects(ag.geom_detail, g.geom)
            ) AS countries
     FROM {schema}.documents_geometries g
-    WHERE g.document_id = ANY(:ids) AND g.geom IS NOT NULL"""
+    WHERE g.document_id = ANY(:ids) AND g.geom IS NOT NULL"""  # nosec B608 (constant SQL, values bound)
 
 
 def _area_centroid(session, lookups, area_id):
@@ -276,7 +276,7 @@ def _area_centroid(session, lookups, area_id):
                 SELECT ST_Transform(ST_Centroid(g.geom_detail), 4326) AS c
                 FROM {schema}.documents_geometries g
                 WHERE g.document_id = :id AND g.geom_detail IS NOT NULL
-            ) x"""
+            ) x"""  # nosec B608 (constant SQL, values bound)
         ),
         {'id': area_id},
     ).first()

@@ -104,7 +104,8 @@ def configure_scheduler_from_config(settings):
         )
 
     # run `purge_partner_outings_job` at 1:40, whether the harvest is on or not:
-    # the partner rows must not outlive the retention (licence)
+    # it expires the lookup cache; the outings and their tracks are kept
+    # forever unless a retention is set (`partners.retention_days`)
     scheduler.add_job(
         partner_outings.purge_partner_outings_job,
         id='purge_partner_outings',

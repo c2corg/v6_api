@@ -29,6 +29,7 @@ WITHOUT_BODY = {
     ('DELETE', '/documents/delete/1/fr'),
     ('DELETE', '/favourites/folders/1'),
     ('POST', '/documents/deleted/1/restore'),
+    ('POST', '/documents/merged/1/unmerge'),
     ('POST', '/routes/update_public_transportation_rating'),
     ('POST', '/users/renew'),
     ('POST', '/users/validate_change_email/1'),

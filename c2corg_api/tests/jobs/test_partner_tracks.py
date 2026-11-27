@@ -200,6 +200,25 @@ def test_tracks_are_deleted_with_their_outing(db):
     assert stored(db) == {}
 
 
+def test_the_default_config_never_purges_the_outings_nor_their_tracks(
+    db, db_connection
+):
+    """`partners_retention=""` (env.default): old outings and tracks stay."""
+    from c2corg_api.tests.partners.test_defaults import read_env
+
+    env = read_env('env.default')
+    settings = {
+        'partners.retention_days': env['partners_retention'],
+        'partners.lookup_retention_days': env['partners_lookup_retention'],
+    }
+    job.upsert_outings(db, [outing('1', GPX + 'a.gpx', days_ago=400)], NOW)
+    run(db, Answers({}))
+    db.commit()
+    job.purge_partner_outings_job(settings)
+    assert set(stored(db)) == {'1'}
+    assert db.scalar(select(func.count()).select_from(PartnerOuting)) == 1
+
+
 def test_the_harvester_runs_the_phase_after_the_outings(db, db_connection):
     """The demo: the gulliver fixtures, then the synthetic tracks of two reports."""
     settings = {
