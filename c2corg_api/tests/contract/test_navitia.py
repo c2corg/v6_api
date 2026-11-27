@@ -1,9 +1,11 @@
 import json
 import os
+from datetime import date
 from unittest.mock import Mock, patch
 
 import pytest
 
+from c2corg_api.httpexceptions import HTTPServiceUnavailable
 from c2corg_api.tests import invalid_parameters
 from c2corg_api.tests.contract import check_snapshot, contract
 from c2corg_api.tests.contract.test_misc import navitia_coverage  # noqa: F401
@@ -241,3 +243,148 @@ class TestJobs:
                 'event: error\n'
                 'data: {"id": "unknown_job", "message": "Unknown job no-such-job"}\n\n'
             )
+
+
+TRANSPORT_ISOCHRONES = ('GET', '/navitia/transportisochrones')
+ROUND_TRIP = ('GET', '/navitia/roundtripreachable')
+ROUND_TRIP_START = [
+    ('GET', f'/navitia/journeyroundtrip{kind}/start')
+    for kind in ('routes', 'waypoints')
+]
+ROUND_TRIP_RESULT = [
+    ('GET', f'/navitia/journeyroundtrip{kind}/result/{{job_id}}')
+    for kind in ('routes', 'waypoints')
+]
+ROUND_TRIP_PROGRESS = [
+    ('GET', f'/navitia/journeyroundtrip{kind}/progress/{{job_id}}')
+    for kind in ('routes', 'waypoints')
+]
+TRANSPORT_PARAMS = {
+    'from': '5.73;45.18',
+    'date': '2026-01-16',
+    'min_departure': '08:00',
+    'max_return': '18:00',
+}
+
+
+@pytest.fixture
+def open_dates():
+    """The dates of the tests are fixed: any of them is in range."""
+    with patch(
+        'c2corg_api.views.navitia.transport_date_range',
+        return_value=(date(2000, 1, 1), date(2100, 1, 1)),
+    ):
+        yield
+
+
+@pytest.mark.usefixtures('open_dates')
+class TestTransportSearch:
+    @contract(TRANSPORT_ISOCHRONES)
+    def test_isochrones(self, browser):
+        empty = {'aller_geom': None, 'retour_geom': None, 'intersection_geom': None}
+        with patch(
+            'c2corg_api.views.navitia.get_cached_isochrone_pair', return_value=empty
+        ):
+            response = browser.get(
+                '/navitia/transportisochrones', params=TRANSPORT_PARAMS
+            )
+        check_snapshot('navitia_transport_isochrones', response)
+        # no geometry: empty strings
+        assert response.json == {
+            'aller_geom': '',
+            'retour_geom': '',
+            'intersection_geom': '',
+        }
+
+    @contract(TRANSPORT_ISOCHRONES)
+    def test_isochrones_errors(self, browser):
+        url = '/navitia/transportisochrones'
+        response = browser.get(url, params={'from': '5.73;45.18'}, status=422)
+        check_snapshot('navitia_isochrone_missing', response)
+        # the times are on the quarter hour
+        response = browser.get(
+            url, params={**TRANSPORT_PARAMS, 'min_departure': '08:10'}, status=400
+        )
+        check_snapshot('navitia_transport_invalid', response)
+
+    @contract(TRANSPORT_ISOCHRONES)
+    def test_budget_exceeded(self, browser):
+        with patch(
+            'c2corg_api.views.navitia.get_cached_isochrone_pair',
+            side_effect=HTTPServiceUnavailable('navitia_budget_exceeded'),
+        ):
+            response = browser.get(
+                '/navitia/transportisochrones', params=TRANSPORT_PARAMS, status=503
+            )
+        check_snapshot('navitia_budget_exceeded', response)
+        assert response.json['errors'][0]['description'] == 'navitia_budget_exceeded'
+
+    @contract(ROUND_TRIP)
+    def test_round_trip(self, browser):
+        result = {
+            'aller': {'found': True},
+            'retour': {'found': False},
+            'compatible': False,
+        }
+        params = {**TRANSPORT_PARAMS, 'document_id': '1', 'document_type': 'route'}
+        with (
+            patch('c2corg_api.views.navitia.prepare_round_trip_document'),
+            patch(
+                'c2corg_api.views.navitia.best_round_trip_result', return_value=result
+            ),
+        ):
+            response = browser.get('/navitia/roundtripreachable', params=params)
+        check_snapshot('navitia_round_trip', response)
+        assert response.json == result
+
+    @contract(ROUND_TRIP)
+    def test_round_trip_errors(self, browser):
+        url = '/navitia/roundtripreachable'
+        response = browser.get(url, params=TRANSPORT_PARAMS, status=422)
+        check_snapshot('navitia_isochrone_missing', response)
+        params = {**TRANSPORT_PARAMS, 'document_id': '1', 'document_type': 'outing'}
+        response = browser.get(url, params=params, status=400)
+        check_snapshot('navitia_transport_invalid', response)
+
+    @contract(*ROUND_TRIP_START)
+    def test_round_trip_start(self, browser, jobs):
+        for kind in ('routes', 'waypoints'):
+            url = f'/navitia/journeyroundtrip{kind}/start'
+            # the job itself runs in a thread: not here
+            with patch(f'c2corg_api.views.navitia.compute_round_trip_reachable_{kind}'):
+                response = browser.get(url, params={**TRANSPORT_PARAMS, 'ids': '1,2'})
+            check_snapshot('navitia_job_start', response)
+            job_id = response.json['job_id']
+            jobs.forget(f'job:{job_id}:progress', f'job:{job_id}:status')
+            assert jobs.redis.get(f'job:{job_id}:status') == b'running'
+
+            response = browser.get(url, params={'from': '5.73;45.18'}, status=422)
+            check_snapshot('navitia_job_start_missing', response)
+
+    @contract(*ROUND_TRIP_RESULT)
+    def test_round_trip_result(self, browser, jobs):
+        result = {'documents': [], 'total': 0}
+        jobs.store('round-trip-job', status='done', result=json.dumps(result))
+        for kind in ('routes', 'waypoints'):
+            url = f'/navitia/journeyroundtrip{kind}/result/'
+            done = browser.get(url + 'round-trip-job')
+            check_snapshot('navitia_job_result_done', done)
+            assert done.json == {'status': 'done', 'result': result}
+            unknown = browser.get(url + 'no-such-job')
+            check_snapshot('navitia_job_result_unknown', unknown)
+
+    @contract(*ROUND_TRIP_PROGRESS)
+    def test_round_trip_progress(self, browser, jobs):
+        jobs.store(
+            'round-trip-job',
+            status='done',
+            progress='2',
+            found='1',
+            not_found='1',
+            total='2',
+        )
+        for kind in ('routes', 'waypoints'):
+            url = f'/navitia/journeyroundtrip{kind}/progress/'
+            done = browser.get(url + 'round-trip-job')
+            check_snapshot('navitia_job_progress_done', done)
+            assert done.text.endswith('event: done\ndata: done\n\n')

@@ -85,6 +85,9 @@ def _open_transport_dates():
         yield
 
 
+# the real ones, the autouse fixtures patching them for the other tests
+transport_date_range = navitia.transport_date_range
+
 # the budget, as the tests of the budget call it (the other tests do not count
 # their calls)
 consume_navitia_budget = navitia.consume_navitia_budget
@@ -2770,7 +2773,7 @@ def test_transport_document_ids_waypoint_no_intersection():
 def test_navitia_roundtripreachable_missing_params(client):
     client.get(
         '/navitia/roundtripreachable?document_type=waypoint&from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',
-        status=400,
+        status=422,
     )
 
 
@@ -3345,7 +3348,7 @@ def test_navitia_journeyroundtrip_start_missing_params(client, subtests):
             client.get(
                 base_url
                 + '/start?from=5.1%3B45.1&date=2026-01-16&min_departure=08:00&max_return=18:00',  # noqa
-                status=400,
+                status=422,
             )
 
 
@@ -3663,13 +3666,13 @@ class FakeCounter:
 
 
 def test_transport_date_range():
-    assert navitia.transport_date_range(date(2026, 11, 27)) == (
+    assert transport_date_range(date(2026, 11, 27)) == (
         date(2026, 11, 26),
         date(2027, 5, 27),
     )
     # the last day of a shorter month
-    assert navitia.transport_date_range(date(2026, 8, 31))[1] == date(2027, 2, 28)
-    assert navitia.transport_date_range(date(2026, 12, 31))[1] == date(2027, 6, 30)
+    assert transport_date_range(date(2026, 8, 31))[1] == date(2027, 2, 28)
+    assert transport_date_range(date(2026, 12, 31))[1] == date(2027, 6, 30)
 
 
 def test_check_transport_window():

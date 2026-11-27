@@ -834,6 +834,10 @@ def get_route_candidates_within_geometry(intersection_geom_wkt):
     # since Route.document_id is inherited from the base Document table,
     # a query selecting only that column does not reliably bring the
     # "routes" table itself into the FROM clause.
+    # the waypoint and its geometry, aliased: the route and the waypoint
+    # both are documents
+    waypoint = aliased(Waypoint, flat=True)
+    geometry = aliased(DocumentGeometry, flat=True)
     routes = (
         DBSession.query(Route)
         .options(
@@ -847,19 +851,19 @@ def get_route_candidates_within_geometry(intersection_geom_wkt):
             ),
         )
         .join(
-            Waypoint,
+            waypoint,
             and_(
                 or_(
-                    Waypoint.document_id == Association.child_document_id,
-                    Waypoint.document_id == Association.parent_document_id,
+                    waypoint.document_id == Association.child_document_id,
+                    waypoint.document_id == Association.parent_document_id,
                 ),
-                Waypoint.waypoint_type == 'access',
+                waypoint.waypoint_type == 'access',
             ),
         )
-        .join(DocumentGeometry, DocumentGeometry.document_id == Waypoint.document_id)
+        .join(geometry, geometry.document_id == waypoint.document_id)
         .filter(
             func.ST_Intersects(
-                DocumentGeometry.geom, func.ST_GeomFromText(intersection_geom_wkt, 3857)
+                geometry.geom, func.ST_GeomFromText(intersection_geom_wkt, 3857)
             )
         )
         .distinct()
