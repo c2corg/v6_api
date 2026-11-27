@@ -262,6 +262,16 @@ def redact_selectors(source: str, endpoint: str) -> list[str]:
     return list(getattr(adapter, 'REDACT_SELECTORS', {}).get(endpoint, ()))
 
 
+def record_limits(source: str, endpoint: str) -> dict[str, int]:
+    """Return how many elements of a selector a recording keeps (`RECORD_LIMITS`).
+
+    The HTML counterpart of `MAX_ITEMS`: an adapter cuts the cards of a list
+    page to what its tests need (selector -> n).
+    """
+    adapter = _adapter(source)
+    return dict(getattr(adapter, 'RECORD_LIMITS', {}).get(endpoint, {}))
+
+
 def pseudonymise_selectors(source: str, endpoint: str) -> list[str]:
     """Return the CSS selectors of the elements holding a partner user's identity."""
     from c2corg_api.partners.sources import REGISTRY
@@ -285,8 +295,9 @@ def _decode_html(body: bytes) -> str:
 def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> bytes:
     """Trim a JSON body (`trim_data`, `pseudonymise_data`, `redact_data`) or HTML.
 
-    An HTML body is trimmed (`htmlparse.trim`, with the pseudonyms of
-    `PSEUDONYMISE_SELECTORS` and the placeholders of `REDACT_SELECTORS`) when
+    An HTML (or RSS) body is trimmed (`htmlparse.trim`, with the pseudonyms of
+    `PSEUDONYMISE_SELECTORS`, the placeholders of `REDACT_SELECTORS` and the
+    cuts of `RECORD_LIMITS`) when
     the source declares selectors for the endpoint; anything else is returned
     as is.
     """
@@ -302,6 +313,7 @@ def trim_body(source: str, url: str, body: bytes, names: dict | None = None) -> 
                 pseudonymise_selectors(source, endpoint),
                 names,
                 redact=redact_selectors(source, endpoint),
+                limits=record_limits(source, endpoint),
             ).encode()
         return body
     endpoint = endpoint_of(url, source)

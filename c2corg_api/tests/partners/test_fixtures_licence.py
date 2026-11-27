@@ -237,7 +237,8 @@ def _html_fixtures():
         for entry in json.loads(
             (FIXTURES / source / 'manifest.json').read_text(encoding='utf-8')
         )['entries']
-        if entry['file'].endswith('.html') and int(entry.get('status', 200)) == 200
+        if entry['file'].endswith(('.html', '.xml'))
+        and int(entry.get('status', 200)) == 200
     ]
 
 

@@ -8,7 +8,7 @@ demo (`transport=fixtures`) never touch the network.
 
 ```
 fixtures/<source>/manifest.json
-fixtures/<source>/<endpoint>_<distinguishing params>.<json|html>
+fixtures/<source>/<endpoint>_<distinguishing params>.<json|html|xml>
 ```
 
 File names are snake case: `sorties_j2_c1_l200.json`, `routes_id57949.json`,
@@ -50,7 +50,7 @@ c2corg_api.partners shapes` to see what changed.
 | skitour.fr | reachable with an API key (`cle` header, `SKITOUR_API_KEY` or `SKITOUR_API_KEY_FILE`) | recorded 2026-11-25 (`skitour/`, `synthetic: false`) |
 | gulliver.it | 403 Cloudflare "Just a moment..." JS challenge from cloud addresses; reachable from a home connection (camptocamp User-Agent) | recorded 2026-11-27 (`gulliver/`, texts redacted, authors pseudonymised) + `gulliver_synthetic/` |
 | gipfelbuch.ch | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
-| bivouak.net | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
+| bivouak.net | reachable | lists and detail pages recorded 2026-11-25, RSS feed 2026-11-27 (HTML and RSS, trimmed to the selectors of the adapter, 3 cards per list and 10 feed items: `RECORD_LIMITS`) |
 | skitourenportal.eu | reachable without `www` | recorded 2026-11-25 (HTML, trimmed to the selectors, authors pseudonymised) |
 | on-ice.it | reachable over plain `http` only (https fails), ISO-8859-1 pages | recorded 2026-11-27 (HTML, trimmed to the selectors, texts redacted, authors pseudonymised; written in UTF-8) |
 | api.camptocamp.org | reachable | not needed |

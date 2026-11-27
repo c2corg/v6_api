@@ -386,6 +386,11 @@ def test_recording_transport_writes_files_and_manifest(tmp_path):
                 'file': 'x.html',
             },
             {'url': 'https://www.example.org/', 'file': 'x.html'},
+            {
+                'url': 'https://www.example.org/rss/feed.rss',
+                'content_type': 'application/rss+xml',
+                'file': 'x.html',
+            },
         ],
         {'x.json': b'{"media": 1, "a": 2}', 'x.html': b'<html>hi</html>'},
     )
@@ -408,11 +413,13 @@ def test_recording_transport_writes_files_and_manifest(tmp_path):
     recorder.get('https://www.example.org/Verhaeltnisse/')
     recorder.get('https://www.example.org/Verhaeltnisse/')
     recorder.get('https://www.example.org/')
-    assert recorder.request_count == 4
+    recorder.get('https://www.example.org/rss/feed.rss')
+    assert recorder.request_count == 5
 
     files = sorted(p.name for p in (out / 'demo').iterdir())
     assert files == [
         'commentglobal_page1.json',
+        'feed_rss.xml',
         'index.txt',
         'manifest.json',
         'verhaeltnisse.html',

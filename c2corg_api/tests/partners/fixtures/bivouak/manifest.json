@@ -4,6 +4,12 @@
   "synthetic": false,
   "entries": [
     {
+      "url": "https://www.bivouak.net/rss/outings/outings.rss",
+      "status": 200,
+      "content_type": "application/rss+xml",
+      "file": "outings_rss.xml"
+    },
+    {
       "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
       "status": 200,
       "content_type": "text/html; charset=UTF-8",
@@ -101,12 +107,6 @@
       "status": 200,
       "content_type": "text/html; charset=utf-8",
       "file": "sortie_29958.html"
-    },
-    {
-      "url": "https://www.bivouak.net/topos/sortie-30880-chamechaude-par-pas-arche-et-rampe-ecureuils.html",
-      "status": 200,
-      "content_type": "text/html; charset=utf-8",
-      "file": "sortie_30880_chamechaude_par_pas_arche_et_rampe_ecureuils.html"
     },
     {
       "url": "https://www.bivouak.net/topos/sortie-30886-.html",

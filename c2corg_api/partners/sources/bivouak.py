@@ -7,6 +7,16 @@ One list per sport, rather than the "all sports" one, so that the paragliding
 reports (more than half of the "all" list in autumn) do not push the ski tours
 out of it.
 
+The site also has an RSS feed of its last 50 outings, all sports together
+(`rss/outings/outings.rss`: link, title, author, date and one sport, but no
+massif, elevation, rating or position). It is read first, as a cheap change
+detector: the lists are read only for the sports of the outings new in the feed
+(the cursor keeps the ids of the last feed), and those that still had outings
+waiting for their detail page. All the lists are read on the first run, when
+the feed fails or has nothing in common with the last one, and every
+`LIST_MAX_AGE` (the feed is not rebuilt at once: it misses the latest reports).
+A run with nothing new makes one request instead of five.
+
 The lists have no coordinates: they are on the detail page of an outing
 (`sortie-<id>-<slug>.html`, attributes `data-lat` and `data-lng` of the map). A
 detail page is fetched at most once per outing (the answer, empty or not, is
@@ -27,7 +37,7 @@ from typing import ClassVar
 from urllib.parse import urljoin
 
 from c2corg_api.partners import htmlparse, normalise
-from c2corg_api.partners.adapter import ParseError
+from c2corg_api.partners.adapter import ParseError, SourceDown
 from c2corg_api.partners.lookups import LookupRequests
 from c2corg_api.partners.model import (
     FetchContext,
@@ -40,9 +50,22 @@ log = logging.getLogger(__name__)
 
 BASE_URL = 'https://www.bivouak.net'
 LIST_URL = f'{BASE_URL}/topos/liste_des_sorties.php'
+FEED_URL = f'{BASE_URL}/rss/outings/outings.rss'
 # the sports, in the order they are listed and looked up: bit -> code
 SPORTS = {1: 'ski', 2: 'rando', 8: 'raquettes', 4: 'vtt', 16: 'parapente'}
 MAX_DETAIL_FETCHES = 10  # new detail pages per run
+# all the lists are read again after this long, whatever the feed says
+LIST_MAX_AGE = datetime.timedelta(hours=3)
+# the sport of a feed item (`<category>`, lower case) -> its bit: the first
+# keyword found wins ("Ski de Rando" is ski); an unknown one reads every list
+FEED_SPORTS = (
+    ('ski', 1),
+    ('raquette', 8),
+    ('vtt', 4),
+    ('parapente', 16),
+    ('rando', 2),
+    ('trail', 2),
+)
 # The "massif" of a report abroad is the country (French name). Anything else is
 # a French massif: the site is French.
 COUNTRIES = {
@@ -70,6 +93,7 @@ _SUMMIT_IN_TITLE = re.compile(r'\s\(([^()]+)\)\s*$')
 _SORTIE = re.compile(r'sortie-(\d+)')
 
 CARD = 'article.post_sortie'
+ITEM = 'item'
 ACTIVITIES = {
     code: normalise.ACTIVITY_MAP['bivouak'][code][0] for code in SPORTS.values()
 }
@@ -88,6 +112,15 @@ def _country(massif):
     return COUNTRIES.get(massif.lower(), 'FR')
 
 
+def _datetime(value):
+    """Return the aware datetime of an ISO string of the cursor (None if bad)."""
+    try:
+        moment = datetime.datetime.fromisoformat(value)
+    except TypeError, ValueError:
+        return None
+    return moment if moment.tzinfo is not None else None
+
+
 def _float(value):
     try:
         return float(value)
@@ -101,13 +134,16 @@ class BivouakAdapter:
     site_url = 'https://www.bivouak.net'
     required_secrets = ()
     # robots.txt asks the aggressive crawlers for a 10 s delay: we keep it.
-    # 5 lists + MAX_DETAIL_FETCHES detail pages
-    rate = RateLimit(10.0, 5 + MAX_DETAIL_FETCHES, 30)
+    # the feed + 5 lists + MAX_DETAIL_FETCHES detail pages, at most
+    rate = RateLimit(10.0, 1 + 5 + MAX_DETAIL_FETCHES, 30)
     REQUIRED_PATHS: ClassVar[dict[str, list[str]]] = {}
     # endpoint -> every CSS selector read from it (`contract.py`): the check of
     # the live shapes, and the allow-list of what a recording keeps. The
     # excerpt of a card (`.bk-card__text`) is not in it, nor are the photos.
     REQUIRED_SELECTORS: ClassVar[dict[str, list[str]]] = {
+        # the feed: the link (id) and the sport of an item, nothing else (no
+        # author, no excerpt)
+        'outings_rss': [f'{ITEM} > guid', f'{ITEM} > category'],
         'liste_des_sorties': [
             f'{CARD} .bk-pill',
             f'{CARD} .bk-card__meta span',
@@ -127,12 +163,16 @@ class BivouakAdapter:
     PSEUDONYMISE_SELECTORS: ClassVar[dict[str, list[str]]] = {
         'liste_des_sorties': [f'{CARD} a.bk-author'],
     }
+    # a recording keeps the first cards of a list and items of the feed only:
+    # enough for the tests (the first turns of the detail pages)
+    RECORD_LIMITS: ClassVar[dict[str, dict[str, int]]] = {
+        'outings_rss': {ITEM: 10},
+        'liste_des_sorties': {CARD: 3},
+    }
 
     def fetch(self, ctx: FetchContext) -> FetchResult:
         result = FetchResult(outings=[], skipped=Counter())
         _Run(ctx, result).harvest()
-        # nothing is remembered between runs but the lookups
-        result.cursor = dict(ctx.cursor) if ctx.cursor else None
         return result
 
 
@@ -145,16 +185,77 @@ class _Run:
         self.requests = LookupRequests(ctx, result)
 
     def harvest(self):
-        by_sport = [self._list(bit) for bit in SPORTS]
+        cursor = self.ctx.cursor or {}
+        feed = self._feed()
+        bits = self._lists_to_read(cursor, feed)
+        by_sport = {bit: self._list(bit) for bit in SPORTS if bit in bits}
+        pending = set()
         # the sports take turns for the detail pages, the newest outings first
-        for turn in turns(by_sport):
+        for turn in turns(list(by_sport.values())):
             for draft in turn:
                 self.result.outings.append(self._locate(draft))
+                if draft['deferred']:
+                    pending.add(draft['bit'])
+        lists_at = cursor.get('lists_at')
+        if bits == set(SPORTS):
+            lists_at = self.ctx.now.isoformat()
+        self.result.cursor = {
+            # the ids of the last feed (the previous one when it failed)
+            'feed': sorted(feed) if feed is not None else cursor.get('feed', []),
+            'lists_at': lists_at,
+            # the sports whose lists still have outings to look up
+            'pending': sorted(pending),
+        }
+
+    # -- the feed ----------------------------------------------------------
+
+    def _feed(self):
+        """Return {outing id: sport bit or None} of the feed, None when it failed.
+
+        The feed is a hint only: when it fails, every list is read, and a list
+        that fails stops the run as before. A block (`SourceBlocked`) stops it.
+        """
+        try:
+            response = self.ctx.transport.get(FEED_URL)
+        except SourceDown as e:
+            log.info('bivouak feed: %s', e)
+            return None
+        if response.status != 200:
+            log.info('bivouak feed: HTTP %s', response.status)
+            return None
+        items = {}
+        for item in htmlparse.parse(response.text('utf-8')).select(ITEM):
+            match = _SORTIE.search(htmlparse.text_of(item.select_one('guid')))
+            if match:
+                category = htmlparse.text_of(item.select_one('category')).lower()
+                items[int(match.group(1))] = next(
+                    (bit for word, bit in FEED_SPORTS if word in category), None
+                )
+        return items or None
+
+    def _lists_to_read(self, cursor, feed):
+        """Return the bits of the sports whose list is read this run."""
+        everything = set(SPORTS)
+        known = set(cursor.get('feed') or ())
+        lists_at = _datetime(cursor.get('lists_at'))
+        if (
+            feed is None
+            # the first run, or nothing in common with the last feed: some
+            # outings may have come and gone between the two
+            or not known & set(feed)
+            or lists_at is None
+            or self.ctx.now - lists_at >= LIST_MAX_AGE
+        ):
+            return everything
+        new = {feed[i] for i in set(feed) - known}
+        if None in new:  # a sport the feed names otherwise: read them all
+            return everything
+        return (new | set(cursor.get('pending') or ())) & everything
 
     # -- the lists ---------------------------------------------------------
 
     def _list(self, bit):
-        """Return the drafts (new outings of the period) of the list of a sport."""
+        """Return the drafts (outings of the period) of the list of a sport."""
         response = self.ctx.transport.get(LIST_URL, params={'id_sport': bit})
         if response.status != 200:
             raise ParseError(f'liste_des_sorties sport {bit}: HTTP {response.status}')
@@ -166,6 +267,7 @@ class _Run:
         for card in cards:
             draft = self._card(card)
             if draft is not None:
+                draft['bit'] = bit
                 drafts.append(draft)
         return drafts
 
@@ -283,6 +385,7 @@ class _Run:
     def _locate(self, values):
         """Return the outing, located when its detail page is (or can be) had."""
         detail = self._detail(values['external_id'], values['url'])
+        values['deferred'] = detail is None
         if detail is None:
             self.result.skipped['location_deferred'] += 1
         else:
@@ -300,7 +403,8 @@ class _Run:
                     geom_quality='summit' if detail.get('summit') else 'route',
                 )
         values['activities'] = tuple(values['activities'])
-        return HarvestedOuting(**values)
+        fields = {k: v for k, v in values.items() if k not in ('bit', 'deferred')}
+        return HarvestedOuting(**fields)
 
     def _detail(self, external_id, url):
         """Return the dict of a detail page, None when it cannot be had this run."""
