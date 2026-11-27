@@ -40,10 +40,11 @@ log = logging.getLogger(__name__)
 
 ENCODING = 'UTF-8'
 VALIDATION_EXPIRE_DAYS = 3
-# NIST SP 800-63B recommends a minimum of 8 characters; 10 gives a bit more
-# margin against brute-force/credential-stuffing while staying easy to
-# remember.
-MINIMUM_PASSWORD_LENGTH = 10
+# The CNIL recommendation on passwords (deliberation 2022-100) asks, for an
+# authentication by password alone, for at least 12 characters mixing
+# lowercase and uppercase letters, digits and special characters (see
+# is_password_strong_enough() below).
+MINIMUM_PASSWORD_LENGTH = 12
 
 PASSWORD_STRENGTH_ERROR = (
     f'Password must be at least {MINIMUM_PASSWORD_LENGTH} characters long and '

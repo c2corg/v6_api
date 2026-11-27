@@ -163,6 +163,24 @@ def test_always_register_non_validated_users(_send_email, client, session):
 
 
 @patch('c2corg_api.emails.email_service.EmailService._send_email')
+def test_register_password_minimum_length(_send_email, client, session):
+    request_body = {
+        'username': 'test',
+        'forum_username': 'test',
+        'name': 'Max Mustermann',
+        'password': 'Super$ecre1',  # nosec B105 (a test password, 11 characters)
+        'email': 'some_user@camptocamp.org',
+    }
+    url = PREFIX + '/register'
+
+    body = send_json(client, 'post', url, request_body, status=400).json
+    assert_errors_contain(body, 'password', 'Password too short')
+
+    request_body['password'] = 'Super$ecret1'  # nosec B105 (12 characters)
+    send_json(client, 'post', url, request_body, status=200)
+
+
+@patch('c2corg_api.emails.email_service.EmailService._send_email')
 def test_register_default_lang(_send_email, client, session):
     request_body = {
         'username': 'test',
