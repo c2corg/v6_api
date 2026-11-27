@@ -266,6 +266,25 @@ def test_html_fixtures_only_hold_the_selectors_the_adapter_reads(source, file, u
     assert longest <= 200, file
 
 
+_EMAIL = re.compile(r'[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}', re.I)
+
+
+def _fixture_files():
+    return [
+        pytest.param(path, id=f'{directory.name}/{path.name}')
+        for directory in sorted(p for p in FIXTURES.iterdir() if p.is_dir())
+        for path in sorted(directory.iterdir())
+        if path.suffix in ('.json', '.html', '.txt', '.xml', '.gpx')
+    ]
+
+
+@pytest.mark.parametrize('path', _fixture_files())
+def test_fixtures_hold_no_email_address(path):
+    """No e-mail of a partner user (on-ice.it keeps one in an HTML comment)."""
+    text = path.read_text(encoding='utf-8', errors='replace')
+    assert not _EMAIL.search(text), path.name
+
+
 def test_there_is_an_html_fixture_to_check():
     assert any(p.values[0] == 'bivouak' for p in _html_fixtures())
 

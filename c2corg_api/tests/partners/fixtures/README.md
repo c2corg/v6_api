@@ -52,7 +52,7 @@ c2corg_api.partners shapes` to see what changed.
 | gipfelbuch.ch | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
 | bivouak.net | reachable | recorded 2026-11-25 (HTML, trimmed to the selectors of the adapter) |
 | skitourenportal.eu | reachable without `www` | recorded 2026-11-25 (HTML, trimmed to the selectors, authors pseudonymised) |
-| on-ice.it | blocked by the sandbox proxy | not yet (later) |
+| on-ice.it | reachable over plain `http` only (https fails), ISO-8859-1 pages | recorded 2026-11-27 (HTML, trimmed to the selectors, texts redacted, authors pseudonymised; written in UTF-8) |
 | api.camptocamp.org | reachable | not needed |
 
 Never commit an API key or a cookie in a fixture.

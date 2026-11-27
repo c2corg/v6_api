@@ -644,6 +644,11 @@ class TestSources:
             {'source': 'gipfelbuch', 'status': 'never_run', 'last_success_at': None},
             {'source': 'gulliver', 'status': 'never_run', 'last_success_at': None},
             {
+                'source': 'onice',
+                'status': 'never_run',
+                'last_success_at': None,
+            },
+            {
                 'source': 'skitour',
                 'status': 'ok',
                 'last_success_at': '2026-11-24T10:15:00+00:00',
@@ -716,6 +721,17 @@ class TestSources:
                     'last_run_at': '2026-11-24T09:00:00+00:00',
                     'last_fetched': 0,
                     'last_skipped': {'parse_error': 1},
+                },
+                {
+                    'source': 'onice',
+                    'site_name': 'on-ice.it',
+                    'site_url': 'http://www.on-ice.it/onice/',
+                    'status': 'never_run',
+                    'status_detail': None,
+                    'last_success_at': None,
+                    'last_run_at': None,
+                    'last_fetched': None,
+                    'last_skipped': {},
                 },
                 {
                     'source': 'skitour',

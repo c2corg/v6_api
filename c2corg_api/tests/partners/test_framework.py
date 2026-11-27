@@ -54,6 +54,7 @@ def test_source_names_come_from_the_registry():
             'bivouak',
             'gipfelbuch',
             'skitourenportal',
+            'onice',
         )
     )
 
@@ -63,7 +64,8 @@ def test_every_source_has_a_credit(name):
     adapter = REGISTRY[name]
     assert adapter.name == name
     assert adapter.site_name.strip()
-    assert adapter.site_url.startswith('https://')
+    # on-ice.it answers on plain http only (https fails)
+    assert adapter.site_url.startswith('http://' if name == 'onice' else 'https://')
 
 
 def test_harvested_outing_defaults_and_is_frozen():
