@@ -1,0 +1,952 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "v6_api partner outings (metaskirando)",
+    "output": "metaskirando.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "parentHref": "batch.html",
+    "repository": {
+      "url": "https://github.com/c2corg/v6_api/",
+      "provider": "github",
+      "revision": "3aa92ec80fa5a65ada0644bce38a06d380c9164f"
+    }
+  },
+  "components": [
+    {
+      "id": "tick",
+      "type": "backend",
+      "label": "harvest_tick",
+      "sublabel": "scheduler · every minute",
+      "explanation": "The shared harvest framework (docs/harvest.md): claims the due sources of harvest_sources and runs them in lanes by host. Each partner adapter is one harvester partners.<name> with one source partners.<name>:outings.",
+      "href": "batch.html",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 72,
+          "end_line": 85
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 48,
+          "end_line": 64
+        }
+      ],
+      "pos": [
+        680,
+        450
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_harvest",
+      "type": "database",
+      "label": "harvest_sources",
+      "sublabel": "schedule · last_error · backoff",
+      "sources": [
+        {
+          "path": "c2corg_api/models/harvest.py",
+          "line": 18,
+          "end_line": 78
+        }
+      ],
+      "pos": [
+        680,
+        300
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "ph",
+      "type": "backend",
+      "label": "PartnerHarvester",
+      "sublabel": "partners.<name> · every 15 min",
+      "explanation": "fetch() runs the whole source through run_source and hands the runner a summary; a blocked, down or failing run raises PartnerRunFailed, so the harvest policy backs off from the interval up to 16 times it.",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 520,
+          "end_line": 620
+        }
+      ],
+      "pos": [
+        680,
+        580
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "tag": "backoff up to ×16"
+    },
+    {
+      "id": "run",
+      "type": "backend",
+      "label": "run_source",
+      "sublabel": "fetch · locate · upsert · health",
+      "explanation": "One transaction per source: the adapter's outings, its lookups and its health row are committed together; a failure never touches the other sources.",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 354,
+          "end_line": 475
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 492,
+          "end_line": 510
+        }
+      ],
+      "pos": [
+        360,
+        580
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "adapters",
+      "type": "backend",
+      "label": "Partner adapters",
+      "sublabel": "partners/sources/*.py · pure",
+      "explanation": "REGISTRY: skitour, gulliver, bivouak, gipfelbuch, skitourenportal, onice. An adapter only turns the answers of its site into HarvestedOuting objects; it gets its transport and lookup cache from the job, so it runs unchanged on recorded fixtures.",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/__init__.py",
+          "line": 1,
+          "end_line": 25
+        },
+        {
+          "path": "c2corg_api/partners/adapter.py",
+          "line": 1,
+          "end_line": 47
+        }
+      ],
+      "pos": [
+        360,
+        710
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "transport",
+      "type": "backend",
+      "label": "HttpTransport",
+      "sublabel": "delay · budget · blocked / down",
+      "explanation": "Our User-Agent, a minimum delay between requests and a request budget per run (RateLimit of each adapter); 401/403/429 or a challenge page raise SourceBlocked, 5xx, timeouts and a spent budget SourceDown. partners.transport=fixtures replays recordings instead.",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/transport.py",
+          "line": 67,
+          "end_line": 167
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 125,
+          "end_line": 135
+        }
+      ],
+      "pos": [
+        360,
+        840
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "p_skitour",
+      "type": "external",
+      "label": "skitour.fr",
+      "sublabel": "JSON API /api/sorties",
+      "tag": "cle key · ≤10 req · 1.1 s",
+      "explanation": "GET https://skitour.fr/api/sorties?c=1&l=200&j=<days>&p=<page> with the header cle: SKITOUR_API_KEY (disabled without it). Coordinates come in the API (summits' latlon).",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/skitour.py",
+          "line": 33,
+          "end_line": 34
+        },
+        {
+          "path": "c2corg_api/partners/sources/skitour.py",
+          "line": 69,
+          "end_line": 75
+        },
+        {
+          "path": "c2corg_api/partners/sources/skitour.py",
+          "line": 110,
+          "end_line": 129
+        }
+      ],
+      "pos": [
+        40,
+        1000
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "p_gulliver",
+      "type": "external",
+      "label": "gulliver.it",
+      "sublabel": "WordPress REST wp-json/gulliver",
+      "tag": "≤45 req · 2 s · Cloudflare",
+      "explanation": "mobile/commentglobal?page=1..5, then front_page/comments?sorting=id (HTML fragment of the 50 newest reports) for the reports the paging misses, read with mobile/comments?id= (≤15 a run); mobile/routes?id= (≤24 new a run, cached) gives the start point. Behind a Cloudflare challenge: blocked from datacenter addresses.",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/gulliver.py",
+          "line": 1,
+          "end_line": 30
+        },
+        {
+          "path": "c2corg_api/partners/sources/gulliver.py",
+          "line": 53,
+          "end_line": 64
+        },
+        {
+          "path": "c2corg_api/partners/sources/gulliver.py",
+          "line": 344,
+          "end_line": 355
+        }
+      ],
+      "pos": [
+        240,
+        1000
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "p_bivouak",
+      "type": "external",
+      "label": "bivouak.net",
+      "sublabel": "HTML liste_des_sorties.php",
+      "tag": "≤15 req · 10 s",
+      "explanation": "One list per sport (id_sport=1, 2, 8, 4, 16), then the sortie detail page for data-lat / data-lng: at most 10 new detail pages a run, cached as sortie:<id>. HTML scraping, no RSS.",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/bivouak.py",
+          "line": 1,
+          "end_line": 19
+        },
+        {
+          "path": "c2corg_api/partners/sources/bivouak.py",
+          "line": 41,
+          "end_line": 45
+        },
+        {
+          "path": "c2corg_api/partners/sources/bivouak.py",
+          "line": 96,
+          "end_line": 103
+        }
+      ],
+      "pos": [
+        440,
+        1000
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "p_gipfelbuch",
+      "type": "external",
+      "label": "gipfelbuch.ch",
+      "sublabel": "HTML /verhaeltnisse/uebersicht",
+      "tag": "≤18 req · 2 s",
+      "explanation": "One listing page (about 66 reports, no coordinates), then the page of a report for the map's data-lat / data-lon, once per summit (cached summit:<name>_<altitude>), at most 15 new summits a run.",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/gipfelbuch.py",
+          "line": 1,
+          "end_line": 11
+        },
+        {
+          "path": "c2corg_api/partners/sources/gipfelbuch.py",
+          "line": 32,
+          "end_line": 35
+        },
+        {
+          "path": "c2corg_api/partners/sources/gipfelbuch.py",
+          "line": 127,
+          "end_line": 133
+        }
+      ],
+      "pos": [
+        640,
+        1000
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "p_stp",
+      "type": "external",
+      "label": "skitourenportal.eu",
+      "sublabel": "HTML: 5 Austrian state pages",
+      "tag": "≤12 req · 3 s",
+      "explanation": "The portal page of Salzburg, Oberösterreich, Niederösterreich, Kärnten and Steiermark, 2 pages each (?page=N): a table of tours and a map whose inline script gives a marker per tour. No detail page is read.",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/skitourenportal.py",
+          "line": 1,
+          "end_line": 14
+        },
+        {
+          "path": "c2corg_api/partners/sources/skitourenportal.py",
+          "line": 40,
+          "end_line": 50
+        },
+        {
+          "path": "c2corg_api/partners/sources/skitourenportal.py",
+          "line": 151,
+          "end_line": 157
+        }
+      ],
+      "pos": [
+        840,
+        1000
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "p_onice",
+      "type": "external",
+      "label": "on-ice.it",
+      "sublabel": "HTML · plain http · ISO-8859-1",
+      "tag": "≤17 req · 2 s",
+      "explanation": "onice_reports.php?type=0 (and the second page while the list is new to us), then onice_view_report.php?type=&id= detail pages, at most 15 a run, cached. No coordinates anywhere: hints only (summit name, elevation, region, country).",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/onice.py",
+          "line": 1,
+          "end_line": 25
+        },
+        {
+          "path": "c2corg_api/partners/sources/onice.py",
+          "line": 57,
+          "end_line": 62
+        },
+        {
+          "path": "c2corg_api/partners/sources/onice.py",
+          "line": 247,
+          "end_line": 253
+        }
+      ],
+      "pos": [
+        1040,
+        1000
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "t_lookups",
+      "type": "database",
+      "label": "partner_lookups",
+      "sublabel": "cached lookups · 30 days",
+      "explanation": "A durable cache per source of the secondary fetches (gulliver reports and routes, bivouak and on-ice detail pages, gipfelbuch summits) and of the job's location resolutions; extracted fields only, purged after partners.lookup_retention_days.",
+      "sources": [
+        {
+          "path": "c2corg_api/models/partner_outing.py",
+          "line": 218,
+          "end_line": 231
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 138,
+          "end_line": 164
+        }
+      ],
+      "pos": [
+        40,
+        710
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "locate",
+      "type": "backend",
+      "label": "resolve_locations",
+      "sublabel": "summit_match · area_centroid",
+      "explanation": "For outings published without coordinates: a c2c summit or pass with the same folded name (geom_quality summit_match), else the centroid of the region's area (regions/<source>.json, area_centroid), else the country area alone.",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/partner_locations.py",
+          "line": 61,
+          "end_line": 128
+        }
+      ],
+      "pos": [
+        40,
+        580
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "tag": "else country area"
+    },
+    {
+      "id": "t_c2c",
+      "type": "database",
+      "label": "c2c guidebook",
+      "sublabel": "waypoints · areas · outings",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/partner_locations.py",
+          "line": 190,
+          "end_line": 265
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 238,
+          "end_line": 259
+        }
+      ],
+      "pos": [
+        40,
+        450
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_outings",
+      "type": "database",
+      "label": "partner_outings",
+      "sublabel": "texts never served · kept forever",
+      "explanation": "One row per (source, external_id), upserted. texts (narrative, conditions...) are stored for later uses and never returned by the API. Kept forever unless partners.retention_days is set.",
+      "sources": [
+        {
+          "path": "c2corg_api/models/partner_outing.py",
+          "line": 51,
+          "end_line": 131
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 206,
+          "end_line": 235
+        }
+      ],
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_sources",
+      "type": "database",
+      "label": "partner_sources",
+      "sublabel": "status · last_skipped · cursor",
+      "sources": [
+        {
+          "path": "c2corg_api/models/partner_outing.py",
+          "line": 181,
+          "end_line": 215
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 455,
+          "end_line": 473
+        }
+      ],
+      "pos": [
+        360,
+        300
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "tracks",
+      "type": "backend",
+      "label": "harvest_tracks",
+      "sublabel": "2nd phase · ≤3 files, 10 s",
+      "explanation": "After an ok or degraded run of a source that declares TRACK_LICENCE (gulliver.it, CC BY-NC-ND): the newest outings with a gpx_url and no track, with a transport and budget of their own. Failures never change the source status.",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/partner_tracks.py",
+          "line": 1,
+          "end_line": 84
+        },
+        {
+          "path": "c2corg_api/jobs/partner_tracks.py",
+          "line": 157,
+          "end_line": 198
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 587,
+          "end_line": 610
+        }
+      ],
+      "pos": [
+        1000,
+        580
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "p_gpx",
+      "type": "external",
+      "label": "gulliver.it GPX files",
+      "sublabel": "public https .gpx on gulliver.it",
+      "sources": [
+        {
+          "path": "c2corg_api/partners/sources/gulliver.py",
+          "line": 187,
+          "end_line": 213
+        }
+      ],
+      "pos": [
+        1000,
+        710
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "t_tracks",
+      "type": "database",
+      "label": "partner_tracks",
+      "sublabel": "points only · MULTILINESTRING 3857",
+      "sources": [
+        {
+          "path": "c2corg_api/models/partner_outing.py",
+          "line": 134,
+          "end_line": 178
+        },
+        {
+          "path": "c2corg_api/partners/gpx.py",
+          "line": 71,
+          "end_line": 128
+        }
+      ],
+      "pos": [
+        1000,
+        300
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "purge",
+      "type": "backend",
+      "label": "purge_partner_outings",
+      "sublabel": "daily 01:40 · lookups > 30 d",
+      "sources": [
+        {
+          "path": "c2corg_api/jobs/__init__.py",
+          "line": 106,
+          "end_line": 116
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 262,
+          "end_line": 289
+        },
+        {
+          "path": "c2corg_api/jobs/harvest_partner_outings.py",
+          "line": 695,
+          "end_line": 708
+        }
+      ],
+      "pos": [
+        40,
+        840
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "tag": "outings: if retention set"
+    },
+    {
+      "id": "api_list",
+      "type": "backend",
+      "label": "GET /partner-outings",
+      "sublabel": "UNION ALL c2c · Redis 120 s",
+      "explanation": "Partner rows (selected columns: never texts) and the c2c outings of the same window in one UNION ALL, so order, paging and total are those of the union; at most 31 days, 14 by default.",
+      "sources": [
+        {
+          "path": "c2corg_api/web/partner_outings.py",
+          "line": 32,
+          "end_line": 107
+        },
+        {
+          "path": "c2corg_api/views/partner_outings.py",
+          "line": 344,
+          "end_line": 380
+        },
+        {
+          "path": "c2corg_api/views/partner_outings.py",
+          "line": 578,
+          "end_line": 610
+        }
+      ],
+      "pos": [
+        40,
+        170
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "api_sources",
+      "type": "backend",
+      "label": "GET /partner-outings/sources",
+      "sublabel": "health of each source",
+      "sources": [
+        {
+          "path": "c2corg_api/web/partner_outings.py",
+          "line": 110,
+          "end_line": 113
+        },
+        {
+          "path": "c2corg_api/views/partner_outings.py",
+          "line": 546,
+          "end_line": 575
+        }
+      ],
+      "pos": [
+        360,
+        170
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "api_track",
+      "type": "backend",
+      "label": "GET /partner-outings/{id}/track",
+      "sublabel": "GeoJSON Feature · attribution",
+      "sources": [
+        {
+          "path": "c2corg_api/web/partner_outings.py",
+          "line": 116,
+          "end_line": 135
+        },
+        {
+          "path": "c2corg_api/views/partner_outings.py",
+          "line": 629,
+          "end_line": 673
+        }
+      ],
+      "pos": [
+        1000,
+        170
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "health",
+      "type": "backend",
+      "label": "GET /health",
+      "sublabel": "harvest: partners.<name>",
+      "sources": [
+        {
+          "path": "c2corg_api/web/health.py",
+          "line": 74,
+          "end_line": 82
+        },
+        {
+          "path": "c2corg_api/harvest/runner.py",
+          "line": 275,
+          "end_line": 300
+        }
+      ],
+      "pos": [
+        680,
+        170
+      ],
+      "size": [
+        200,
+        64
+      ]
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "c2c_ui /metaskirando",
+      "sublabel": "partner-outings-service.ts",
+      "pos": [
+        360,
+        40
+      ],
+      "size": [
+        200,
+        64
+      ]
+    }
+  ],
+  "boundaries": [],
+  "connections": [
+    {
+      "id": "tick-ph",
+      "from": "tick",
+      "to": "ph",
+      "label": "fetch(source)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tick-harvest",
+      "from": "tick",
+      "to": "t_harvest",
+      "label": "claim · next_run_at"
+    },
+    {
+      "id": "ph-run",
+      "from": "ph",
+      "to": "run",
+      "label": "run_source",
+      "variant": "emphasis"
+    },
+    {
+      "id": "run-adapters",
+      "from": "run",
+      "to": "adapters",
+      "label": "adapter.fetch(ctx)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "adapters-transport",
+      "from": "adapters",
+      "to": "transport",
+      "label": "ctx.transport.get",
+      "variant": "emphasis"
+    },
+    {
+      "id": "adapters-lookups",
+      "from": "adapters",
+      "to": "t_lookups",
+      "label": "LookupCache"
+    },
+    {
+      "id": "tr-skitour",
+      "from": "transport",
+      "to": "p_skitour"
+    },
+    {
+      "id": "tr-gulliver",
+      "from": "transport",
+      "to": "p_gulliver"
+    },
+    {
+      "id": "tr-bivouak",
+      "from": "transport",
+      "to": "p_bivouak"
+    },
+    {
+      "id": "tr-gipfelbuch",
+      "from": "transport",
+      "to": "p_gipfelbuch"
+    },
+    {
+      "id": "tr-stp",
+      "from": "transport",
+      "to": "p_stp"
+    },
+    {
+      "id": "tr-onice",
+      "from": "transport",
+      "to": "p_onice"
+    },
+    {
+      "id": "run-locate",
+      "from": "run",
+      "to": "locate",
+      "label": "outings without coords"
+    },
+    {
+      "id": "locate-c2c",
+      "from": "locate",
+      "to": "t_c2c",
+      "label": "summit names, area centroids"
+    },
+    {
+      "id": "locate-lookups",
+      "from": "locate",
+      "to": "t_lookups",
+      "label": "resolve:* cache"
+    },
+    {
+      "id": "run-outings",
+      "from": "run",
+      "to": "t_outings",
+      "label": "upsert, assign areas",
+      "variant": "emphasis"
+    },
+    {
+      "id": "run-sources",
+      "from": "run",
+      "to": "t_sources",
+      "label": "status, health"
+    },
+    {
+      "id": "ph-tracks",
+      "from": "ph",
+      "to": "tracks",
+      "label": "after ok / degraded"
+    },
+    {
+      "id": "tracks-gpx",
+      "from": "tracks",
+      "to": "p_gpx",
+      "label": "GET .gpx"
+    },
+    {
+      "id": "tracks-tracks",
+      "from": "tracks",
+      "to": "t_tracks",
+      "label": "points only"
+    },
+    {
+      "id": "purge-lookups",
+      "from": "purge",
+      "to": "t_lookups",
+      "label": "older than 30 d",
+      "variant": "dashed"
+    },
+    {
+      "id": "ui-list",
+      "from": "ui",
+      "to": "api_list",
+      "label": "list + filters",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ui-sources",
+      "from": "ui",
+      "to": "api_sources",
+      "label": "source health"
+    },
+    {
+      "id": "ui-track",
+      "from": "ui",
+      "to": "api_track",
+      "label": "track of an outing"
+    },
+    {
+      "id": "list-outings",
+      "from": "api_list",
+      "to": "t_outings",
+      "label": "read (no texts)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "list-c2c",
+      "from": "api_list",
+      "to": "t_c2c",
+      "label": "c2c outings"
+    },
+    {
+      "id": "sources-read",
+      "from": "api_sources",
+      "to": "t_sources",
+      "label": "read"
+    },
+    {
+      "id": "track-read",
+      "from": "api_track",
+      "to": "t_tracks",
+      "label": "read"
+    },
+    {
+      "id": "health-harvest",
+      "from": "health",
+      "to": "t_harvest",
+      "label": "status by harvester"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Integration points",
+      "items": [
+        "skitour.fr: JSON API skitour.fr/api/sorties, header cle = SKITOUR_API_KEY (else disabled), ≤10 requests, 1.1 s apart; coordinates in the answer",
+        "gulliver.it: WordPress REST wp-json/gulliver: mobile/commentglobal pages 1-5, mobile/comments?id= (≤15), mobile/routes?id= (≤24 new, cached), plus the HTML fragment front_page/comments?sorting=id; ≤45 requests, 2 s; Cloudflare blocks cloud addresses",
+        "bivouak.net: HTML topos/liste_des_sorties.php?id_sport=1|2|8|4|16, then sortie pages for data-lat/data-lng (≤10 new); ≤15 requests, 10 s (robots.txt)",
+        "gipfelbuch.ch: HTML /verhaeltnisse/uebersicht, then a report page per new summit for its map (≤15); ≤18 requests, 2 s",
+        "skitourenportal.eu: HTML portal pages of 5 Austrian states, 2 pages each: table + map markers; ≤12 requests, 3 s",
+        "on-ice.it: HTML over plain http, ISO-8859-1: onice_reports.php?type=0 (+ page 2), onice_view_report.php (≤15 new); ≤17 requests, 2 s; no coordinates, hints only"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "A run of a source",
+      "items": [
+        "Every partners.interval_minutes (15); blocked, down or failing raise PartnerRunFailed: backoff 1×, 2×, 4×… up to 16× the interval",
+        "A failed lookup (one detail page, route or summit) degrades the run, it does not fail it; 3 in a row defer the rest",
+        "Statuses in partner_sources: ok, degraded, failing, blocked, down, disabled (never_run when no row)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Licence and personal data",
+      "items": [
+        "texts are stored for later uses, never served; fixtures hold placeholders and pseudonymised authors",
+        "GPX: only the points are kept (no time, heart rate, names), simplified over 2000 points; served with the author and CC BY-NC-ND",
+        "Switches: harvest.partners.enabled and harvest.partners.<name>.enabled; bivouak, gipfelbuch, skitourenportal and onice off by default"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "See also",
+      "items": [
+        "docs/partner-outings.md (configuration, statuses, each site) and docs/harvest.md (the harvest framework)",
+        "Recording and contract checks: python -m c2corg_api.partners record | shapes <source>"
+      ]
+    }
+  ]
+}
