@@ -1,0 +1,38 @@
+{
+  "source": "skitour",
+  "recorded_at": "2026-11-25",
+  "synthetic": true,
+  "note": "Season 2027: the recording of fixtures/skitour (2026-11-25). Season 2026: page 1 recorded live on 2026-11-28 by the backfill (a=2026, l=1000), trimmed by contract.trim_body (REQUIRED_PATHS only, authors pseudonymised, first 30 outings). Season 2025: an empty season made by hand (to end the walk).",
+  "entries": [
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {
+        "a": "2027",
+        "p": "1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_a2027_p1.json"
+    },
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {
+        "a": "2026",
+        "p": "1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_a2026_p1.json"
+    },
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {
+        "a": "2025",
+        "p": "1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_a2025_p1.json"
+    }
+  ]
+}

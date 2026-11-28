@@ -405,6 +405,8 @@ class GulliverAdapter:
 
 class _Run:
     def __init__(self, ctx, result):
+        # the cap of a run (the temporary backfill sets its own)
+        self.max_route_fetches = MAX_ROUTE_FETCHES
         self.ctx = ctx
         self.result = result
         self.floor = ctx.since - datetime.timedelta(days=LOOKBACK_DAYS)
@@ -663,7 +665,7 @@ class _Run:
         if cached is not None:
             self.routes[route_id] = cached
             return cached
-        if self.route_fetches >= MAX_ROUTE_FETCHES or not self.requests.available:
+        if self.route_fetches >= self.max_route_fetches or not self.requests.available:
             return None  # not remembered: nothing was tried
         self.route_fetches += 1
         response = self.requests.get(f'{BASE_URL}/routes', params={'id': route_id})

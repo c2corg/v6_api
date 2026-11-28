@@ -142,6 +142,12 @@ def configure_scheduler_from_config(settings):
         kwargs={'settings': settings},
     )
 
+    # TEMPORARY: the backfill of the partner outings, when
+    # PARTNERS_BACKFILL_SOURCES is set (delete with the backfill_* files)
+    from c2corg_api.jobs.backfill_partner_outings import register_backfill_job
+
+    register_backfill_job(scheduler, settings)
+
     scheduler.add_listener(exception_listener, EVENT_JOB_ERROR)
 
     atexit.register(lambda: scheduler.shutdown())

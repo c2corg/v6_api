@@ -1,0 +1,53 @@
+{
+  "source": "gulliver",
+  "recorded_at": "2026-11-27",
+  "synthetic": true,
+  "note": "Pages 1 and 2: the recording of fixtures/gulliver (2026-11-27); page 3: the empty page past the end, made by hand (the site is behind a Cloudflare challenge from the sandbox). The routes of the first two ski reports: the recording of fixtures/gulliver.",
+  "entries": [
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "params": {
+        "page": "1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "commentglobal_page1.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "params": {
+        "page": "2"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "commentglobal_page2.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/commentglobal",
+      "params": {
+        "page": "3"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "commentglobal_page3.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "params": {
+        "id": "10191"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "routes_id10191.json"
+    },
+    {
+      "url": "https://www.gulliver.it/wp-json/gulliver/mobile/routes",
+      "params": {
+        "id": "2520"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "routes_id2520.json"
+    }
+  ]
+}

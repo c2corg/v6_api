@@ -1,0 +1,780 @@
+[
+ {
+  "id": "188918",
+  "titre": "Mont Charvin, Combe Ouest",
+  "orientation": "W",
+  "denivele": "1100",
+  "dif_ski": "4.1",
+  "date": "1765580400",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Bornes - Aravis"
+  },
+  "sommets": [
+   {
+    "sommet": "Mont Charvin",
+    "altitude": "2409",
+    "lat": "45.8023",
+    "lng": "6.4203"
+   }
+  ],
+  "depart": {
+   "lat": "45.8028",
+   "lng": "6.385"
+  }
+ },
+ {
+  "id": "188917",
+  "titre": "Pointe de Merdassier, face NW",
+  "orientation": "NW",
+  "denivele": "865",
+  "dif_ski": "3.2",
+  "date": "1766271600",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Bornes - Aravis"
+  },
+  "sommets": [
+   {
+    "sommet": "Pointe de Merdassier",
+    "altitude": "2313",
+    "lat": "45.8651",
+    "lng": "6.4434"
+   }
+  ],
+  "depart": {
+   "lat": "45.8696",
+   "lng": "6.4178"
+  }
+ },
+ {
+  "id": "188916",
+  "titre": "Pointe de Mandallaz, Couloir NW en boucle",
+  "orientation": "T",
+  "denivele": "1180",
+  "dif_ski": "4.2",
+  "date": "1769382000",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Bornes - Aravis"
+  },
+  "sommets": [
+   {
+    "sommet": "Pointe de Mandallaz",
+    "altitude": "2277",
+    "lat": "45.8314",
+    "lng": "6.4441"
+   }
+  ],
+  "depart": {
+   "lat": "45.8373",
+   "lng": "6.4159"
+  }
+ },
+ {
+  "id": "188915",
+  "titre": "La Goenne, Face Nord",
+  "orientation": "N",
+  "denivele": "1150",
+  "dif_ski": "3.2",
+  "date": "1769554800",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Bornes - Aravis"
+  },
+  "sommets": [
+   {
+    "sommet": "La Goenne",
+    "altitude": "2174",
+    "lat": "45.8107",
+    "lng": "6.4259"
+   }
+  ],
+  "depart": {
+   "lat": "45.8373",
+   "lng": "6.4159"
+  }
+ },
+ {
+  "id": "188914",
+  "titre": "Banc lingual",
+  "orientation": "NW",
+  "denivele": "1075",
+  "dif_ski": "4.1",
+  "date": "1766617200",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Bauges"
+  },
+  "sommets": [
+   {
+    "sommet": "Petite Chaurionde",
+    "altitude": "2123",
+    "lat": "45.6887",
+    "lng": "6.2613"
+   },
+   {
+    "sommet": "Petite Sambuy",
+    "altitude": "2107",
+    "lat": "45.6952",
+    "lng": "6.2644"
+   },
+   {
+    "sommet": "Pointe de Chaurionde",
+    "altitude": "2173",
+    "lat": "45.6839",
+    "lng": "6.2584"
+   },
+   {
+    "sommet": "Pointe de la Sambuy",
+    "altitude": "2198",
+    "lat": "45.6916",
+    "lng": "6.2653"
+   }
+  ],
+  "depart": {
+   "lat": "45.7137",
+   "lng": "6.2753"
+  }
+ },
+ {
+  "id": "188913",
+  "titre": "Montagne de Sulens, Sulens par Plan Bois",
+  "orientation": "NW",
+  "denivele": "540",
+  "dif_ski": "2.1",
+  "date": "1771369200",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Bornes - Aravis"
+  },
+  "sommets": [
+   {
+    "sommet": "Montagne de Sulens",
+    "altitude": "1839",
+    "lat": "45.8293",
+    "lng": "6.3713"
+   }
+  ],
+  "depart": {
+   "lat": "45.8398",
+   "lng": "6.35825"
+  }
+ },
+ {
+  "id": "188912",
+  "titre": "Dent Parrachée, Par la brèche de la Loza",
+  "orientation": "T",
+  "denivele": "2170",
+  "dif_ski": "4.2",
+  "date": "1772319600",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Vanoise"
+  },
+  "sommets": [
+   {
+    "sommet": "Dent Parrachée",
+    "altitude": "3697",
+    "lat": "45.2889",
+    "lng": "6.75611"
+   }
+  ],
+  "depart": {
+   "lat": "45.2332",
+   "lng": "6.7421"
+  }
+ },
+ {
+  "id": "188911",
+  "titre": "Pic de Jallouvre, Triangle Ouest",
+  "orientation": "W",
+  "denivele": "1300",
+  "dif_ski": "4.1",
+  "date": "1772838000",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Bornes - Aravis"
+  },
+  "sommets": [
+   {
+    "sommet": "Pic de Jallouvre",
+    "altitude": "2408",
+    "lat": "45.996",
+    "lng": "6.4534"
+   }
+  ],
+  "depart": {
+   "lat": "45.9706",
+   "lng": "6.39821"
+  }
+ },
+ {
+  "id": "188910",
+  "titre": "Pointe de Cerdosse, Couloir Nord-Est",
+  "orientation": "T",
+  "denivele": "1120",
+  "dif_ski": "4.1",
+  "date": "1774652400",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Beaufortain"
+  },
+  "sommets": [
+   {
+    "sommet": "Pointe de Cerdosse",
+    "altitude": "2595",
+    "lat": "45.6269",
+    "lng": "6.65033"
+   }
+  ],
+  "depart": {
+   "lat": "45.5924",
+   "lng": "6.6708"
+  }
+ },
+ {
+  "id": "188909",
+  "titre": "Croisse Baulet, De Cordon par le Col de l'Avenaz",
+  "orientation": "SE",
+  "denivele": "1116",
+  "dif_ski": "2.3",
+  "date": "1773529200",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Bornes - Aravis"
+  },
+  "sommets": [
+   {
+    "sommet": "Croisse Baulet",
+    "altitude": "2236",
+    "lat": "45.8984",
+    "lng": "6.55215"
+   }
+  ],
+  "depart": {
+   "lat": "45.9035",
+   "lng": "6.5858"
+  }
+ },
+ {
+  "id": "188908",
+  "titre": "Lochberg, versant S",
+  "orientation": "S",
+  "denivele": "1800",
+  "dif_ski": "3.1",
+  "date": "1776376800",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Alpes de Suisse Centrale"
+  },
+  "sommets": [
+   {
+    "sommet": "Lochberg",
+    "altitude": "3074",
+    "lat": "0",
+    "lng": "0"
+   }
+  ],
+  "depart": {
+   "lat": "46.599",
+   "lng": "8.50331"
+  }
+ },
+ {
+  "id": "188907",
+  "titre": "Sustenhorn, Normale",
+  "orientation": "NW",
+  "denivele": "1650",
+  "dif_ski": "2.3",
+  "date": "1776549600",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Alpes de Suisse Centrale"
+  },
+  "sommets": [
+   {
+    "sommet": "Sustenhorn",
+    "altitude": "3503",
+    "lat": "46.7002",
+    "lng": "8.45626"
+   }
+  ],
+  "depart": {
+   "lat": "46.7309",
+   "lng": "8.42725"
+  }
+ },
+ {
+  "id": "188906",
+  "titre": "Col des Anneaux E",
+  "orientation": "E",
+  "denivele": "1490",
+  "dif_ski": "3.2",
+  "date": "1776895200",
+  "auteur": {
+   "pseudo": "user1"
+  },
+  "massif": {
+   "nom": "Ecrins"
+  },
+  "sommets": [
+   {
+    "sommet": "Col des Agneaux",
+    "altitude": "3157",
+    "lat": "44.9666",
+    "lng": "6.3872"
+   }
+  ],
+  "depart": {
+   "lat": "44.9865",
+   "lng": "5.9704"
+  }
+ },
+ {
+  "id": "188813",
+  "titre": "Cerro Sin Nombre",
+  "orientation": "S",
+  "denivele": "1315",
+  "dif_ski": "4.1",
+  "date": "1787522400",
+  "auteur": {
+   "pseudo": "user2"
+  },
+  "massif": {
+   "nom": "Andes centrales"
+  },
+  "depart": {
+   "lat": "-33.706",
+   "lng": "-70.1233"
+  }
+ },
+ {
+  "id": "188812",
+  "titre": "Cerro Union couloir SW",
+  "orientation": "SW",
+  "denivele": "1798",
+  "dif_ski": "4.2",
+  "date": "1787436000",
+  "auteur": {
+   "pseudo": "user2"
+  },
+  "massif": {
+   "nom": "Andes centrales"
+  },
+  "depart": {
+   "lat": "-33.706",
+   "lng": "-70.1233"
+  }
+ },
+ {
+  "id": "188808",
+  "titre": "Bienvenue en Absurdie, ici on y ski même au mois d'Août : Névé de la Combe à Marion",
+  "orientation": "N",
+  "denivele": "500",
+  "dif_ski": "2.1",
+  "date": "1785535200",
+  "auteur": {
+   "pseudo": "user3"
+  },
+  "massif": {
+   "nom": "Bornes - Aravis"
+  },
+  "sommets": [
+   {
+    "sommet": "Blonnière",
+    "altitude": "2369",
+    "lat": "45.8588",
+    "lng": "6.4533"
+   }
+  ],
+  "depart": {
+   "lat": "45.8649",
+   "lng": "6.4886"
+  }
+ },
+ {
+  "id": "188790",
+  "titre": "Mont Ruapehu - Whakapapa",
+  "orientation": "S",
+  "denivele": "1100",
+  "dif_ski": "2.3",
+  "date": "1784066400",
+  "auteur": {
+   "pseudo": "user4"
+  },
+  "massif": {
+   "nom": "Nouvelle Zelande"
+  },
+  "sommets": [
+   {
+    "sommet": "Mount Ruapehu",
+    "altitude": "2797",
+    "lat": "-39.285",
+    "lng": "175.559"
+   }
+  ],
+  "depart": {
+   "lat": "-39.2363",
+   "lng": "175.555"
+  }
+ },
+ {
+  "id": "188788",
+  "titre": "VTTEtendard 2026, en boucle par les Quirlies",
+  "orientation": "NE",
+  "denivele": "2150",
+  "dif_ski": "2.3",
+  "date": "1783202400",
+  "auteur": {
+   "pseudo": "user5"
+  },
+  "massif": {
+   "nom": "Grandes Rousses - Arves"
+  },
+  "sommets": [
+   {
+    "sommet": "Pic de l'Étendard",
+    "altitude": "3464",
+    "lat": "45.1544",
+    "lng": "6.1438"
+   }
+  ],
+  "depart": {
+   "lat": "45.0825",
+   "lng": "6.1616"
+  }
+ },
+ {
+  "id": "188785",
+  "titre": "Pic Blanc Alpe d'Huez",
+  "orientation": "",
+  "denivele": "1430",
+  "dif_ski": "",
+  "date": "1783029600",
+  "auteur": {
+   "pseudo": "user6"
+  },
+  "massif": {
+   "nom": "Grandes Rousses - Arves"
+  },
+  "depart": {
+   "lat": "45.0878",
+   "lng": "6.1493"
+  }
+ },
+ {
+  "id": "188784",
+  "titre": "Tête (plus très) Blanche&nbsp;",
+  "orientation": "NW",
+  "denivele": "1273",
+  "dif_ski": "2.3",
+  "date": "1782252000",
+  "auteur": {
+   "pseudo": "user7"
+  },
+  "massif": {
+   "nom": "Mont Blanc"
+  },
+  "sommets": [
+   {
+    "sommet": "Tete Blanche",
+    "altitude": "3420",
+    "lat": "45.9836",
+    "lng": "7.0194"
+   }
+  ],
+  "depart": {
+   "lat": "46.0268",
+   "lng": "6.9699"
+  }
+ },
+ {
+  "id": "188782",
+  "titre": "Mont Blanc, Par les Grands Mulets",
+  "orientation": "N",
+  "denivele": "2500",
+  "dif_ski": "3.1",
+  "date": "1781560800",
+  "auteur": {
+   "pseudo": "user8"
+  },
+  "massif": {
+   "nom": "Mont Blanc"
+  },
+  "sommets": [
+   {
+    "sommet": "Mont Blanc",
+    "altitude": "4810",
+    "lat": "45.8325",
+    "lng": "6.86417"
+   }
+  ],
+  "depart": {
+   "lat": "45.9016",
+   "lng": "6.885"
+  }
+ },
+ {
+  "id": "188781",
+  "titre": "Hors saison à la Belle Etoile",
+  "orientation": "NW",
+  "denivele": "1800",
+  "dif_ski": "3.3",
+  "date": "1781992800",
+  "auteur": {
+   "pseudo": "user9"
+  },
+  "massif": {
+   "nom": "Belledonne"
+  },
+  "sommets": [
+   {
+    "sommet": "Pic de la Belle Etoile",
+    "altitude": "2718",
+    "lat": "45.2369",
+    "lng": "6.054"
+   }
+  ],
+  "depart": {
+   "lat": "45.2703",
+   "lng": "6.05497"
+  }
+ },
+ {
+  "id": "188780",
+  "titre": "Pic des 3 Evêchés, façon fondue estivale",
+  "orientation": "E",
+  "denivele": "1100",
+  "dif_ski": "3.2",
+  "date": "1781906400",
+  "auteur": {
+   "pseudo": "user10"
+  },
+  "massif": {
+   "nom": "Grandes Rousses - Arves"
+  },
+  "sommets": [
+   {
+    "sommet": "Pic des 3 Evêchés",
+    "altitude": "3116",
+    "lat": "45.07",
+    "lng": "6.3649"
+   }
+  ],
+  "depart": {
+   "lat": "45.0759",
+   "lng": "6.41207"
+  }
+ },
+ {
+  "id": "188777",
+  "titre": "Pointe de la Sana, et boucle Fond des fours&gt;Rocheure&gt;Barmes de l'ours&gt;Vallon du Charvet",
+  "orientation": "T",
+  "denivele": "1200",
+  "dif_ski": "2.2",
+  "date": "1781388000",
+  "auteur": {
+   "pseudo": "user5"
+  },
+  "massif": {
+   "nom": "Vanoise"
+  },
+  "sommets": [
+   {
+    "sommet": "Pointe de la Sana",
+    "altitude": "3436",
+    "lat": "45.3851",
+    "lng": "6.9175"
+   }
+  ],
+  "depart": {
+   "lat": "45.4392",
+   "lng": "6.9747"
+  }
+ },
+ {
+  "id": "188776",
+  "titre": "Pointe des Buffettes en boucle par le col des Roches et le col des Fours",
+  "orientation": "T",
+  "denivele": "1800",
+  "dif_ski": "2.3",
+  "date": "1781301600",
+  "auteur": {
+   "pseudo": "user5"
+  },
+  "massif": {
+   "nom": "Vanoise"
+  },
+  "sommets": [
+   {
+    "sommet": "Col des Fours",
+    "altitude": "2976",
+    "lat": "45.3933",
+    "lng": "7.0072"
+   },
+   {
+    "sommet": "Pointe des Buffettes",
+    "altitude": "3233",
+    "lat": "45.3656",
+    "lng": "7.0067"
+   }
+  ],
+  "depart": {
+   "lat": "45.4195",
+   "lng": "6.97205"
+  }
+ },
+ {
+  "id": "188775",
+  "titre": "Mont Blanc du Tacul, Face N par l'épaule",
+  "orientation": "N",
+  "denivele": "750",
+  "dif_ski": "3.3",
+  "date": "1780696800",
+  "auteur": {
+   "pseudo": "user11"
+  },
+  "massif": {
+   "nom": "Mont Blanc"
+  },
+  "sommets": [
+   {
+    "sommet": "Mont Blanc du Tacul",
+    "altitude": "4248",
+    "lat": "45.8564",
+    "lng": "6.88778"
+   }
+  ],
+  "depart": {
+   "lat": "45.8791",
+   "lng": "6.887"
+  }
+ },
+ {
+  "id": "188774",
+  "titre": "Combo skis parapente Mont Blanc, col du Midi ,Grands Mulets .",
+  "orientation": "N",
+  "denivele": "3555",
+  "dif_ski": "3.1",
+  "date": "1780092000",
+  "auteur": {
+   "pseudo": "user11"
+  },
+  "massif": {
+   "nom": "Mont Blanc"
+  },
+  "sommets": [
+   {
+    "sommet": "Mont Blanc",
+    "altitude": "4810",
+    "lat": "45.8325",
+    "lng": "6.86417"
+   }
+  ],
+  "depart": {
+   "lat": "45.9018",
+   "lng": "6.8606"
+  }
+ },
+ {
+  "id": "188772",
+  "titre": "Full Menu Snomanen",
+  "orientation": "NE",
+  "denivele": "2500",
+  "dif_ski": "4.1",
+  "date": "1781388000",
+  "auteur": {
+   "pseudo": "user12"
+  },
+  "massif": {
+   "nom": "Alpes de Lyngen (Norvege)"
+  },
+  "depart": {
+   "lat": "69.3827",
+   "lng": "19.2892"
+  }
+ },
+ {
+  "id": "188771",
+  "titre": "Dome des Ecrins par la Grande Sagne",
+  "orientation": "N",
+  "denivele": "2294",
+  "dif_ski": "5.1",
+  "date": "1780783200",
+  "auteur": {
+   "pseudo": "user13"
+  },
+  "massif": {
+   "nom": "Ecrins"
+  },
+  "sommets": [
+   {
+    "sommet": "Col de la Grande Sagne",
+    "altitude": "3402",
+    "lat": "44.9319",
+    "lng": "6.37917"
+   },
+   {
+    "sommet": "Dôme des Ecrins",
+    "altitude": "4015",
+    "lat": "44.9243",
+    "lng": "6.35337"
+   }
+  ],
+  "depart": {
+   "lat": "44.9165",
+   "lng": "6.41724"
+  }
+ },
+ {
+  "id": "188770",
+  "titre": "Ouille noire ouest",
+  "orientation": "W",
+  "denivele": "850",
+  "dif_ski": "3.3",
+  "date": "1781388000",
+  "auteur": {
+   "pseudo": "user14"
+  },
+  "massif": {
+   "nom": "Alpes Grées S"
+  },
+  "sommets": [
+   {
+    "sommet": "Ouille Noire",
+    "altitude": "3357",
+    "lat": "45.4062",
+    "lng": "7.07197"
+   }
+  ],
+  "depart": {
+   "lat": "45.4067",
+   "lng": "7.02778"
+  }
+ }
+]

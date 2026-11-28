@@ -1,0 +1,56 @@
+{
+ "items": [
+  {
+   "viewtype1": true,
+   "id": 2355344,
+   "mainpoint": "Firstspitz (1624m)",
+   "type": "Skitour",
+   "typesym": "ski",
+   "region": "CH - Zentralschweiz",
+   "region_group": "Schweiz",
+   "hasautorinfos": true,
+   "autor": "user4",
+   "datum": "24.11.2026",
+   "year": "2026",
+   "ident": "2355344-skitour-firstspitz-1624m",
+   "isinactive": false,
+   "isnew": false
+  },
+  {
+   "viewtype1": true,
+   "id": 2355342,
+   "mainpoint": "Sigriswiler Rothorn (2051m)",
+   "type": "Schneeschuhtour",
+   "typesym": "schneeschuh",
+   "region": "CH - Waadt/Freib./Berner Alpen",
+   "region_group": "Schweiz",
+   "hasautorinfos": true,
+   "autor": "user5",
+   "datum": "24.11.2026",
+   "year": "2026",
+   "ident": "2355342-schneeschuhtour-sigriswiler-rothorn-2051m",
+   "isinactive": false,
+   "isnew": false
+  },
+  {
+   "viewtype1": true,
+   "id": 2355201,
+   "mainpoint": "Bürglen (2165m)",
+   "type": "Skitour",
+   "typesym": "ski",
+   "region": "CH - Waadt/Freib./Berner Alpen",
+   "region_group": "Schweiz",
+   "hasautorinfos": true,
+   "autor": "user6",
+   "datum": "23.11.2026",
+   "year": "2026",
+   "ident": "2355201-skitour-buerglen-2165m",
+   "isinactive": false,
+   "isnew": false
+  }
+ ],
+ "meta": {
+  "total": 132500
+ },
+ "template": "<article class=\"item list-item{{#isinactive}} inactive{{/isinactive}} y{{year}}\" id=\"conditions{{id}}\">{{#controlpanel}}{{button}}{{/controlpanel}}<a href=\"/verhaeltnisse/{{ident}}\"><div class=\"item_inner\">{{#viewtype1}}<div class=\"tilecontent\"><div class=\"typeinfo\">{{short_category}}</div><div class=\"tilebackgroundimage\">{{#hasimage}}<span class=\"tileimage lazyload\" style=\"background-image:url('/data/images/icon/{{preview}}')\" data-lazyload=\"icon-full\" data-target=\"bg\"></span>{{/hasimage}}{{#hasnoimage}}<span class=\"tileimage test\" style=\"background-image:url('{{dummy}}')\"></span>{{/hasnoimage}}</div><div class=\"detailoverlay\"><div class=\"topinfo\"><span class=\"left\">{{#isnew}}<i class=\"sym dv-tt isnew\"><svg><use xlink:href=\"/dist/gui-db80699370.svg#isnew\"></use></svg></i>{{/isnew}}{{datum}}</span><span class=\"right\">{{region}}</span></div><span class=\"icon\"><i class=\"sym dv-tt\" data-tooltip=\"{{type}}\"><svg><use xlink:href=\"/dist/tp-2d35ecd75e.svg#{{typesym}}\"></use></svg></i></span><h2>{{mainpoint}}</h2><div class=\"previewsubtitle\"><span class=\"dv-tt\" data-tooltip=\"{{routename}}\">{{routename}}</span></div><div class=\"previewtextcontainer\"><p>{{contentpreview}}</p></div><div class=\"bottominfo\">{{#hasautorinfos}}<div class=\"left\"><div class=\"imgbox testclass\" style=\"background-image: url({{autor_image}})\"></div><span class=\" dv-tt\" data-tooltip=\"Autor: {{autor}}\">{{autor}}</span></div>{{/hasautorinfos}}<div class=\"right\"><i id=\"\" class=\"sym dv-tt\"{{#hasgps}} data-tooltip=\"Mit GPS-Track\"{{/hasgps}}><svg>{{#hasgps}}<use xlink:href=\"/dist/tp-2d35ecd75e.svg#gps\"></use>{{/hasgps}}</svg></i><i id=\"\" class=\"sym dv-tt\"{{#hasvideo}} data-tooltip=\"Mit Video\"{{/hasvideo}}><svg>{{#hasvideo}}<use xlink:href=\"/dist/gui-db80699370.svg#video\"></use>{{/hasvideo}}</svg></i><i id=\"\"  class=\"sym dv-tt{{#hasrating}}{{/hasrating}}\"{{#hasrating}} data-tooltip=\"Bewertung: {{ratingtext}}\"{{/hasrating}}><svg class=\"ranking{{ratingkey}}\">{{#hasrating}}<use xlink:href=\"/dist/tp-2d35ecd75e.svg#star\"></use>{{/hasrating}}</svg></i></div></div></div></div><div class=\"listcontent\"><span class=\"column main-icon\"><i class=\"large-sym dv-tt\" data-tooltip=\"{{type}}\"><svg><use xlink:href=\"/dist/tp-2d35ecd75e.svg#{{typesym}}\"></use></svg></i></span><span class=\"double column main-title\"><div class=\" dv-tt main\" data-tooltip=\"{{mainpoint}}\">{{mainpoint}}</div><div class=\" dv-tt\" data-tooltip=\"{{routename}}\">{{routename}}</div></span><span class=\"double column regions\"><div class=\" dv-tt\" data-tooltip=\"{{region}}\">{{region}}</div><div class=\" dv-tt\" data-tooltip=\"{{region_group}}\">{{region_group}}</div></span><span class=\"column status-icons\"><i id=\"\" class=\"sym dv-tt\"{{#hasgps}} data-tooltip=\"Mit GPS-Track\"{{/hasgps}}><svg>{{#hasgps}}<use xlink:href=\"/dist/tp-2d35ecd75e.svg#gps\"></use>{{/hasgps}}</svg></i><i id=\"\" class=\"sym dv-tt\"{{#hasphoto}} data-tooltip=\"Mit Foto(s)\"{{/hasphoto}}><svg>{{#hasphoto}}<use xlink:href=\"/dist/gui-db80699370.svg#hasimage\"></use>{{/hasphoto}}</svg></i><i id=\"\" class=\"sym dv-tt\"{{#hasvideo}} data-tooltip=\"Mit Video\"{{/hasvideo}}><svg>{{#hasvideo}}<use xlink:href=\"/dist/gui-db80699370.svg#video\"></use>{{/hasvideo}}</svg></i><i id=\"\"  class=\"sym dv-tt{{#hasrating}}{{/hasrating}}\"{{#hasrating}} data-tooltip=\"Bewertung: {{ratingtext}}\"{{/hasrating}}><svg class=\"ranking{{ratingkey}}\">{{#hasrating}}<use xlink:href=\"/dist/tp-2d35ecd75e.svg#star\"></use>{{/hasrating}}</svg></i></span><span class=\"double column information\"><div class=\"date_info\">{{#isnew}}<i class=\"sym dv-tt isnew\"><svg><use xlink:href=\"/dist/gui-db80699370.svg#isnew\"></use></svg></i>{{/isnew}}<span class=\"date dv-tt {{#isnew}} new{{/isnew}}\" data-tooltip=\"{{#isnew}}Neuer Eintrag<br>{{/isnew}}Datum Tour: {{datum}}\">{{datum}}</span></div>{{#hasautorinfos}}<div class=\"autor-infos\"><div class=\"imgbox testclass\" style=\"background-image: url({{autor_image}})\"></div><span class=\" dv-tt tr\" data-tooltip=\"Autor: {{autor}}\">{{autor}}</span></div>{{/hasautorinfos}}<div class=\"mobile-region dv-tt\" data-tooltip=\"{{region}}\">{{region}}</div></span></div>{{/viewtype1}}{{#viewtype2}}<span class=\"col1 st1\"><i class=\"sym dv-tt\" data-tooltip=\"{{type}}\"><svg><use xlink:href=\"/dist/tp-2d35ecd75e.svg#{{typesym}}\"></use></svg></i></span><span class=\"col10 st1 dv-tt\" data-tooltip=\"{{pointname}}\">{{pointname}}</span><span class=\"col5 st1 dv-tt\" data-tooltip=\"{{datum}}\">{{datum}}</span>{{/viewtype2}}{{#viewtype3}}<span class=\"col1 st1\">{{#quick}}<svg class=\"sym inline large dv-tt\" data-tooltip=\"{{quick_name}}\"><use xlink:href=\"/dist/tp-2d35ecd75e.svg#smiley{{quick}}\"></use></svg>{{/quick}}</span><span class=\"col10 st1 dv-tt\" data-tooltip=\"{{routename}}\">{{routename}}</span><span class=\"col5 st1 dv-tt\" data-tooltip=\"{{datum}}\">{{datum}}</span>{{/viewtype3}}{{#viewtype4}}<span class=\"col1 st2 dv-tt\">{{#quick}}<i class=\"sym dv-tt\" data-tooltip=\"{{quick_name}}\"><svg><use xlink:href=\"/dist/tp-2d35ecd75e.svg#smiley{{quick}}\"></use></svg></i>{{/quick}}</span><span class=\"col6 st2 dv-tt\" data-tooltip=\"{{pointname}}\">{{pointname}}</span><span class=\"col6 st2 user\"><i class=\"sym dv-tt\" data-tooltip=\"{{autor}}\"><div class=\"imgbox\" style=\"background-image: url('/dist/user-5770990683.svg')\"></div></i>{{autor}}</span><i class=\"sym dv-tt\" {{#hasgps}} data-tooltip=\"Mit GPS-Track {{/hasgps}}\">{{#hasgps}}<svg><use xlink:href=\"/dist/tp-2d35ecd75e.svg#gps\"></use></svg>{{/hasgps}}</i><i class=\"sym dv-tt\" {{#hasphoto}} data-tooltip=\"Mit Foto(s) {{/hasphoto}}\">{{#hasphoto}}<svg><use xlink:href=\"/dist/tp-2d35ecd75e.svg#foto\"></use></svg>{{/hasphoto}}</i><i class=\"sym dv-tt\" {{#hascomment}} data-tooltip=\"Mit Kommentaren {{/hascomment}}\">{{#hascomment}}<svg><use xlink:href=\"/dist/tp-2d35ecd75e.svg#comment\"></use></svg>{{/hascomment}}</i>{{/viewtype4}}</div></a></article>\n"
+}
