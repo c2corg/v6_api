@@ -34,6 +34,7 @@ help:
 	@echo "  run-syncer           Run the ElasticSearch syncer script"
 	@echo "  run-background-jobs  Run the background jobs"
 	@echo "  harvest-partners     Harvest the partner outings once"
+	@echo "  backfill-partners    Backfill older partner outings (temporary; ARGS=\"--sources all --steps 3\")"
 	@echo
 	@echo "  test                 Run the unit tests"
 	@echo "  format               Format the Python code with ruff (and apply safe lint fixes)"
@@ -56,7 +57,7 @@ help:
 	@echo "                       (make CONFIG=<env file> load-env adds an env file)"
 
 .PHONY: bootstrap start stop serve lint test init-database init-test-database \
-		init-elastic install run-syncer run-background-jobs harvest-partners flush-redis load-env
+		init-elastic install run-syncer run-background-jobs harvest-partners backfill-partners flush-redis load-env
 
 bootstrap:
 		$(MAKE) start
@@ -154,6 +155,10 @@ run-background-jobs:
 
 harvest-partners:
 		$(UV_RUN) python c2corg_api/scripts/jobs/harvest_partners.py development.ini
+
+# TEMPORARY (c2corg/v6_api#2763): delete with the backfill_* files
+backfill-partners:
+		$(UV_RUN) python c2corg_api/scripts/jobs/backfill_partners.py development.ini $(ARGS)
 
 flush-redis:
 		$(UV_RUN) python c2corg_api/scripts/redis-flushdb.py development.ini

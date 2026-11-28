@@ -1,0 +1,38 @@
+{
+  "source": "skitour",
+  "recorded_at": "2026-11-25",
+  "synthetic": true,
+  "note": "Season 2027: the recording of fixtures/skitour (2026-11-25). Seasons 2026 and 2025: made by hand (two outings of the recording, new ids, dates and titles; then an empty season): the API key of the sandbox was refused when the backfill was written.",
+  "entries": [
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {
+        "a": "2027",
+        "p": "1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_a2027_p1.json"
+    },
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {
+        "a": "2026",
+        "p": "1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_a2026_p1.json"
+    },
+    {
+      "url": "https://skitour.fr/api/sorties",
+      "params": {
+        "a": "2025",
+        "p": "1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "sorties_a2025_p1.json"
+    }
+  ]
+}

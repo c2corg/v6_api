@@ -1,0 +1,120 @@
+{
+  "source": "bivouak",
+  "recorded_at": "2026-11-28",
+  "synthetic": false,
+  "note": "Recorded 2026-11-28 by a backfill step (floor 2026-09-01, 12 pages, 2 detail pages) with the c2c user agent, 10 s apart; trimmed to REQUIRED_SELECTORS, authors pseudonymised, then cut to the first 3 cards of each page (the pages are sorted newest first: the walk takes the same turns).",
+  "entries": [
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport1_start1.html",
+      "params": {
+        "id_sport": "1",
+        "start": "1"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport1_start2.html",
+      "params": {
+        "id_sport": "1",
+        "start": "2"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport2_start1.html",
+      "params": {
+        "id_sport": "2",
+        "start": "1"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport2_start2.html",
+      "params": {
+        "id_sport": "2",
+        "start": "2"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport8_start1.html",
+      "params": {
+        "id_sport": "8",
+        "start": "1"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport4_start1.html",
+      "params": {
+        "id_sport": "4",
+        "start": "1"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport4_start2.html",
+      "params": {
+        "id_sport": "4",
+        "start": "2"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport16_start1.html",
+      "params": {
+        "id_sport": "16",
+        "start": "1"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport16_start2.html",
+      "params": {
+        "id_sport": "16",
+        "start": "2"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/liste_des_sorties.php",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "liste_des_sorties_id_sport16_start3.html",
+      "params": {
+        "id_sport": "16",
+        "start": "3"
+      }
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30895-prelude.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_30895_prelude.html"
+    },
+    {
+      "url": "https://www.bivouak.net/topos/sortie-30892-oratoire-charmant-som.html",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "file": "sortie_30892_oratoire_charmant_som.html"
+    }
+  ]
+}

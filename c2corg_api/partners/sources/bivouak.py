@@ -178,6 +178,8 @@ class BivouakAdapter:
 
 class _Run:
     def __init__(self, ctx, result):
+        # the cap of a run (the temporary backfill sets its own)
+        self.max_detail_fetches = MAX_DETAIL_FETCHES
         self.ctx = ctx
         self.result = result
         self.seen = set()
@@ -412,7 +414,10 @@ class _Run:
         cached = self.ctx.lookups.get(key)
         if cached is not None:
             return cached
-        if self.detail_fetches >= MAX_DETAIL_FETCHES or not self.requests.available:
+        if (
+            self.detail_fetches >= self.max_detail_fetches
+            or not self.requests.available
+        ):
             return None  # not remembered: nothing was tried
         self.detail_fetches += 1
         response = self.requests.get(url)

@@ -1,0 +1,56 @@
+{
+  "source": "gipfelbuch",
+  "recorded_at": "2026-11-28",
+  "synthetic": false,
+  "note": "Recorded 2026-11-28 by a backfill step (floor 2026-11-22) with the c2c user agent. The listing is reduced to its form token (a placeholder); the JSON of the form keeps the first 3 reports of each answer and only the fields the template rows read (no preview text, no photo, no route name), authors pseudonymised; the summit pages are trimmed to REQUIRED_SELECTORS. POST entries match on the offset only.",
+  "entries": [
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/uebersicht",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "uebersicht.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/conditions/list",
+      "method": "POST",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "conditions_list_offset0.json",
+      "params": {
+        "filter_conditions_offset": "0"
+      }
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2356636",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2356636.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/verhaeltnisse/2356630",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "2356630.html"
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/conditions/list",
+      "method": "POST",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "conditions_list_offset66.json",
+      "params": {
+        "filter_conditions_offset": "66"
+      }
+    },
+    {
+      "url": "https://www.gipfelbuch.ch/conditions/list",
+      "method": "POST",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "conditions_list_offset132.json",
+      "params": {
+        "filter_conditions_offset": "132"
+      }
+    }
+  ]
+}

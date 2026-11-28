@@ -1,0 +1,54 @@
+[
+ {
+  "id": "900001",
+  "titre": "Sortie de test un",
+  "orientation": "T",
+  "denivele": "1250",
+  "dif_ski": "2.1",
+  "date": "1771110000",
+  "auteur": {
+   "pseudo": "user90"
+  },
+  "massif": {
+   "nom": "Grandes Rousses - Arves"
+  },
+  "sommets": [
+   {
+    "sommet": "Dôme des Petites Rousses",
+    "altitude": "2793",
+    "lat": "45.1283",
+    "lng": "6.10591"
+   }
+  ],
+  "depart": {
+   "lat": "45.0955",
+   "lng": "6.06973"
+  }
+ },
+ {
+  "id": "900002",
+  "titre": "Sortie de test deux",
+  "orientation": "SE",
+  "denivele": "1500",
+  "dif_ski": "3.2",
+  "date": "1766185200",
+  "auteur": {
+   "pseudo": "user91"
+  },
+  "massif": {
+   "nom": "Lauzière - Cheval Noir"
+  },
+  "sommets": [
+   {
+    "sommet": "Roc Rouge",
+    "altitude": "2375",
+    "lat": "45.435",
+    "lng": "6.3402"
+   }
+  ],
+  "depart": {
+   "lat": "45.423",
+   "lng": "6.3596"
+  }
+ }
+]

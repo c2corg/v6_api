@@ -1,0 +1,65 @@
+{
+  "source": "skitourenportal",
+  "recorded_at": "2026-11-28",
+  "synthetic": false,
+  "note": "Recorded 2026-11-28 by a backfill step (floor 2026-10-01) with the c2c user agent; trimmed to REQUIRED_SELECTORS, authors pseudonymised, cut to the first 3 rows of each page, the map script reduced to the tour markers of those rows (the live popups name the authors).",
+  "entries": [
+    {
+      "url": "https://skitourenportal.eu/salzburg",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "salzburg.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/salzburg",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "salzburg_page2.html",
+      "params": {
+        "page": "2"
+      }
+    },
+    {
+      "url": "https://skitourenportal.eu/oberoesterreich",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "oberoesterreich.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/niederoesterreich",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "niederoesterreich.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/niederoesterreich",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "niederoesterreich_page2.html",
+      "params": {
+        "page": "2"
+      }
+    },
+    {
+      "url": "https://skitourenportal.eu/kaernten",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "kaernten.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/steiermark",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "steiermark.html"
+    },
+    {
+      "url": "https://skitourenportal.eu/steiermark",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "file": "steiermark_page2.html",
+      "params": {
+        "page": "2"
+      }
+    }
+  ]
+}

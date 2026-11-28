@@ -1,0 +1,83 @@
+{
+  "source": "onice",
+  "recorded_at": "2026-11-28",
+  "synthetic": false,
+  "note": "Recorded 2026-11-28 by backfill steps (the first page of the list of each type; two detail pages) with the c2c user agent; trimmed to REQUIRED_SELECTORS, texts redacted, authors pseudonymised, cut to the first 3 rows of each page (so each list ends after its first page).",
+  "entries": [
+    {
+      "url": "http://www.on-ice.it/onice/onice_reports.php",
+      "status": 200,
+      "content_type": "text/html; charset=ISO-8859-1",
+      "file": "onice_reports_start0_type1_u0.html",
+      "params": {
+        "type": "1",
+        "u": "0",
+        "start": "0"
+      }
+    },
+    {
+      "url": "http://www.on-ice.it/onice/onice_reports.php",
+      "status": 200,
+      "content_type": "text/html; charset=ISO-8859-1",
+      "file": "onice_reports_start0_type2_u0.html",
+      "params": {
+        "type": "2",
+        "u": "0",
+        "start": "0"
+      }
+    },
+    {
+      "url": "http://www.on-ice.it/onice/onice_reports.php",
+      "status": 200,
+      "content_type": "text/html; charset=ISO-8859-1",
+      "file": "onice_reports_start0_type3_u0.html",
+      "params": {
+        "type": "3",
+        "u": "0",
+        "start": "0"
+      }
+    },
+    {
+      "url": "http://www.on-ice.it/onice/onice_reports.php",
+      "status": 200,
+      "content_type": "text/html; charset=ISO-8859-1",
+      "file": "onice_reports_start0_type4_u0.html",
+      "params": {
+        "type": "4",
+        "u": "0",
+        "start": "0"
+      }
+    },
+    {
+      "url": "http://www.on-ice.it/onice/onice_reports.php",
+      "status": 200,
+      "content_type": "text/html; charset=ISO-8859-1",
+      "file": "onice_reports_start0_type6_u0.html",
+      "params": {
+        "type": "6",
+        "u": "0",
+        "start": "0"
+      }
+    },
+    {
+      "url": "http://www.on-ice.it/onice/onice_view_report.php",
+      "status": 200,
+      "content_type": "text/html; charset=ISO-8859-1",
+      "file": "onice_view_report_id26073_type1.html",
+      "params": {
+        "type": "1",
+        "id": "26073"
+      }
+    },
+    {
+      "url": "http://www.on-ice.it/onice/onice_view_report.php",
+      "status": 200,
+      "content_type": "text/html; charset=ISO-8859-1",
+      "file": "onice_view_report_id26072_type1.html",
+      "params": {
+        "type": "1",
+        "id": "26072"
+      }
+    }
+  ]
+}

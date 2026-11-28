@@ -1,0 +1,33 @@
+{
+ "10191": {
+  "title": "Cialma (la) o Punta Cia da Carello",
+  "region": {
+   "name": "Piemonte"
+  },
+  "district": "TO",
+  "meta": {
+   "data": {
+    "drop": {
+     "value": "795"
+    },
+    "alt_top": {
+     "value": "2196"
+    },
+    "exposure": {
+     "value": "Est"
+    },
+    "grade_skimo": {
+     "value": "MS"
+    }
+   },
+   "geo": {
+    "coords": {
+     "value": {
+      "lat": 45.4089357705333,
+      "lng": 7.432798186508176
+     }
+    }
+   }
+  }
+ }
+}
