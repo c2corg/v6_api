@@ -194,10 +194,10 @@ def test_skitour_on_the_fixtures(db):
     assert summary['cursor']['done'] is True
     old = db.scalar(
         select(PartnerOuting).where(
-            PartnerOuting.source == 'skitour', PartnerOuting.external_id == '900001'
+            PartnerOuting.source == 'skitour', PartnerOuting.external_id == '188918'
         )
     )
-    assert old.date == datetime.date(2026, 2, 18)
+    assert old.date == datetime.date(2025, 12, 16)
 
 
 def test_a_source_held_by_another_step_is_skipped(db):

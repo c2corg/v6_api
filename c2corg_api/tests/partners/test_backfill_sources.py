@@ -66,17 +66,17 @@ def test_season_of(day, season):
 
 def test_skitour_walks_the_seasons_down_to_the_floor():
     result, transport = run('skitour', datetime.date(2025, 1, 1))
-    # seasons 2027 (the recording), 2026 (two outings), 2025 (empty); 2024
+    # seasons 2027 (the recording), 2026 (30 outings), 2025 (empty); 2024
     # ends before the floor
     assert transport.request_count == 3
     assert result.cursor == {'season': 2024, 'page': 1, 'done': True}
     ids = {o.external_id for o in result.outings}
-    assert {'900001', '900002'} <= ids
-    assert len(ids) == 32
-    old = next(o for o in result.outings if o.external_id == '900001')
-    assert old.date == datetime.date(2026, 2, 15)
-    assert old.source == 'skitour'
-    assert old.url == 'https://skitour.fr/sorties/900001'
+    assert '188918' in ids
+    assert len(ids) == 60
+    old = next(o for o in result.outings if o.external_id == '188918')
+    assert old.date == datetime.date(2025, 12, 13)
+    assert old.source == 'skitour' and old.author.startswith('user')
+    assert old.url == 'https://skitour.fr/sorties/188918'
 
 
 def test_skitour_resumes_and_keeps_to_its_pages():
@@ -84,7 +84,9 @@ def test_skitour_resumes_and_keeps_to_its_pages():
     assert transport.request_count == 1
     assert first.cursor == {'season': 2026, 'page': 1}
     second, _ = run('skitour', datetime.date(2025, 1, 1), pages=1, cursor=first.cursor)
-    assert {o.external_id for o in second.outings} == {'900001', '900002'}
+    assert len(second.outings) == 30 and '188918' in {
+        o.external_id for o in second.outings
+    }
     assert second.cursor == {'season': 2025, 'page': 1}
 
 

@@ -2,7 +2,7 @@
   "source": "skitour",
   "recorded_at": "2026-11-25",
   "synthetic": true,
-  "note": "Season 2027: the recording of fixtures/skitour (2026-11-25). Seasons 2026 and 2025: made by hand (two outings of the recording, new ids, dates and titles; then an empty season): the API key of the sandbox was refused when the backfill was written.",
+  "note": "Season 2027: the recording of fixtures/skitour (2026-11-25). Season 2026: page 1 recorded live on 2026-11-28 by the backfill (a=2026, l=1000), trimmed by contract.trim_body (REQUIRED_PATHS only, authors pseudonymised, first 30 outings). Season 2025: an empty season made by hand (to end the walk).",
   "entries": [
     {
       "url": "https://skitour.fr/api/sorties",
