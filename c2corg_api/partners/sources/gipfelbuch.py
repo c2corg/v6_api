@@ -9,15 +9,22 @@ it is read once per summit (its name and altitude) and remembered in the
 
 HTML is read by labelled elements (`REQUIRED_SELECTORS`), never by position.
 The report text, the route notes and the photos are never read.
+
+The route of a report: the listing gives its name under the summit ("Normalroute
+ab PP bei Vordere Fildrich"); the route has an id (`/routen/<id>-<slug>`) only on
+the page of a report, which is read once per summit. So a route is keyed by its
+names (`name:<summit>|<altitude>|<route>`, folded), and gets the link of its page
+when the page read for its summit is about the same route.
 """
 
 import datetime
+import hashlib
 import logging
 import re
 from collections import Counter
 from typing import ClassVar
 
-from c2corg_api.partners import htmlparse, normalise
+from c2corg_api.partners import htmlparse, normalise, places
 from c2corg_api.partners.adapter import ParseError
 from c2corg_api.partners.lookups import LookupRequests
 from c2corg_api.partners.model import (
@@ -51,6 +58,8 @@ _TOUR_DATE = re.compile(r'Datum Tour:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})')
 _DATE = re.compile(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$')
 _AUTHOR = re.compile(r'^Autor:\s*')
 MAX_ALTITUDE = 9000
+ROUTE_LINK = '.page-title h2 a[href^="/routen/"]'
+_ROUTE_PATH = re.compile(r'^/routen/(\d+)-')
 
 
 def _slug(text):
@@ -106,23 +115,59 @@ def summit_key(summit, altitude):
     return f'summit:{_slug(summit)}_{altitude or "x"}'[:128]
 
 
+def route_key(summit, altitude, route_name):
+    """Return the external id of a route: 'name:chemispitz|1814|von der talstation'.
+
+    Folded names (`places.full_key`); a key longer than the column ends with a
+    hash of the whole key.
+    """
+    key = (
+        f'name:{places.full_key(summit)}|{altitude or ""}|{places.full_key(route_name)}'
+    )
+    if len(key) > normalise.ROUTE_ID_MAX_LENGTH:
+        digest = hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:12]
+        key = f'{key[: normalise.ROUTE_ID_MAX_LENGTH - 13]}~{digest}'
+    return key
+
+
+def _page_route(soup):
+    """Return `{'url', 'name'}` of the route a report page is about, or None.
+
+    The heading links to the route page; its text is '<summit> (<alt>m):
+    <route name>'.
+    """
+    link = soup.select_one(ROUTE_LINK)
+    href = str(link.get('href', '')) if link is not None else ''
+    if not _ROUTE_PATH.match(href):
+        return None
+    text = normalise.clean_text(htmlparse.text_of(link), 300)
+    name = text.split(':', 1)[1].strip() if ':' in text else ''
+    return {'url': f'{SITE_URL}{href}', 'name': name or None}
+
+
 def parse_detail(markup):
-    """Return `{'lat', 'lon'}` of the map of a report page, or None.
+    """Return `{'lat', 'lon', 'route'}` of a report page (its map), or None.
 
     None when the page has no map element at all (a layout change or an error
     page); the coordinates are None when the map has none or they are not valid.
+    `route` is the route of the report (`_page_route`), when the page links it.
     """
-    element = htmlparse.parse(markup).select_one('#map-container-inner')
+    soup = htmlparse.parse(markup)
+    element = soup.select_one('#map-container-inner')
     if element is None:
         return None
+    place = {'lat': None, 'lon': None}
+    route = _page_route(soup)
+    if route is not None:
+        place['route'] = route
     try:
         lat = float(element.get('data-lat', ''))
         lon = float(element.get('data-lon', ''))
     except ValueError:
-        return {'lat': None, 'lon': None}
-    if not normalise.valid_lonlat(lon, lat):
-        return {'lat': None, 'lon': None}
-    return {'lat': lat, 'lon': lon}
+        return place
+    if normalise.valid_lonlat(lon, lat):
+        place.update(lat=lat, lon=lon)
+    return place
 
 
 class GipfelbuchAdapter:
@@ -139,11 +184,12 @@ class GipfelbuchAdapter:
         'uebersicht': [
             f'{ARTICLE} .main-icon i[data-tooltip]',
             f'{ARTICLE} .main-title .main',
+            f'{ARTICLE} .main-title .main + div',
             f'{ARTICLE} .regions div',
             f'{ARTICLE} .information .date',
             f'{ARTICLE} .autor-infos span',
         ],
-        'detail': ['#map-container-inner'],
+        'detail': ['#map-container-inner', ROUTE_LINK],
     }
     # the author (its text and tooltip): "user1", "user2"... in a recording
     PSEUDONYMISE_SELECTORS: ClassVar[dict[str, list[str]]] = {
@@ -251,9 +297,44 @@ class _Run:
             'country': country,
         }
         place = self._summit(summit, altitude, url)
-        if place and normalise.valid_lonlat(place.get('lon'), place.get('lat')):
+        located = place and normalise.valid_lonlat(place.get('lon'), place.get('lat'))
+        if located:
             values.update(lon=place['lon'], lat=place['lat'], geom_quality='summit')
+        route = self._route(article, values, place)
+        if route is not None:
+            values['routes'] = (route,)
         return HarvestedOuting(**values)
+
+    @staticmethod
+    def _route(article, values, place):
+        """Return the route named under the summit in the listing, or None.
+
+        The link of the route page is known when the page read for the summit
+        (cached, maybe of another report) is about a route of the same name.
+        """
+        cell = article.select_one('.main-title .main + div')
+        name = normalise.clean_text(htmlparse.text_of(cell), 300) if cell else ''
+        summit = values['summit_name']
+        if not name or not summit:
+            return None
+        place = place or {}
+        page = place.get('route')
+        url = None
+        if isinstance(page, dict) and places.full_key(
+            page.get('name')
+        ) == places.full_key(name):
+            url = page.get('url')
+        altitude = values['elevation_max']
+        return normalise.route(
+            route_key(summit, altitude, name),
+            f'{summit}: {name}',
+            url=url,
+            summit_name=summit,
+            elevation_max=altitude,
+            lon=place.get('lon'),
+            lat=place.get('lat'),
+            geom_quality='summit',
+        )
 
     @staticmethod
     def _activity_code(article):

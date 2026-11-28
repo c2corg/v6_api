@@ -91,6 +91,7 @@ _DATE = re.compile(r'(\d{2})-(\d{2})-(\d{4})')
 _NUMBER = re.compile(r'^\s*(\d+)')
 _SUMMIT_IN_TITLE = re.compile(r'\s\(([^()]+)\)\s*$')
 _SORTIE = re.compile(r'sortie-(\d+)')
+_TOPO = re.compile(r'/topo-(\d+)-')
 
 CARD = 'article.post_sortie'
 ITEM = 'item'
@@ -154,6 +155,7 @@ class BivouakAdapter:
         'sortie': [
             '.bk-crumbs a[href*="massif-"]',
             '.bk-crumbs a[href*="sommet-"]',
+            '.bk-crumbs a[href*="/topo-"]',
             '.bk-viewer[data-lat][data-lng]',
         ],
     }
@@ -394,6 +396,9 @@ class _Run:
             if detail.get('massif'):
                 values['region'] = detail['massif']
             lat, lng = detail.get('lat'), detail.get('lng')
+            route = _route(detail)
+            if route is not None:
+                values['routes'] = (route,)
             if normalise.valid_lonlat(lng, lat):
                 values.update(
                     lon=lng,
@@ -440,9 +445,32 @@ def turns(lists):
         index += 1
 
 
+def _route(detail):
+    """Return the route (the topo of the outing) of a detail dict, or None.
+
+    The breadcrumb names the way only ("Depuis l'Aiguille du Midi."): the title
+    is '<summit> - <way>' when the topo has a summit. The map is centred on the
+    summit of the topo when there is one: it is the position of the route then.
+    """
+    topo = detail.get('topo')
+    if not isinstance(topo, dict):
+        return None
+    summit = detail.get('summit')
+    way = topo.get('title')
+    return normalise.route(
+        topo.get('id'),
+        f'{summit} - {way}' if summit and way else way,
+        url=topo.get('url'),
+        summit_name=summit,
+        lon=detail.get('lng') if summit else None,
+        lat=detail.get('lat') if summit else None,
+        geom_quality='summit',
+    )
+
+
 def _extract_detail(text):
-    """Return the dict to cache for a detail page: summit, massif and the map centre."""
-    detail = {'lat': None, 'lng': None, 'summit': None, 'massif': None}
+    """Return the dict to cache for a detail page: summit, massif, topo, map centre."""
+    detail = {'lat': None, 'lng': None, 'summit': None, 'massif': None, 'topo': None}
     if text is None:
         return detail
     soup = htmlparse.parse(text)
@@ -451,6 +479,15 @@ def _extract_detail(text):
     viewer = soup.select_one('.bk-viewer[data-lat][data-lng]')
     detail['summit'] = normalise.clean_text(htmlparse.text_of(summit), 200) or None
     detail['massif'] = normalise.clean_text(htmlparse.text_of(massif), 200) or None
+    topo = soup.select_one('.bk-crumbs a[href*="/topo-"]')
+    match = _TOPO.search(str(topo.get('href', ''))) if topo is not None else None
+    title = normalise.clean_text(htmlparse.text_of(topo), 300) if match else ''
+    if match and title:
+        detail['topo'] = {
+            'id': match.group(1),
+            'title': title,
+            'url': urljoin(LIST_URL, topo['href']),
+        }
     if viewer is not None:
         lat, lng = _float(viewer.get('data-lat')), _float(viewer.get('data-lng'))
         if normalise.valid_lonlat(lng, lat):

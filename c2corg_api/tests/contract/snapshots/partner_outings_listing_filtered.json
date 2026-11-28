@@ -42,6 +42,12 @@
           "system": "str"
         },
         "region": "str",
+        "routes": [
+          {
+            "title": "str",
+            "url": "str"
+          }
+        ],
         "snow": {
           "top_cm": "int"
         },

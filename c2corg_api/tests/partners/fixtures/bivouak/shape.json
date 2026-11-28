@@ -39,40 +39,48 @@
   "item > guid": "str"
  },
  "sortie_29958.html": {
+  ".bk-crumbs a[href*=\"/topo-\"]": "str",
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str"
  },
  "sortie_29975_privatisation_station_pour_sunset.html": {},
  "sortie_30061_belle_descente.html": {
+  ".bk-crumbs a[href*=\"/topo-\"]": "str",
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str",
   ".bk-viewer[data-lat][data-lng]": "str"
  },
  "sortie_30876_col_espone_vtt.html": {
+  ".bk-crumbs a[href*=\"/topo-\"]": "str",
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str",
   ".bk-viewer[data-lat][data-lng]": "str"
  },
  "sortie_30883.html": {
+  ".bk-crumbs a[href*=\"/topo-\"]": "str",
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str"
  },
  "sortie_30885_tour_angle_est.html": {
+  ".bk-crumbs a[href*=\"/topo-\"]": "str",
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str",
   ".bk-viewer[data-lat][data-lng]": "str"
  },
  "sortie_30886.html": {},
  "sortie_30887.html": {
+  ".bk-crumbs a[href*=\"/topo-\"]": "str",
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str",
   ".bk-viewer[data-lat][data-lng]": "str"
  },
  "sortie_30888.html": {
+  ".bk-crumbs a[href*=\"/topo-\"]": "str",
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str"
  },
  "sortie_30889_rocher_walkyrie.html": {
+  ".bk-crumbs a[href*=\"/topo-\"]": "str",
   ".bk-crumbs a[href*=\"massif-\"]": "str",
   ".bk-crumbs a[href*=\"sommet-\"]": "str",
   ".bk-viewer[data-lat][data-lng]": "str"

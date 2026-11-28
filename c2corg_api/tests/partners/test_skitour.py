@@ -22,8 +22,8 @@ from c2corg_api.partners.adapter import (
     SourceDown,
 )
 from c2corg_api.partners.lookups import MemoryLookupCache
-from c2corg_api.partners.model import FetchContext, HarvestedOuting
-from c2corg_api.partners.sources import REGISTRY
+from c2corg_api.partners.model import FetchContext, HarvestedOuting, HarvestedRoute
+from c2corg_api.partners.sources import REGISTRY, skitour
 from c2corg_api.partners.sources.skitour import SkitourAdapter
 from c2corg_api.partners.transport import FixtureTransport, HttpResponse
 
@@ -638,6 +638,14 @@ def test_real_outing_with_a_summit(real):
         lon=6.3402,
         lat=45.435,
         geom_quality='summit',
+        routes=(
+            HarvestedRoute(
+                external_id='565',
+                title='Roc Rouge, De St François Longchamp',
+                url='https://skitour.fr/topos/565',
+                summit_name='Roc Rouge',
+            ),
+        ),
     )
 
 
@@ -647,6 +655,43 @@ def test_real_outing_with_only_a_start_point(real):
     assert (o.summit_name, o.elevation_max) == (None, None)
     assert o.height_diff_up == 692
     assert o.country == 'FR'
+
+
+def test_real_routes(real):
+    outings = by_id(real)
+    with_topos = {i: [r.external_id for r in o.routes] for i, o in outings.items()}
+    # 21 of the 30 outings link a topo, one links three, one two
+    assert sum(1 for r in with_topos.values() if r) == 21
+    assert with_topos['188886'] == ['198', '812', '9136']
+    assert with_topos['188893'] == ['42', '215']
+    assert with_topos['188865'] == []
+    # two topos are followed by two outings each
+    counts = Counter(r for ids in with_topos.values() for r in ids)
+    assert {r for r, n in counts.items() if n > 1} == {'215', '3183'}
+    # a topo without a comma has no summit name
+    assert outings['188874'].routes[0].summit_name is None
+
+
+def test_routes_of_odd_topos():
+    routes = skitour._routes(
+        [
+            {'id': '12', 'nom': 'Pic &amp; Col, Nord'},
+            {'id': '12', 'nom': 'Pic, again'},  # once each
+            {'id': 'x', 'nom': 'No id'},
+            {'id': '0', 'nom': 'Zero'},
+            {'id': '13', 'nom': ' '},
+            'not a topo',
+        ]
+    )
+    assert routes == (
+        HarvestedRoute(
+            external_id='12',
+            title='Pic & Col, Nord',
+            url='https://skitour.fr/topos/12',
+            summit_name='Pic & Col',
+        ),
+    )
+    assert skitour._routes(None) == () == skitour._routes({'id': '1'})
 
 
 def test_real_geometry_qualities(real):
@@ -698,6 +743,10 @@ def test_real_dates_are_paris_midnights(real):
 
 def test_real_recording_holds_no_licensed_text(real):
     text = (FIXTURES / 'skitour' / 'sorties_c1_l200_p1.json').read_text()
-    for key in ('recit', 'cond', 'photos', 'participants', 'topos', 'gpx', 'cle'):
+    for key in ('recit', 'cond', 'photos', 'participants', 'gpx', 'cle'):
         assert f'"{key}"' not in text
+    # the linked topos: their id and name only (topo-guide data, CC BY-SA)
+    for item in json.loads(text):
+        for topo in item.get('topos', []):
+            assert set(topo) == {'id', 'nom'}
     assert 'test-key' not in text

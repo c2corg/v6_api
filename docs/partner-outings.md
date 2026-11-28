@@ -148,6 +148,27 @@ have no `unaccent`, and `translate()` with the accent table costs about 25 µs a
 52 000 locales of the demo database), where the scan and the Python fold take 70 ms for the 3 200 summit and pass
 titles of the demo (production has about 25 times more: about 1.5 s, only on runs that meet a new summit name).
 
+## Partner routes
+
+When a site gives the route of a report an identity of its own, the adapter adds it to the outing
+(`HarvestedOuting.routes`, `partners/model.py` `HarvestedRoute`), and the job (`jobs/partner_routes.py`, after the
+upsert of the outings) stores it in `guidebook.partner_routes`, one row per `(source, external_id)`: the outings of the
+same route share the row. `guidebook.partner_outing_routes` links each outing to its route(s) (`position` 0 for the
+main one; deleted with the outing or the route).
+
+| Source | Route | `external_id` | Url | Position |
+| --- | --- | --- | --- | --- |
+| skitour.fr | the topos linked to the outing (`topos[]` of `/api/sorties?c=1`; 0, 1 or several) | topo id | `skitour.fr/topos/<id>` | none (the summit is the head of the name) |
+| gulliver.it | the itinerary of the report (`comment_post_ID`, its `routes?id=` lookup) | post id | the report link without its date and id | start point |
+| bivouak.net | the topo of the breadcrumb of the detail page | topo id | `topos/topo-<id>-...html` | the summit (map centre) |
+| gipfelbuch.ch | the route named under the summit in the listing | `name:<summit>\|<altitude>\|<route>` (folded): the route id (`/routen/<id>`) is only on the report page, read once per summit | when the page read for the summit is about the same route | the summit |
+| skitourenportal.eu, on-ice.it | no route concept (a free title only): no row | | | |
+
+A route seen again updates its title and keeps the url, summit, elevation and position a new sighting lacks; the links
+of an outing are replaced only when it names routes in the run (a bivouak outing whose detail page was not read keeps
+its links). `GET /partner-outings` adds `routes: [{title, url}]` to each item (`[]` for c2c). The partner routes are
+not linked to the c2c routes or waypoints.
+
 ## Local demo
 
 Fixture mode runs the real job and the real adapters on recorded answers of the partner sites, so the whole chain

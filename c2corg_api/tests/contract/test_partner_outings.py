@@ -9,6 +9,8 @@ from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.outing import Outing, OutingLocale
 from c2corg_api.models.partner_outing import (
     PartnerOuting,
+    PartnerOutingRoute,
+    PartnerRoute,
     PartnerSource,
     PartnerTrack,
 )
@@ -80,6 +82,22 @@ def rows(session, user_ids, monkeypatch):
         )
     )
     session.flush()
+    route = PartnerRoute(
+        source='skitour',
+        external_id='4213',
+        title="Pic de l'Etendard, Combe NE",
+        url='https://skitour.fr/topos/4213',
+    )
+    session.add(route)
+    session.flush()
+    session.add(
+        PartnerOutingRoute(
+            outing_id=session.query(PartnerOuting.id)
+            .filter_by(source='skitour', external_id='123456')
+            .scalar(),
+            route_id=route.id,
+        )
+    )
     session.add(
         PartnerTrack(
             source='skitour',

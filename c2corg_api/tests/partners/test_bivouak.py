@@ -9,7 +9,7 @@ import pytest
 from c2corg_api.partners import contract, htmlparse
 from c2corg_api.partners.adapter import ParseError, SourceBlocked, SourceDown
 from c2corg_api.partners.lookups import MemoryLookupCache
-from c2corg_api.partners.model import FetchContext, HarvestedOuting
+from c2corg_api.partners.model import FetchContext, HarvestedOuting, HarvestedRoute
 from c2corg_api.partners.sources import REGISTRY, bivouak
 from c2corg_api.partners.sources.bivouak import BivouakAdapter
 from c2corg_api.partners.transport import FixtureTransport, HttpResponse
@@ -221,6 +221,19 @@ def test_located_ski_outing():
         geom_quality='summit',
         summit_name='Vallée Blanche',
         country='FR',
+        # the topo of the breadcrumb, located at the summit (the map centre)
+        routes=(
+            HarvestedRoute(
+                external_id='73',
+                title="Vallée Blanche - Depuis l'Aiguille du Midi.",
+                url='https://www.bivouak.net/topos/'
+                'topo-73-vallee-blanche-depuis-aiguille-midi-sport-1.html',
+                summit_name='Vallée Blanche',
+                lon=6.896746,
+                lat=45.873075,
+                geom_quality='summit',
+            ),
+        ),
     )
 
 
@@ -294,7 +307,9 @@ def test_detail_without_a_map_is_not_located_but_is_cached():
         'lng': None,
         'summit': None,
         'massif': None,
+        'topo': None,
     }
+    assert untitled.routes == ()
 
 
 def test_map_without_a_summit_is_a_route_point(tmp_path):
@@ -876,6 +891,7 @@ def test_extract_detail():
         'lng': 6.5,
         'summit': 'Un Sommet',
         'massif': 'Mont-Blanc',
+        'topo': None,
     }
     assert bivouak._extract_detail('<p>nothing</p>')['lat'] is None
     assert (
@@ -891,3 +907,54 @@ def test_extract_detail():
         is None
     )
     assert bivouak._extract_detail(None)['lat'] is None
+
+
+def test_extract_detail_topo():
+    detail = bivouak._extract_detail(
+        '<ol class="bk-crumbs"><li><a href="../topos/sommet-71-x.html">Un Sommet</a>'
+        '</li><li><a href="../topos/topo-73-un-sommet-par-ici-sport-1.html">'
+        'Par ici.</a></li></ol>'
+    )
+    assert detail['topo'] == {
+        'id': '73',
+        'title': 'Par ici.',
+        'url': 'https://www.bivouak.net/topos/topo-73-un-sommet-par-ici-sport-1.html',
+    }
+    # no map: the route has no position
+    assert bivouak._route(detail) == HarvestedRoute(
+        external_id='73',
+        title='Un Sommet - Par ici.',
+        url='https://www.bivouak.net/topos/topo-73-un-sommet-par-ici-sport-1.html',
+        summit_name='Un Sommet',
+    )
+    # a link without an id, or without a text, is no topo
+    for crumb in (
+        '<a href="../topos/topo-x.html">Par ici</a>',
+        '<a href="../topos/topo-73-x.html"> </a>',
+    ):
+        html = f'<ol class="bk-crumbs"><li>{crumb}</li></ol>'
+        assert bivouak._extract_detail(html)['topo'] is None
+    # the details cached before the topos were read have no `topo`
+    assert bivouak._route({'lat': 45.5, 'lng': 6.5, 'summit': 'S'}) is None
+
+
+def test_routes_of_the_fixtures():
+    outings = by_id(run()[0])
+    routes = {i: [r.external_id for r in o.routes] for i, o in outings.items()}
+    # every detail page with a topo in its breadcrumb; the others have none
+    assert {i: r for i, r in routes.items() if r} == {
+        '29958': ['281'],
+        '30061': ['73'],
+        '30876': ['6639'],
+        '30883': ['6757'],
+        '30885': ['4653'],
+        '30887': ['5350'],
+        '30888': ['6834'],
+        '30889': ['6310'],
+    }
+    walk = outings['30885'].routes[0]
+    assert (
+        walk.title
+        == 'Mont Revard - Par le golet de la Pierre, retour par la Crémaillère'
+    )
+    assert (walk.lon, walk.lat, walk.geom_quality) == (5.9743, 45.6815, 'summit')

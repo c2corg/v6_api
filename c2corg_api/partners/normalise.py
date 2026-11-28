@@ -8,6 +8,7 @@ from collections.abc import Iterable
 from zoneinfo import ZoneInfo
 
 from c2corg_api.models.common.attributes import orientation_types, ski_ratings
+from c2corg_api.partners.model import HarvestedRoute
 
 # source -> source activity code -> (c2c activities, steep). The skitour
 # activities are handled in its adapter (all skitouring, steep from the rating).
@@ -195,3 +196,42 @@ def to_int(value):
     if isinstance(value, float):
         return round(value) if math.isfinite(value) else None
     return None
+
+
+ROUTE_ID_MAX_LENGTH = 128
+
+
+def route(
+    external_id,
+    title,
+    url=None,
+    summit_name=None,
+    elevation_max=None,
+    lon=None,
+    lat=None,
+    geom_quality='none',
+):
+    """Return a `HarvestedRoute`, or None without an id or a title.
+
+    The title and the summit are cleaned (HTML, spaces), the id is stripped;
+    unusable coordinates are dropped (the quality then is 'none'), as is an
+    elevation that is not plausible.
+    """
+    external_id = str(external_id).strip() if external_id is not None else ''
+    title = clean_text(title, 300)
+    if not external_id or len(external_id) > ROUTE_ID_MAX_LENGTH or not title:
+        return None
+    elevation = to_int(elevation_max)
+    if not valid_lonlat(lon, lat):
+        lon = lat = None
+        geom_quality = 'none'
+    return HarvestedRoute(
+        external_id=external_id,
+        title=title,
+        url=url or None,
+        summit_name=clean_text(summit_name, 200) or None,
+        elevation_max=elevation if elevation and 0 < elevation < 9000 else None,
+        lon=lon,
+        lat=lat,
+        geom_quality=geom_quality,
+    )

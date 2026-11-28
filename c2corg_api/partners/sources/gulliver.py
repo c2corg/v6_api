@@ -184,6 +184,25 @@ def title_from_slug(permalink):
     return text[:1].upper() + text[1:]
 
 
+def route_url(permalink):
+    """Return the page of the route of a report link, None if it is not one.
+
+    A report is a WordPress comment of its route (`comment_post_ID`), its link
+    the route page plus `/<yyyy>/<mm>/<dd>/<id>/`:
+    '.../itinerari/cima-bianca/2026/11/26/350636/' -> '.../itinerari/cima-bianca/'.
+    """
+    if not isinstance(permalink, str):
+        return None
+    parts = urlsplit(permalink)
+    match = _REPORT_LINK.search(parts.path)
+    if not match or f'{parts.scheme}://{parts.netloc}' != SITE:
+        return None
+    path = parts.path[: match.start()]
+    if not path.startswith('/itinerari/') or path.rstrip('/') == '/itinerari':
+        return None
+    return f'{SITE}{path.rstrip("/")}/'
+
+
 def gpx_url(tracks):
     """Return the URL of the first GPX track of a report, if it is a sound one.
 
@@ -608,6 +627,17 @@ class _Run:
         lat, lng = route.get('lat'), route.get('lng')
         if normalise.valid_lonlat(lng, lat):
             values.update(lon=lng, lat=lat, geom_quality='start')
+        partner_route = normalise.route(
+            _int(report['route_id']),
+            values['title'] if values['title'] != report['id'] else None,
+            url=route_url(permalink),
+            elevation_max=route.get('alt_top'),
+            lon=lng,
+            lat=lat,
+            geom_quality='start',
+        )
+        if partner_route is not None:
+            values['routes'] = (partner_route,)
         if 'skitouring' in activities:
             steep = self._ski_grade(route, values) or steep
         values['steep'] = steep

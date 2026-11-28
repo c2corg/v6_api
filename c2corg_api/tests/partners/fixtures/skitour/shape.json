@@ -24,7 +24,13 @@
      "sommet": "str"
     }
    ],
-   "titre": "str"
+   "titre": "str",
+   "topos": [
+    {
+     "id": "str",
+     "nom": "str"
+    }
+   ]
   }
  ]
 }

@@ -57,6 +57,12 @@
             "\"str\""
           ]
         },
+        "routes": [
+          {
+            "title": "str",
+            "url": "str"
+          }
+        ],
         "snow": {
           "any_of": [
             "\"null\"",

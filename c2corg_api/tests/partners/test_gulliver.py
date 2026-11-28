@@ -15,7 +15,7 @@ import pytest
 
 from c2corg_api.partners.adapter import ParseError, SourceBlocked, SourceDown
 from c2corg_api.partners.lookups import MemoryLookupCache
-from c2corg_api.partners.model import FetchContext, HarvestedOuting
+from c2corg_api.partners.model import FetchContext, HarvestedOuting, HarvestedRoute
 from c2corg_api.partners.sources import REGISTRY, gulliver
 from c2corg_api.partners.sources.gulliver import (
     GulliverAdapter,
@@ -217,6 +217,18 @@ def test_skimo_outing_with_coordinates_and_grade():
         lon=7.432798186508176,
         lat=45.4089357705333,
         geom_quality='start',
+        # the route of the report (`comment_post_ID`), its page and start point
+        routes=(
+            HarvestedRoute(
+                external_id='10191',
+                title='Cialma (la) o Punta Cia da Carello',
+                url='https://www.gulliver.it/itinerari/cialma-la-o-punta-cia-da-carello/',
+                elevation_max=2196,
+                lon=7.432798186508176,
+                lat=45.4089357705333,
+                geom_quality='start',
+            ),
+        ),
     )
 
 
@@ -555,3 +567,38 @@ def test_front_page_reports():
     assert front_page_reports({'content': html}) == [('7', datetime.date(2026, 11, 26))]
     with pytest.raises(ValueError):
         front_page_reports([])
+
+
+def test_routes_of_the_fixtures():
+    outings = run()[0].outings
+    # every report names its route (`comment_post_ID`): one route each
+    assert all(len(o.routes) == 1 for o in outings)
+    routes = Counter(o.routes[0].external_id for o in outings)
+    # several reports of the recording follow the same route
+    assert len(routes) < len(outings)
+    assert routes.most_common(1)[0][1] >= 2
+    for o in outings:
+        route = o.routes[0]
+        assert route.url and o.url.startswith(route.url)
+        assert route.title == o.title
+        if o.geom_quality == 'start':
+            assert (route.lon, route.lat) == (o.lon, o.lat)
+        else:  # the route was not looked up: no position, no elevation
+            assert (route.lon, route.lat, route.geom_quality) == (None, None, 'none')
+
+
+def test_route_url():
+    assert (
+        gulliver.route_url(
+            'https://www.gulliver.it/itinerari/cima-bianca/2026/11/26/350636/'
+        )
+        == 'https://www.gulliver.it/itinerari/cima-bianca/'
+    )
+    for link in (
+        'https://www.gulliver.it/itinerari/2026/11/26/350636/',
+        'https://www.gulliver.it/itinerari/cima-bianca/',
+        'https://example.org/itinerari/cima-bianca/2026/11/26/350636/',
+        'https://www.gulliver.it/news/cima-bianca/2026/11/26/350636/',
+        None,
+    ):
+        assert gulliver.route_url(link) is None
