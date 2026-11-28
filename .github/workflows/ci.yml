@@ -154,13 +154,26 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          # the whole history and the tags, for git describe
+          fetch-depth: 0
+      - name: Describe the commit
+        # shown by /health next to the version (the SHA): where the commit
+        # sits relative to the releases (v6.45.0-12-gabc1234), and its date
+        id: git_info
+        run: |
+          echo "describe=$(git describe --tags --always "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+          echo "commit_date=$(git log -1 --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
       - name: Docker meta
         id: docker_meta
         uses: docker/metadata-action@v6.2.0
         with:
           images: ghcr.io/c2corg/v6_api
-      - name: Checkout repository
-        uses: actions/checkout@v7
+          labels: |
+            org.c2corg.git.describe=${{ steps.git_info.outputs.describe }}
+            org.c2corg.git.commit-date=${{ steps.git_info.outputs.commit_date }}
       - run: git archive --format=tar --output project.tar "$GITHUB_SHA"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -184,3 +197,5 @@ jobs:
           labels: ${{ steps.docker_meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.sha }}
+            GIT_DESCRIBE=${{ steps.git_info.outputs.describe }}
+            COMMIT_DATE=${{ steps.git_info.outputs.commit_date }}

@@ -5,6 +5,33 @@ def test_get(client):
 
     assert data['es'] == 'ok'
     assert data['redis'] == 'ok'
+    # no CI Docker build arguments in the tests: present but empty
+    assert data['version']
+    assert data['describe'] == ''
+    assert data['commit_date'] == ''
+
+
+def test_describe(monkeypatch, fastapi_app, client):
+    # given by the CI Docker build (common.ini.in), next to the version
+    settings = fastapi_app.state.settings
+    monkeypatch.setitem(settings, 'version.describe', 'v6.45.0-12-gabc1234')
+    monkeypatch.setitem(settings, 'version.commit_date', '2026-11-20T10:02:03+01:00')
+
+    r = client.get('/health', status=200)
+    assert r.json['describe'] == 'v6.45.0-12-gabc1234'
+    assert r.json['commit_date'] == '2026-11-20T10:02:03+01:00'
+    assert r.json['version'] == settings['cache_version']
+
+
+def test_describe_missing(monkeypatch, fastapi_app, client):
+    # a common.ini generated before these settings existed: empty, no error
+    settings = fastapi_app.state.settings
+    monkeypatch.delitem(settings, 'version.describe', raising=False)
+    monkeypatch.delitem(settings, 'version.commit_date', raising=False)
+
+    r = client.get('/health', status=200)
+    assert r.json['describe'] == ''
+    assert r.json['commit_date'] == ''
 
 
 def test_maintenance_mode(tmp_path, monkeypatch, client):
