@@ -10,7 +10,12 @@ from c2corg_api.models.area_association import AreaAssociation
 from c2corg_api.models.association import Association
 from c2corg_api.models.document import DocumentGeometry, DocumentLocale
 from c2corg_api.models.outing import Outing, OutingLocale
-from c2corg_api.models.partner_outing import PartnerOuting, PartnerSource
+from c2corg_api.models.partner_outing import (
+    PartnerOuting,
+    PartnerOutingRoute,
+    PartnerRoute,
+    PartnerSource,
+)
 from c2corg_api.models.user import User
 
 TODAY = date(2026, 11, 24)
@@ -476,6 +481,7 @@ class TestItems:
             'snow': None,
             'gpx_url': None,
             'has_track': False,
+            'routes': [],
             'region': None,
             'geometry': {
                 'geom': '{"type":"Point","coordinates":[100,100]}',
@@ -498,6 +504,47 @@ class TestItems:
                 'site_url': 'https://www.camptocamp.org',
             },
         }
+
+    def test_partner_routes(self, client, data, session):
+        def outing_id(external_id):
+            return (
+                session.query(PartnerOuting.id)
+                .filter_by(source='skitour', external_id=external_id)
+                .scalar()
+            )
+
+        main = PartnerRoute(
+            source='skitour',
+            external_id='12',
+            title='Etendard, Combe NE',
+            url='https://skitour.example/topos/12',
+        )
+        other = PartnerRoute(source='skitour', external_id='13', title='Col, S')
+        session.add_all([main, other])
+        session.flush()
+        session.add_all(
+            [
+                PartnerOutingRoute(
+                    outing_id=outing_id('ext1'), route_id=other.id, position=1
+                ),
+                PartnerOutingRoute(
+                    outing_id=outing_id('ext1'), route_id=main.id, position=0
+                ),
+                PartnerOutingRoute(outing_id=outing_id('ext2'), route_id=main.id),
+            ]
+        )
+        session.flush()
+        items = {i['id']: i for i in listing(client).json['items']}
+        # the main route first; one route can have several outings
+        assert items['skitour:ext1']['routes'] == [
+            {'title': 'Etendard, Combe NE', 'url': 'https://skitour.example/topos/12'},
+            {'title': 'Col, S', 'url': None},
+        ]
+        assert items['skitour:ext2']['routes'] == [
+            {'title': 'Etendard, Combe NE', 'url': 'https://skitour.example/topos/12'}
+        ]
+        assert items['gulliver:g1']['routes'] == []
+        assert items[c2c_id(data.c1)]['routes'] == []
 
     def test_c2c_titles_use_the_best_locale(self, client, data):
         def title(**params):
@@ -554,6 +601,7 @@ class TestItems:
             'snow': {'top_cm': 40},
             'gpx_url': 'https://skitour.example/ext1.gpx',
             'has_track': False,
+            'routes': [],
             'region': 'Grandes Rousses',
             'geometry': {
                 'geom': '{"type":"Point","coordinates":[110,110]}',

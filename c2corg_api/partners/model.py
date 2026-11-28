@@ -41,6 +41,29 @@ class RateLimit:
 
 
 @dataclass(frozen=True, slots=True)
+class HarvestedRoute:
+    """The route (itinerary, "topo") an outing followed, as its partner names it.
+
+    Only for the sites that give a route its own identity: a skitour.fr topo,
+    a gulliver.it itinerary, a bivouak.net topo, a gipfelbuch.ch route.
+    `external_id` is unique within the source: the id of the site, or (when the
+    site gives the route no id where we read it) a key made of its names
+    (`name:...`, see the adapter). The route is upserted by `(source,
+    external_id)`: the outings of the same route share one row.
+    """
+
+    external_id: str  # <= 128 chars
+    title: str  # plain text, <= 300 chars
+    url: str | None = None  # the route page on the partner site
+    summit_name: str | None = None
+    elevation_max: int | None = None
+    lon: float | None = None  # WGS 84
+    lat: float | None = None
+    # what lon / lat are: 'summit', 'start' or 'none' (as GeomQuality)
+    geom_quality: GeomQuality = 'none'
+
+
+@dataclass(frozen=True, slots=True)
 class HarvestedOuting:
     """An outing as published by a partner site, normalised."""
 
@@ -81,6 +104,10 @@ class HarvestedOuting:
     # alpha-2) and `region` against the areas. Adapters fill what they know.
     summit_name: str | None = None
     country: str | None = None
+    # the route(s) the outing followed, the main one first (a skitour.fr outing
+    # can link several topos). Empty when the site has no route concept
+    # (skitourenportal.eu, on-ice.it) or the outing names none.
+    routes: tuple[HarvestedRoute, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

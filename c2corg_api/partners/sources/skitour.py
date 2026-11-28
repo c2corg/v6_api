@@ -10,7 +10,9 @@ the altitudes and the coordinates. `date` is an epoch at 00:00 Paris time,
 `{id, sommet, altitude, lat, lng}`, `depart` the start point
 `{id, depart, altitude_dep, lat, lng}`, `orientation` one of N, NE... or `T`
 (all) or empty, `dif_ski` a c2c ski rating ("2.1") or empty. `skiabilite`
-(1 to 5) is a skier level, not a route rating: not read.
+(1 to 5) is a skier level, not a route rating: not read. `topos` is the list
+(or null) of the topos (routes of the topo-guide, CC BY-SA) the outing is linked
+to, `{id, nom}`: they give the outing its routes (`HarvestedOuting.routes`).
 """
 
 import logging
@@ -32,6 +34,7 @@ log = logging.getLogger(__name__)
 
 API_URL = 'https://skitour.fr/api/sorties'
 OUTING_URL = 'https://skitour.fr/sorties/{}'
+TOPO_URL = 'https://skitour.fr/topos/{}'
 TIMEZONE = 'Europe/Paris'
 
 # massif name -> country, for the massifs wholly in one country. The massifs that
@@ -95,6 +98,8 @@ class SkitourAdapter:
             '[].orientation',
             '[].denivele',
             '[].dif_ski',
+            '[].topos[].id',
+            '[].topos[].nom',
         ]
     }
 
@@ -225,6 +230,7 @@ class SkitourAdapter:
             lon=lon,
             lat=lat,
             geom_quality=quality,
+            routes=_routes(item.get('topos')),
         )
 
     @staticmethod
@@ -267,6 +273,32 @@ def _summit_name(summits) -> str | None:
         if name and (best is None or (altitude or -1) > best[0]):
             best = ((altitude if altitude is not None else -1), name)
     return best[1] if best else None
+
+
+def _routes(topos):
+    """Return the routes of the topos of an outing, in their order, once each.
+
+    The name of a topo is '<summit>, <way>' ('Pic du Lac Blanc, Par le tunnel'):
+    its head is the summit. The position of the topo is not in the listing (it
+    is in `/api/topo/<id>`, not read).
+    """
+    routes = {}
+    for topo in topos if isinstance(topos, list) else ():
+        if not isinstance(topo, dict):
+            continue
+        topo_id = normalise.to_int(topo.get('id'))
+        title = normalise.clean_text(topo.get('nom'), 300)
+        if topo_id is None or topo_id <= 0 or topo_id in routes:
+            continue
+        route = normalise.route(
+            topo_id,
+            title,
+            url=TOPO_URL.format(topo_id),
+            summit_name=title.split(',')[0] if ',' in title else None,
+        )
+        if route is not None:
+            routes[topo_id] = route
+    return tuple(routes.values())
 
 
 def _last_id(cursor) -> int | None:

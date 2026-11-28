@@ -478,6 +478,29 @@ def _area_titles(session, area_ids, pl):
     }
 
 
+def _routes(session, row_ids):
+    """Return {partner outing id: [{title, url}]}: the routes it followed, in order."""
+    if not row_ids:
+        return {}
+    rows = session.execute(
+        text(
+            """
+            SELECT l.outing_id, r.title, r.url
+            FROM guidebook.partner_outing_routes l
+            JOIN guidebook.partner_routes r ON r.id = l.route_id
+            WHERE l.outing_id = ANY(CAST(:ids AS integer[]))
+            ORDER BY l.outing_id, l.position, r.id"""
+        ),
+        {'ids': _array(row_ids)},
+    )
+    routes = {}
+    for row in rows:
+        routes.setdefault(row.outing_id, []).append(
+            {'title': row.title, 'url': row.url}
+        )
+    return routes
+
+
 # serialisation
 
 
@@ -500,7 +523,7 @@ def _author(name, url):
     return {'name': name, 'url': url} if name or url else None
 
 
-def _item(row, locales, authors, areas, titles):
+def _item(row, locales, authors, areas, titles, routes):
     c2c = row['source'] == C2C
     document_id = row['document_id']
     if c2c:
@@ -533,6 +556,9 @@ def _item(row, locales, authors, areas, titles):
         'snow': row['snow'],
         'gpx_url': row['gpx_url'],
         'has_track': bool(row['has_track']),
+        # the partner's route(s) of the outing (none for the c2c outings: their
+        # routes are associations of the document)
+        'routes': [] if c2c else routes.get(row['row_id'], []),
         'region': row['region'],
         'geometry': geometry,
         'areas': [titles[i] for i in sorted(area_ids) if i in titles],
@@ -586,9 +612,10 @@ def _list(session, params):
     area_ids = {i for ids in areas.values() for i in ids}
     area_ids.update(i for r in rows for i in r['area_ids'] or [])
     titles = _area_titles(session, area_ids, pl)
+    routes = _routes(session, [r['row_id'] for r in rows if r['source'] != C2C])
     return {
         'total': total,
-        'items': [_item(row, locales, authors, areas, titles) for row in rows],
+        'items': [_item(row, locales, authors, areas, titles, routes) for row in rows],
         # the health of the sources, the status of the listing at a glance
         'sources': [
             {

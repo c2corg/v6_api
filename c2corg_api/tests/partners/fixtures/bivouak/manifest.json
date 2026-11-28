@@ -2,6 +2,7 @@
   "source": "bivouak",
   "recorded_at": "2026-11-25",
   "synthetic": false,
+  "note": "2026-11-28: the detail pages re-trimmed from the live pages with the topo breadcrumb selector (`.bk-crumbs a[href*=\"/topo-\"]`); identical to a new recording of them.",
   "entries": [
     {
       "url": "https://www.bivouak.net/rss/outings/outings.rss",

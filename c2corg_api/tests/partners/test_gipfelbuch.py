@@ -8,7 +8,7 @@ import pytest
 from c2corg_api.partners import contract, htmlparse
 from c2corg_api.partners.adapter import ParseError, SourceBlocked, SourceDown
 from c2corg_api.partners.lookups import MemoryLookupCache
-from c2corg_api.partners.model import FetchContext, HarvestedOuting
+from c2corg_api.partners.model import FetchContext, HarvestedOuting, HarvestedRoute
 from c2corg_api.partners.sources import REGISTRY
 from c2corg_api.partners.sources.gipfelbuch import (
     LIST_URL,
@@ -16,6 +16,7 @@ from c2corg_api.partners.sources.gipfelbuch import (
     GipfelbuchAdapter,
     parse_detail,
     parse_region,
+    route_key,
     split_title,
     summit_key,
 )
@@ -95,14 +96,17 @@ def card(
     regions=('CH - Wallis', 'Schweiz'),
     date='24.11.2026',
     author='Anna',
+    route=None,
 ):
+    route_cell = f'<div class="dv-tt">{route}</div>' if route else ''
     cells = ''.join(f'<div class="dv-tt">{r}</div>' for r in regions)
     return (
         f'<article class="item list-item y2026" id="conditions{report_id}">'
         f'<a href="/verhaeltnisse/{report_id}-{slug}">'
         '<div class="item_inner"><div class="listcontent">'
         f'<span class="column main-icon"><i data-tooltip="{label}"></i></span>'
-        f'<span class="column main-title"><div class="main">{title}</div></span>'
+        f'<span class="column main-title"><div class="main">{title}</div>'
+        f'{route_cell}</span>'
         f'<span class="column regions">{cells}</span>'
         '<span class="column information">'
         f'<span class="date" data-tooltip="Datum Tour: {date}">{date}</span>'
@@ -120,6 +124,12 @@ def page(*cards):
 MAP = (
     '<div id="map-container-inner" data-lat="46.5" data-lon="8.25" '
     'data-zoom="15"></div>'
+)
+# a report page with the link of its route in the heading
+ROUTE_MAP = (
+    '<div class="page-title"><div><h2>'
+    '<a href="/routen/21390-gipfel-2000m-nordflanke">Gipfel (2000m): Nordflanke</a>'
+    '</h2></div></div>' + MAP
 )
 
 
@@ -158,6 +168,20 @@ def test_fixture_outings():
         lon=10.1592,
         lat=47.4517,
         geom_quality='summit',
+        # the route named under the summit; its page is linked from the report
+        # page read for the summit
+        routes=(
+            HarvestedRoute(
+                external_id='name:riedbergerhorn|1787|von grasgehren',
+                title='Riedbergerhorn: von Grasgehren',
+                url='https://www.gipfelbuch.ch/routen/4634-riedbergerhorn-1787m-von-grasgehren',
+                summit_name='Riedbergerhorn',
+                elevation_max=1787,
+                lon=10.1592,
+                lat=47.4517,
+                geom_quality='summit',
+            ),
+        ),
     )
     hike = by_id(result)['2355522']
     assert (hike.activities, hike.source_activity) == (('hiking',), 'wanderung')
@@ -167,7 +191,60 @@ def test_fixture_outings():
     assert lookups.get('summit:riedbergerhorn_1787') == {
         'lat': 47.4517,
         'lon': 10.1592,
+        'route': {
+            'url': 'https://www.gipfelbuch.ch/routen/4634-riedbergerhorn-1787m-von-grasgehren',
+            'name': 'von Grasgehren',
+        },
     }
+
+
+def test_routes_of_the_fixtures():
+    result, _, _ = run(since=datetime.date(2026, 1, 1))
+    # every report of the listing names its route under the summit
+    assert all(len(o.routes) == 1 for o in result.outings)
+    routes = Counter(o.routes[0].external_id for o in result.outings)
+    assert len(routes) < len(result.outings)  # some routes have several reports
+    with_url = [o.routes[0] for o in result.outings if o.routes[0].url]
+    assert with_url
+    assert all(r.url.startswith('https://www.gipfelbuch.ch/routen/') for r in with_url)
+    # located routes are where their outing is
+    for o in result.outings:
+        assert (o.routes[0].lon, o.routes[0].lat) == (o.lon, o.lat)
+
+
+def test_route_of_a_card():
+    listing = page(card('1', route='Nordflanke'), card('2'))
+    result, _, _ = run(Canned(listing, ROUTE_MAP))
+    first, second = result.outings
+    assert first.routes == (
+        HarvestedRoute(
+            external_id='name:gipfel|2000|nordflanke',
+            title='Gipfel: Nordflanke',
+            url='https://www.gipfelbuch.ch/routen/21390-gipfel-2000m-nordflanke',
+            summit_name='Gipfel',
+            elevation_max=2000,
+            lon=8.25,
+            lat=46.5,
+            geom_quality='summit',
+        ),
+    )
+    assert second.routes == ()  # a card without a route name
+
+
+def test_route_of_another_report_gives_no_link():
+    # the summit page read (cached) is about another route of the summit
+    listing = page(card('1', route='Südgrat'))
+    result, _, _ = run(Canned(listing, ROUTE_MAP))
+    route = result.outings[0].routes[0]
+    assert (route.external_id, route.url) == ('name:gipfel|2000|sudgrat', None)
+
+
+def test_route_key():
+    assert route_key('Bürglen', 2165, 'Nordflanke') == 'name:burglen|2165|nordflanke'
+    assert route_key('Bürglen', None, 'Nord-Flanke!') == 'name:burglen||nord flanke'
+    long = route_key('Gipfel', 2000, 'x ' * 200)
+    assert len(long) == 128
+    assert long != route_key('Gipfel', 2000, 'x ' * 201)
 
 
 def test_outings_without_a_resolved_summit_keep_the_hints():
@@ -430,6 +507,18 @@ def test_summit_key():
 
 def test_parse_detail():
     assert parse_detail(MAP) == {'lat': 46.5, 'lon': 8.25}
+    assert parse_detail(ROUTE_MAP) == {
+        'lat': 46.5,
+        'lon': 8.25,
+        'route': {
+            'url': 'https://www.gipfelbuch.ch/routen/21390-gipfel-2000m-nordflanke',
+            'name': 'Nordflanke',
+        },
+    }
+    # a heading without a route link (a report about a hut, or no route page)
+    assert parse_detail(
+        '<div class="page-title"><h2><a href="/punkte/1-hut">Hut</a></h2></div>' + MAP
+    ) == {'lat': 46.5, 'lon': 8.25}
     assert parse_detail('<p>no map</p>') is None
     nothing = {'lat': None, 'lon': None}
     for attrs in (

@@ -6,6 +6,7 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
+    ForeignKey,
     ForeignKeyConstraint,
     Index,
     Integer,
@@ -123,6 +124,82 @@ class PartnerOuting(Base):
     fetched_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+# how the position of a partner route is known: given by the partner, at the
+# summit or at the start of the route, or unknown
+ROUTE_GEOM_QUALITIES = ('summit', 'start', 'none')
+
+
+class PartnerRoute(Base):
+    """The route (itinerary, "topo") of partner outings, as the partner names it.
+
+    One row per route of a partner site that gives its routes an identity
+    (skitour.fr topos, gulliver.it itineraries, bivouak.net topos, gipfelbuch.ch
+    routes), upserted with the outings that follow it: several outings of the
+    same route share the row. Not linked to the c2c routes or waypoints (yet):
+    the partner's own identity of the route only.
+    """
+
+    __tablename__ = 'partner_routes'
+    __table_args__ = (
+        UniqueConstraint(
+            'source', 'external_id', name='uq_partner_routes_source_external_id'
+        ),
+        CheckConstraint(
+            _in_list('geom_quality', ROUTE_GEOM_QUALITIES),
+            name='partner_routes_geom_quality_check',
+        ),
+        {'schema': schema},
+    )
+
+    id = Column(Integer, primary_key=True)
+    source = Column(String(32), nullable=False)
+    # the id of the route on the site ('4213'), or a key made of its names
+    # when the site gives no id where it is read (gipfelbuch: 'name:...')
+    external_id = Column(String(128), nullable=False)
+    title = Column(String(300), nullable=False)
+    # the route page on the partner site, when known
+    url = Column(String(500))
+    summit_name = Column(String(200))
+    elevation_max = Column(SmallInteger)
+    geom = Column(Geometry(geometry_type='POINT', srid=3857, spatial_index=False))
+    geom_quality = Column(
+        String(16), nullable=False, default='none', server_default='none'
+    )
+    first_seen_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    fetched_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class PartnerOutingRoute(Base):
+    """The link of a partner outing to the route(s) it followed.
+
+    Usually one route per outing; a skitour.fr outing can link several topos
+    (`position` keeps their order, 0 for the main one). Deleted with the outing
+    or the route.
+    """
+
+    __tablename__ = 'partner_outing_routes'
+    __table_args__ = (
+        Index('partner_outing_routes_route_id_idx', 'route_id'),
+        {'schema': schema},
+    )
+
+    outing_id = Column(
+        Integer,
+        ForeignKey(f'{schema}.partner_outings.id', ondelete='CASCADE'),
+        primary_key=True,
+    )
+    route_id = Column(
+        Integer,
+        ForeignKey(f'{schema}.partner_routes.id', ondelete='CASCADE'),
+        primary_key=True,
+    )
+    position = Column(SmallInteger, nullable=False, default=0, server_default=text('0'))
 
 
 # the state of a partner track: read (`ok`), to try again (`failed`: the site

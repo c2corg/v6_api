@@ -208,6 +208,20 @@ _PARTNER_OUTING = {
             'type': 'boolean',
             'description': 'The outing has a track: `GET /partner-outings/{id}/track`.',
         },
+        'routes': {
+            'type': 'array',
+            'description': 'The route(s) of the outing on the partner site (a '
+            'skitour.fr topo, a gulliver.it itinerary...), the main one first; '
+            'empty for c2c and for the sites without routes.',
+            'items': {
+                'type': 'object',
+                'required': ['title'],
+                'properties': {
+                    'title': {'type': 'string'},
+                    'url': {'type': ['string', 'null']},
+                },
+            },
+        },
         'region': {'type': ['string', 'null']},
         'geometry': {
             'type': ['object', 'null'],

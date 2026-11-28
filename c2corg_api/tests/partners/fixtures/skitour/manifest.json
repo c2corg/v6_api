@@ -2,6 +2,7 @@
   "source": "skitour",
   "recorded_at": "2026-11-25",
   "synthetic": false,
+  "note": "2026-11-28: `topos` ({id, nom}: the topos linked to each outing) added to the items of the 2026-11-25 recording, read on the public outing pages (skitour.fr/sorties/<id>, 'Topo(s) associé(s)'): the API key of the sandbox was rejected that day. Items without a topo have no `topos` key, as in the API.",
   "entries": [
     {
       "url": "https://skitour.fr/api/sorties",

@@ -2,6 +2,7 @@
   "source": "gipfelbuch",
   "recorded_at": "2026-11-25",
   "synthetic": false,
+  "note": "2026-11-28: the report pages re-trimmed from the live pages with the route link selector (`.page-title h2 a[href^=\"/routen/\"]`); the listing (no longer online as recorded) got the route name under each summit (`.main-title .main + div`) from the heading of the live report page.",
   "entries": [
     {
       "url": "https://www.gipfelbuch.ch/verhaeltnisse/uebersicht",

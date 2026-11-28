@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 from c2corg_api.harvest.harvester import Harvester, Payload, Stored
 from c2corg_api.harvest.policy import Policy
 from c2corg_api.jobs.partner_locations import resolve_locations
+from c2corg_api.jobs.partner_routes import upsert_routes
 from c2corg_api.jobs.partner_tracks import harvest_tracks, track_transport
 from c2corg_api.models import DBSession, schema
 from c2corg_api.models.partner_outing import (
@@ -506,6 +507,7 @@ def _store(session, result, shift, now, settings, skipped, lookups):
     if located:
         log.info('Partner outings located from their hints: %s', dict(located))
     ids = upsert_outings(session, kept, now, area_ids)
+    upsert_routes(session, kept, now)
     assign_areas(session, ids)
     return len(ids)
 

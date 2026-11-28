@@ -32,8 +32,10 @@ FORBIDDEN_KEYS = {
     'cond',
     'participants',
     'gpx',
-    'topos',
 }
+# not in it: skitour `topos`, the topos linked to an outing, of which only the id
+# and the name are read (`REQUIRED_PATHS`: topo-guide data, CC BY-SA, not the
+# texts of the topo)
 
 
 def _keys(node):
