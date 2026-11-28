@@ -92,7 +92,7 @@ def test_partners_in_the_harvest_status(client, session):
     assert r.json['harvest']['partners.skitour'] == {
         'sources': 1,
         'failing': 0,
-        'last_success': '2026-11-25T10:00:00+00:00',
+        'last_run': '2026-11-25T10:00:00+00:00',
     }
     assert r.json['harvest']['partners.gulliver']['failing'] == 1
     assert 'partners' not in r.json

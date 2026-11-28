@@ -359,7 +359,7 @@ def test_health_lists_the_partners(client, world):
     for name in ('partners.skitour', 'partners.gulliver'):
         assert harvest[name]['sources'] == 1
         assert harvest[name]['failing'] == 0
-        assert harvest[name]['last_success']
+        assert harvest[name]['last_run']
     assert 'partners' not in response.json
 
 

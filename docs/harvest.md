@@ -104,8 +104,9 @@ requests a minute, shared with the PDFs the API fetches on demand. The CAAML ser
 
 A disabled source is deleted 30 days later, with its payloads; its bulletins stay (`source_id` set to null).
 
-`GET /health` has a `harvest` section: by harvester, its enabled `sources`, those `failing` (`error_count > 0`) and the
-latest `last_success`. A failing source does not fail the health check (the last data is still read); `harvest` is
+`GET /health` has a `harvest` section: by harvester, its enabled `sources`, those `failing` (`error_count > 0`) and
+`last_run`, the latest run that raised no error (column `last_success`). It is not a proof of data: a partner source
+`disabled` for a missing key also runs without error. Its real state is in `GET /partner-outings/sources`. A failing source does not fail the health check (the last data is still read); `harvest` is
 `null` if the query fails, `{}` while nothing is harvested.
 
 ## Raw payloads
